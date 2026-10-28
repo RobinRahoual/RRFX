@@ -90,12 +90,12 @@ test('name checks accept the expected parameter names (EN / FR) and reject neigh
 });
 
 test('effect names are detected in French, English and German lists', () => {
-  const fr = Core.resolveEffectNames(['Transformer', 'Flou gaussien', 'Flou directionnel', 'Luminosité et contraste', 'Décalage', 'Déformation de la vague', 'Distorsion de l’objectif', 'Écho', 'Flou de l’appareil photo']);
+  const fr = Core.resolveEffectNames(['Transformer', 'Flou gaussien', 'Flou directionnel', 'Luminosité et contraste', 'Décalage', 'Déformation de la vague', 'Distorsion de l’objectif', 'Écho', 'Flou de l’appareil photo', 'Teinte']);
   assert.deepStrictEqual(Object.values(fr).filter(v => !v), []);
   assert.strictEqual(fr.lens, 'Distorsion de l’objectif');
-  const en = Core.resolveEffectNames(['Transform', 'Gaussian Blur', 'Directional Blur', 'Brightness & Contrast', 'Offset', 'Wave Warp', 'Lens Distortion', 'Echo', 'Camera Blur']);
+  const en = Core.resolveEffectNames(['Transform', 'Gaussian Blur', 'Directional Blur', 'Brightness & Contrast', 'Offset', 'Wave Warp', 'Lens Distortion', 'Echo', 'Camera Blur', 'Tint']);
   assert.deepStrictEqual(Object.values(en).filter(v => !v), []);
-  const de = Core.resolveEffectNames(['Transformieren', 'Gaußscher Weichzeichner', 'Direktionaler Weichzeichner', 'Helligkeit und Kontrast', 'Versatz', 'Wellen-Warp', 'Objektivverzerrung', 'Echo']);
+  const de = Core.resolveEffectNames(['Transformieren', 'Gaußscher Weichzeichner', 'Direktionaler Weichzeichner', 'Helligkeit und Kontrast', 'Versatz', 'Wellen-Warp', 'Objektivverzerrung', 'Echo', 'Färben']);
   assert.deepStrictEqual(Object.values(de).filter(v => !v), []);
   const none = Core.resolveEffectNames([]);
   assert.strictEqual(none.transform, null);

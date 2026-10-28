@@ -41,11 +41,17 @@
   function faceZoom(c, grow) {
     const eye = i => (c.p.face && c.p.face.length ? c.p.face[Math.min(c.p.face.length - 1, Math.max(0, i))] : FACE_EYES);
     const z = i => 1 + c.p.amount / 100 * c.k * grow(i);
+    // « lock » (stabiliser) : les yeux sont tenus à leur position moyenne dans le plan.
+    let hold = [0.5, 0.4];
+    if (c.p.frame === 'lock' && c.p.face && c.p.face.length) {
+      const med = j => c.p.face.map(e => e[j]).sort((a, b) => a - b)[c.p.face.length >> 1];
+      hold = [med(0), med(1)];
+    }
     const pos = i => {
       const e = eye(i), zz = z(i);
-      if (c.p.frame !== 'center') return [0.5 + (e[0] - 0.5) * (1 - zz), 0.5 + (e[1] - 0.5) * (1 - zz)];
+      if (c.p.frame !== 'center' && c.p.frame !== 'lock') return [0.5 + (e[0] - 0.5) * (1 - zz), 0.5 + (e[1] - 0.5) * (1 - zz)];
       const m = (zz - 1) / 2, cl = v => Math.min(0.5 + m, Math.max(0.5 - m, v));
-      return [cl(0.5 - (e[0] - 0.5) * zz), cl(0.4 - (e[1] - 0.5) * zz)];
+      return [cl(hold[0] - (e[0] - 0.5) * zz), cl(hold[1] - (e[1] - 0.5) * zz)];
     };
     return [{ type: 'transform', props: { scale: i => 100 * z(i), position: pos } }];
   }
@@ -342,6 +348,19 @@
       desc: 'Zoom avant lent sur tout le plan, centré sur les yeux qui sont suivis : l\'émotion monte sans perdre le regard.',
       params: [range('amount', 'Zoom', 15, 0, 60, '%')].concat(FACE_PARAMS),
       build: c => faceZoom(c, i => (c.N <= 1 ? 1 : i / (c.N - 1)))
+    },
+    {
+      id: 'face-stab', name: 'Stabiliser le visage', cat: 'motion', frames: 100, noCurve: true, face: true, sparse: true,
+      desc: 'Face cam : la tête reste au même endroit du cadre même si la personne bouge. Léger zoom pour ne jamais voir de bord.',
+      params: [range('amount', 'Zoom', 8, 2, 30, '%'), select('follow', 'Suivi', 'tight', [{ v: 'tight', label: 'Serré' }, { v: 'smooth', label: 'Doux' }])],
+      build: c => faceZoom(Object.assign({}, c, { p: Object.assign({}, c.p, { frame: 'lock' }) }), () => 1)
+    },
+    {
+      id: 'object-zoom', name: 'Zoom suivi (objet)', cat: 'motion', frames: 100, noCurve: true, face: true, track: 'object', sparse: true,
+      desc: 'Entoure un produit, un logo ou une personne sur la première image : RR FX le suit et zoome dessus pendant tout le plan.',
+      params: [range('amount', 'Zoom', 25, 0, 100, '%'), select('frame', 'Objet', 'keep', [{ v: 'keep', label: 'À sa place' }, { v: 'center', label: 'Recentré' }]),
+        select('follow', 'Suivi', 'smooth', [{ v: 'smooth', label: 'Doux' }, { v: 'tight', label: 'Serré' }]), select('arrive', 'Arrivée', 'smooth', [{ v: 'cut', label: 'Sèche' }, { v: 'smooth', label: 'Douce' }])],
+      build: c => faceZoom(c, i => (c.p.arrive === 'smooth' ? 1 - Math.pow(1 - Math.min(1, i / 8), 3) : 1))
     },
     {
       id: 'ken-burns', name: 'Ken Burns', cat: 'motion', frames: 100, noCurve: true,

@@ -4,21 +4,31 @@
      retire en recollant la suite (sur une copie de la séquence par défaut).
    - Zoom visage : un plan sur deux (ou tous) resserré sur les yeux, qui sont suivis : la coupe
      devient un changement de cadre et le regard ne bouge pas.
-   - Sous-titres : un .srt / .vtt posé en textes animés, en phrases ou en mots courts.
-   - Bandeau nom et fonction (lower third). */
+   - « Euh » et répétitions : repérés dans le son (et dans le .srt), coupés ou marqués.
+   - Sous-titres : un .srt / .vtt posé en textes animés, en phrases ou en mots courts, mots clés
+     en couleur (et emoji), petit « pop » sonore.
+   - Bandeau nom et fonction (lower third).
+   - Son de la voix : chaque plan amené à -14 LUFS, débruitage en option.
+   - Musique sous la voix : le volume de la musique baisse quand on parle (ducking).
+   - Chapitres YouTube : depuis les marqueurs ou les blancs du .srt, prêts à coller. */
 (function (root) {
   'use strict';
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
-    const Sp = root.RRFXSpeech, { Lib, Store, Host } = app;
+    const Sp = root.RRFXSpeech, V = root.RRFXVoix, { Core, Lib, Store, Host } = app;
     const { h, hotText, actionGroup, picker, row, section } = app.UI;
 
     const DEFAULTS = {
       level: 'normal', minSilence: 0.5, pad: 0.12, mode: 'copy', remap: true,
       faceAmount: 20, faceAlt: true, faceTrack: true, faceFrame: 'keep',
       srt: '', words: 0, capAnim: 'pop', capFrom: 'start',
-      name: '', role: '', lowerDur: 5, lowerPos: 'left', lowerAnim: 'slide-up'
+      name: '', role: '', lowerDur: 5, lowerPos: 'left', lowerAnim: 'slide-up',
+      keys: 'color', keyColor: '#ffd21e', keyList: '', emoji: false, popSound: 'none',
+      fillerLevel: 'normal', fillerMode: 'copy',
+      voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers'
     };
+    const DENOISE = ['DeNoise', 'Réduction du bruit', 'Débruitage', 'Rauschunterdrückung', 'Reducción de ruido', 'Riduzione rumore'];
+    const KEY_COLORS = ['#ffd21e', '#ff4d4d', '#2ee6a8', '#38b6ff', '#c77dff'];
     const st = () => {
       // Complète sans remplacer l'objet (l'interface garde une référence dessus).
       const s = app.settings();
@@ -31,30 +41,41 @@
     // ---------------------------------------------------------------- silences
 
     let last = null; // dernière analyse { ranges, a, b, clips }
-    let lastCut = null; // dernière coupe { ranges, name } : pour recaler les sous-titres
+    let lastCuts = []; // coupes faites (silences, euh) : [{ ranges, name }], pour recaler les sous-titres
 
-    async function analyze() {
-      const x = st();
+    async function speechClips() {
       const info = await Host.call('speechInfo', {});
       if (!info.ok) throw new Error(info.error);
       if (!info.clips.length) throw new Error('Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul).');
-      const per = [];
+      return info.clips;
+    }
+
+    /* Son d'un plan de la timeline → { samples, sr, toSeq } (toSeq : temps du son → séquence),
+       ou null s'il n'a pas de fichier son lisible. */
+    async function readClip(c) {
+      const dur = (c.end - c.start) * c.speed;
+      let samples, sr, t0 = c.inPoint;
+      if (app.S.demo) { sr = 16000; samples = Sp.demoSpeech(sr, dur); } else if (!c.path) return null; else {
+        const a = await app.services.readAudio(c.path, c.inPoint, c.inPoint + dur);
+        samples = a.samples; sr = a.sampleRate; t0 = a.start;
+      }
+      return { samples, sr, toSeq: t => c.start + (t0 + t - c.inPoint) / c.speed };
+    }
+
+    async function analyze() {
+      const x = st(), clips = await speechClips(), per = [];
       let mute = 0;
-      for (let i = 0; i < info.clips.length; i++) {
-        const c = info.clips[i], dur = (c.end - c.start) * c.speed;
-        app.status.progress(i, info.clips.length, 'Écoute de ' + c.name);
-        let samples, sr, t0 = c.inPoint;
-        if (app.S.demo) { sr = 16000; samples = Sp.demoSpeech(sr, dur); } else if (!c.path) { mute++; per.push({ start: c.start, end: c.end, silent: [] }); continue; } else {
-          const a = await app.services.readAudio(c.path, c.inPoint, c.inPoint + dur);
-          samples = a.samples; sr = a.sampleRate; t0 = a.start;
-        }
-        const d = Sp.detect(samples, sr, { level: x.level, minSilence: x.minSilence, pad: x.pad });
-        const toSeq = t => c.start + (t0 + t - c.inPoint) / c.speed;
-        per.push({ start: c.start, end: c.end, silent: d.ranges.map(r => ({ a: toSeq(r.a), b: toSeq(r.b) })) });
+      for (let i = 0; i < clips.length; i++) {
+        const c = clips[i];
+        app.status.progress(i, clips.length, 'Écoute de ' + c.name);
+        const a = await readClip(c);
+        if (!a) { mute++; per.push({ start: c.start, end: c.end, silent: [] }); continue; }
+        const d = Sp.detect(a.samples, a.sr, { level: x.level, minSilence: x.minSilence, pad: x.pad });
+        per.push({ start: c.start, end: c.end, silent: d.ranges.map(r => ({ a: a.toSeq(r.a), b: a.toSeq(r.b) })) });
       }
       if (mute) app.log(app.plural(mute, 'plan sans fichier son lisible', 'plans sans fichier son lisible') + ' (séquence imbriquée ?) : gardés en entier.', 'warn');
       const ranges = Sp.combine(per);
-      last = { ranges, a: Math.min(...per.map(p => p.start)), b: Math.max(...per.map(p => p.end)), clips: info.clips.length };
+      last = { ranges, a: Math.min(...per.map(p => p.start)), b: Math.max(...per.map(p => p.end)), clips: clips.length, spans: per.map(p => ({ a: p.start, b: p.end })) };
       return last;
     }
 
@@ -75,7 +96,7 @@
         const res = await Host.call('cutSilences', { ranges: r.ranges, copy: mode === 'copy' });
         if (!res.ok) return { kind: 'error', title: 'Silences non coupés', detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        lastCut = { ranges: r.ranges, name: res.name };
+        lastCuts.push({ ranges: r.ranges, name: res.name });
         last = null;
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
@@ -83,6 +104,135 @@
           detail: (res.copy ? 'Dans « ' + res.name + ' » : ta séquence d\'origine est intacte.' : 'Ctrl+Z (Cmd+Z) dans Premiere pour revenir en arrière.') + (res.warnings && res.warnings.length ? ' ' + res.warnings[0] : '')
         };
       }, true);
+    }
+
+    // ---------------------------------------------------------------- « euh » et répétitions
+
+    /* « Euh » trouvés dans le son des plans choisis, et répétitions du .srt (s'il y en a un).
+       → { fillers: [{ a, b }], repeats: [{ a, b, text, exact }] } en temps de séquence. */
+    async function findFillers() {
+      const x = st(), clips = await speechClips(), fillers = [];
+      for (let i = 0; i < clips.length; i++) {
+        app.status.progress(i, clips.length, 'Écoute de ' + clips[i].name);
+        const a = await readClip(clips[i]);
+        if (!a) continue;
+        V.fillers(a.samples, a.sr, { level: x.fillerLevel }).forEach(r => fillers.push({ a: Math.max(clips[i].start, a.toSeq(r.a)), b: Math.min(clips[i].end, a.toSeq(r.b)) }));
+      }
+      let repeats = [];
+      const cues = Sp.parseSubtitles(x.srt);
+      if (cues.length) repeats = Sp.repeats(cutAware(Sp.offset(cues, await startTime(x.capFrom))));
+      return { fillers, repeats };
+    }
+
+    // Sous-titres faits avant les coupes (silences, euh) recalés sur la séquence d'aujourd'hui.
+    const cutAware = items => lastCuts.reduce((acc, c) => Sp.remap(acc, c.ranges), items);
+
+    function cutFillers() {
+      const x = st();
+      return app.runTask('« Euh » et répétitions', async () => {
+        app.status.phase('Écoute du son');
+        const f = await findFillers();
+        const exact = f.repeats.filter(r => r.exact), rough = f.repeats.filter(r => !r.exact);
+        const cut = f.fillers.concat(exact.map(r => ({ a: r.a, b: r.b }))).sort((p, q) => p.a - q.a);
+        if (!cut.length && !rough.length) return { kind: 'warn', title: 'Aucun « euh » trouvé', detail: 'Essaie la sensibilité « Forte ». Les répétitions sont lues dans le .srt (onglet Parole > Sous-titres).' };
+        const n = app.plural(f.fillers.length, '« euh »', '« euh »') + (f.repeats.length ? ' et ' + app.plural(f.repeats.length, 'répétition') : '');
+        if (x.fillerMode === 'markers' || !cut.length) {
+          const all = cut.concat(rough).sort((p, q) => p.a - q.a);
+          const m = await Host.call('addMarkers', { times: all.map(r => r.a), name: 'RR FX · euh / répétition', color: 5 });
+          if (!m.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: m.error };
+          return { kind: 'ok', title: n + ' marqué' + (all.length > 1 ? 's' : ''), detail: 'Un marqueur au début de chacun : vérifie et coupe à ton rythme.' };
+        }
+        app.status.phase('Coupe et recollage');
+        const res = await Host.call('cutSilences', { ranges: cut, copy: x.fillerMode === 'copy', suffix: ' (sans euh)' });
+        if (!res.ok) return { kind: 'error', title: 'Rien n\'a été coupé', detail: res.error };
+        (res.warnings || []).forEach(w => app.log(w, 'warn'));
+        lastCuts.push({ ranges: cut, name: res.name });
+        rough.forEach(r => app.log('Répétition à vérifier (temps estimé) : « ' + r.text + ' »', 'warn'));
+        return {
+          kind: rough.length || (res.warnings && res.warnings.length) ? 'warn' : 'ok',
+          title: n + ' : ' + fmtSecs(res.seconds) + ' en moins',
+          detail: (res.copy ? 'Dans « ' + res.name + ' ».' : 'Ctrl+Z dans Premiere pour revenir.') + (rough.length ? ' ' + app.plural(rough.length, 'répétition') + ' à vérifier (sous-titres non découpés mot par mot) : voir le journal.' : '')
+        };
+      }, true);
+    }
+
+    // ---------------------------------------------------------------- son de la voix
+
+    // Chaque plan parlé amené à la même sonie (et débruité en option).
+    function levelVoice() {
+      const x = st();
+      return app.runTask('Son de la voix', async () => {
+        const clips = await speechClips(), todo = [], before = [];
+        for (let i = 0; i < clips.length; i++) {
+          app.status.progress(i, clips.length, 'Mesure de ' + clips[i].name);
+          const a = await readClip(clips[i]);
+          if (!a) continue;
+          const m = V.loudness(a.samples, a.sr), g = V.gainFor(m, x.voiceTarget, -1);
+          if (g.silent) continue;
+          before.push(m.lufs);
+          if (g.limited) app.log(clips[i].name + ' : gain limité à ' + g.gain + ' dB (crêtes déjà hautes)', 'warn');
+          (clips[i].audio || []).forEach(t => todo.push({ track: t.track, start: t.start, gain: g.gain }));
+        }
+        if (!todo.length) return { kind: 'warn', title: 'Aucun son à régler', detail: 'Sélectionne des plans avec leur son (image et son liés, ou le son seul).' };
+        const r = await Host.call('voiceLevel', { clips: todo, denoise: x.denoise ? DENOISE : null });
+        if (!r.ok) return { kind: 'error', title: 'Niveau non réglé', detail: r.error };
+        (r.warnings || []).forEach(w => app.log(w, 'warn'));
+        if (r.created.length) app.pushHistory({ date: Date.now(), label: 'Son de la voix', entries: r.created });
+        const lo = Math.round(Math.min(...before)), hi = Math.round(Math.max(...before));
+        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: app.plural(r.done, 'son réglé', 'sons réglés') + ' à ' + x.voiceTarget + ' LUFS', detail: 'Avant : ' + (lo === hi ? lo : 'de ' + lo + ' à ' + hi) + ' LUFS.' + (r.cleaned ? ' Débruitage ajouté (réglable dans Options d\'effet).' : '') + ' ↶ Annuler remet le volume d\'avant.' };
+      });
+    }
+
+    // ---------------------------------------------------------------- musique sous la voix
+
+    function duckMusic() {
+      const x = st();
+      return app.runTask('Musique sous la voix', async () => {
+        app.status.phase('Écoute de la voix');
+        const r = await analyze();
+        draw();
+        // Voix = les plans choisis moins leurs silences.
+        const speech = [];
+        r.spans.sort((p, q) => p.a - q.a).forEach(sp => {
+          let t = sp.a;
+          r.ranges.filter(g => g.b > sp.a && g.a < sp.b).forEach(g => { if (g.a > t) speech.push({ a: t, b: g.a }); t = Math.max(t, g.b); });
+          if (t < sp.b) speech.push({ a: t, b: sp.b });
+        });
+        const m = await Host.call('musicInfo', {});
+        if (!m.ok) return { kind: 'error', title: 'Pas de musique', detail: m.error || 'Pose ta musique sur une piste audio.' };
+        const keys = V.duckKeys(speech, { depth: x.duckDepth, from: m.start, to: m.end });
+        if (!keys.length) return { kind: 'warn', title: 'Rien à baisser', detail: 'La voix ne passe pas pendant la musique.' };
+        const res = await Host.call('duckMusic', { track: m.track, start: m.start, keys });
+        if (!res.ok) return { kind: 'error', title: 'Volume non réglé', detail: res.error };
+        (res.warnings || []).forEach(w => app.log(w, 'warn'));
+        app.pushHistory({ date: Date.now(), label: 'Musique sous la voix', entries: res.created });
+        return { kind: 'ok', title: 'Musique baissée de ' + x.duckDepth + ' dB sous la voix', detail: app.plural(speech.length, 'passage parlé', 'passages parlés') + ' sur « ' + m.name + ' ». ↶ Annuler remet le volume d\'avant.' };
+      });
+    }
+
+    // ---------------------------------------------------------------- chapitres YouTube
+
+    let chap = null;
+    function makeChapters(refresh) {
+      const x = st();
+      return app.runTask('Chapitres YouTube', async () => {
+        let res;
+        if (x.chapSrc === 'markers') {
+          const m = await Host.call('markerList', {});
+          if (!m.ok) return { kind: 'error', title: 'Marqueurs illisibles', detail: m.error };
+          // Les marqueurs posés par RR FX (temps forts, silences) ne sont pas des chapitres.
+          const mk = m.markers.filter(q => !/^RR FX · /.test(q.name || '') || /chapitre/i.test(q.name || ''));
+          if (!mk.length) return { kind: 'warn', title: 'Aucun marqueur', detail: 'Pose un marqueur nommé au début de chaque partie (touche M, puis double-clic pour le nommer), ou choisis « Sous-titres ».' };
+          res = Sp.chapters({ markers: mk });
+        } else {
+          const cues = Sp.parseSubtitles(x.srt);
+          if (!cues.length) return { kind: 'warn', title: 'Pas de sous-titres', detail: 'Importe ton .srt ci-dessus, ou choisis « Marqueurs ».' };
+          res = Sp.chapters({ cues: cutAware(Sp.offset(cues, await startTime(x.capFrom))) });
+        }
+        chap = res;
+        refresh();
+        return { kind: res.ok ? 'ok' : 'warn', title: app.plural(res.list.length, 'chapitre'), detail: res.ok ? 'Copie-les dans la description YouTube.' : res.why };
+      });
     }
 
     // ---------------------------------------------------------------- punch-in
@@ -123,14 +273,30 @@
         if (!cues.length) return { kind: 'error', title: 'Pas de sous-titres', detail: 'Importe ou colle un fichier .srt / .vtt (Premiere : Texte > Sous-titres > Exporter en fichier SRT).' };
         if (!app.services.mogrt()) return { kind: 'error', title: 'Choisis un modèle de texte', detail: 'Onglet Textes > Modèle de texte.' };
         const t0 = await startTime(x.capFrom);
-        let items = Sp.offset(Sp.splitCues(cues, x.words), t0);
-        if (remap && lastCut) { items = Sp.remap(items, lastCut.ranges); app.log('Sous-titres recalés sur la coupe des silences (' + lastCut.name + ')', 'info'); }
+        // Mots clés repérés (couleur, emoji) pendant le découpage.
+        const marked = x.keys !== 'none' || x.emoji;
+        let items = Sp.offset(marked ? Sp.highlight(cues, x.words, { emoji: x.emoji, list: String(x.keyList || '').split(/[,;\n]+/) }) : Sp.splitCues(cues, x.words), t0);
+        if (remap && lastCuts.length) { items = cutAware(items); app.log('Sous-titres recalés sur ' + app.plural(lastCuts.length, 'coupe') + ' (' + lastCuts[lastCuts.length - 1].name + ')', 'info'); }
         app.status.phase('Pose des sous-titres');
-        const r = await app.services.placeTexts(items, { anim: x.capAnim, label: 'Sous-titres', pos: [0.5, 0.78] });
+        const keyFx = x.keys === 'color' ? Core.toWire(Core.compileEffect({ params: [], build: () => [{ type: 'tint', props: { black: [0, 0, 0], white: rgb(x.keyColor), amount: 100 } }] }, {}, 'post', 1, app.fps(), app.registry())) : null;
+        const r = await app.services.placeTexts(items, { anim: x.capAnim, label: 'Sous-titres', pos: [0.5, 0.78], keyFx });
         if (r.error) return { kind: 'error', title: 'Sous-titres non posés', detail: r.error };
-        return { kind: r.warnings.length ? 'warn' : 'ok', title: app.plural(r.created.length, 'sous-titre posé', 'sous-titres posés') + (r.track !== null ? ' sur V' + (r.track + 1) : ''), detail: 'Animation « ' + r.anim.name + ' ». Police et couleur : modifie le modèle dans Objets graphiques essentiels.' };
+        // Petit « pop » sonore sur les mots clés ou sur chaque sous-titre.
+        let pops = 0;
+        if (x.popSound !== 'none' && r.created.length && !app.S.cancel) {
+          const times = items.filter(it => x.popSound === 'all' || it.key).map(it => it.start);
+          if (times.length) {
+            const snd = await Host.call('placeAsset', { kind: 'audio', path: app.services.ensureSound('pop'), name: 'Pop', times });
+            if (snd.ok) { pops = snd.created.length; app.pushHistory({ date: Date.now(), label: 'Pops des sous-titres', entries: snd.created }); } else app.log('Pops : ' + snd.error, 'warn');
+          }
+        }
+        const keyCount = items.filter(it => it.key).length;
+        return { kind: r.warnings.length ? 'warn' : 'ok', title: app.plural(r.created.length, 'sous-titre posé', 'sous-titres posés') + (r.track !== null ? ' sur V' + (r.track + 1) : ''),
+          detail: (marked ? app.plural(keyCount, 'mot clé mis en avant', 'mots clés mis en avant') + (pops ? ', ' + app.plural(pops, 'pop') : '') + '. ' : '') + 'Animation « ' + r.anim.name + ' ». Police : modifie le modèle dans Objets graphiques essentiels.' };
       }, true);
     }
+
+    const rgb = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || '') || [0, 'ffd21e']; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 
     function importSrt(refresh) {
       const files = Store.pickFiles('Choisir des sous-titres (.srt, .vtt)', ['srt', 'vtt']);
@@ -179,7 +345,7 @@
       view.innerHTML = '';
       view.appendChild(h('div', { class: 'xp-hero' },
         h('div', { class: 'xp-hero-title' }, 'Vidéos qui parlent'),
-        h('div', { class: 'xp-hero-text' }, 'YouTube, vlogs, interviews, podcasts, vidéos d\'entreprise : silences coupés, zooms sur les jump cuts, sous-titres et bandeaux en quelques clics.')));
+        h('div', { class: 'xp-hero-text' }, 'YouTube, vlogs, interviews, podcasts, vidéos d\'entreprise : silences et « euh » coupés, zoom visage, sous-titres avec mots clés, son de la voix, musique sous la voix, chapitres.')));
 
       // Silences
       const analyzeBtn = h('button', { class: 'action' }, 'Analyser');
@@ -203,6 +369,17 @@
         h('div', { class: 'note' }, 'À faire avant d\'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées.')
       ]));
       draw();
+
+      // « Euh » et répétitions
+      const fillBtn = h('button', { class: 'action selected' }, 'Couper les « euh »');
+      fillBtn.addEventListener('click', cutFillers);
+      view.appendChild(section('« Euh » et répétitions', [
+        h('div', { class: 'note' }, 'RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues entre deux mots. Avec un .srt (section Sous-titres), il trouve aussi les répétitions (« on va, on va ») et les faux départs.'),
+        row('Sensibilité', actionGroup([{ v: 'soft', label: 'Douce' }, { v: 'normal', label: 'Normale' }, { v: 'strong', label: 'Forte' }], x.fillerLevel, v => { x.fillerLevel = v; app.persist(); })),
+        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie' }, { v: 'cut', label: 'Dans la séquence' }, { v: 'markers', label: 'Marquer seulement' }], x.fillerMode, v => { x.fillerMode = v; app.persist(); })),
+        h('div', { class: 'note' }, 'Les répétitions dont le temps n\'est qu\'estimé (sous-titres de plusieurs mots) sont seulement listées dans le journal, ou marquées.'),
+        h('div', { class: 'row-buttons' }, fillBtn)
+      ]));
 
       // Zoom visage
       const punch = h('button', { class: 'action selected' }, 'Zoomer sur le visage');
@@ -237,8 +414,13 @@
         ta, count,
         row('À l\'écran', actionGroup([{ v: 0, label: 'Phrase entière' }, { v: 3, label: '3 mots' }, { v: 1, label: 'Mot par mot', title: 'Le style TikTok / Reels' }], x.words, v => { x.words = v; updateCount(); app.persist(); })),
         row('Animation', picker(anims, x.capAnim, v => { x.capAnim = v; app.persist(); })),
+        row('Mots clés', actionGroup([{ v: 'color', label: 'En couleur' }, { v: 'none', label: 'Non' }], x.keys, v => { x.keys = v; app.persist(); app.switchTab('speech'); }), { title: 'Chiffres, mots forts, mots en MAJUSCULES ou suivis de « ! », et ta liste' }),
+        x.keys === 'color' ? row('Couleur', swatches()) : null,
+        row('Tes mots', keyListField(), { title: 'Toujours mis en avant (séparés par des virgules)' }),
+        h('div', { class: 'field' }, app.UI.checkbox('Emoji après les mots clés (💰 🔥 💡…)', x.emoji, v => { x.emoji = v; app.persist(); })),
+        row('Son « pop »', actionGroup([{ v: 'none', label: 'Aucun' }, { v: 'keys', label: 'Mots clés' }, { v: 'all', label: 'Chaque texte' }], x.popSound, v => { x.popSound = v; app.persist(); })),
         row('Départ du .srt', picker([{ v: 'start', label: 'Début de la séquence' }, { v: 'playhead', label: 'Tête de lecture' }, { v: 'selection', label: 'Début des clips sélectionnés' }], x.capFrom, v => { x.capFrom = v; app.persist(); })),
-        lastCut ? h('div', { class: 'field' }, app.UI.checkbox('Recaler sur la coupe des silences (.srt fait avant la coupe)', x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
+        lastCuts.length ? h('div', { class: 'field' }, app.UI.checkbox('Recaler sur les coupes (silences, euh) : .srt fait avant', x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
         h('div', { class: 'note' }, 'Modèle de texte : ' + (model || 'aucun') + ' (onglet Textes).'),
         h('div', { class: 'row-buttons' }, capBtn)
       ]));
@@ -260,12 +442,81 @@
         row('Animation', picker(anims, x.lowerAnim, v => { x.lowerAnim = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, lowBtn)
       ]));
+
+      // Son de la voix
+      const voiceBtn = h('button', { class: 'action selected' }, 'Égaliser la voix');
+      voiceBtn.addEventListener('click', levelVoice);
+      view.appendChild(section('Son de la voix', [
+        h('div', { class: 'note' }, 'Chaque plan parlé est mesuré (sonie en LUFS) et amené au même niveau : plus de plan trop faible ou trop fort. Les crêtes restent sous -1 dB.'),
+        row('Niveau', actionGroup([{ v: -14, label: '-14 · YouTube, réseaux' }, { v: -16, label: '-16 · Podcast' }, { v: -23, label: '-23 · TV' }], x.voiceTarget, v => { x.voiceTarget = v; app.persist(); })),
+        h('div', { class: 'field' }, app.UI.checkbox('Réduire le bruit de fond (effet DeNoise de Premiere)', x.denoise, v => { x.denoise = v; app.persist(); })),
+        h('div', { class: 'row-buttons' }, voiceBtn)
+      ]));
+
+      // Musique sous la voix
+      const duckBtn = h('button', { class: 'action selected' }, 'Baisser la musique sous la voix');
+      duckBtn.addEventListener('click', duckMusic);
+      view.appendChild(section('Musique sous la voix', [
+        h('div', { class: 'note' }, 'Sélectionne les plans où l\'on parle : la musique de la séquence baisse doucement pendant la voix et remonte dans les pauses (images clés de volume, modifiables).'),
+        row('Baisse', hotText({ value: x.duckDepth, min: 3, max: 30, step: 1, unit: 'dB', onChange: v => { x.duckDepth = v; app.persist(); } })),
+        h('div', { class: 'row-buttons' }, duckBtn)
+      ]));
+
+      // Chapitres YouTube
+      const chapBox = h('div');
+      const drawChap = () => {
+        chapBox.innerHTML = '';
+        if (!chap) return;
+        const out = h('textarea', { class: 'code', rows: Math.min(12, chap.list.length + 1), readonly: true }, chap.text);
+        const copy = h('button', { class: 'action' }, 'Copier');
+        copy.addEventListener('click', () => (navigator.clipboard ? navigator.clipboard.writeText(chap.text) : Promise.reject(new Error('presse-papiers indisponible')))
+          .then(() => app.status.finish('ok', 'Chapitres copiés', 'Colle-les dans la description de ta vidéo YouTube.'), e => app.status.finish('warn', 'Copie impossible', app.errorMessage(e))));
+        const mark = h('button', { class: 'action' }, 'Poser les marqueurs');
+        mark.addEventListener('click', () => app.runTask('Marqueurs de chapitre', async () => {
+          for (const c of chap.list) {
+            const m = await Host.call('addMarkers', { times: [c.t], name: 'RR FX · Chapitre · ' + c.title, color: 4 });
+            if (!m.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: m.error };
+          }
+          return { kind: 'ok', title: app.plural(chap.list.length, 'marqueur de chapitre', 'marqueurs de chapitre'), detail: 'Renomme-les dans Premiere si besoin : RR FX les relit.' };
+        }));
+        chapBox.appendChild(out);
+        if (chap.why) chapBox.appendChild(h('div', { class: 'note' }, chap.why));
+        chapBox.appendChild(h('div', { class: 'row-buttons' }, copy, x.chapSrc === 'srt' ? mark : null));
+      };
+      const chapBtn = h('button', { class: 'action selected' }, 'Créer les chapitres');
+      chapBtn.addEventListener('click', () => makeChapters(drawChap));
+      view.appendChild(section('Chapitres YouTube', [
+        h('div', { class: 'note' }, 'La liste « 00:00 Titre » à coller dans la description : depuis tes marqueurs nommés, ou depuis les grands blancs du .srt (le début de la phrase suivante sert de titre).'),
+        row('Depuis', actionGroup([{ v: 'markers', label: 'Les marqueurs' }, { v: 'srt', label: 'Les sous-titres' }], x.chapSrc, v => { x.chapSrc = v; app.persist(); })),
+        h('div', { class: 'row-buttons' }, chapBtn),
+        chapBox
+      ]));
+      drawChap();
+    }
+
+    function swatches() {
+      const x = st(), box = h('div', { class: 'key-colors' });
+      KEY_COLORS.forEach(c => {
+        const b = h('button', { class: 'key-color' + (x.keyColor === c ? ' on' : ''), style: { background: c }, title: c, 'aria-label': 'Couleur ' + c });
+        b.addEventListener('click', () => { x.keyColor = c; app.persist(); box.querySelectorAll('.key-color').forEach(q => q.classList.toggle('on', q === b)); });
+        box.appendChild(b);
+      });
+      return box;
+    }
+    function keyListField() {
+      const x = st(), inp = h('input', { class: 'textfield', value: x.keyList, placeholder: 'formation, gratuit, Robin' });
+      inp.addEventListener('input', () => { x.keyList = inp.value; app.persist(); });
+      return inp;
     }
 
     app.actions.cutSilences = cutSilences;
     app.actions.captions = captions;
     app.actions.lowerThird = lowerThird;
     app.actions.punchIn = punchIn;
+    app.actions.cutFillers = cutFillers;
+    app.actions.levelVoice = levelVoice;
+    app.actions.duckMusic = duckMusic;
+    app.actions.chapters = () => makeChapters(() => { if (app.S.tab === 'speech') app.switchTab('speech'); });
     app.services.speechClips = async () => { const r = await Host.call('speechInfo', {}).catch(() => ({ ok: false })); return r.ok ? r.clips.length : 0; };
     app.services.hasCaptions = () => Sp.parseSubtitles(st().srt).length;
     app.services.hasLowerThird = () => !!String(st().name || '').trim();

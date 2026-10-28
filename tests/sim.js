@@ -31,7 +31,8 @@ function makeEnv(fps) {
     'Lens Distortion': ['AE.ADBE Lens Distortion', [0, 0, 0]],
     'Echo': ['AE.ADBE Echo', [-0.033, 1, 1, 1, 1]],
     'Lumetri Color': ['AE.ADBE Lumetri', [0, null, 0, '', 0, 0, 0, 100, 0]],
-    'Auto Reframe': ['AE.ADBE AutoReframe', [0, 1]]
+    'Auto Reframe': ['AE.ADBE AutoReframe', [0, 1]],
+    'Tint': ['AE.ADBE Tint', [[255, 0, 0, 0], [255, 255, 255, 255], 100]]
   };
 
   class Param {
@@ -44,6 +45,7 @@ function makeEnv(fps) {
     getValue() { return this.v; }
     getValueAtKey(t) { const k = this.keys && this.keys.find(x => x.t === t._t); if (!k) throw new Error('no key'); return k.v; }
     setValue(v) { if (this.keys) throw new Error('setValue on animated'); this.v = v; }
+    setColorValue(a, r, g, b) { this.v = [a, r, g, b]; }
     getValueAtTime(t) {
       if (!this.keys || !this.keys.length) return this.v;
       const x = t._t, ks = this.keys;
@@ -67,6 +69,8 @@ function makeEnv(fps) {
     'AE.ADBE Offset': ['Shift Center To', 'Blend With Original'],
     'AE.ADBE Wave Warp': ['Wave Type', 'Wave Height', 'Wave Width', 'Direction', 'Wave Speed', 'Pinning', 'Phase', 'Antialiasing'],
     'AE.ADBE Lens Distortion': ['Curvature', 'Vertical Decentering', 'Horizontal Decentering'],
+    'AE.ADBE Tint': ['Map Black To', 'Map White To', 'Amount to Tint'],
+    'Internal Volume Stereo': ['Bypass', 'Level'],
     'AE.ADBE Echo': ['Echo Time (seconds)', 'Number Of Echoes', 'Starting Intensity', 'Decay', 'Echo Operator'],
     // Lumetri : la LUT d'entrée personnalisée est le champ sans nom deux crans après « Basic Correction ».
     'AE.ADBE Lumetri': ['High Dynamic Range', 'Basic Correction', ' ', ' ', ' ', 'Input LUT', 'Input LUT', 'Intensity', 'Temperature']
@@ -221,6 +225,7 @@ function makeEnv(fps) {
     return {
       type: 'Clip', start: { ticks: String(it._s) }, name: it.name,
       addVideoEffect(eff) { const [mn, vals] = EFFECTS[eff.name]; it.components.push(comp(mn, eff.name, JSON.parse(JSON.stringify(vals)), it)); },
+      addAudioEffect(eff) { it.components.push(comp('AE.ADBE ' + eff.name, eff.name, [0], it)); },
       setSpeed(v) {
         if (speedPercent) v = v / 100;
         // factor semantics; non-ripple: keep start, clamp end to next clip
@@ -289,6 +294,7 @@ function makeEnv(fps) {
         };
       },
       getVideoEffectByName(n) { return EFFECTS[n] ? { name: n } : null; },
+      getAudioEffectByName(n) { return n === 'DeNoise' ? { name: n } : null; },
       getVideoEffectList() { return Object.keys(EFFECTS); }
     }
   };
@@ -308,7 +314,14 @@ function makeEnv(fps) {
 
   const ctx = vm.createContext({ app, qe, Time });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
-  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  // Élément audio avec son réglage de volume (Niveau 0,1778 = 0 dB).
+  const audioItem = (sq, pi, a, b, inP, name) => {
+    const it = new Item(sq, pi, a, b, inP, name);
+    it.mediaType = 'Audio';
+    it.components = coll([comp('Internal Volume Stereo', 'Volume', [false, Math.pow(10, -15 / 20)], it)]);
+    return it;
+  };
+  return { ctx, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };

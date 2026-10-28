@@ -484,3 +484,7 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .sp-bar { margin: 8px 0 4px; }
 .sp-track { position: relative; height: 18px; border-radius: 4px; background: var(--field, rgba(255,255,255,0.08)); border: 1px solid var(--border); overflow: hidden; margin-bottom: 4px; }
 .sp-gap { position: absolute; top: 0; bottom: 0; background: rgba(230, 70, 70, 0.75); }
+.key-colors { display: flex; gap: 6px; }
+.key-color { width: 22px; height: 22px; border-radius: 50%; border: 2px solid transparent; padding: 0; cursor: pointer; }
+.key-color.on { border-color: var(--text, #fff); box-shadow: 0 0 0 2px rgba(38, 128, 235, 0.6); }
+.trk-canvas { width: 100%; height: auto; cursor: crosshair; border-radius: 4px; display: block; margin-bottom: 6px; }

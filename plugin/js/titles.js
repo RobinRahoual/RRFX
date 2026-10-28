@@ -81,8 +81,9 @@
       return items;
     }
 
-    /* Pose des textes minutés : items [{ start, end, text }] (s). opts : anim (id), pos [x, y]
-       (0 à 1), label (historique). → { created, track, warnings, error } */
+    /* Pose des textes minutés : items [{ start, end, text, key }] (s). opts : anim (id), pos
+       [x, y] (0 à 1), label (historique), keyFx (effets en plus sur les textes key). → { created,
+       track, warnings, error } */
     async function placeItems(items, opts) {
       const t = st(), o = opts || {}, fps = app.fps(), created = [], warnings = [];
       const a = (o.anim && Lib.titleById[o.anim]) || anim();
@@ -94,7 +95,9 @@
         app.status.progress(i, items.length, it.text);
         const frames = Math.max(1, Math.round((it.end - it.start) * fps));
         const fx = Core.titleSpec(a, params, frames, t.inF, t.outF, fps, app.registry());
-        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null });
+        // Mot clé : effets en plus (couleur, taille) donnés par opts.keyFx.
+        const all = it.key && o.keyFx ? fx.concat(o.keyFx) : fx;
+        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null });
         if (!r.ok) {
           if (!created.length) return { created, track, warnings, error: r.error };
           warnings.push(it.text + ' : ' + r.error);

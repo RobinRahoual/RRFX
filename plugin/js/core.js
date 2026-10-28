@@ -151,6 +151,14 @@
         decay: ['(decay|att.nu|d.clin|abfall|ca.da|decad|diminu)']
       }
     },
+    // Teinte : le blanc devient la couleur choisie (texte blanc mis en couleur, contour noir gardé).
+    tint: {
+      matchName: 'AE.ADBE Tint',
+      names: ['Tint', 'Teinte', 'Färben', 'Tinte', 'Tinta'],
+      props: { black: 0, white: 1, amount: 2 },
+      colors: ['black', 'white'],
+      match: { amount: ['(amount|quantit|st.rke|cantidad|quantit)'] }
+    },
     motion: {
       matchName: 'AE.ADBE Motion', intrinsic: 'motion', names: [],
       props: { position: 0, scale: 1, scaleW: 2, uniform: 3, rotation: 4, anchor: 5 },
@@ -171,7 +179,8 @@
     offset: /^(offset|decalage|versatz|desplazamiento|sfalsamento|desfase)$/,
     wave: /(wave warp|vague|ondul|wellen|onda)/,
     lens: /(lens.*distor|distor.*(objectif|lente|lens)|objektivverzerr)/,
-    echo: /^(echo|eco)$/
+    echo: /^(echo|eco)$/,
+    tint: /^(tint|teinte|farben|tinte|tinta)$/
   };
 
   function normName(s) {
@@ -304,6 +313,7 @@
         const src = fx.props[key];
         const point = (reg.points || []).indexOf(key) >= 0;
         const base = { key, index, point };
+        if ((reg.colors || []).indexOf(key) >= 0) base.color = true;
         if (reg.match && reg.match[key]) base.match = reg.match[key];
         if (typeof src === 'function') {
           const values = [];

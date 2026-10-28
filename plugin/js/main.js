@@ -1140,15 +1140,19 @@
       // « Un plan sur deux » (punch-in sur les jump cuts) : un clip visé sur deux, dans l'ordre.
       if (isFull(st.placement) && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
       if (!r.targets.length) return { kind: 'warn', title: 'Un seul plan', detail: '« Un plan sur deux » : sélectionne au moins deux clips.' };
-      // Zoom visage : le visage est cherché dans chaque plan visé, puis suivi image par image.
+      // Zoom visage / objet : le visage (ou l'objet entouré) est cherché dans chaque plan visé,
+      // puis suivi image par image.
       let faceNote = '';
-      if ((chained ? chainEntries() : [e]).some(x => x.def && x.def.face) && app.services.trackFaces) {
-        status.phase('Recherche du visage');
-        const tr = await app.services.trackFaces(r.targets, S.params.follow || 'smooth');
+      const tracked = (chained ? chainEntries() : [e]).find(x => x.def && x.def.face);
+      if (tracked && app.services.trackFaces) {
+        const object = tracked.def.track === 'object';
+        status.phase(object ? 'Suivi de l\'objet' : 'Recherche du visage');
+        const follow = S.params.follow || (tracked.def.id === 'face-stab' ? 'tight' : 'smooth');
+        const tr = object ? await app.services.trackObject(r.targets, follow) : await app.services.trackFaces(r.targets, follow);
         r.targets.forEach((t, i) => { t.face = tr.faces[i]; });
-        const found = tr.faces.filter(Boolean).length;
-        faceNote = found === r.targets.length ? 'Visage suivi dans ' + plural(found, 'plan') + '.' : 'Visage suivi dans ' + found + ' plan(s) sur ' + r.targets.length + ' ; ailleurs, zoom vers le haut du cadre.';
-        if (found < r.targets.length) log('Visage introuvable dans ' + plural(r.targets.length - found, 'plan') + ' : zoom vers le haut du cadre (visage de face, assez grand et éclairé ?).', 'warn');
+        const found = tr.faces.filter(Boolean).length, what = object ? 'Objet suivi' : 'Visage suivi';
+        faceNote = found === r.targets.length ? what + ' dans ' + plural(found, 'plan') + '.' : what + ' dans ' + found + ' plan(s) sur ' + r.targets.length + ' ; ailleurs, zoom vers le haut du cadre.';
+        if (found < r.targets.length) log((object ? 'Objet' : 'Visage') + ' introuvable dans ' + plural(r.targets.length - found, 'plan') + ' : zoom vers le haut du cadre' + (object ? '.' : ' (visage de face, assez grand et éclairé ?).'), 'warn');
       }
       const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
       if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };

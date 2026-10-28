@@ -131,14 +131,156 @@
   }
 
   /* Décale des sous-titres (temps de la vidéo → temps de la séquence). */
-  const offset = (cues, d) => cues.map(c => ({ start: c.start + d, end: c.end + d, text: c.text })).filter(c => c.end > 0).map(c => Object.assign(c, { start: Math.max(0, c.start) }));
+  const offset = (cues, d) => cues.map(c => Object.assign({}, c, { start: c.start + d, end: c.end + d })).filter(c => c.end > 0).map(c => Object.assign(c, { start: Math.max(0, c.start) }));
 
   /* Sous-titres recalés après une coupe des silences (ranges : ce qui a été retiré, en temps
      de séquence d'avant la coupe). Ce qui tombait dans un silence disparaît. */
   function remap(cues, ranges) {
     const rs = ranges.slice().sort((p, q) => p.a - q.a);
     const map = t => t - rs.reduce((s, r) => s + Math.min(Math.max(0, t - r.a), r.b - r.a), 0);
-    return cues.map(c => ({ start: map(c.start), end: map(c.end), text: c.text })).filter(c => c.end - c.start >= 0.05);
+    return cues.map(c => Object.assign({}, c, { start: map(c.start), end: map(c.end) })).filter(c => c.end - c.start >= 0.05);
+  }
+
+  // ---------------------------------------------------------------- mots clés
+
+  const STOP = new Set(('le la les un une des de du d l au aux et ou mais donc or ni car a à en dans sur sous par pour avec sans ' +
+    'je j tu il elle on nous vous ils elles me m te t se s lui leur y ce c ça cela ceci cet cette ces mon ma mes ton ta tes son sa ses notre nos votre vos ' +
+    'qui que qu quoi dont où est es suis sont était été être avoir ai as avons avez ont va vais vas allez vont fait faire ' +
+    'ne n pas plus moins très trop bien tout tous toute toutes si comme alors aussi encore déjà là ici oui non euh ben bah voilà ' +
+    'the a an and or but of to in on at for with is are was be it this that you i we they he she my your so just').split(' '));
+  // Racines (sans accents) → emoji.
+  const EMOJI = [
+    [/^(argent|euro|prix|cash|salaire|riche|payer|paye|gagn)/, '💰'], [/^(idee|astuce|conseil|truc)/, '💡'],
+    [/^(attention|danger|piege|erreur)/, '⚠️'], [/^(incroyable|enorme|feu|fou|ouf|dingue|top|meilleur)/, '🔥'],
+    [/^(amour|aime|coeur|adore)/, '❤️'], [/^(rire|drole|marrant|mdr)/, '😂'], [/^(temps|minute|heure|seconde|vite|rapide)/, '⏱️'],
+    [/^(video|camera|film)/, '🎥'], [/^(musique|son|chanson)/, '🎵'], [/^(objectif|but|cible)/, '🎯'],
+    [/^(croissance|augment|hausse|monte|progres)/, '📈'], [/^(baisse|chute|perte)/, '📉'], [/^(question|pourquoi)/, '❓'],
+    [/^(vrai|valide|parfait|reussi)/, '✅'], [/^(faux|jamais|interdit)/, '❌'], [/^(travail|business|entreprise|boulot|client)/, '💼'],
+    [/^(telephone|iphone|appli|smartphone)/, '📱'], [/^(voyage|avion|vacance)/, '✈️'], [/^(sport|muscle|force|entrain)/, '💪'],
+    [/^(gagne|victoire|champion|record)/, '🏆'], [/^(secret|cache)/, '🤫'], [/^(nouveau|nouvelle|nouveaute)/, '🆕'],
+    [/^(gratuit|cadeau|offert)/, '🎁'], [/^(maison|appart)/, '🏠'], [/^(manger|repas|recette|cuisine)/, '🍽️']
+  ];
+  const bare = w => String(w || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/^[^a-z0-9]+|[^a-z0-9%€$]+$/g, '');
+  const emojiFor = w => { const b = bare(w); const m = EMOJI.find(e => e[0].test(b)); return m ? m[1] : ''; };
+
+  /* Mots clés d'un texte : → indices des mots à mettre en avant. Chiffres, MAJUSCULES, mots
+     suivis de « ! », mots qui ont un emoji, ta liste, mots longs ; au plus un mot sur `every`. */
+  function keywords(text, opts) {
+    const o = Object.assign({ list: [], every: 4 }, opts || {});
+    const mine = new Set(o.list.map(bare).filter(Boolean));
+    const w = String(text || '').split(/\s+/).filter(Boolean);
+    const scored = w.map((x, i) => {
+      const b = bare(x);
+      if (!b || (STOP.has(b) && !mine.has(b))) return { i, s: 0 };
+      let s = 0;
+      if (mine.has(b)) s += 4;
+      if (/\d/.test(b)) s += 3;
+      if (/[A-ZÀ-Ý]{2,}/.test(x) && x === x.toUpperCase()) s += 2;
+      if (/!/.test(x)) s += 2;
+      if (emojiFor(x)) s += 2;
+      if (b.length >= 7) s += 1.5;
+      else if (b.length >= 5) s += 0.5;
+      return { i, s };
+    });
+    const max = Math.max(1, Math.round(w.length / o.every));
+    return scored.filter(x => x.s >= 2).sort((a, b) => b.s - a.s || a.i - b.i).slice(0, max).map(x => x.i).sort((a, b) => a - b);
+  }
+
+  /* Sous-titres découpés comme splitCues, avec les mots clés repérés : chaque texte reçoit
+     key (il contient un mot clé) et emoji (si opts.emoji, celui du premier mot clé). */
+  function highlight(cues, words, opts) {
+    const o = Object.assign({ emoji: false }, opts || {}), out = [];
+    cues.forEach(c => {
+      const w = c.text.split(/\s+/).filter(Boolean), kw = new Set(keywords(c.text, o));
+      const n = words || w.length, groups = [];
+      for (let i = 0; i < w.length; i += n) groups.push({ text: w.slice(i, i + n).join(' '), idx: Array.from({ length: Math.min(n, w.length - i) }, (_, k) => i + k) });
+      const len = groups.reduce((s, g) => s + g.text.length + 1, 0);
+      let t = c.start;
+      groups.forEach((g, i) => {
+        const end = i === groups.length - 1 ? c.end : t + (c.end - c.start) * (g.text.length + 1) / len;
+        const first = g.idx.find(k => kw.has(k));
+        const em = first !== undefined && o.emoji ? emojiFor(w[first]) : '';
+        out.push({ start: t, end, text: g.text + (em ? ' ' + em : ''), key: first !== undefined, emoji: em });
+        t = end;
+      });
+    });
+    return out;
+  }
+
+  // ---------------------------------------------------------------- répétitions
+
+  /* Répétitions et faux départs dans des sous-titres : « je je », « on va, on va », « c'est-
+     c'est ». Le temps de chaque mot est estimé dans son sous-titre (exact si le sous-titre a un
+     ou deux mots). → [{ a, b, text, exact }] : ce qui est en trop (la première occurrence). */
+  function repeats(cues) {
+    const out = [];
+    cues.forEach(c => {
+      const w = c.text.split(/\s+/).filter(Boolean);
+      const len = w.reduce((s, x) => s + x.length + 1, 0);
+      const at = [];
+      let t = c.start;
+      w.forEach(x => { const d = (c.end - c.start) * (x.length + 1) / len; at.push([t, t + d]); t += d; });
+      const exact = w.length <= 2;
+      for (let i = 0; i < w.length; i++) {
+        let found = 0;
+        for (let n = 3; n >= 1 && !found; n--) {
+          if (i + 2 * n > w.length) continue;
+          const a = w.slice(i, i + n).map(bare).join(' '), b = w.slice(i + n, i + 2 * n).map(bare).join(' ');
+          if (a && a === b && !(n === 1 && /^(tres|non|oui|si|plus|vraiment|ha|haha)$/.test(a))) found = n;
+        }
+        // Mot coupé : « c'est- c'est », « on… on ».
+        if (!found && /[-–…]$/.test(w[i]) && w[i + 1] && bare(w[i + 1]).startsWith(bare(w[i]).slice(0, 2))) found = 1;
+        if (found) { out.push({ a: at[i][0], b: at[i + found - 1][1], text: w.slice(i, i + 2 * found).join(' '), exact }); i += found - 1; }
+      }
+    });
+    // Mot isolé répété d'un sous-titre au suivant (sous-titres mot par mot).
+    for (let k = 1; k < cues.length; k++) {
+      const p = cues[k - 1], c = cues[k];
+      if (p.text.split(/\s+/).length === 1 && bare(p.text) && bare(p.text) === bare(c.text.split(/\s+/)[0]) && c.start - p.end < 0.6 && !out.some(r => Math.abs(r.a - p.start) < 1e-6)) out.push({ a: p.start, b: c.start, text: p.text + ' ' + c.text.split(/\s+/)[0], exact: true });
+    }
+    return out.sort((x, y) => x.a - y.a);
+  }
+
+  // ---------------------------------------------------------------- chapitres YouTube
+
+  const stampOf = t => {
+    t = Math.max(0, Math.round(t));
+    const h = Math.floor(t / 3600), m = Math.floor(t / 60) % 60, s = t % 60, p = v => String(v).padStart(2, '0');
+    return h ? h + ':' + p(m) + ':' + p(s) : p(m) + ':' + p(s);
+  };
+  const titleOf = text => {
+    const w = String(text || '').replace(/[«»"“”]/g, '').split(/\s+/).filter(Boolean).slice(0, 6).join(' ').replace(/[,;:.!?…]+$/, '');
+    return w ? w[0].toUpperCase() + w.slice(1) : '';
+  };
+
+  /* Chapitres YouTube. src.markers : [{ t, name }] (prioritaires) ; sinon src.cues : un chapitre
+     après chaque grand blanc entre deux sous-titres. Règles YouTube : 00:00 en premier, au moins
+     3 chapitres de 10 s ou plus. → { list: [{ t, title }], text, ok, why } */
+  function chapters(src, opts) {
+    const o = Object.assign({ minLen: 10, max: 15, gap: 1.2, duration: 0 }, opts || {});
+    let list = [];
+    if (src.markers && src.markers.length) {
+      list = src.markers.slice().sort((a, b) => a.t - b.t).map(m => ({ t: m.t, title: String(m.name || '').replace(/^RR FX · /, '').trim() }));
+    } else if (src.cues && src.cues.length) {
+      const cues = src.cues.slice().sort((a, b) => a.start - b.start);
+      const gaps = [];
+      for (let k = 1; k < cues.length; k++) if (cues[k].start - cues[k - 1].end >= o.gap) gaps.push({ t: cues[k].start, g: cues[k].start - cues[k - 1].end, title: titleOf(cues[k].text) });
+      // Les plus grands blancs d'abord, en gardant 10 s entre deux chapitres.
+      const kept = [{ t: 0, title: titleOf(cues[0].text) }];
+      gaps.sort((a, b) => b.g - a.g).forEach(g => { if (kept.length < o.max && kept.every(k => Math.abs(k.t - g.t) >= o.minLen)) kept.push(g); });
+      list = kept.map(k => ({ t: k.t, title: k.title }));
+    }
+    list.sort((a, b) => a.t - b.t);
+    // 00:00 obligatoire ; chapitres trop courts fusionnés avec le précédent.
+    if (list.length && list[0].t > 0.5) list.unshift({ t: 0, title: 'Introduction' });
+    if (list.length) list[0].t = 0;
+    const merged = [];
+    list.forEach(c => { if (!merged.length || c.t - merged[merged.length - 1].t >= o.minLen) merged.push(c); });
+    if (o.duration && merged.length > 1 && o.duration - merged[merged.length - 1].t < o.minLen) merged.pop();
+    merged.forEach((c, i) => { if (!c.title) c.title = 'Partie ' + (i + 1); });
+    const text = merged.map(c => stampOf(c.t) + ' ' + c.title).join('\n');
+    const ok = merged.length >= 3;
+    return { list: merged, text, ok, why: ok ? '' : 'YouTube demande au moins 3 chapitres de 10 s ou plus.' };
   }
 
   /* Son de démonstration : phrases (bruit modulé) séparées de pauses, bruit de fond léger. */
@@ -154,5 +296,5 @@
     return x;
   }
 
-  return { LEVELS, envelope, detect, combine, total, parseSubtitles, splitCues, offset, remap, demoSpeech };
+  return { LEVELS, envelope, detect, combine, total, parseSubtitles, splitCues, offset, remap, keywords, emojiFor, highlight, repeats, chapters, stampOf, demoSpeech };
 });

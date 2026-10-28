@@ -181,13 +181,21 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.click('button:has-text("Analyser")');
   await page.waitForSelector('#status.ok:has-text("silences trouvés")', { timeout: 10000 });
   await shot('parole', null, 500);
-  await page.fill('.section:has-text("Sous-titres") textarea', '1\n00:00:01,000 --> 00:00:03,200\nBienvenue dans notre nouvel atelier\n\n2\n00:00:03,400 --> 00:00:06,000\nOn vous montre tout en deux minutes');
-  await page.click('.section:has-text("Sous-titres") .action:has-text("Mot par mot")');
+  await page.fill('.section:has(textarea.lyrics) textarea', '1\n00:00:01,000 --> 00:00:03,200\nBienvenue dans notre nouvel atelier\n\n2\n00:00:03,400 --> 00:00:06,000\nOn vous montre tout en deux minutes');
+  await page.click('.section:has(textarea.lyrics) .action:has-text("Mot par mot")');
   await page.fill('.section:has-text("Bandeau") input >> nth=0', 'Camille Martin');
   await page.fill('.section:has-text("Bandeau") input >> nth=1', 'Directrice marketing');
   await close();
-  await mark('.section|Sous-titres', 'sub');
+  await mark('.section|Départ du .srt', 'sub');
   await shot('parole-sous-titres', '[data-shot=sub]', 500);
+  await page.click('button:has-text("Égaliser la voix")');
+  await page.waitForSelector('#status.ok:has-text("-14 LUFS")', { timeout: 10000 });
+  await page.click('.section:has-text("Chapitres YouTube") .action:has-text("Les sous-titres")');
+  await page.click('button:has-text("Créer les chapitres")');
+  await page.waitForSelector('.section:has-text("Chapitres YouTube") textarea', { timeout: 10000 });
+  await close();
+  await mark('.section|Son de la voix', 'son');
+  await shot('parole-son', '[data-shot=son]', 500);
 
   // Recherche rapide.
   await page.keyboard.press('Control+k');

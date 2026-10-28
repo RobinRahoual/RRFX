@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.1.0';
+    var VERSION = '2.2.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -359,6 +359,8 @@ var RRFX = (function () {
             p = paramFor(comp, sp, fx, warnings);
             if (!p) { warnings.push(fx.names[0] + ' : param\u00e8tre #' + sp.index + ' absent'); continue; }
             try {
+                // Couleur [r, g, b] (0 a 255) : reglage de couleur, sans images cles.
+                if (sp.color) { p.setColorValue(255, sp['static'][0], sp['static'][1], sp['static'][2], true); n++; continue; }
                 pixels = sp.point && !sp.raw ? isPixelPoint(p) : false;
                 if (sp.keys || sp.values) {
                     // keys : [[image, valeur], ...] ; values : une valeur par image.
@@ -853,6 +855,13 @@ var RRFX = (function () {
             }
             if (e.kind === 'mc') {
                 removed += multicamEnable(s, e.tracks, e.a, e.b) ? 1 : 0;
+                continue;
+            }
+            if (e.kind === 'level') {
+                // Volume remis comme avant (musique baissee sous la voix, niveau de la voix).
+                it = findAudioAt(s, e.track, e.start);
+                r = it ? levelParam(it) : null;
+                if (r) { if (r.isTimeVarying()) r.setTimeVarying(false); r.setValue(e.value, true); removed++; } else skipped++;
                 continue;
             }
             it = e.kind === 'adj' ? findNamed(s, e.track, e.start, e.name) : findItemAt(s, e.track, e.start);
@@ -1823,9 +1832,36 @@ var RRFX = (function () {
         return true;
     }
 
+    function faceFor(list, track, start, f) {
+        var i;
+        for (i = 0; list && i < list.length; i++) if (list[i].track === track && Math.abs(list[i].start - start) < f / 2) return list[i];
+        return null;
+    }
+
+    // Position de Trajectoire qui garde le visage au centre du nouveau cadre. sw, sh : taille de
+    // l'image agrandie (1 = le cadre). face.keys : [[s depuis le debut du plan, x, y]] (0 a 1).
+    function followFace(s, it, face, sw, sh) {
+        var p, pixels, i, k, t, x, y, last, mx = Math.max(0, (sw - 1) / 2), my = Math.max(0, (sh - 1) / 2);
+        if (!face || !face.keys || !face.keys.length) return false;
+        p = componentByMatch(it, 'AE.ADBE Motion').properties[0];
+        pixels = isPixelPoint(p);
+        if (p.isTimeVarying()) p.setTimeVarying(false);
+        p.setTimeVarying(true);
+        last = face.keys.length - 1;
+        for (i = 0; i <= last; i++) {
+            k = face.keys[i];
+            x = Math.min(0.5 + mx, Math.max(0.5 - mx, 0.5 - (k[1] - 0.5) * sw));
+            y = Math.min(0.5 + my, Math.max(0.5 - my, 0.5 - (k[2] - 0.5) * sh));
+            t = clipTime(it, tk(it.start) + Math.round(k[0] * TICKS));
+            p.addKey(t);
+            p.setValueAtKey(t, convert([x, y], { point: true }, pixels, s), i === last);
+        }
+        return true;
+    }
+
     function formatCopy(o) {
         var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, before, k, i, j, list, it, comp, sc, over, kind;
-        var reframed = 0, filled = 0, blurred = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
+        var reframed = 0, filled = 0, blurred = 0, faced = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
         before = P.sequences.numSequences;
         s.clone();
@@ -1867,6 +1903,15 @@ var RRFX = (function () {
                     } catch (e6) { warnings.push(it.name + ' : ' + e6.toString()); }
                     continue;
                 }
+                // Suivi du visage : plan agrandi pour remplir, puis cadre qui suit le visage.
+                if (kind === 'rush' && o.mode === 'face') {
+                    try {
+                        scaleBy(findItemAt(s, i, tk(it.start)), k);
+                        filled++;
+                        if (followFace(s, findItemAt(s, i, tk(it.start)), faceFor(o.faces, i, tk(it.start), tpf(s)), k * oldW / W, k * oldH / H)) faced++;
+                    } catch (e7) { warnings.push(it.name + ' : ' + e7.toString()); }
+                    continue;
+                }
                 if (kind === 'rush' && o.mode !== 'fill' && o.reframe && o.reframe.length) {
                     comp = addEffect(s, i, tk(it.start), { names: o.reframe }, reframed || filled ? [] : warnings);
                     if (comp) { reframed++; continue; }
@@ -1879,7 +1924,7 @@ var RRFX = (function () {
                 } catch (e3) {}
             }
         }
-        return ok({ name: s.name, reframed: reframed, filled: filled, blurred: blurred, width: W, height: H, warnings: warnings });
+        return ok({ name: s.name, reframed: reframed, filled: filled, blurred: blurred, faced: faced, width: W, height: H, warnings: warnings });
     }
 
     // ------------------------------------------------------------ public: parole (silences)
@@ -1911,17 +1956,23 @@ var RRFX = (function () {
     // Ce qui parle : les plans selectionnes (video et son lie, ou son seul), leurs pistes et limites.
     function speechTargets(s) {
         var f = tpf(s), sel = s.getSelection(), vids = selectedVideo(s), audio = audioClipsOf(s), out = { clips: [], v: [], a: [], lo: Infinity, hi: -Infinity };
-        var linked = {}, seenV = {}, seenA = {}, i, k, c, a, b;
+        var linked = {}, seenV = {}, seenA = {}, i, k, c, a, b, info;
         function addA(ti) { if (!seenA[ti]) { seenA[ti] = true; out.a.push(ti); } }
         for (i = 0; i < vids.length; i++) {
             c = vids[i].item;
             if (isLayer(c) || isGraphic(c)) continue;
             a = tk(c.start); b = tk(c.end);
             if (!seenV[vids[i].track]) { seenV[vids[i].track] = true; out.v.push(vids[i].track); }
+            info = clipInfo(c, 'video', vids[i].track);
+            info.audio = [];
             for (k = 0; k < audio.length; k++) {
-                if (Math.abs(tk(audio[k].item.start) - a) < f / 2 && Math.abs(tk(audio[k].item.end) - b) < f / 2) { linked[audio[k].item.nodeId] = true; addA(audio[k].track); }
+                if (Math.abs(tk(audio[k].item.start) - a) < f / 2 && Math.abs(tk(audio[k].item.end) - b) < f / 2) {
+                    linked[audio[k].item.nodeId] = true;
+                    addA(audio[k].track);
+                    info.audio.push({ track: audio[k].track, start: secs(tk(audio[k].item.start)) });
+                }
             }
-            out.clips.push(clipInfo(c, 'video', vids[i].track));
+            out.clips.push(info);
             out.lo = Math.min(out.lo, a); out.hi = Math.max(out.hi, b);
         }
         // Son seul (micro, podcast) : selectionne sans image liee.
@@ -1931,7 +1982,9 @@ var RRFX = (function () {
                 if (audio[k].item.nodeId !== sel[i].nodeId) continue;
                 c = audio[k].item;
                 addA(audio[k].track);
-                out.clips.push(clipInfo(c, 'audio', audio[k].track));
+                info = clipInfo(c, 'audio', audio[k].track);
+                info.audio = [{ track: audio[k].track, start: secs(tk(c.start)) }];
+                out.clips.push(info);
                 out.lo = Math.min(out.lo, tk(c.start)); out.hi = Math.max(out.hi, tk(c.end));
             }
         }
@@ -1968,7 +2021,7 @@ var RRFX = (function () {
             s.clone();
             if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
             ns = P.sequences[P.sequences.numSequences - 1];
-            try { ns.name = s.name + ' (sans silences)'; } catch (e0) {}
+            try { ns.name = s.name + (o.suffix || ' (sans silences)'); } catch (e0) {}
             try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e1) {}
             if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
             s = activeSeq();
@@ -2024,6 +2077,98 @@ var RRFX = (function () {
         }
         if (others.length) warnings.push('Pistes non d\u00e9cal\u00e9es : ' + others.join(', ') + '. Coupe les silences avant d\'ajouter musique, plans de coupe et titres.');
         return ok({ removed: removed, ranges: ranges.length, seconds: total / TICKS, moved: moved, name: s.name, copy: !!o.copy, warnings: warnings });
+    }
+
+    // ------------------------------------------------------------ public: son (voix, musique)
+
+    // Reglage " Niveau " du volume d'un element audio (0 a 1, 1 = +15 dB).
+    var LEVEL = /^(level|niveau|pegel|nivel|livello)$/i;
+    function levelParam(it) {
+        var i, j, c, p;
+        for (i = 0; i < it.components.numItems; i++) {
+            c = it.components[i];
+            if (!/^(volume|lautst.rke|volumen)$/i.test(c.displayName)) continue;
+            for (j = 0; j < c.properties.numItems; j++) {
+                p = c.properties[j];
+                if (LEVEL.test(p.displayName)) return p;
+            }
+            if (c.properties.numItems > 1) return c.properties[1];
+        }
+        return null;
+    }
+    function dbOf(v) { return 20 * Math.log(Math.max(1e-9, v)) / Math.LN10 + 15; }
+    function levelOf(db) { return Math.pow(10, (db - 15) / 20); }
+
+    function audioAt(s, ti, sec) {
+        var f = tpf(s), tr = s.audioTracks[ti], a = Math.round(sec * TICKS), j;
+        if (!tr) return null;
+        for (j = 0; j < tr.clips.numItems; j++) if (Math.abs(tk(tr.clips[j].start) - a) < f / 2) return tr.clips[j];
+        return null;
+    }
+
+    // Musique qui baisse sous la voix : o.track, o.start (s, debut du clip de musique),
+    // o.keys [[s de sequence, gain dB]]. La courbe de volume existante est remplacee.
+    function duckMusic(o) {
+        var s = activeSeq(), it = audioAt(s, o.track, o.start), p, base, baseDb, i, t, warnings = [], last;
+        if (!it) return fail('Musique introuvable sur A' + (o.track + 1));
+        p = levelParam(it);
+        if (!p) return fail('R\u00e9glage de volume introuvable sur la musique');
+        base = p.getValue();
+        if (p.isTimeVarying()) {
+            warnings.push('La courbe de volume de la musique a \u00e9t\u00e9 remplac\u00e9e');
+            try { base = p.getValueAtTime(it.inPoint); } catch (e0) {}
+            p.setTimeVarying(false);
+        }
+        if (!(base > 0)) base = levelOf(0);
+        baseDb = dbOf(base);
+        p.setTimeVarying(true);
+        last = o.keys.length - 1;
+        for (i = 0; i <= last; i++) {
+            t = clipTime(it, Math.round(o.keys[i][0] * TICKS));
+            p.addKey(t);
+            p.setValueAtKey(t, levelOf(baseDb + o.keys[i][1]), i === last);
+        }
+        return ok({ keys: o.keys.length, created: [{ kind: 'level', track: o.track, start: tk(it.start), value: base, name: it.name }], warnings: warnings });
+    }
+
+    // Element audio QE pour ajouter un effet audio.
+    function qeAudioFor(s, ti, a) {
+        var qt = qeSeq().getAudioTrackAt(ti), f = tpf(s), i, q;
+        for (i = 0; i < qt.numItems; i++) {
+            q = qt.getItemAt(i);
+            if (!q || q.type === 'Empty') continue;
+            if (Math.abs(qeStart(q) - a) < f / 2) return q;
+        }
+        return null;
+    }
+
+    // Voix : o.clips [{ track, start (s), gain (dB) }] ; o.denoise : noms possibles de
+    // l'effet de reduction du bruit (ajoute a chaque clip), ou rien.
+    function voiceLevel(o) {
+        var s = activeSeq(), created = [], warnings = [], done = 0, cleaned = 0, i, j, c, it, p, base, eff = null, q;
+        if (o.denoise && o.denoise.length) {
+            for (j = 0; j < o.denoise.length && !eff; j++) { try { eff = qe.project.getAudioEffectByName(o.denoise[j]); } catch (e0) { eff = null; } }
+            if (!eff) warnings.push('Effet de r\u00e9duction du bruit introuvable : le niveau est r\u00e9gl\u00e9 sans d\u00e9bruitage');
+        }
+        for (i = 0; i < o.clips.length; i++) {
+            c = o.clips[i];
+            it = audioAt(s, c.track, c.start);
+            if (!it) { warnings.push('Son introuvable sur A' + (c.track + 1)); continue; }
+            p = levelParam(it);
+            if (!p) { warnings.push(it.name + ' : r\u00e9glage de volume introuvable'); continue; }
+            if (p.isTimeVarying()) { warnings.push(it.name + ' : volume anim\u00e9, laiss\u00e9 tel quel'); continue; }
+            base = p.getValue();
+            if (!(base > 0)) base = levelOf(0);
+            p.setValue(levelOf(dbOf(base) + c.gain), true);
+            created.push({ kind: 'level', track: c.track, start: tk(it.start), value: base, name: it.name });
+            done++;
+            if (eff) {
+                q = qeAudioFor(s, c.track, tk(it.start));
+                try { if (q) { q.addAudioEffect(eff); cleaned++; } } catch (e1) {}
+            }
+        }
+        if (eff && cleaned < done) warnings.push('D\u00e9bruitage ajout\u00e9 sur ' + cleaned + ' clip(s) sur ' + done);
+        return ok({ done: done, cleaned: cleaned, created: created, warnings: warnings });
     }
 
     // ------------------------------------------------------------ public: test de compatibilite
@@ -2375,6 +2520,8 @@ var RRFX = (function () {
         setPlayhead: guard(setPlayhead),
         selfTest: guard(selfTest),
         speechInfo: guard(speechInfo),
-        cutSilences: guard(cutSilences)
+        cutSilences: guard(cutSilences),
+        duckMusic: guard(duckMusic),
+        voiceLevel: guard(voiceLevel)
     };
 })();

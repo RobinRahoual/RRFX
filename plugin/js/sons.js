@@ -1,4 +1,4 @@
-/* RR FX : sons fournis (whooshs, impacts, riser, glitch), fabriqués par le plugin lui-même :
+/* RR FX : sons fournis (whooshs, impacts, riser, glitch, pop), fabriqués par le plugin lui-même :
    rien à télécharger, aucun droit à gérer. Ils se posent sur les transitions, calés sur la
    coupe (le moment fort du son tombe pile dessus). Sans DOM, testé sous Node. */
 (function (root, factory) {
@@ -109,6 +109,20 @@
         for (let i = 0; i < n; i++) {
           if (--hold <= 0) { hold = Math.floor(400 + (r() + 1) * 1200); period = Math.floor(8 + (r() + 1) * 60); v = r() > 0.3 ? 0.7 : 0; }
           x[i] = v * ((i % period) < period / 2 ? 1 : -1) * Math.exp(-i / n * 2.5);
+        }
+        return x;
+      }
+    },
+    {
+      // « Pop » de sous-titre : petite bulle qui éclate (note qui descend vite).
+      id: 'pop', name: 'Pop', kind: 'pop', dur: 0.2, peak: 0.01,
+      make(n) {
+        const x = new Float32Array(n);
+        let ph = 0;
+        for (let i = 0; i < n; i++) {
+          const t = i / SR;
+          ph += TAU * (320 + 900 * Math.exp(-t / 0.018)) / SR;
+          x[i] = Math.sin(ph) * Math.exp(-t / 0.045) * Math.min(1, i / 48);
         }
         return x;
       }

@@ -54,7 +54,9 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/speech.js           silences dans le son, lecture .srt / .vtt, sous-titres courts (testé)
   js/faces.js            détection du visage (Viola-Jones), suivi des yeux, cadrage du zoom visage (testé)
   js/vendor/haar-face.js cascade « visage de face » d'OpenCV (licences BSD / Intel en tête du fichier)
-  js/visage.js           images des plans et suivi du visage pour les zooms visage
+  js/visage.js           images des plans, suivi du visage ou de l'objet entouré, 9:16 qui suit le visage
+  js/voix.js             sonie LUFS (BS.1770), « euh » dans le son, courbe de ducking (testé)
+  js/tracker.js          suivi d'un objet par corrélation (testé)
   js/parole.js           onglet Parole : couper les silences, zoom visage, sous-titres, bandeau
   js/sons.js             sons fournis (whooshs, impacts, riser, glitch) fabriqués par le plugin, WAV (testé)
   js/diagnostic.js       test de compatibilité Premiere (Réglages)

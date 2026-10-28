@@ -75,10 +75,11 @@
       const cv = h('canvas', { class: 'fmt-preview' });
       view.appendChild(section('Format', [cards, h('div', { class: 'fmt-stage' }, cv), h('div', { class: 'note' }, f.w + ' × ' + f.h + (f.safe.some(Boolean) ? ' · le cadre pointillé évite les boutons et légendes de l\'app.' : ''))]));
       view.appendChild(section('Cadrage', [
-        row('Rushs', actionGroup([{ v: 'reframe', label: 'Recadrage auto', title: 'Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan' }, { v: 'fill', label: 'Remplir, centré' }, { v: 'blur', label: 'Fond flou', title: 'Le plan entier, net, sur le même plan agrandi et flouté' }], s.mode, v => { s.mode = v; app.persist(); render(); })),
+        row('Rushs', actionGroup([{ v: 'reframe', label: 'Recadrage auto', title: 'Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan' }, { v: 'face', label: 'Suivre le visage', title: 'RR FX trouve le visage dans chaque plan et le garde au centre du cadre' }, { v: 'fill', label: 'Remplir, centré' }, { v: 'blur', label: 'Fond flou', title: 'Le plan entier, net, sur le même plan agrandi et flouté' }], s.mode, v => { s.mode = v; app.persist(); render(); })),
         row('Aperçu', actionGroup([{ v: true, label: 'Zones sûres' }, { v: false, label: 'Image seule' }], s.safe, v => { s.safe = v; app.persist(); drawPreview(cv); })),
         h('div', { class: 'note' }, s.mode === 'reframe'
           ? 'Premiere analyse chaque plan en arrière-plan (barre de progression dans le panneau Effets) : le sujet reste dans le cadre. Réglable ensuite dans Options d\'effet > Recadrage automatique.'
+          : s.mode === 'face' ? 'RR FX cherche le visage dans chaque rush (quelques images par plan) et anime la position pour qu\'il reste au centre du nouveau cadre, sans jamais montrer de bord. Idéal face cam, interview, podcast.'
           : s.mode === 'blur' ? 'Rien n\'est coupé : chaque plan est posé entier au centre, sur une copie de lui-même agrandie et floutée (effet Flou gaussien). Le classique des interviews, conférences et vidéos d\'entreprise en vertical.'
           : 'Chaque rush est agrandi pour remplir le cadre et centré. Recadre ensuite avec Trajectoire > Position si besoin.'),
         h('div', { class: 'note' }, 'RR FX crée une copie de ta séquence et l\'ouvre : l\'originale ne bouge pas. Les titres et calques gardent leur place : vérifie-les dans le nouveau cadre.')
@@ -100,16 +101,26 @@
           const r = await Host.call('listEffects', { filter: 'gaussian|gaussien|gau.' });
           if (r.ok && r.names.length) blur = r.names.concat(blur);
         }
-        const res = await Host.call('formatCopy', { width: f.w, height: f.h, label: f.label, mode: s.mode, reframe: s.mode === 'reframe' ? names : [], blur, blurAmount: 60 });
+        // Suivre le visage : analyse de la séquence d'origine avant d'en faire la copie.
+        let faces = null;
+        if (s.mode === 'face') {
+          app.status.phase('Recherche du visage dans les plans');
+          const fk = await app.services.faceKeysForSequence();
+          faces = fk.faces;
+          if (fk.found < fk.total) app.log('Visage introuvable dans ' + (fk.total - fk.found) + ' plan(s) : ils sont simplement centrés.', 'warn');
+          app.status.phase('Copie de la séquence');
+        }
+        const res = await Host.call('formatCopy', { width: f.w, height: f.h, label: f.label, mode: s.mode, reframe: s.mode === 'reframe' ? names : [], blur, blurAmount: 60, faces });
         if (!res.ok) return { kind: 'error', title: 'Copie impossible', detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
         const how = res.reframed ? app.plural(res.reframed, 'plan recadré', 'plans recadrés') + ' automatiquement' : '';
         const fill = res.filled ? app.plural(res.filled, 'plan agrandi', 'plans agrandis') + ' et centré' + (res.filled > 1 ? 's' : '') : '';
+        const faced = res.faced ? app.plural(res.faced, 'plan qui suit le visage', 'plans qui suivent le visage') : '';
         const blurred = res.blurred ? app.plural(res.blurred, 'plan posé', 'plans posés') + ' sur fond flou' : '';
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
           title: '« ' + res.name + ' » créée (' + f.label + ')',
-          detail: [how, fill, blurred].filter(Boolean).join(', ') + '. ' + (res.reframed ? 'Premiere analyse les plans en arrière-plan. ' : '') + 'Vérifie les titres dans le nouveau cadre.'
+          detail: [how, faced || fill, blurred].filter(Boolean).join(', ') + '. ' + (res.reframed ? 'Premiere analyse les plans en arrière-plan. ' : '') + 'Vérifie les titres dans le nouveau cadre.'
         };
       });
     }

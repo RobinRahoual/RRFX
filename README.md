@@ -78,12 +78,15 @@ textes. Un compte rendu clair à la fin : ce qui a été fait, étape par étape
 
 ### ⚡ Transitions et effets en un clic
 
-**34 effets** prêts à l'emploi, pour toutes tes vidéos :
+**36 effets** prêts à l'emploi, pour toutes tes vidéos :
 
 - **Transitions modernes** : push, zoom lent, zoom traversant, pop, fondus au blanc et au noir, fondu flou.
 - **Zoom visage** : RR FX trouve le visage dans chaque plan et zoome sur les yeux **en les suivant** (+20 % par
   défaut). Les yeux restent à leur place à l'écran, ou sont recentrés : parfait pour la face cam et les interviews.
   En coupe sèche, en arrivée douce ou en zoom progressif.
+- **Stabiliser le visage** : la tête reste au même endroit du cadre même si la personne bouge.
+- **Zoom suivi (objet)** : entoure un produit, un logo ou une personne sur la première image, RR FX le suit et
+  zoome dessus.
 - **Mouvements** sur tout le plan : Ken Burns (photos d'événement), zoom lent, caméra à l'épaule, punch-in.
 - **Effets de clip** : flashs, flickers, zooms, shakes, glitchs, motion blur.
 
@@ -107,6 +110,8 @@ RR FX écoute le son et te montre les blancs en rouge, avant de toucher à quoi 
 - **Couper** : les blancs sont retirés, l'image et le son recollés et toujours synchro.
 - Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque silence.
 - Sensibilité, silence minimum et marge autour des mots réglables.
+- **Coupe aussi les « euh »** et les hésitations repérés dans le son, et les répétitions (« on va, on va »)
+  trouvées dans le `.srt`.
 - Puis **Zoom visage** : un plan sur deux resserré sur les yeux, chaque jump cut devient un changement de cadre.
 
 </td>
@@ -114,11 +119,13 @@ RR FX écoute le son et te montre les blancs en rouge, avant de toucher à quoi 
 <tr>
 <td width="56%">
 
-### 💬 Sous-titres et bandeaux
+### 💬 Sous-titres, mots clés et bandeaux
 
 - **Sous-titres** : importe un `.srt` (Premiere le crée avec sa transcription) et RR FX pose chaque phrase en texte
   animé. **Mot par mot** pour le style TikTok, ou 3 mots, ou la phrase entière. Recalés tout seuls après la coupe
-  des silences.
+  des silences et des « euh ».
+- **Mots clés en couleur** : chiffres, mots forts et ta propre liste ressortent en jaune (ou la couleur de ton
+  choix), avec un **emoji** et un petit **« pop » sonore** en option.
 - **Bandeau nom et fonction** pour tes interviews et témoignages, en bas à gauche, animé.
 
 </td>
@@ -247,11 +254,26 @@ Glissement, Impact…).
 <tr>
 <td width="56%">
 
+### 🔊 Le son réglé tout seul
+
+- **Égaliser la voix** : chaque plan parlé mesuré et amené au même niveau (-14 LUFS pour YouTube et les réseaux,
+  -16 podcast, -23 TV), sans dépasser -1 dB. Débruitage en option.
+- **Musique sous la voix** : la musique baisse doucement quand on parle et remonte dans les pauses (images clés
+  de volume, modifiables).
+- **Chapitres YouTube** : la liste « 00:00 Titre » prête à coller, depuis tes marqueurs ou les blancs du `.srt`.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/parole-son.png" alt="Son de la voix, musique sous la voix, chapitres" width="300"></td>
+</tr>
+<tr>
+<td width="56%">
+
 ### 📱 Prêt pour Reels, TikTok et LinkedIn
 
 Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic.
 
 - Le **recadrage automatique** de Premiere suit ton sujet dans chaque plan.
+- Ou **en suivant le visage** : RR FX garde la personne au centre du cadre vertical, plan par plan.
 - Ou **sur fond flou** : le plan entier au centre, sur lui-même agrandi et flouté. Le classique des interviews et
   des vidéos d'entreprise.
 - L'aperçu montre la **zone sûre**, ce que cachent les boutons de l'app.

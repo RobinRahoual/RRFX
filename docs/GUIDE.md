@@ -77,10 +77,10 @@ Toutes les animations sont écrites en images clés dans les effets natifs de Pr
 Flou directionnel, Luminosité et contraste, Décalage, Déformation de la vague, Distorsion de l'objectif, Écho) :
 tout reste modifiable ensuite dans *Options d'effet*.
 
-**Les 34 effets** : Flash blanc, Glow flash, Dip noir, Double flash, Fondu au blanc, Fondu au noir · Flicker,
+**Les 36 effets** : Flash blanc, Glow flash, Dip noir, Double flash, Fondu au blanc, Fondu au noir · Flicker,
 Stroboscope · Défocus, Flou directionnel, Fondu flou · Zoom in, Zoom out, Zoom rebond, Zoom rotation (flou de
 mouvement réel), Zoom lent, Zoom traversant, Pop · Shake, Impact, Bass drop · Slide, Whip pan, Push · Onde, Bulge,
-Glitch · **Mouvements** sur tout le plan : **Zoom visage** et **Zoom visage progressif** (voir plus bas), Punch-in, Ken Burns (photos et plans fixes d'événement), Respiration,
+Glitch · **Mouvements** sur tout le plan : **Zoom visage**, **Zoom visage progressif**, **Stabiliser le visage**, **Zoom suivi (objet)** (voir plus bas), Punch-in, Ken Burns (photos et plans fixes d'événement), Respiration,
 Caméra à l'épaule · Motion blur (vraie fusion d'images, sur une copie du plan). Choisir un mouvement passe la
 position sur *Clips entiers*.
 
@@ -98,6 +98,11 @@ est posé sur un calque de réglage (effet Transformer) avec peu d'images clés,
 | **Yeux** | *À leur place* : le zoom se fait autour des yeux, ils ne bougent pas à l'écran ; *Recentrés* : ils viennent au milieu, au tiers haut, sans jamais laisser voir de bord |
 | **Suivi** | *Doux* (mouvement posé), *Serré* (colle aux mouvements de tête) ou *Fixe* (une seule position) |
 | **Arrivée** | *Sèche* (punch-in) ou *Douce* (le zoom s'installe sur 8 images) |
+
+*Stabiliser le visage* tient les yeux à leur position moyenne dans le plan (léger zoom de 8 % pour ne jamais
+voir de bord). *Zoom suivi (objet)* : à l'application, la première image du plan s'affiche ; trace un rectangle
+autour de l'objet (produit, logo, personne). RR FX le retrouve image par image (une tous les 0,2 s) par
+corrélation, et garde la dernière position connue s'il le perd de vue.
 
 Visage de face, assez grand et éclairé : c'est ce que le détecteur reconnaît le mieux. Dans un plan où il ne
 trouve pas de visage, le zoom se fait vers le haut du cadre et le journal le signale.
@@ -272,6 +277,11 @@ Pour tout ce qui parle : YouTube, vlogs, interviews, podcasts filmés, témoigna
   seulement** (un marqueur au début de chaque silence). Avec deux caméras, RR FX ne coupe que là où personne ne
   parle. À faire avant d'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées (RR FX
   les nomme).
+- **« Euh » et répétitions** : RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues
+  (un bout de voix court, isolé entre deux petites pauses, d'une hauteur et d'un volume presque constants). Avec
+  un `.srt`, il trouve aussi les répétitions (« je je », « on va, on va ») et les faux départs (« c'est- c'est »).
+  *Résultat* : sur une copie (« … (sans euh) »), dans la séquence, ou marquer seulement. Une répétition n'est
+  coupée que si son temps est exact (sous-titres mot par mot) ; sinon elle est listée dans le journal.
 - **Zoom visage** : sur un plan sur deux (ou tous) de la séquence, un zoom (+20 % par défaut) sur les yeux, qui
   sont suivis ; la coupe devient un changement de cadre et le regard ne bouge pas. *Yeux* : à leur place ou
   recentrés. Décoche *Suivre le visage* pour un punch-in fixe vers le haut du cadre.
@@ -280,14 +290,28 @@ Pour tout ce qui parle : YouTube, vlogs, interviews, podcasts filmés, témoigna
   entière, 3 mots ou **mot par mot** (style TikTok, temps partagé selon la longueur des mots). *Départ du
   .srt* : début de la séquence, tête de lecture ou début des clips sélectionnés. Après une coupe des silences,
   les sous-titres faits avant la coupe sont recalés (ce qui tombait dans un silence disparaît).
+- **Mots clés** (sous-titres) : chiffres, mots en MAJUSCULES ou suivis de « ! », mots forts et *Tes mots*
+  ressortent dans la couleur choisie (effet Teinte sur le texte), un sur quatre au plus. *Emoji* : 💰 🔥 💡 ⏱️…
+  après le mot clé (selon la police du modèle). *Son « pop »* : sur les mots clés ou sur chaque texte.
 - **Bandeau nom et fonction** : nom et fonction sur deux lignes, posés à la tête de lecture (durée, place : bas
   gauche, bas centre, haut gauche ; animation).
+
+- **Son de la voix** : chaque plan parlé (avec son son lié, ou le son seul) est mesuré en LUFS (norme EBU R128)
+  et son *Niveau* (Volume) est réglé pour atteindre -14 (YouTube, réseaux), -16 (podcast) ou -23 LUFS (TV), sans
+  dépasser -1 dB de crête. *Réduire le bruit de fond* ajoute l'effet DeNoise de Premiere. ↶ Annuler remet le volume.
+- **Musique sous la voix** : la voix des plans choisis (sans ses silences) fait baisser la musique de la séquence
+  (-12 dB par défaut) avec une descente de 0,25 s et une remontée de 0,5 s ; les pauses de moins d'une seconde
+  gardent la musique basse. Images clés sur le *Niveau* du clip de musique ; ↶ Annuler remet le volume d'avant.
+- **Chapitres YouTube** : depuis tes marqueurs nommés (les marqueurs automatiques de RR FX sont ignorés) ou depuis
+  les grands blancs du `.srt`. Règles YouTube respectées : 00:00 en premier, au moins 3 chapitres de 10 s.
+  *Copier* pour la description ; *Poser les marqueurs* depuis les sous-titres.
 
 ### Onglet Formats
 
 Une **copie de la séquence** au format des réseaux, en un clic : **9:16** (Reels, TikTok, Shorts), **4:5**
 (Instagram), **1:1** ou **16:9**. Les rushs reçoivent l'effet **Recadrage automatique** de Premiere, qui suit le
-sujet (analyse en arrière-plan), sont agrandis et centrés (*Remplir, centré*), ou posés **sur fond flou** (le plan
+sujet (analyse en arrière-plan), sont agrandis et centrés (*Remplir, centré*), **suivent le visage** (RR FX cherche le visage dans chaque rush et anime la *Position* pour le garder au centre,
+sans montrer de bord), ou posés **sur fond flou** (le plan
 entier, net, au centre ; dessous, le même plan agrandi avec un Flou gaussien : interviews, conférences, vidéos
 d'entreprise). L'aperçu montre la **zone sûre**
 (ce que cachent les boutons et la légende de l'app). La séquence d'origine n'est pas modifiée ; les titres et calques
