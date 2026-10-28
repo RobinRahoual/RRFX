@@ -88,7 +88,7 @@ position sur *Clips entiers*.
 
 *Zoom visage* et *Zoom visage progressif* (catégorie Mouvements) zooment sur la personne qui parle en gardant son
 regard en place. Pour chaque plan visé, RR FX exporte quelques images propres de la timeline (une toutes les
-demi-secondes environ, sans looks ni titres), y cherche le visage (détecteur de Viola-Jones d'OpenCV, intégré au
+0,6 s environ, sans looks ni titres), y cherche le visage (détecteur de Viola-Jones d'OpenCV, intégré au
 panneau, rien n'est envoyé en ligne), en déduit la ligne des yeux et la suit sur toute la durée du plan. Le zoom
 est posé sur un calque de réglage (effet Transformer) avec peu d'images clés, modifiables ensuite.
 
@@ -101,7 +101,7 @@ est posé sur un calque de réglage (effet Transformer) avec peu d'images clés,
 
 *Stabiliser le visage* tient les yeux à leur position moyenne dans le plan (léger zoom de 8 % pour ne jamais
 voir de bord). *Zoom suivi (objet)* : à l'application, la première image du plan s'affiche ; trace un rectangle
-autour de l'objet (produit, logo, personne). RR FX le retrouve image par image (une tous les 0,2 s) par
+autour de l'objet (produit, logo, personne). RR FX le retrouve image par image (une toutes les 0,3 s) par
 corrélation, et garde la dernière position connue s'il le perd de vue.
 
 Visage de face, assez grand et éclairé : c'est ce que le détecteur reconnaît le mieux. Dans un plan où il ne
@@ -267,6 +267,9 @@ Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un t
 ### Onglet Parole
 
 Pour tout ce qui parle : YouTube, vlogs, interviews, podcasts filmés, témoignages, conférences.
+
+En haut, un **sommaire** (Silences, Euh, Visage, Sous-titres, Bandeau, Voix, Musique, Chapitres) amène à la
+section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil utilisé dans l'onglet.
 
 - **Couper les silences** : sélectionne dans la timeline les plans où l'on parle (image et son liés, ou le son seul
   d'un micro). **Analyser** écoute le son (WAV, MOV/MP4) et montre les blancs en rouge sur une barre, sans rien

@@ -110,9 +110,37 @@ RR FX écoute le son et te montre les blancs en rouge, avant de toucher à quoi 
 - **Couper** : les blancs sont retirés, l'image et le son recollés et toujours synchro.
 - Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque silence.
 - Sensibilité, silence minimum et marge autour des mots réglables.
-- **Coupe aussi les « euh »** et les hésitations repérés dans le son, et les répétitions (« on va, on va »)
-  trouvées dans le `.srt`.
 - Puis **Zoom visage** : un plan sur deux resserré sur les yeux, chaque jump cut devient un changement de cadre.
+- L'onglet Parole a son **sommaire** : un clic amène à l'outil voulu, et le bouton bleu reprend le dernier utilisé.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### ✂️ Les « euh » en moins
+
+RR FX repère dans le son les **« euh », « hum » et hésitations** (une voyelle tenue entre deux pauses), et dans
+ton `.srt` les **répétitions** (« on va, on va ») et les **faux départs**.
+
+- Coupés sur une copie de ta séquence, directement, ou simplement **marqués** pour vérifier d'abord.
+- Les sous-titres se recalent tout seuls sur chaque coupe.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/parole-euh.png" alt="Couper les euh et les répétitions" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/suivi-objet.png" alt="Zoom suivi : l'objet entouré sur la première image" width="300"></td>
+<td width="56%">
+
+### 🎯 Un zoom qui suit ton produit
+
+**Zoom suivi (objet)** : entoure un produit, un logo ou une personne sur la première image du plan. RR FX le
+retrouve image par image et zoome dessus pendant tout le plan.
+
+- Idéal pour la pub, l'e-commerce, les démos et le sport.
+- L'objet reste à sa place à l'écran, ou il est recentré. Arrivée douce ou sèche.
+- **Stabiliser le visage** fait pareil avec une tête : elle ne bouge plus dans le cadre.
 
 </td>
 </tr>
@@ -280,7 +308,7 @@ Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic.
 - Ta séquence d'origine ne bouge pas.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/formats-fond-flou.png" alt="Formats 9:16 sur fond flou" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/formats-visage.png" alt="Copie 9:16 qui suit le visage" width="300"></td>
 </tr>
 <tr>
 <td width="44%"><img src="docs/captures/outils/ressources.png" alt="Tes ressources" width="300"></td>

@@ -27,6 +27,13 @@
       fillerLevel: 'normal', fillerMode: 'copy',
       voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers'
     };
+    const NAV = [['silences', '✂ Silences'], ['euh', 'Euh'], ['visage', 'Visage'], ['soustitres', 'Sous-titres'], ['bandeau', 'Bandeau'], ['voix', 'Voix'], ['musique', 'Musique'], ['chapitres', 'Chapitres']];
+    const TOOLS = {
+      silences: ['Couper les silences', () => cutSilences()], euh: ['Couper les « euh »', () => cutFillers()],
+      visage: ['Zoomer sur le visage', () => punchIn()], soustitres: ['Poser les sous-titres', () => captions()],
+      bandeau: ['Poser le bandeau', () => lowerThird()], voix: ['Égaliser la voix', () => levelVoice()],
+      musique: ['Baisser la musique sous la voix', () => duckMusic()], chapitres: ['Créer les chapitres', () => makeChapters(() => app.switchTab('speech'))]
+    };
     const DENOISE = ['DeNoise', 'Réduction du bruit', 'Débruitage', 'Rauschunterdrückung', 'Reducción de ruido', 'Riduzione rumore'];
     const KEY_COLORS = ['#ffd21e', '#ff4d4d', '#2ee6a8', '#38b6ff', '#c77dff'];
     const st = () => {
@@ -359,6 +366,21 @@
         h('div', { class: 'xp-hero-title' }, 'Vidéos qui parlent'),
         h('div', { class: 'xp-hero-text' }, 'YouTube, vlogs, interviews, podcasts, vidéos d\'entreprise : silences et « euh » coupés, zoom visage, sous-titres avec mots clés, son de la voix, musique sous la voix, chapitres.')));
 
+      // Sommaire collant : un clic amène à la section (et la déplie).
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Sections de l\'onglet Parole' });
+      NAV.forEach(([k, label]) => {
+        const b = h('button', { class: 'action' + (x.lastTool === k ? ' selected' : '') }, label);
+        b.addEventListener('click', () => {
+          const el = view.querySelector('[data-sec="' + k + '"]');
+          if (!el) return;
+          if (el.classList.contains('folded')) el.querySelector('.section-title').click();
+          const sc = document.getElementById('scroll');
+          sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - nav.offsetHeight - 4;
+        });
+        nav.appendChild(b);
+      });
+      view.appendChild(nav);
+
       // Silences
       const analyzeBtn = h('button', { class: 'action' }, 'Analyser');
       analyzeBtn.addEventListener('click', () => app.runTask('Analyse des silences', async () => {
@@ -366,16 +388,16 @@
         draw();
         return { kind: r.ranges.length ? 'ok' : 'warn', title: r.ranges.length ? app.plural(r.ranges.length, 'silence trouvé', 'silences trouvés') + ' · ' + fmtSecs(Sp.total(r.ranges)) : 'Aucun silence trouvé', detail: r.ranges.length ? 'Rien n\'est coupé tant que tu ne cliques pas sur « Couper les silences ».' : 'Essaie la sensibilité « Forte ».' };
       }));
-      const cutBtn = h('button', { class: 'action selected' }, 'Couper les silences');
-      cutBtn.addEventListener('click', () => cutSilences());
+      const cutBtn = h('button', { class: 'action go' }, 'Couper les silences');
+      cutBtn.addEventListener('click', use('silences', () => cutSilences()));
       bar = h('div', { class: 'sp-bar' });
       const reset = () => { last = null; draw(); app.persist(); };
-      view.appendChild(section('Couper les silences', [
+      view.appendChild(sec('silences', 'Couper les silences', [
         h('div', { class: 'note' }, 'Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul). RR FX écoute le son, trouve les blancs et les retire en recollant la suite.'),
         row('Sensibilité', actionGroup([{ v: 'soft', label: 'Douce', title: 'Seulement les vrais blancs' }, { v: 'normal', label: 'Normale' }, { v: 'strong', label: 'Forte', title: 'Aussi les respirations et les « euh » faibles' }], x.level, v => { x.level = v; reset(); })),
         row('Silence minimum', hotText({ value: x.minSilence, min: 0.2, max: 3, step: 0.05, unit: 's', onChange: v => { x.minSilence = v; reset(); } }), { title: 'Les pauses plus courtes sont gardées' }),
         row('Marge gardée', hotText({ value: x.pad, min: 0, max: 0.5, step: 0.01, unit: 's', onChange: v => { x.pad = v; reset(); } }), { title: 'Laissée de chaque côté de la voix, pour ne pas couper les mots' }),
-        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie', title: 'Une copie « (sans silences) » : ta séquence reste intacte' }, { v: 'cut', label: 'Dans la séquence' }, { v: 'markers', label: 'Marquer seulement' }], x.mode, v => { x.mode = v; app.persist(); })),
+        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie', title: 'Une copie « (sans silences) » : ta séquence reste intacte' }, { v: 'cut', label: 'Directement', title: 'Dans la séquence ouverte (Ctrl+Z pour revenir)' }, { v: 'markers', label: 'Marqueurs', title: 'Un marqueur sur chaque silence, rien n\'est coupé' }], x.mode, v => { x.mode = v; app.persist(); })),
         bar,
         h('div', { class: 'row-buttons' }, analyzeBtn, cutBtn),
         h('div', { class: 'note' }, 'À faire avant d\'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées.')
@@ -383,20 +405,20 @@
       draw();
 
       // « Euh » et répétitions
-      const fillBtn = h('button', { class: 'action selected' }, 'Couper les « euh »');
-      fillBtn.addEventListener('click', cutFillers);
-      view.appendChild(section('« Euh » et répétitions', [
+      const fillBtn = h('button', { class: 'action go' }, 'Couper les « euh »');
+      fillBtn.addEventListener('click', use('euh', cutFillers));
+      view.appendChild(sec('euh', '« Euh » et répétitions', [
         h('div', { class: 'note' }, 'RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues entre deux mots. Avec un .srt (section Sous-titres), il trouve aussi les répétitions (« on va, on va ») et les faux départs.'),
         row('Sensibilité', actionGroup([{ v: 'soft', label: 'Douce' }, { v: 'normal', label: 'Normale' }, { v: 'strong', label: 'Forte' }], x.fillerLevel, v => { x.fillerLevel = v; app.persist(); })),
-        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie' }, { v: 'cut', label: 'Dans la séquence' }, { v: 'markers', label: 'Marquer seulement' }], x.fillerMode, v => { x.fillerMode = v; app.persist(); })),
+        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie', title: 'Une copie « (sans euh) » : ta séquence reste intacte' }, { v: 'cut', label: 'Directement' }, { v: 'markers', label: 'Marqueurs', title: 'Conseillé pour un premier essai : un marqueur sur chaque « euh »' }], x.fillerMode, v => { x.fillerMode = v; app.persist(); })),
         h('div', { class: 'note' }, 'Les répétitions dont le temps n\'est qu\'estimé (sous-titres de plusieurs mots) sont seulement listées dans le journal, ou marquées.'),
         h('div', { class: 'row-buttons' }, fillBtn)
       ]));
 
       // Zoom visage
-      const punch = h('button', { class: 'action selected' }, 'Zoomer sur le visage');
-      punch.addEventListener('click', punchIn);
-      view.appendChild(section('Zoom visage', [
+      const punch = h('button', { class: 'action go' }, 'Zoomer sur le visage');
+      punch.addEventListener('click', use('visage', punchIn));
+      view.appendChild(sec('visage', 'Zoom visage', [
         h('div', { class: 'note' }, 'RR FX trouve le visage dans chaque plan et zoome sur les yeux en les suivant : ils restent à leur place à l\'écran pendant que le cadre se resserre. Après la coupe des silences, un plan sur deux : chaque jump cut devient un changement de cadre.'),
         row('Zoom', hotText({ value: x.faceAmount, min: 5, max: 60, step: 1, unit: '%', onChange: v => { x.faceAmount = v; app.persist(); } })),
         row('Plans', actionGroup([{ v: true, label: 'Un sur deux' }, { v: false, label: 'Tous' }], x.faceAlt, v => { x.faceAlt = v; app.persist(); }), { title: 'Sur tous les plans de la séquence' }),
@@ -416,11 +438,11 @@
       updateCount();
       const imp = h('button', { class: 'action' }, 'Importer un .srt…');
       imp.addEventListener('click', () => importSrt(() => app.switchTab('speech')));
-      const capBtn = h('button', { class: 'action selected' }, 'Poser les sous-titres');
-      capBtn.addEventListener('click', captions);
+      const capBtn = h('button', { class: 'action go' }, 'Poser les sous-titres');
+      capBtn.addEventListener('click', use('soustitres', () => captions()));
       const anims = Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name }));
       const model = app.services.mogrtName ? app.services.mogrtName() : '';
-      view.appendChild(section('Sous-titres', [
+      view.appendChild(sec('soustitres', 'Sous-titres', [
         h('div', { class: 'note' }, 'Un fichier .srt ou .vtt : Premiere le crée (Texte > Transcription, puis Sous-titres > Exporter en fichier SRT), comme la plupart des outils de transcription.'),
         h('div', { class: 'row-buttons' }, imp),
         ta, count,
@@ -443,32 +465,32 @@
         inp.addEventListener('input', () => { x[key] = inp.value; app.persist(); });
         return inp;
       };
-      const lowBtn = h('button', { class: 'action selected' }, 'Poser le bandeau');
-      lowBtn.addEventListener('click', lowerThird);
-      view.appendChild(section('Bandeau nom et fonction', [
+      const lowBtn = h('button', { class: 'action go' }, 'Poser le bandeau');
+      lowBtn.addEventListener('click', use('bandeau', lowerThird));
+      view.appendChild(sec('bandeau', 'Bandeau nom et fonction', [
         h('div', { class: 'note' }, 'Le nom de la personne qui parle, posé à la tête de lecture (interviews, témoignages, conférences).'),
         row('Nom', field('name', 'Camille Martin')),
         row('Fonction', field('role', 'Directrice marketing')),
         row('Durée', hotText({ value: x.lowerDur, min: 1, max: 30, step: 0.5, unit: 's', onChange: v => { x.lowerDur = v; app.persist(); } })),
-        row('Place', actionGroup([{ v: 'left', label: 'Bas gauche' }, { v: 'center', label: 'Bas centre' }, { v: 'top', label: 'Haut gauche' }], x.lowerPos, v => { x.lowerPos = v; app.persist(); })),
+        row('Place', actionGroup([{ v: 'left', label: '↙ Bas' }, { v: 'center', label: '↓ Centre' }, { v: 'top', label: '↖ Haut' }], x.lowerPos, v => { x.lowerPos = v; app.persist(); })),
         row('Animation', picker(anims, x.lowerAnim, v => { x.lowerAnim = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, lowBtn)
       ]));
 
       // Son de la voix
-      const voiceBtn = h('button', { class: 'action selected' }, 'Égaliser la voix');
-      voiceBtn.addEventListener('click', levelVoice);
-      view.appendChild(section('Son de la voix', [
+      const voiceBtn = h('button', { class: 'action go' }, 'Égaliser la voix');
+      voiceBtn.addEventListener('click', use('voix', levelVoice));
+      view.appendChild(sec('voix', 'Son de la voix', [
         h('div', { class: 'note' }, 'Chaque plan parlé est mesuré (sonie en LUFS) et amené au même niveau : plus de plan trop faible ou trop fort. Les crêtes restent sous -1 dB.'),
-        row('Niveau', actionGroup([{ v: -14, label: '-14 · YouTube, réseaux' }, { v: -16, label: '-16 · Podcast' }, { v: -23, label: '-23 · TV' }], x.voiceTarget, v => { x.voiceTarget = v; app.persist(); })),
+        row('Niveau (LUFS)', actionGroup([{ v: -14, label: '-14 · Web', title: 'YouTube, Instagram, TikTok' }, { v: -16, label: '-16 · Podcast' }, { v: -23, label: '-23 · TV' }], x.voiceTarget, v => { x.voiceTarget = v; app.persist(); })),
         h('div', { class: 'field' }, app.UI.checkbox('Réduire le bruit de fond (effet DeNoise de Premiere)', x.denoise, v => { x.denoise = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, voiceBtn)
       ]));
 
       // Musique sous la voix
-      const duckBtn = h('button', { class: 'action selected' }, 'Baisser la musique sous la voix');
-      duckBtn.addEventListener('click', duckMusic);
-      view.appendChild(section('Musique sous la voix', [
+      const duckBtn = h('button', { class: 'action go' }, 'Baisser la musique sous la voix');
+      duckBtn.addEventListener('click', use('musique', duckMusic));
+      view.appendChild(sec('musique', 'Musique sous la voix', [
         h('div', { class: 'note' }, 'Sélectionne les plans où l\'on parle : la musique de la séquence baisse doucement pendant la voix et remonte dans les pauses (images clés de volume, modifiables).'),
         row('Baisse', hotText({ value: x.duckDepth, min: 3, max: 30, step: 1, unit: 'dB', onChange: v => { x.duckDepth = v; app.persist(); } })),
         h('div', { class: 'row-buttons' }, duckBtn)
@@ -495,9 +517,9 @@
         if (chap.why) chapBox.appendChild(h('div', { class: 'note' }, chap.why));
         chapBox.appendChild(h('div', { class: 'row-buttons' }, copy, x.chapSrc === 'srt' ? mark : null));
       };
-      const chapBtn = h('button', { class: 'action selected' }, 'Créer les chapitres');
-      chapBtn.addEventListener('click', () => makeChapters(drawChap));
-      view.appendChild(section('Chapitres YouTube', [
+      const chapBtn = h('button', { class: 'action go' }, 'Créer les chapitres');
+      chapBtn.addEventListener('click', use('chapitres', () => makeChapters(drawChap)));
+      view.appendChild(sec('chapitres', 'Chapitres YouTube', [
         h('div', { class: 'note' }, 'La liste « 00:00 Titre » à coller dans la description : depuis tes marqueurs nommés, ou depuis les grands blancs du .srt (le début de la phrase suivante sert de titre).'),
         row('Depuis', actionGroup([{ v: 'markers', label: 'Les marqueurs' }, { v: 'srt', label: 'Les sous-titres' }], x.chapSrc, v => { x.chapSrc = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, chapBtn),
@@ -505,6 +527,11 @@
       ]));
       drawChap();
     }
+
+    // Section repérée par une clé (sommaire, dernier outil utilisé).
+    const sec = (key, title, body) => { const el = section(title, body); el.dataset.sec = key; return el; };
+    // Le bouton bleu du haut reprend le dernier outil utilisé de l'onglet.
+    const use = (key, fn) => () => { st().lastTool = key; app.persist(); app.renderCTA(); return fn(); };
 
     function swatches() {
       const x = st(), box = h('div', { class: 'key-colors' });
@@ -532,6 +559,6 @@
     app.services.speechClips = async () => { const r = await Host.call('speechInfo', {}).catch(() => ({ ok: false })); return r.ok ? r.clips.length : 0; };
     app.services.hasCaptions = () => Sp.parseSubtitles(st().srt).length;
     app.services.hasLowerThird = () => !!String(st().name || '').trim();
-    app.tabs.speech = { render, cta: () => ({ label: 'Couper les silences', run: () => cutSilences(), enabled: true }), leave: () => {} };
+    app.tabs.speech = { render, cta: () => { const t = TOOLS[st().lastTool] || TOOLS.silences; return { label: t[0], run: t[1], enabled: true }; }, leave: () => {} };
   });
 })(typeof self !== 'undefined' ? self : this);

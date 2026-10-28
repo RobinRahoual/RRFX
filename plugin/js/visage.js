@@ -27,7 +27,7 @@
     /* targets : zones de resolve (start, end en ticks, frames). follow : smooth | tight | fixed.
        → { faces: [[[x, y], …] | null] (une valeur par image de chaque zone) } */
     async function trackFaces(targets, follow) {
-      const plan = F.sampling(targets.map(t => ({ a: t.start / TICKS, b: t.end / TICKS })), { every: 0.5, max: 20, budget: 100 });
+      const plan = F.sampling(targets.map(t => ({ a: t.start / TICKS, b: t.end / TICKS })), { every: 0.6, max: 16, budget: 80 });
       const times = [].concat(...plan.map(p => p.times));
       const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, 'Images des plans'));
       const faces = [];
@@ -73,7 +73,7 @@
 
     /* Comme trackFaces, pour l'objet entouré sur la première image du premier plan. */
     async function trackObject(targets, follow) {
-      const plan = F.sampling(targets.map(t => ({ a: t.start / TICKS, b: t.end / TICKS })), { every: 0.2, max: 60, budget: 150 });
+      const plan = F.sampling(targets.map(t => ({ a: t.start / TICKS, b: t.end / TICKS })), { every: 0.3, max: 40, budget: 90 });
       const times = [].concat(...plan.map(p => p.times));
       const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, 'Images des plans'));
       const box = await pickBox(frames[0]);
@@ -103,7 +103,7 @@
       const clips = list.clips.filter(c => !c.copy);
       if (!clips.length) throw new Error('Aucun rush dans la séquence.');
       const fps = list.fps || app.fps();
-      const plan = F.sampling(clips.map(c => ({ a: c.start / TICKS, b: c.end / TICKS })), { every: 0.5, max: 16, budget: 120 });
+      const plan = F.sampling(clips.map(c => ({ a: c.start / TICKS, b: c.end / TICKS })), { every: 0.6, max: 14, budget: 80 });
       const times = [].concat(...plan.map(p => p.times));
       const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, 'Images des plans'));
       const out = [];

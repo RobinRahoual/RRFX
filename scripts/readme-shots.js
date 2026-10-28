@@ -49,7 +49,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
       s.scrollTop = 0;
       if (!sel) return;
       const el = document.querySelector(sel);
-      if (el) s.scrollTop = el.getBoundingClientRect().top - s.getBoundingClientRect().top - 6;
+      // Sommaire collant (onglet Parole) : la section se place juste dessous.
+      const nav = document.querySelector('.view.on .sec-nav');
+      if (el) s.scrollTop = el.getBoundingClientRect().top - s.getBoundingClientRect().top - 6 - (nav && nav !== el ? nav.offsetHeight + 4 : 0);
     }, selector || null);
     await page.waitForTimeout(300);
     const file = path.join(out, name + '.png');
@@ -68,6 +70,19 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.click('#grid .card:has-text("Zoom visage") >> nth=0');
   await close();
   await shot('effets-mouvements', null, 700);
+  // Zoom suivi (objet) : l'objet entouré sur la première image.
+  await page.click('#grid .card:has-text("Zoom suivi")');
+  await page.click('#cta');
+  await page.waitForSelector('.trk-canvas', { timeout: 15000 });
+  const tb = await page.locator('.trk-canvas').boundingBox();
+  await page.mouse.move(tb.x + tb.width * 0.52, tb.y + tb.height * 0.28);
+  await page.mouse.down();
+  await page.mouse.move(tb.x + tb.width * 0.72, tb.y + tb.height * 0.62);
+  await page.mouse.up();
+  await shot('suivi-objet', null, 400);
+  await page.click('.modal .button-secondary');
+  await page.waitForFunction(() => !window.RRFXApp.S.busy, null, { timeout: 10000 });
+  await close();
   await page.click('.chips .action:has-text("Tout")');
   await page.click('#grid .card:has-text("Zoom rotation")');
   await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
@@ -196,6 +211,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await close();
   await mark('.section|Son de la voix', 'son');
   await shot('parole-son', '[data-shot=son]', 500);
+  await page.evaluate(() => { document.querySelectorAll('[data-shot]').forEach(e => e.removeAttribute('data-shot')); document.querySelector('[data-sec="euh"]').setAttribute('data-shot', 'euh'); });
+  await shot('parole-euh', '[data-shot=euh]', 400);
 
   // Recherche rapide.
   await page.keyboard.press('Control+k');
@@ -208,6 +225,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('formats', null, 700);
   await page.click('.section:has-text("Cadrage") .action:has-text("Fond flou")');
   await shot('formats-fond-flou', null, 700);
+  await page.click('.section:has-text("Cadrage") .action:has-text("Suivre le visage")');
+  await page.evaluate(() => { document.querySelectorAll('[data-shot]').forEach(e => e.removeAttribute('data-shot')); const c = Array.from(document.querySelectorAll('.section')).find(e => /Cadrage/.test(e.textContent)); if (c) c.setAttribute('data-shot', 'cad'); });
+  await shot('formats-visage', '[data-shot=cad]', 500);
   await page.click('.section:has-text("Cadrage") .action:has-text("Recadrage auto")');
 
   // Ressources.

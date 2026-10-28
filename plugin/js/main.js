@@ -836,6 +836,9 @@
       h('span', { class: 'badge' }, e.kind === 'captured' ? 'capturé' : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
       h('div', { class: 'effect-tools' }, star, e.kind === 'overlay' ? null : save)));
     if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
+    if (def && def.face) ins.appendChild(h('div', { class: 'hint-box' }, def.track === 'object'
+      ? '🎯 Au moment d\'appliquer, la première image du plan s\'affiche : entoure l\'objet, RR FX le suit dans tout le plan.'
+      : '🙂 Le visage est cherché et suivi automatiquement dans chaque plan au moment d\'appliquer (quelques secondes). L\'aperçu ci-dessous suppose un visage en haut du cadre.'));
     if (e.kind === 'overlay') {
       ins.appendChild(h('div', { class: 'note' }, e.overlay.pack
         ? 'Pack « ' + Packs.byId[e.overlay.pack].packName + ' », fourni avec RR FX. À la première utilisation, il est fabriqué à la taille de ta séquence (quelques secondes), puis réutilisé.'
