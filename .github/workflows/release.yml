@@ -65,6 +65,8 @@ jobs:
           EOF
           )
           NOTES="${NOTES//VERSION/$VERSION}"
+          # Nouveautés de la version (.github/release-notes/vX.Y.Z.md), si le fichier existe.
+          if [ -f ".github/release-notes/$TAG.md" ]; then NOTES="$NOTES"$'\n\n'"$(cat ".github/release-notes/$TAG.md")"; fi
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$FILE" --clobber
           else
