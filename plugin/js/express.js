@@ -1,5 +1,5 @@
-/* RR FX : onglet Express. Ton montage en un clic, quel que soit le domaine (clip musical,
-   Reels / TikTok, entreprise, événementiel, YouTube) : choisis un style, RR FX enchaîne ce que
+/* RR FX : onglet Express. Ton montage en un clic, pour tout type de vidéo (Reels, interview,
+   vidéo d'entreprise, aftermovie, YouTube, clip musical…) : choisis un style, RR FX enchaîne ce que
    le plugin sait faire (silences coupés, temps forts, montage sur le rythme, conversion LOG,
    expo, look, zooms sur les jump cuts, effets enchaînés, sons, paroles, sous-titres, bandeau,
    copie au format réseau). Chaque étape reste une opération séparée : ↶ Annuler en retire une à
@@ -14,7 +14,7 @@
       // Complète sans remplacer l'objet (l'interface garde une référence dessus).
       const s = app.settings();
       if (!s.express || typeof s.express !== 'object') s.express = {};
-      if (!s.express.recipe) s.express.recipe = 'rap';
+      if (!s.express.recipe) s.express.recipe = R.RECIPES[0].id;
       if (!s.express.picks || typeof s.express.picks !== 'object') s.express.picks = {};
       return s.express;
     };
@@ -22,7 +22,6 @@
     // Étapes cochées pour une recette : ton choix s'il y en a un, sinon celui de la recette.
     const picks = r => { const x = st(); if (!x.picks[r.id] || typeof x.picks[r.id] !== 'object') x.picks[r.id] = {}; return x.picks[r.id]; };
     const wants = (r, step) => { const p = picks(r); return step.id in p ? !!p[step.id] : step.on; };
-    const domain = () => app.settings().domain || 'all';
     const lookParams = r => (r.look ? (D.LOOKS.find(l => l.name === r.look) || {}).p : r.lookParams) || null;
     const nameOf = key => { const e = app.services.entryByKey(key); return e ? e.name : key.slice(2); };
 
@@ -184,43 +183,17 @@
       return c;
     }
 
-    const HERO = {
-      all: ['Ton montage en un clic', 'Clip, Reels, entreprise, événement, YouTube : choisis un style, RR FX enchaîne silences, montage, couleur, effets, sons, textes et format.'],
-      clip: ['Ton clip en un clic', 'Temps forts, montage sur le rythme, conversion et étalonnage, effets enchaînés avec leurs sons, paroles animées.'],
-      social: ['Ton Reel en un clic', 'Coupes sur le son, transitions qui claquent, sous-titres mot par mot et version 9:16 prête à poster.'],
-      corporate: ['Ta vidéo d\'entreprise en un clic', 'Image propre, transitions sobres sur chaque coupe, bandeau nom et fonction, sous-titres, version réseaux sur fond flou.'],
-      event: ['Ton aftermovie en un clic', 'Soirée, mariage, séminaire, festival : montage sur la musique, étalonnage, flashs et leaks, version verticale.'],
-      youtube: ['Ta vidéo YouTube en un clic', 'Silences coupés, zoom un plan sur deux sur les jump cuts, transitions et whooshs, sous-titres.']
-    };
-
     let view = null;
     function render(v) {
       if (v) view = v;
       if (!view || !view.isConnected || app.S.tab !== 'express') return;
-      const x = st(), r = recipe(), c = check, dom = domain();
+      const x = st(), r = recipe(), c = check;
       view.innerHTML = '';
-      const hero = HERO[dom] || HERO.all;
-      view.appendChild(h('div', { class: 'xp-hero' }, h('div', { class: 'xp-hero-title' }, hero[0]), h('div', { class: 'xp-hero-text' }, hero[1])));
-
-      // Domaine : filtre les styles (le même que dans l'onglet Effets).
-      const chips = h('div', { class: 'chips domains' }, h('span', { class: 'chips-label' }, 'Pour'),
-        [{ id: 'all', icon: '', label: 'Tout' }].concat(app.Lib.DOMAINS).map(d => {
-          const b = h('button', { class: 'action' + (dom === d.id ? ' selected' : ''), title: d.label }, (d.icon ? d.icon + ' ' : '') + d.label);
-          b.addEventListener('click', () => {
-            app.settings().domain = d.id;
-            const list = R.forDomain(d.id);
-            if (x.recipe !== 'mine' && list.length && !list.some(q => q.id === x.recipe)) x.recipe = list[0].id;
-            app.persist(); render(); app.renderCTA();
-          });
-          return b;
-        }));
-      view.appendChild(chips);
+      view.appendChild(h('div', { class: 'xp-hero' }, h('div', { class: 'xp-hero-title' }, 'Ton montage en un clic'),
+        h('div', { class: 'xp-hero-text' }, 'Choisis un style, RR FX enchaîne ce qu\'il faut : silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, bandeau, version 9:16. Chaque outil reste dispo à part.')));
 
       // 1. Style
-      // Le style choisi reste visible même hors du domaine (choisi par la recherche rapide).
-      const shown = R.forDomain(dom);
-      if (r.id !== 'mine' && !shown.some(q => q.id === r.id)) shown.unshift(r);
-      const cards = h('div', { class: 'xp-styles' }, shown.concat([R.fromSettings(app.settings())]).map(rc => {
+      const cards = h('div', { class: 'xp-styles' }, R.RECIPES.concat([R.fromSettings(app.settings())]).map(rc => {
         const card = h('button', { class: 'xp-style' + (rc.id === x.recipe ? ' on' : ''), title: rc.desc }, lookThumb(rc), h('b', null, rc.name), h('span', { class: 'xp-sub' }, rc.chain.slice(0, 4).map(nameOf).join(' · ') || 'Aucun effet'));
         card.addEventListener('click', () => { x.recipe = rc.id; app.persist(); render(); app.renderCTA(); });
         return card;

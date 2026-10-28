@@ -21,17 +21,8 @@
       s.welcomed = MAJOR;
       app.persist();
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
-      // Ce que l'on monte surtout : filtre les styles Express et les effets (modifiable ensuite).
-      const doms = h('div', { class: 'chips domains wl-domains' });
-      const pick = id => { s.domain = id; app.persist(); doms.querySelectorAll('.action').forEach(b => b.classList.toggle('selected', b.dataset.id === id)); };
-      [{ id: 'all', label: 'Un peu de tout' }].concat(app.Lib.DOMAINS).forEach(d => {
-        const b = h('button', { class: 'action' + ((s.domain || 'all') === d.id ? ' selected' : ''), 'data-id': d.id }, (d.icon ? d.icon + ' ' : '') + d.label);
-        b.addEventListener('click', () => pick(d.id));
-        doms.appendChild(b);
-      });
       const body = h('div', { class: 'wl' },
-        h('div', { class: 'wl-lead' }, 'Le plugin gratuit pour monter plus vite : clips, Reels et TikTok, vidéos d\'entreprise, événements, YouTube.'),
-        h('div', { class: 'wl-ask' }, 'Tu montes surtout :'), doms,
+        h('div', { class: 'wl-lead' }, 'Le couteau suisse gratuit du montage dans Premiere : transitions, silences, sous-titres, couleur, formats, pour toutes tes vidéos.'),
         card('⚡', 'Express : ton montage en un clic', 'Choisis un style (Reels, interview, aftermovie, YouTube, clip…) : RR FX enchaîne coupe des silences, montage sur le rythme, couleur, transitions, sons, textes et format.'),
         card('🎙', 'Parole : vidéos qui parlent', 'Silences coupés, zoom un plan sur deux, sous-titres .srt animés, bandeau nom et fonction.'),
         card('✨', 'Effets et transitions', 'Plus de 30 transitions et mouvements (push, zoom lent, Ken Burns, punch-in…) sur une coupe, toutes les coupes ou les temps forts.'),

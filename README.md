@@ -2,9 +2,9 @@
 
 <h1 align="center">RR FX</h1>
 
-<p align="center"><b>Le plugin gratuit qui accélère ton montage dans Premiere Pro, quel que soit ton domaine.</b><br>
-Reels et TikTok, vidéos d'entreprise, événements, YouTube, clips musicaux : choisis un style, clique.<br>
-Silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, version 9:16. Chaque outil reste dispo séparément.</p>
+<p align="center"><b>Le couteau suisse gratuit du montage dans Premiere Pro.</b><br>
+Transitions et mouvements, silences coupés, sous-titres, couleur, sons, formats réseaux : tout ce qui fait gagner du temps,<br>
+pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.</p>
 
 <p align="center">
   <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger&style=for-the-badge&color=2680eb" alt="Télécharger RR FX"></a>
@@ -18,20 +18,10 @@ Silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titr
 
 ---
 
-## Pour qui ?
-
-| | Ce que RR FX fait pour toi |
-| --- | --- |
-| 📱 **Réseaux sociaux** | Reels, TikTok, Shorts : coupes sur le son, zooms traversants et pushs, sous-titres mot par mot, copie 9:16 recadrée sur le sujet. |
-| 💼 **Entreprise** | Vidéos corporate, interviews, témoignages : image propre, fondus doux sur chaque coupe, bandeau nom et fonction, version verticale sur fond flou. |
-| 🎉 **Événementiel** | Aftermovies, mariages, séminaires, festivals : montage sur la musique, étalonnage, flashs, light leaks, Ken Burns sur les photos. |
-| ▶ **YouTube** | Face cam, vlogs, tutos, podcasts filmés : silences coupés en un clic, zoom un plan sur deux sur les jump cuts, whooshs sur les coupes. |
-| 🎵 **Clips musicaux** | Temps forts de la musique, montage sur le rythme, effets enchaînés sur les kicks, paroles animées. |
-
----
-
 ## Pourquoi RR FX ?
 
+- **🧰 Un couteau suisse.** Les mêmes outils servent partout : un Reel, une interview, une vidéo d'entreprise, un
+  aftermovie, un vlog YouTube ou un clip. Rien n'est rangé par métier, tout est à portée de clic.
 - **⚡ Ton montage en un clic.** Le mode Express enchaîne tout : de la coupe des silences ou du premier temps fort
   jusqu'à la version Reels.
 - **🎯 Précis.** Chaque effet est posé sur ta coupe, tes marqueurs ou chaque temps fort de la musique, avec son son.
@@ -53,8 +43,7 @@ Silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titr
 
 ### ⚡ Express : ton montage en un clic
 
-Dis ce que tu montes (réseaux, entreprise, événement, YouTube, clip), choisis un style, clique. RR FX enchaîne
-**dans l'ordre** les étapes de ce style :
+Choisis un style, clique. RR FX enchaîne **dans l'ordre** les étapes de ce style :
 
 1. coupe les silences (sur une copie de ta séquence) ou pose les temps forts de ta musique ;
 2. monte tes rushs sur le rythme ;
@@ -66,20 +55,18 @@ Pas de musique pour une interview ? Pas de souci : seules les étapes utiles son
 modifiable, et **↶ Annuler** retire une étape à la fois.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/express-reseaux.png" alt="Onglet Express, style Reels" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/express-reels.png" alt="Onglet Express, style Reels" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/express-entreprise.png" alt="Styles pour la vidéo d'entreprise" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/express-interview.png" alt="Styles prêts à l'emploi" width="300"></td>
 <td width="56%">
 
 ### 🎬 14 styles prêts à l'emploi
 
-- 📱 **Reels dynamique**, **Face cam / UGC**
-- 💼 **Entreprise épuré**, **Interview / témoignage**
-- 🎉 **Aftermovie**, **Mariage / cérémonie**
-- ▶ **YouTube face cam**, **Vlog voyage**
-- 🎵 **Rap énergique**, **Drill sombre**, **Pop lumineux**, **Chill / lofi**, **Cinématique**, **Rétro VHS**
-- … ou **ton style** à toi.
+**Reels dynamique**, **Face cam / UGC**, **YouTube face cam**, **Interview / témoignage**, **Entreprise épuré**,
+**Aftermovie**, **Mariage / cérémonie**, **Vlog voyage**, **Cinématique**, **Rap énergique**, **Drill sombre**,
+**Pop lumineux**, **Chill / lofi**, **Rétro VHS**… ou **ton style** à toi. Ce sont des points de départ : prends
+celui qui colle à ta vidéo, décoche les étapes inutiles.
 
 Chaque style règle tout : les étapes, le rythme des plans, les transitions, le look, les sons et l'animation des
 textes. Un compte rendu clair à la fin : ce qui a été fait, étape par étape.
@@ -91,7 +78,7 @@ textes. Un compte rendu clair à la fin : ce qui a été fait, étape par étape
 
 ### ⚡ Transitions et effets en un clic
 
-**32 effets** prêts à l'emploi, classés par usage :
+**32 effets** prêts à l'emploi, pour toutes tes vidéos :
 
 - **Transitions modernes** : push, zoom lent, zoom traversant, pop, fondus au blanc et au noir, fondu flou.
 - **Mouvements** sur tout le plan : Ken Burns (photos d'événement), zoom lent, respiration, caméra à l'épaule,
@@ -104,7 +91,7 @@ Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toute
 - Tout reste modifiable ensuite dans *Options d'effet*, comme si tu l'avais fait à la main.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/effets-entreprise.png" alt="Effets filtrés pour la vidéo d'entreprise" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/effets-mouvements.png" alt="Mouvements : Ken Burns, zoom lent, punch-in" width="300"></td>
 </tr>
 <tr>
 <td width="44%"><img src="docs/captures/outils/parole.png" alt="Couper les silences" width="300"></td>

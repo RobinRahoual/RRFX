@@ -10,7 +10,7 @@ const R = require('../plugin/js/recipes.js');
 const S = require('../plugin/js/sons.js');
 
 test('every clip style uses effects, overlays, looks, animations and sounds that exist', () => {
-  assert.ok(R.RECIPES.length >= 6);
+  assert.ok(R.RECIPES.length >= 14);
   R.RECIPES.forEach(r => {
     assert.ok(r.chain.length >= 1, r.id);
     r.chain.forEach(k => {
@@ -19,7 +19,6 @@ test('every clip style uses effects, overlays, looks, animations and sounds that
       else assert.fail(r.id + ' clé inconnue ' + k);
     });
     assert.ok(r.look === null || D.LOOKS.some(l => l.name === r.look), r.id + ' look ' + r.look);
-    assert.ok(r.uses.length && r.uses.every(u => Lib.DOMAINS.some(d => d.id === u)), r.id + ' domaines');
     assert.ok(['markers', 'allcuts'].includes(r.place), r.id + ' place');
     Object.keys(r.steps).forEach(k => assert.ok(R.STEPS.some(x => x.id === k), r.id + ' étape ' + k));
     if (r.format) assert.ok(['9x16', '4x5', '1x1', '16x9'].includes(r.format.id) && ['reframe', 'fill', 'blur'].includes(r.format.mode), r.id + ' format');
@@ -30,8 +29,7 @@ test('every clip style uses effects, overlays, looks, animations and sounds that
     assert.ok(r.sfx === 'none' || ['whoosh', 'impact', 'mix'].includes(r.sfx) || S.byId(r.sfx), r.id + ' son ' + r.sfx);
   });
   assert.strictEqual(new Set(R.RECIPES.map(r => r.id)).size, R.RECIPES.length);
-  // Chaque domaine a au moins deux styles ; les styles « parole » marchent sans musique.
-  Lib.DOMAINS.forEach(d => assert.ok(R.forDomain(d.id).length >= 2, d.id));
+  // Les styles « parole » marchent sans musique.
   ['facecam', 'corporate', 'interview', 'youtube'].forEach(id => {
     const r = R.byId(id);
     assert.ok(R.stepsOf(r).every(x => !R.needsMusic(x.id, r)), id + ' sans musique');

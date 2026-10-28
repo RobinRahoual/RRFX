@@ -63,12 +63,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
   await close();
   await shot('effets');
-  // Les effets pour la vidéo d'entreprise : transitions douces et mouvements.
-  await page.click('.chips.domains .action:has-text("Entreprise")');
+  // Transitions douces et mouvements : la catégorie Mouvements.
+  await page.click('.chips .action:has-text("Mouvements")');
   await page.click('#grid .card:has-text("Ken Burns")');
   await close();
-  await shot('effets-entreprise', null, 700);
-  await page.click('.chips.domains .action:has-text("Tout")');
+  await shot('effets-mouvements', null, 700);
+  await page.click('.chips .action:has-text("Tout")');
   await page.click('#grid .card:has-text("Zoom rotation")');
   await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
 
@@ -167,16 +167,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.waitForFunction(() => /prêt|revoir/.test(document.getElementById('status-title').textContent), null, { timeout: 60000 });
   await mark('.section|Dernier montage express', 'rp');
   await shot('express-resultat', '[data-shot=rp]', 600);
-  // Les styles d'un autre domaine : vidéo d'entreprise.
-  await page.click('.chips.domains .action:has-text("Entreprise")');
+  // D'autres styles : interview, Reels.
   await page.click('.xp-style:has-text("Interview")');
   await close();
-  await shot('express-entreprise', null, 700);
-  await page.click('.chips.domains .action:has-text("Réseaux")');
+  await mark('.section|1. Style', 'st');
+  await shot('express-interview', '[data-shot=st]', 700);
   await page.click('.xp-style:has-text("Reels dynamique")');
   await close();
-  await shot('express-reseaux', null, 700);
-  await page.click('.chips.domains .action:has-text("Tout")');
+  await shot('express-reels', null, 700);
 
   // Parole : silences analysés, sous-titres.
   await tab('speech');

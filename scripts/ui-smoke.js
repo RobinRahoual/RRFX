@@ -353,7 +353,6 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (kept === 'chain') throw new Error('réglages de l\'onglet Effets non rendus');
   });
   await step('montage express YouTube (sans musique)', async () => {
-    await page.click('.chips.domains .action:has-text("YouTube")');
     await page.click('.xp-style:has-text("YouTube face cam")');
     await page.waitForSelector('.xp-step:has-text("Couper les silences")');
     if (!/YouTube face cam/.test(await page.textContent('#cta'))) throw new Error('style non choisi');
@@ -362,7 +361,6 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const t = await page.textContent('#status-title'), rep = await page.textContent('.section:has-text("Dernier montage express")');
     if (!/Ton montage est prêt/.test(t)) throw new Error('express : ' + t + ' / ' + rep);
     if (!/Couper les silences · \d+ silences coupés/.test(rep) || !/Zoom un plan sur deux/.test(rep)) throw new Error('rapport : ' + rep);
-    await page.click('.chips.domains .action:has-text("Tout")');
   });
   await step('parole : silences, sous-titres, bandeau', async () => {
     await page.click('.tab[data-tab=speech]');
@@ -400,8 +398,6 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await step('accueil et test de compatibilité', async () => {
     await page.evaluate(() => window.RRFXApp.services.welcome());
     await page.waitForSelector('.modal:has-text("Bienvenue dans RR FX")');
-    await page.click('.modal .wl-domains .action:has-text("Entreprise")');
-    if (await page.evaluate(() => window.RRFXApp.settings().domain) !== 'corporate') throw new Error('domaine non retenu');
     await page.click('.modal .button-secondary:has-text("Tester mon Premiere")');
     await page.waitForSelector('#status.ok:has-text("Tout fonctionne")', { timeout: 8000 });
     await page.waitForSelector('.section:has-text("Test de compatibilité") .xp-check.ok');

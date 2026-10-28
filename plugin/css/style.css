@@ -466,8 +466,6 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 /* ---------- Accueil et recherche rapide ---------- */
 .wl { display: flex; flex-direction: column; gap: 8px; }
 .wl-lead { font-size: 13px; }
-.wl-ask { font-weight: 600; margin-top: 8px; }
-.wl-domains { margin: 4px 0 6px; }
 .wl-card { display: flex; gap: 10px; align-items: flex-start; padding: 8px; border-radius: 6px; background: var(--bg-2); }
 .wl-card .note { margin: 2px 0 0; }
 .wl-icon { font-size: 18px; line-height: 1; margin-top: 1px; }
@@ -481,8 +479,6 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .pal-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pal-kind { flex: none; font-size: 11px; color: var(--text-muted); }
 .pal-empty { padding: 8px; }
-.chips.domains { margin-top: 4px; align-items: center; }
-.chips-label { font-size: 11px; color: var(--text-muted); margin-right: 2px; }
 
 /* ---------- Parole : silences ---------- */
 .sp-bar { margin: 8px 0 4px; }

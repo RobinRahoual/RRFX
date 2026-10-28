@@ -724,31 +724,10 @@
       chips.appendChild(b);
     });
     view.appendChild(chips);
-    const doms = h('div', { class: 'chips domains' }, h('span', { class: 'chips-label' }, 'Pour'));
-    [{ id: 'all', label: 'Tout' }].concat(Lib.DOMAINS).forEach(d => {
-      const b = h('button', { class: 'action' + ((settings().domain || 'all') === d.id ? ' selected' : ''), title: d.label }, d.icon ? d.icon + ' ' + d.label : d.label);
-      b.addEventListener('click', () => {
-        settings().domain = d.id;
-        persist();
-        doms.querySelectorAll('.action').forEach(x => x.classList.remove('selected'));
-        b.classList.add('selected');
-        renderGrid();
-      });
-      doms.appendChild(b);
-    });
-    view.appendChild(doms);
     view.appendChild(h('div', { class: 'grid', id: 'grid' }));
     view.appendChild(h('div', { id: 'inspector' }));
     renderGrid();
     renderInspector();
-  }
-
-  // Domaines d'un effet : intégrés (bibliothèque), overlays fournis (selon le pack), les tiens partout.
-  const PACK_USES = { leak: ['clip', 'social', 'event', 'corporate'], flare: ['clip', 'social', 'event', 'corporate'], bokeh: ['clip', 'social', 'event', 'corporate'], dust: ['clip', 'social', 'event'], burn: ['clip', 'social', 'event'], vhs: ['clip', 'social', 'youtube'], rgb: ['clip', 'social', 'youtube'], sweep: ['clip', 'social', 'corporate', 'event', 'youtube'] };
-  function usesOf(e) {
-    if (e.kind === 'builtin' || e.kind === 'preset') return (e.def && e.def.uses) || [];
-    if (e.kind === 'overlay' && e.overlay.pack) return PACK_USES[e.overlay.pack.split('-')[0]] || Lib.DOMAINS.map(d => d.id);
-    return Lib.DOMAINS.map(d => d.id);
   }
 
   function visibleEntries() {
@@ -758,8 +737,6 @@
       if (S.cat === 'mine' && e.kind === 'builtin') return false;
       if (S.cat !== 'all' && S.cat !== 'mine' && e.cat !== S.cat) return false;
       if (q && Core.normName(e.name + ' ' + catLabel(e.cat)).indexOf(q) < 0) return false;
-      const dom = settings().domain || 'all';
-      if (dom !== 'all' && usesOf(e).indexOf(dom) < 0) return false;
       return true;
     });
   }

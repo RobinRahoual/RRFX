@@ -31,20 +31,14 @@ on y revient.
 
 ### Onglet Express : ton montage en un clic
 
-En haut, **Pour** : *Clip musical*, *Réseaux sociaux*, *Entreprise*, *Événementiel*, *YouTube* ou *Tout*. Le choix
-filtre les styles (et les effets de l'onglet Effets) ; il est aussi proposé à l'accueil.
-
-1. **Style** :
-
-   | Domaine | Styles |
-   | --- | --- |
-   | 📱 Réseaux sociaux | *Reels dynamique* (coupes sur le son, zooms traversants, sous-titres mot par mot, 9:16), *Face cam / UGC* (silences, punch-in, sous-titres 3 mots, 9:16) |
-   | 💼 Entreprise | *Entreprise épuré* (fondus flous, pushs et zooms doux sur chaque coupe, bandeau), *Interview / témoignage* (silences, punch-in, fondus, bandeau, sous-titres, 9:16 sur fond flou) |
-   | 🎉 Événementiel | *Aftermovie* (montage sur la musique, flashs, leaks dorés), *Mariage / cérémonie* (fondus blancs, bokeh, lumière chaude) |
-   | ▶ YouTube | *YouTube face cam* (silences, punch-in, whip pans et whooshs), *Vlog voyage* |
-   | 🎵 Clip musical | *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Cinématique*, *Rétro VHS* |
-
-   Ou **Mon style** : ton enchaînement d'effets et ton look en cours.
+1. **Style** : *Reels dynamique* (coupes sur le son, zooms traversants, sous-titres mot par mot, 9:16), *Face cam
+   / UGC* (silences, punch-in, sous-titres 3 mots, 9:16), *YouTube face cam* (silences, punch-in, whip pans et
+   whooshs), *Interview / témoignage* (silences, punch-in, fondus, bandeau, sous-titres, 9:16 sur fond flou),
+   *Entreprise épuré* (fondus flous, pushs et zooms doux sur chaque coupe, bandeau), *Aftermovie* (montage sur la
+   musique, flashs, leaks dorés), *Mariage / cérémonie* (fondus blancs, bokeh, lumière chaude), *Vlog voyage*,
+   *Cinématique*, *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Rétro VHS*, ou **Mon style**
+   (ton enchaînement d'effets et ton look en cours). Ce sont des points de départ, utilisables pour n'importe
+   quelle vidéo : décoche les étapes inutiles.
 2. **Avant de lancer** : RR FX vérifie ce dont ce style a besoin : séquence ouverte, calque de réglage, musique
    (seulement pour les étapes qui suivent le rythme), plans où l'on parle sélectionnés (coupe des silences), rushs
    sélectionnés dans le panneau *Projet* (montage), caméras (conversion), paroles, sous-titres ou bandeau. Ce qui
@@ -70,7 +64,6 @@ fois. Les réglages de tes autres onglets sont rendus tels quels à la fin.
 | Réglage | Rôle |
 | --- | --- |
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
-| **Pour** | Filtre les effets par usage : clip musical, réseaux sociaux, entreprise, événementiel, YouTube |
 | **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Toutes les coupes de la séquence** (sans rien sélectionner) · **Marqueurs de la séquence** · **Temps forts de la musique** (détectés directement, sans poser de marqueurs) · Tête de lecture · Début / fin des clips · Clips entiers · **Tous les plans de la séquence** |
 | **Plans** | Positions « clips entiers » : tous, ou **un sur deux** (punch-in sur les jump cuts : alterne cadre large et serré) |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), **un effet au hasard** (même catégorie ou favoris), ou un **enchaînement** : 2 à 4 effets choisis (Maj + clic sur les cartes) qui se succèdent sur chaque temps fort, dans l'ordre ou au hasard |
