@@ -47,10 +47,6 @@ de la nouvelle version (tes effets perso sont gardés). Pour désinstaller : sup
 **Il faut un calque de réglage dans le projet** (une fois par projet) : *Fichier > Nouveau > Calque de réglage*.
 RR FX le retrouve tout seul.
 
-### Pourquoi pas un `.ccx` comme Rotate ?
-Rotate est un plugin UXP. L'API UXP de Premiere ne permet pas (encore) de découper un clip ni de changer sa vitesse :
-les speed ramps seraient impossibles. RR FX est donc une extension CEP (HTML + ExtendScript), avec la même interface.
-
 ## Utilisation
 
 En haut du panneau, toujours visibles : le crédit, **▴ Réduire**, les onglets (sur deux lignes si le panneau est
