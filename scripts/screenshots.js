@@ -14,44 +14,12 @@ const os = require('os');
 const path = require('path');
 const { chromium } = require('playwright');
 const demo = require('./demo-assets.js');
+const { song, ISSUES } = demo;
 const { addFolder } = require('./demo-files.js');
 
 const out = path.resolve(process.argv[2] || 'captures');
 const WIDTH = Number(process.argv[3]) || 380;
 const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
-
-// Un morceau d'exemple : grosse caisse, caisse claire, basse et mélodie, couplet calme puis refrain.
-function song(file, seconds) {
-  const SR = 22050, n = seconds * SR, x = new Float32Array(n), beat = 60 / 118;
-  const notes = [220, 261.6, 329.6, 293.7, 246.9, 392, 349.2, 329.6];
-  for (let i = 0; i < n; i++) {
-    const t = i / SR, b = t / beat, k = t % beat, loud = t < 12 ? 0.45 : 1;
-    let v = Math.exp(-k * 28) * Math.sin(2 * Math.PI * 55 * k) * 0.9;
-    if (Math.floor(b) % 2 === 1) v += Math.exp(-k * 35) * (Math.sin(i * 12.9898) * 43758.5453 % 1) * 0.35;
-    v += 0.18 * Math.sin(2 * Math.PI * notes[Math.floor(b / 2) % notes.length] * t) * (0.6 + 0.4 * Math.exp(-(t % (beat * 2)) * 3));
-    x[i] = v * loud * 0.7;
-  }
-  const data = Buffer.alloc(n * 2);
-  for (let i = 0; i < n; i++) data.writeInt16LE(Math.max(-32767, Math.min(32767, Math.round(x[i] * 32000))), i * 2);
-  const h = Buffer.alloc(44);
-  h.write('RIFF', 0); h.writeUInt32LE(36 + data.length, 4); h.write('WAVEfmt ', 8); h.writeUInt32LE(16, 16); h.writeUInt16LE(1, 20); h.writeUInt16LE(1, 22);
-  h.writeUInt32LE(SR, 24); h.writeUInt32LE(SR * 2, 28); h.writeUInt16LE(2, 32); h.writeUInt16LE(16, 34); h.write('data', 36); h.writeUInt32LE(data.length, 40);
-  fs.writeFileSync(file, Buffer.concat([h, data]));
-}
-
-const code = items => 'RRFX0:' + Buffer.from(JSON.stringify({ rrfx: 1, items })).toString('base64url');
-const issue = (n, name, author, likes, days, desc, items) => ({
-  number: n, title: '[Preset] ' + name, state: 'open', html_url: 'https://github.com/RobinRahoual/RRFX/issues/' + n,
-  created_at: new Date(Date.now() - days * 86400000).toISOString(), user: { login: author }, reactions: { '+1': likes },
-  body: '### Nom\n\n' + name + '\n\n### Description\n\n' + desc + '\n\n### Code RR FX\n\n' + code(items)
-});
-const ISSUES = [
-  issue(41, 'Zoom drop 140 BPM', 'lea.edits', 128, 3, 'Le zoom rotation de mes clips rap, calé pour les drops à 140.', [{ type: 'preset', name: 'Zoom drop 140 BPM', cat: 'zoom', data: { base: 'zoom-spin', params: { frames: 6, intensity: 150 } } }]),
-  issue(37, 'Glitch VHS doux', 'mehdi.films', 86, 9, 'Glitch léger pour les couplets, pas trop agressif.', [{ type: 'preset', name: 'Glitch VHS doux', cat: 'distort', data: { base: 'glitch', params: { frames: 8, intensity: 70 } } }]),
-  issue(52, 'Rampe « respiration »', 'robin.rahoual', 64, 1, 'Ralenti au milieu du plan, accélération sur la coupe.', [{ type: 'ramp', name: 'Rampe respiration', data: { points: [{ t: 0, v: 100 }, { t: 0.5, v: 30 }, { t: 1, v: 400 }], frames: 18, segments: 12 } }]),
-  issue(29, 'Flash blanc concert', 'nina.cuts', 41, 20, 'Flash court pour les clips de live.', [{ type: 'preset', name: 'Flash blanc concert', cat: 'flash', data: { base: 'flash-white', params: { frames: 4, intensity: 120 } } }]),
-  issue(55, 'Shake basse 808', 'tom.vfx', 12, 0, 'Secousse sur chaque 808.', [{ type: 'preset', name: 'Shake basse 808', cat: 'shake', data: { base: 'shake-bass', params: { frames: 10, intensity: 90 } } }])
-];
 
 (async () => {
   fs.mkdirSync(out, { recursive: true });

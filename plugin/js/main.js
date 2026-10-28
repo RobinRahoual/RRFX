@@ -1707,7 +1707,7 @@
       status.finish('ok', 'Calque de réglage défini', r.name);
     });
     view.appendChild(section('Calques', [
-      h('div', { class: 'note' }, 'Comme 2WIN, RR FX pose les effets sur des calques de réglage « RR FX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « RR FX ») : tes pistes audio ne sont jamais touchées.'),
+      h('div', { class: 'note' }, 'RR FX pose les effets sur des calques de réglage « RR FX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « RR FX ») : tes pistes audio ne sont jamais touchées.'),
       h('div', { class: 'field' }, checkbox('Recopier le cadrage et l\'étalonnage du clip sur les copies CLIP FX', st.copyLook, v => { st.copyLook = v; persist(); })),
       h('div', { class: 'note' }, 'Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.'),
       h('div', { class: 'note' }, 'Calque de réglage utilisé : ' + (st.adjName || 'recherche automatique dans le projet') + '. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.'),
