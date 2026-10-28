@@ -175,7 +175,7 @@
   };
 
   function normName(s) {
-    return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[’`]/g, '\'').replace(/\s+/g, ' ').trim().toLowerCase();
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[’`]/g, '\'').replace(/\s+/g, ' ').trim().toLowerCase();
   }
 
   // Premiere's effect list -> { type: display name or null }.

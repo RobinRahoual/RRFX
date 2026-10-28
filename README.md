@@ -5,7 +5,7 @@ Plugin gratuit créé par **Robin Rahoual** — suis-moi sur Instagram : [@robin
 Des **transitions et effets de clip musical posés en un clic autour des coupes** (flashs, flickers, flous, zooms,
 shakes, slides, glitchs, motion blur) et des **overlays** (16 fournis : light leaks, flares, bokeh, pellicule, VHS…), des **speed ramps** qui ne
 décalent jamais la coupe, la **détection des temps forts** de la musique, le **montage automatique sur le rythme**, la
-**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, et **tes propres effets** capturés depuis Premiere,
+**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, **tes dossiers de ressources** (SFX, polices, LUTs, overlays, titres…) à portée de clic, et **tes propres effets** capturés depuis Premiere,
 partageables par un simple code ou publiés dans la **bibliothèque en ligne** de la communauté.
 
 **Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
@@ -146,6 +146,29 @@ réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèl
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
 *Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/RRFX/Titres`).
 
+### Onglet Ressources
+
+**Lie le dossier de ton disque** où tu ranges tes effets, SFX, polices, LUTs, titres et overlays (*＋ Lier un
+dossier…*, autant de dossiers que tu veux, disques externes compris). RR FX le parcourt (sous-dossiers compris, jusqu'à
+50 000 fichiers) et classe tout ; les fichiers restent où ils sont.
+
+| Type | Aperçu | Actions |
+| --- | --- | --- |
+| **Sons & SFX** (wav, mp3, aif, m4a, flac…) | forme d'onde, ▶ écoute | poser à la tête de lecture ou **sur chaque marqueur** (whooshs et impacts sur les coupes), sur une piste audio libre — la musique n'est jamais touchée |
+| **Vidéos / images** (mov, mp4, webm, png, jpg…) | image, lecture | poser au-dessus de tes plans (vidéo seule), sur chaque marqueur, **utiliser comme overlay** (onglet Effets), importer |
+| **LUTs** (.cube, .3dl, .look…) | **la LUT appliquée** au plan de test ou à ta vraie image (maintenir = avant) | calque de réglage Lumetri sur le clip (le chemin de la LUT est copié), **installer dans Lumetri** |
+| **Polices** (ttf, otf…) | ton texte dans la police | **installer la police** (dossier de polices de l'utilisateur) |
+| **Titres** (.mogrt) | — | poser à la tête de lecture, utiliser dans l'onglet Textes |
+| **Presets** (.prfpset, exports RR FX…) | — | ajouter à Mes effets (exports RR FX), marche à suivre pour les autres |
+
+Recherche (nom, dossier, type), filtres par type et par dossier, tri, favoris ★. Les vignettes se chargent au fil du
+défilement. L'index est gardé (`Documents/RRFX/ressources-index.json`) et relu en arrière-plan au-delà d'une heure ;
+**↻ Actualiser** le relit tout de suite. Un disque débranché garde son index (signalé dans la liste).
+
+Les scripts de Premiere ne peuvent pas choisir une LUT dans Lumetri : RR FX pose le calque et copie le chemin, il
+reste à faire *Lumetri > Créatif > Look > Parcourir…*. Les LUT et polices installées apparaissent après un
+redémarrage de Premiere.
+
 ### Onglet Mes effets
 
 - **Preset** : sur un effet, **＋ Preset** garde tes réglages (catégorie « Mes effets »).
@@ -244,7 +267,8 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - l'import d'une **séquence d'images** (`importFiles` « images numérotées ») et `setOverrideFrameRate` (overlays
   fournis) ;
 - `trackItem.disabled` (montage multicam) : si ta version ne le permet pas, RR FX le dit sans rien toucher ;
-- l'ajout d'une piste audio par QE (son de la caméra de référence) ;
+- l'ajout d'une piste audio par QE (son de la caméra de référence, SFX des Ressources) ;
+- le dossier des LUT de l'utilisateur (`Adobe/Common/LUTs/Creative`) lu par Lumetri ;
 - le décodage du son **AAC** des MOV/MP4 dans le panneau : s'il échoue, exporte le son en WAV, ou utilise
   *Clip > Synchroniser* de Premiere.
 
@@ -274,6 +298,7 @@ bibliothèque (`Documents/CutFX/library.json`) est reprise au premier lancement,
 ```bash
 npm test          # Node 18+ : cœur, modules, cohérence du projet, et le vrai script Premiere sur une timeline simulée
 npm run smoke     # interface en mode démo dans Chromium (nécessite Playwright)
+npm run screenshots # captures d'écran de chaque page (dossier captures/, données d'exemple)
 npm run package   # fabrique dist/RRFX-<version>-installation.zip
 ```
 
@@ -302,6 +327,8 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/share.js            codes de partage RRFX1
   js/packs.js            les 16 overlays fournis, dessinés image par image
   js/community.js        bibliothèque en ligne (issues GitHub : lecture, tri, lien de publication)
+  js/assets.js           ressources : indexation des dossiers liés, classement, filtres, LUT .cube (testé)
+  js/ressources.js       onglet Ressources : vignettes, aperçus, actions
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)
   js/library.js          les 20 recettes d'effets + les animations de texte
   js/preview.js          aperçus simulés
@@ -313,6 +340,6 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)
 install/                 scripts d'installation + LISEZMOI
 .github/ISSUE_TEMPLATE/  formulaire « Partager un effet RR FX » (bibliothèque en ligne)
-scripts/                 fabrication du pack, test d'interface
+scripts/                 fabrication du pack, test d'interface, ressources de démonstration, captures
 tests/                   tests Node (sim.js = timeline Premiere simulée)
 ```

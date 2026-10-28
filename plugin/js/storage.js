@@ -117,7 +117,7 @@
     if (!fs) return false;
     fs.mkdirSync(DIR, { recursive: true });
     const cp = nodeRequire('child_process');
-    if ((root.process || process).platform === 'win32') cp.exec('explorer "' + DIR + '"');
+    if (isWin()) cp.exec('explorer "' + DIR + '"');
     else cp.exec('open "' + DIR + '"');
     return true;
   }
@@ -169,8 +169,53 @@
     return out;
   }
 
+  const platform = () => ((root.process && root.process.platform) || (typeof process !== 'undefined' && process.platform) || '');
+  const isWin = () => platform() === 'win32';
+
+  // Montre un fichier dans le Finder / l'Explorateur (sélectionné).
+  function reveal(file) {
+    if (!fs) return false;
+    const cp = nodeRequire('child_process');
+    if (isWin()) cp.execFile('explorer.exe', ['/select,', String(file).replace(/\//g, '\\')], () => {});
+    else cp.execFile('open', ['-R', file], () => {});
+    return true;
+  }
+
+  // Lance une commande (sans shell) ; résout avec { ok, out }.
+  function execFile(cmd, args) {
+    return new Promise(resolve => {
+      if (!nodeRequire) return resolve({ ok: false, out: 'indisponible' });
+      nodeRequire('child_process').execFile(cmd, args, (err, out, errOut) => resolve({ ok: !err, out: String(err ? errOut || err.message : out || '') }));
+    });
+  }
+
+  // Dossiers où Premiere et le système cherchent les LUT et polices de l'utilisateur.
+  function systemDirs() {
+    if (!fs) return null;
+    const home = os.homedir(), env = (root.process && root.process.env) || {};
+    if (isWin()) {
+      const appData = env.APPDATA || path.join(home, 'AppData', 'Roaming'), local = env.LOCALAPPDATA || path.join(home, 'AppData', 'Local');
+      return { luts: path.join(appData, 'Adobe', 'Common', 'LUTs', 'Creative'), fonts: path.join(local, 'Microsoft', 'Windows', 'Fonts'), win: true };
+    }
+    return { luts: path.join(home, 'Library', 'Application Support', 'Adobe', 'Common', 'LUTs', 'Creative'), fonts: path.join(home, 'Library', 'Fonts'), win: false };
+  }
+
+  // Petit fichier JSON dans Documents/RRFX (index des ressources…).
+  function readJSON(name) {
+    if (!fs) return null;
+    try { return JSON.parse(fs.readFileSync(path.join(DIR, name), 'utf8')); } catch (e) { return null; }
+  }
+  function writeJSON(name, data) {
+    if (!fs) return;
+    fs.mkdirSync(DIR, { recursive: true });
+    const f = path.join(DIR, name), tmp = f + '.tmp';
+    fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
+    fs.renameSync(tmp, f);
+  }
+
   root.RRFXStorage = {
     load, save, exportJSON, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
+    reveal, execFile, systemDirs, readJSON, writeJSON, isWin,
     fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
   };
 })(typeof self !== 'undefined' ? self : this);

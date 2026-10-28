@@ -159,10 +159,18 @@
     return { g, w, h: hh };
   }
 
-  // Les couleurs du thème sont définies sur <body> (theme-dark / theme-light).
+  // Les couleurs du thème sont définies sur <body> (theme-dark / theme-light). Lues une fois
+  // (les dessins des courbes en demandent beaucoup à chaque image) ; css.reset() au changement de thème.
+  const cssCache = new Map();
   function css(name) {
-    return getComputedStyle(document.body).getPropertyValue(name).trim() || getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+    let v = cssCache.get(name);
+    if (v === undefined) {
+      v = getComputedStyle(document.body).getPropertyValue(name).trim() || getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+      if (v) cssCache.set(name, v);
+    }
+    return v;
   }
+  css.reset = () => cssCache.clear();
 
   // Une couleur CSS (#rgb, #rrggbb ou rgb()) avec une opacité donnée.
   function withAlpha(color, a) {

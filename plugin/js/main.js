@@ -311,6 +311,7 @@
     }
     document.body.classList.toggle('theme-light', light);
     document.body.classList.toggle('theme-dark', !light);
+    window.RRFXUI.css.reset();
     if (S.curveEd) S.curveEd.draw();
     if (S.rampEd) S.rampEd.draw();
   }
@@ -1767,6 +1768,14 @@
     setDisabled(b, S.busy || !a.enabled);
   }
 
+  // Fondu sur les bords de la barre d'onglets quand elle déborde.
+  function updateTabFade() {
+    const t = $('tabs');
+    if (!t) return;
+    t.classList.toggle('more-left', t.scrollLeft > 2);
+    t.classList.toggle('more-right', t.scrollLeft + t.clientWidth < t.scrollWidth - 2);
+  }
+
   function switchTab(tab) {
     if (S.tab !== tab && app.tabs[S.tab] && app.tabs[S.tab].leave) app.tabs[S.tab].leave();
     S.tab = tab;
@@ -1780,6 +1789,9 @@
     S.rampEd = null;
     S.capturing = null;
     document.querySelectorAll('.tab').forEach(t => t.classList.toggle('on', t.dataset.tab === tab));
+    const on = document.querySelector('.tab.on');
+    if (on && on.scrollIntoView) on.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    updateTabFade();
     document.querySelectorAll('.view').forEach(v => { v.classList.toggle('on', v.id === 'view-' + tab); if (v.id !== 'view-' + tab) v.innerHTML = ''; });
     if (tab === 'effects') renderEffectsView();
     if (tab === 'ramp') renderRampView();
@@ -1841,7 +1853,8 @@
     document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
     document.addEventListener('keydown', onKeyDown);
     let rt = 0;
-    window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.curveEd) S.curveEd.draw(); if (S.rampEd) S.rampEd.draw(); }, 60); });
+    window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { updateTabFade(); if (S.curveEd) S.curveEd.draw(); if (S.rampEd) S.rampEd.draw(); }, 60); });
+    $('tabs').addEventListener('scroll', updateTabFade, { passive: true });
   }
 
   // ---------------------------------------------------------------- modules (Musique, Textes…)
@@ -1853,6 +1866,10 @@
     tabs: {}, actions: {}, services: {}
   };
   window.RRFXApp = app;
+  // Pour les autres onglets (Ressources…) : ajouter un overlay ou des effets à la bibliothèque.
+  app.services.addOverlay = file => { addOverlayList([file]); if (S.tab !== 'effects') switchTab('effects'); };
+  app.services.addItems = list => addItems(list);
+  app.fileURL = fileURL;
   function loadFeatures() {
     (window.RRFXFeatures || []).forEach(feature => {
       try { feature(app); } catch (e) { log('Module du panneau indisponible : ' + errorMessage(e), 'error'); }

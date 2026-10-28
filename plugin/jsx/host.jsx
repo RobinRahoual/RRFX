@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.5.1';
+    var VERSION = '1.6.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -1517,6 +1517,76 @@ var RRFX = (function () {
         return ok({ created: [{ kind: 'adj', track: ti, start: a, name: label }], track: ti, warnings: warnings });
     }
 
+    // ------------------------------------------------------------ public: ressources (dossiers liés)
+
+    // Piste vidéo la plus haute qui a une image à l'instant t (-1 : aucune).
+    function topTrackAt(s, t) {
+        var i;
+        for (i = s.videoTracks.numTracks - 1; i >= 0; i--) if (clipContaining(s, i, t)) return i;
+        return -1;
+    }
+
+    // Pose une ressource du disque à chaque instant de o.times (s) : vidéo (sans son, au-dessus
+    // de tout), image (o.imageDur s), son (piste audio libre) ou modèle de titre .mogrt.
+    // Les éléments gardent leur nom : « Tout effacer » ne les retire pas, ↶ Annuler oui.
+    function placeAsset(o) {
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, k, a, pi = null, src, dur, ti, ai, it, tr, used = [];
+        if (!o.times || !o.times.length) return fail('Aucun endroit où poser.');
+        if (o.kind === 'mogrt' && !s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un modèle de titre par script.');
+        if (o.kind !== 'mogrt') {
+            pi = itemForPath(o.path, 'RR FX Ressources', false);
+            if (!pi) return fail('Premiere n\'a pas importé ce fichier (format pris en charge ?)');
+        }
+        if (o.kind === 'video') src = videoSourceOf(pi);
+        for (i = 0; i < o.times.length; i++) {
+            a = snap(o.times[i] * TICKS, f);
+            try {
+                if (o.kind === 'audio') {
+                    dur = mediaEndOf(pi) || 2 * TICKS;
+                    // Les sons d'un même lot restent groupés sur les mêmes pistes.
+                    ai = -1;
+                    for (k = 0; k < used.length && ai < 0; k++) if (audioTrackClear(s, used[k], a, a + dur)) ai = used[k];
+                    if (ai < 0) { ai = pickAudioTrack(s, a, a + dur, warnings); if (!inList(used, ai)) used.push(ai); }
+                    tr = s.audioTracks[ai];
+                    tr.overwriteClip(pi, mkTime(a));
+                    it = findAudioAt(s, ai, a);
+                    if (!it) { tr.overwriteClip(pi, a / TICKS); it = findAudioAt(s, ai, a); }
+                    if (!it) throw new Error('son non posé');
+                    created.push({ kind: 'aud', track: ai, start: a, name: it.name });
+                    continue;
+                }
+                if (o.kind === 'mogrt') {
+                    ti = pickTrack(s, topTrackAt(s, a) + 1, a, a + 10 * TICKS, warnings);
+                    it = s.importMGT(o.path, String(a), ti, 0);
+                    if (!it || !it.start) it = findItemAt(s, ti, a);
+                    if (!it) throw new Error('modèle non posé (fichier .mogrt valide ?)');
+                } else {
+                    dur = o.kind === 'image' ? Math.max(1, Math.round((o.imageDur || 5) * TICKS / f)) * f : mediaEndOf(pi);
+                    if (!(dur > 0)) throw new Error('durée du média illisible');
+                    ti = pickTrack(s, topTrackAt(s, a) + 1, a, a + dur, warnings);
+                    it = placeOn(s, ti, o.kind === 'video' ? src : pi, a, 0, dur);
+                    fixSpan(it, a, a + dur);
+                    try { it.name = pi.name; } catch (e) {}
+                }
+                created.push({ kind: 'adj', track: ti, start: a, name: it.name });
+            } catch (err) {
+                warnings.push(String(o.name || o.path) + ' à ' + (Math.round(a / TICKS * 100) / 100) + ' s : ' + err.toString());
+            }
+        }
+        if (!created.length) return fail(warnings[0] || 'Rien n\'a été posé.', { warnings: warnings });
+        return ok({ created: created, warnings: warnings });
+    }
+
+    // Importe des fichiers du disque dans le chutier « RR FX Ressources » (sans rien poser).
+    function importAssets(o) {
+        var n = 0, failed = [], i;
+        for (i = 0; i < o.paths.length; i++) {
+            if (itemForPath(o.paths[i], 'RR FX Ressources', false)) n++;
+            else failed.push(String(o.paths[i]).replace(/^.*[\\\/]/, ''));
+        }
+        return ok({ imported: n, failed: failed });
+    }
+
     // ------------------------------------------------------------ overlays
 
     function placeOverlay(s, ov, t, n, warnings) {
@@ -1683,6 +1753,8 @@ var RRFX = (function () {
         placeRushes: guard(placeRushes),
         cutAtTimes: guard(cutAtTimes),
         multicamSwitch: guard(multicamSwitch),
+        placeAsset: guard(placeAsset),
+        importAssets: guard(importAssets),
         syncInfo: guard(syncInfo),
         moveClips: guard(moveClips),
         grabFrames: guard(grabFrames),

@@ -94,6 +94,7 @@
       return { x: y, sr: sr / 2 };
     }
 
+    const bpmText = () => String(M.beats.bpm).replace('.', ',');
     const seqToFile = (info, t) => info.inPoint + (t - info.start) * (info.speed || 1);
     const fileToSeq = (info, t) => info.start + (t - info.inPoint) / (info.speed || 1);
 
@@ -203,8 +204,8 @@
         const b = st().beats;
         const r = await Host.call('addMarkers', { times, name: 'RR FX · ' + MODES.find(m => m.v === b.mode).short, replace: b.replace, from: M.zone.from, to: M.zone.to });
         if (!r.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: r.error };
-        app.log(r.added + ' marqueurs posés' + (r.removed ? ', ' + r.removed + ' anciens retirés' : '') + (M.beats.bpm ? ' · ~' + M.beats.bpm + ' BPM' : ''), 'ok');
-        return { kind: 'ok', title: app.plural(r.added, 'marqueur posé', 'marqueurs posés'), detail: (M.beats.bpm ? '~' + M.beats.bpm + ' BPM · ' : '') + 'nommés « RR FX · … » (Tout effacer les retire).' };
+        app.log(r.added + ' marqueurs posés' + (r.removed ? ', ' + r.removed + ' anciens retirés' : '') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : ''), 'ok');
+        return { kind: 'ok', title: app.plural(r.added, 'marqueur posé', 'marqueurs posés'), detail: (M.beats.bpm ? '~' + bpmText() + ' BPM · ' : '') + 'nommés « RR FX · … » (Tout effacer les retire).' };
       });
     }
 
@@ -428,7 +429,8 @@
         g.fillText('Clique sur « Analyser » pour voir la musique et ses temps forts.', 10, hh / 2 + 4);
         return;
       }
-      const info = M.info, f0 = info.manual ? 0 : info.inPoint, f1 = info.manual ? M.duration : seqToFile(info, info.end);
+      // Jamais au-delà de la fin du fichier (clip plus long que le son, ou fichier choisi à la main).
+      const info = M.info, f0 = info.manual ? 0 : info.inPoint, f1 = Math.min(M.duration || Infinity, info.manual ? M.duration : seqToFile(info, info.end));
       const xOf = t => (t - f0) / Math.max(0.001, f1 - f0) * w, v = M.loud.values, rate = M.loud.rate;
       if (M.zone) {
         g.fillStyle = 'rgba(75,156,245,0.10)';
@@ -448,7 +450,7 @@
         M.beats.times.forEach(t => { const x = xOf(t); if (x >= 0 && x <= w) g.fillRect(Math.round(x), 0, 1.5, hh); });
       }
       if (waveInfo) {
-        waveInfo.textContent = info.name + ' · ' + Math.round(M.duration) + ' s' + (M.beats ? ' · ' + app.plural(M.beats.times.length, 'temps fort') + (M.beats.bpm ? ' · ~' + M.beats.bpm + ' BPM' : '') : '');
+        waveInfo.textContent = info.name + ' · ' + Math.round(M.duration) + ' s' + (M.beats ? ' · ' + app.plural(M.beats.times.length, 'temps fort') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : '') : '');
       }
     }
 
@@ -459,7 +461,7 @@
         app.status.phase('Détection');
         detect(await zone());
         drawWave();
-        return { kind: 'ok', title: 'Musique analysée', detail: app.plural(M.beats.times.length, 'temps fort') + (M.beats.bpm ? ' · ~' + M.beats.bpm + ' BPM' : '') };
+        return { kind: 'ok', title: 'Musique analysée', detail: app.plural(M.beats.times.length, 'temps fort') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : '') };
       });
     }
 
