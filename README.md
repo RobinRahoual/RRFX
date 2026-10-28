@@ -1,12 +1,14 @@
 # RR FX, plugin Premiere Pro
 
+<p align="center"><img src="docs/captures/banniere.png" alt="RR FX : onglets Effets, Couleur, Musique et Formats" width="100%"></p>
+
 Plugin gratuit créé par **Robin Rahoual**. Suis-moi sur Instagram : [@robin.rahoual](https://www.instagram.com/robin.rahoual/).
 
 Des **transitions et effets de clip musical posés en un clic autour des coupes** (flashs, flickers, flous, zooms,
 shakes, slides, glitchs, motion blur) et des **overlays** (16 fournis : light leaks, flares, bokeh, pellicule, VHS…), des **speed ramps** qui ne
 décalent jamais la coupe, la **détection des temps forts** de la musique, le **montage automatique sur le rythme**, la
-**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, la **colorimétrie façon Lightroom** (LUT pour Premiere, DCTL pour Resolve), **tes dossiers de ressources** (SFX, polices, LUTs, overlays, titres…) à portée de clic, et **tes propres effets** capturés depuis Premiere,
-partageables par un simple code ou publiés dans la **bibliothèque en ligne** de la communauté.
+**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, la **conversion LOG → Rec.709 en un clic** (caméra reconnue sur chaque plan, expo et balance auto, raccord entre caméras), la **colorimétrie façon Lightroom** (LUT pour Premiere, DCTL pour Resolve), la **copie 9:16 pour Reels et TikTok**, **tes dossiers de ressources** (SFX, polices, LUTs, overlays, titres…) à portée de clic, et **tes propres effets** capturés depuis Premiere,
+partageables par un simple code, en **pack de style**, ou publiés dans la **bibliothèque en ligne** de la communauté.
 
 **Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
 (`RR FX · …`). Seules la speed ramp et le motion blur (« CLIP FX ») se posent sur une copie du plan, parce qu'un
@@ -14,6 +16,18 @@ calque de réglage ne peut ni ralentir ni mélanger les images (voir « Les copi
 *Tout effacer* retirent tout.
 
 **[⬇ Télécharger RR FX](https://github.com/RobinRahoual/RRFX/releases/latest)** : fichier `RRFX-<version>-installation.zip`.
+
+## Captures d'écran
+
+Clique sur une image pour voir la page entière (mode démo, données d'exemple).
+
+<table>
+<tr><td align="center" valign="top" width="33%"><a href="docs/captures/01-effets.png"><img src="docs/captures/apercus/01-effets.png" width="250" alt="Effets : transitions sur les coupes, marqueurs, temps forts"></a><br><sub>Effets : transitions sur les coupes, marqueurs, temps forts</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/06-couleur-conversion.png"><img src="docs/captures/apercus/06-couleur-conversion.png" width="250" alt="Conversion LOG → Rec.709 en un clic"></a><br><sub>Conversion LOG → Rec.709 en un clic</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/07-couleur-raccord.png"><img src="docs/captures/apercus/07-couleur-raccord.png" width="250" alt="Expo, balance auto et raccord entre caméras"></a><br><sub>Expo, balance auto et raccord entre caméras</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><a href="docs/captures/05-couleur-panneaux.png"><img src="docs/captures/apercus/05-couleur-panneaux.png" width="250" alt="Couleur façon Lightroom (LUT + DCTL)"></a><br><sub>Couleur façon Lightroom (LUT + DCTL)</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/09-musique.png"><img src="docs/captures/apercus/09-musique.png" width="250" alt="Musique : temps forts, montage auto, synchro"></a><br><sub>Musique : temps forts, montage auto, synchro</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/10-textes.png"><img src="docs/captures/apercus/10-textes.png" width="250" alt="Textes et paroles animés"></a><br><sub>Textes et paroles animés</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><a href="docs/captures/11-formats.png"><img src="docs/captures/apercus/11-formats.png" width="250" alt="Formats : copie 9:16, 4:5, 1:1"></a><br><sub>Formats : copie 9:16, 4:5, 1:1</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/13-ressources-lut.png"><img src="docs/captures/apercus/13-ressources-lut.png" width="250" alt="Ressources : tes dossiers d'effets, SFX, LUTs"></a><br><sub>Ressources : tes dossiers d'effets, SFX, LUTs</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/16-mes-effets.png"><img src="docs/captures/apercus/16-mes-effets.png" width="250" alt="Mes effets et packs de style"></a><br><sub>Mes effets et packs de style</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><a href="docs/captures/02-effets-overlays.png"><img src="docs/captures/apercus/02-effets-overlays.png" width="250" alt="Overlays : light leaks, flares, VHS…"></a><br><sub>Overlays : light leaks, flares, VHS…</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/03-rampe.png"><img src="docs/captures/apercus/03-rampe.png" width="250" alt="Speed ramps"></a><br><sub>Speed ramps</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/08-couleur-conversion-camera.png"><img src="docs/captures/apercus/08-couleur-conversion-camera.png" width="250" alt="Ta caméra, enregistrée une fois"></a><br><sub>Ta caméra, enregistrée une fois</sub></td></tr>
+<tr><td align="center" valign="top" width="33%"><a href="docs/captures/17-communaute.png"><img src="docs/captures/apercus/17-communaute.png" width="250" alt="Bibliothèque de la communauté"></a><br><sub>Bibliothèque de la communauté</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/18-reglages.png"><img src="docs/captures/apercus/18-reglages.png" width="250" alt="Réglages et raccourcis"></a><br><sub>Réglages et raccourcis</sub></td><td align="center" valign="top" width="33%"><a href="docs/captures/20-theme-clair.png"><img src="docs/captures/apercus/20-theme-clair.png" width="250" alt="Thème clair de Premiere"></a><br><sub>Thème clair de Premiere</sub></td></tr>
+</table>
 
 ## Installation
 
@@ -398,7 +412,7 @@ bibliothèque (`Documents/CutFX/library.json`) est reprise au premier lancement,
 ```bash
 npm test          # Node 18+ : cœur, modules, cohérence du projet, et le vrai script Premiere sur une timeline simulée
 npm run smoke     # interface en mode démo dans Chromium (nécessite Playwright)
-npm run screenshots # captures d'écran de chaque page (dossier captures/, données d'exemple)
+npm run screenshots # captures de chaque page et images du README (docs/captures, données d'exemple)
 npm run package   # fabrique dist/RRFX-<version>-installation.zip
 ```
 
@@ -449,6 +463,7 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)
 install/                 scripts d'installation + LISEZMOI
+docs/captures/           captures d'écran du README (npm run screenshots les refait)
 .github/ISSUE_TEMPLATE/  formulaire « Partager un effet RR FX » (bibliothèque en ligne)
 scripts/                 fabrication du pack, test d'interface, ressources de démonstration, captures
 tests/                   tests Node (sim.js = timeline Premiere simulée)
