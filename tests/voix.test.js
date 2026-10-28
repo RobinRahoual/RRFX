@@ -61,7 +61,9 @@ test('keywords: numbers, strong words, your list, emoji; repetitions and false s
   assert.strictEqual(one.length, w.length);
   assert.deepStrictEqual(one.filter(x => x.key).map(x => x.text), ['500', '3', 'minutes ⏱️']);
   assert.strictEqual(one[one.length - 1].end, 4);
-  assert.ok(Sp.highlight(cues, 0, {}).every(x => x.key));
+  // Phrase entière : pas de couleur sur toute la phrase ; 3 mots : le groupe qui contient le mot clé.
+  assert.ok(Sp.highlight(cues, 0, {}).every(x => !x.key));
+  assert.deepStrictEqual(Sp.highlight(cues, 3, {}).map(x => x.key), [false, false, true, true]);
   assert.strictEqual(Sp.emojiFor('Argent'), '💰');
   const rep = Sp.repeats([{ start: 5, end: 7, text: 'On va on va regarder ça' }, { start: 8, end: 9, text: 'je' }, { start: 9.1, end: 9.4, text: 'je pense' }, { start: 10, end: 11, text: 'c\'est- c\'est vrai' }]);
   assert.deepStrictEqual(rep.map(r => [r.text, r.exact]), [['On va on va', false], ['je je', true], ['c\'est- c\'est', false]]);

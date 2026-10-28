@@ -1158,7 +1158,10 @@ var RRFX = (function () {
             }
             return false;
         }
-        if (sel) for (i = 0; i < sel.length; i++) if (sel[i].mediaType === 'Audio' && !linkedToSelection(sel[i])) { best = sel[i]; break; }
+        // o.notSelected : la selection, c'est la voix (musique sous la voix) : jamais la musique.
+        var picked = {};
+        if (sel) for (i = 0; i < sel.length; i++) picked[sel[i].nodeId] = true;
+        if (sel && !(o && o.notSelected)) for (i = 0; i < sel.length; i++) if (sel[i].mediaType === 'Audio' && !linkedToSelection(sel[i])) { best = sel[i]; break; }
         // Sinon : le plus long son qui n'accompagne aucune image (la musique n'a pas de video).
         function withVideo(a) {
             for (var t = 0; t < s.videoTracks.numTracks; t++) {
@@ -1173,7 +1176,7 @@ var RRFX = (function () {
         for (var pass = 0; pass < 2 && !best && !it; pass++) {
             for (i = 0; i < list.length; i++) {
                 // Le son pose par RR FX (camera de reference) n'est jamais la musique.
-                if (/^RR FX \u00b7 /.test(list[i].item.name) || linkedToSelection(list[i].item) || (pass === 0 && withVideo(list[i].item))) continue;
+                if (/^RR FX \u00b7 /.test(list[i].item.name) || linkedToSelection(list[i].item) || (o && o.notSelected && picked[list[i].item.nodeId]) || (pass === 0 && withVideo(list[i].item))) continue;
                 d = tk(list[i].item.end) - tk(list[i].item.start);
                 if (d > bd) { bd = d; it = list[i].item; tr = list[i].track; }
             }

@@ -55,6 +55,7 @@
         g.strokeStyle = '#2680eb'; g.lineWidth = 2; g.strokeRect(x, y, w, hh);
       };
       const at = e => { const r = cv.getBoundingClientRect(); return [Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), Math.min(1, Math.max(0, (e.clientY - r.top) / r.height))]; };
+      const up = () => { drag = null; };
       cv.addEventListener('mousedown', e => { drag = at(e); });
       cv.addEventListener('mousemove', e => {
         if (!drag) return;
@@ -62,12 +63,12 @@
         box = { x: Math.min(drag[0], p[0]), y: Math.min(drag[1], p[1]), w: Math.max(0.03, Math.abs(p[0] - drag[0])), h: Math.max(0.03, Math.abs(p[1] - drag[1])) };
         draw();
       });
-      window.addEventListener('mouseup', () => { drag = null; }, { once: false });
+      window.addEventListener('mouseup', up);
       draw();
       return app.modal('Entoure l\'objet à suivre', h('div', null, cv, h('div', { class: 'note' }, 'Trace un rectangle autour du produit, du logo ou de la personne : RR FX le suit dans tout le plan.')), [
         { label: 'Annuler', value: null },
         { label: 'Suivre cet objet', primary: true, value: () => box }
-      ]);
+      ]).then(v => { window.removeEventListener('mouseup', up); return v; });
     }
 
     /* Comme trackFaces, pour l'objet entouré sur la première image du premier plan. */

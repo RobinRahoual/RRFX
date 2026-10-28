@@ -187,9 +187,11 @@
   }
 
   /* Sous-titres découpés comme splitCues, avec les mots clés repérés : chaque texte reçoit
-     key (il contient un mot clé) et emoji (si opts.emoji, celui du premier mot clé). */
+     key (il contient un mot clé et a au plus colorMax mots) et emoji (si opts.emoji, celui du
+     premier mot clé). */
   function highlight(cues, words, opts) {
-    const o = Object.assign({ emoji: false }, opts || {}), out = [];
+    // La couleur d'un texte de plus de `colorMax` mots n'aurait plus de sens : seul l'emoji reste.
+    const o = Object.assign({ emoji: false, colorMax: 3 }, opts || {}), out = [];
     cues.forEach(c => {
       const w = c.text.split(/\s+/).filter(Boolean), kw = new Set(keywords(c.text, o));
       const n = words || w.length, groups = [];
@@ -200,7 +202,7 @@
         const end = i === groups.length - 1 ? c.end : t + (c.end - c.start) * (g.text.length + 1) / len;
         const first = g.idx.find(k => kw.has(k));
         const em = first !== undefined && o.emoji ? emojiFor(w[first]) : '';
-        out.push({ start: t, end, text: g.text + (em ? ' ' + em : ''), key: first !== undefined, emoji: em });
+        out.push({ start: t, end, text: g.text + (em ? ' ' + em : ''), key: first !== undefined && g.idx.length <= o.colorMax, emoji: em });
         t = end;
       });
     });

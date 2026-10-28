@@ -163,15 +163,27 @@
       const x = st();
       return app.runTask('Son de la voix', async () => {
         const clips = await speechClips(), todo = [], before = [];
-        for (let i = 0; i < clips.length; i++) {
-          app.status.progress(i, clips.length, 'Mesure de ' + clips[i].name);
-          const a = await readClip(clips[i]);
-          if (!a) continue;
-          const m = V.loudness(a.samples, a.sr), g = V.gainFor(m, x.voiceTarget, -1);
+        // Un même enregistrement (souvent coupé en morceaux par la coupe des silences) est mesuré
+        // en entier et reçoit un seul gain : pas de volume qui saute d'un morceau à l'autre.
+        const groups = new Map();
+        clips.forEach(c => { const k = c.path || c.name; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); });
+        let n = 0;
+        for (const list of groups.values()) {
+          app.status.progress(n++, groups.size, 'Mesure de ' + list[0].name);
+          const parts = [];
+          let sr = 0;
+          for (const c of list) {
+            const a = await readClip(c);
+            if (a) { parts.push(a.samples); sr = a.sr; }
+          }
+          if (!parts.length) continue;
+          const all = new Float32Array(parts.reduce((s2, q) => s2 + q.length, 0));
+          parts.reduce((o, q) => { all.set(q, o); return o + q.length; }, 0);
+          const m = V.loudness(all, sr), g = V.gainFor(m, x.voiceTarget, -1);
           if (g.silent) continue;
           before.push(m.lufs);
-          if (g.limited) app.log(clips[i].name + ' : gain limité à ' + g.gain + ' dB (crêtes déjà hautes)', 'warn');
-          (clips[i].audio || []).forEach(t => todo.push({ track: t.track, start: t.start, gain: g.gain }));
+          if (g.limited) app.log(list[0].name + ' : gain limité à ' + g.gain + ' dB (crêtes déjà hautes)', 'warn');
+          list.forEach(c => (c.audio || []).forEach(t => todo.push({ track: t.track, start: t.start, gain: g.gain })));
         }
         if (!todo.length) return { kind: 'warn', title: 'Aucun son à régler', detail: 'Sélectionne des plans avec leur son (image et son liés, ou le son seul).' };
         const r = await Host.call('voiceLevel', { clips: todo, denoise: x.denoise ? DENOISE : null });
@@ -198,7 +210,7 @@
           r.ranges.filter(g => g.b > sp.a && g.a < sp.b).forEach(g => { if (g.a > t) speech.push({ a: t, b: g.a }); t = Math.max(t, g.b); });
           if (t < sp.b) speech.push({ a: t, b: sp.b });
         });
-        const m = await Host.call('musicInfo', {});
+        const m = await Host.call('musicInfo', { notSelected: true });
         if (!m.ok) return { kind: 'error', title: 'Pas de musique', detail: m.error || 'Pose ta musique sur une piste audio.' };
         const keys = V.duckKeys(speech, { depth: x.duckDepth, from: m.start, to: m.end });
         if (!keys.length) return { kind: 'warn', title: 'Rien à baisser', detail: 'La voix ne passe pas pendant la musique.' };

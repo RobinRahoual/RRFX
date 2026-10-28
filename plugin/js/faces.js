@@ -33,22 +33,43 @@
     return { S, Q, W };
   }
 
-  // La fenêtre (x, y, taille b, échelle s) passe-t-elle tous les étages de la cascade ?
-  function passes(d, S, W, x, y, b, s, inv, sd) {
+  /* Cascade mise à l'échelle s pour une image intégrale de largeur W : chaque rectangle devient
+     4 décalages dans l'image intégrale (calculés une fois par échelle, pas à chaque fenêtre).
+     Même disposition que la cascade, les rectangles remplacés par [o1, o2, o3, o4, poids]. */
+  function scaled(d, s, W) {
+    const out = new Float64Array(d.length);
+    out[0] = d[0]; out[1] = d[1];
     for (let w = 2; w < d.length;) {
-      const stageThr = d[w++];
-      let nodes = d[w++], sum = 0;
+      out[w] = d[w]; w++;
+      let nodes = out[w] = d[w]; w++;
+      while (nodes--) {
+        out[w] = d[w]; w++;
+        const nr = out[w] = d[w]; w++;
+        for (let r = 0; r < nr; r++) {
+          const x0 = (d[w] * s + 0.5) | 0, y0 = (d[w + 1] * s + 0.5) | 0;
+          const x1 = x0 + ((d[w + 2] * s + 0.5) | 0), y1 = y0 + ((d[w + 3] * s + 0.5) | 0);
+          out[w] = y1 * W + x1; out[w + 1] = y0 * W + x1; out[w + 2] = y1 * W + x0; out[w + 3] = y0 * W + x0; out[w + 4] = d[w + 4];
+          w += 5;
+        }
+        out[w] = d[w]; out[w + 1] = d[w + 1]; out[w + 2] = d[w + 2];
+        w += 3;
+      }
+    }
+    return out;
+  }
+
+  // La fenêtre dont le coin est à `base` dans l'image intégrale passe-t-elle tous les étages ?
+  function passes(c, S, base, inv, sd) {
+    for (let w = 2; w < c.length;) {
+      const stageThr = c[w++];
+      let nodes = c[w++], sum = 0;
       while (nodes--) {
         w++; // incliné : jamais dans cette cascade
-        const nr = d[w++];
+        const nr = c[w++];
         let rs = 0;
-        for (let r = 0; r < nr; r++) {
-          const x0 = x + ((d[w++] * s + 0.5) | 0), y0 = y + ((d[w++] * s + 0.5) | 0);
-          const x1 = x0 + ((d[w++] * s + 0.5) | 0), y1 = y0 + ((d[w++] * s + 0.5) | 0);
-          rs += (S[y1 * W + x1] - S[y0 * W + x1] - S[y1 * W + x0] + S[y0 * W + x0]) * d[w++];
-        }
-        const thr = d[w++], left = d[w++], right = d[w++];
-        sum += rs * inv < thr * sd ? left : right;
+        for (let r = 0; r < nr; r++, w += 5) rs += (S[base + c[w]] - S[base + c[w + 1]] - S[base + c[w + 2]] + S[base + c[w + 3]]) * c[w + 4];
+        sum += rs * inv < c[w] * sd ? c[w + 1] : c[w + 2];
+        w += 3;
       }
       if (sum < stageThr) return false;
     }
@@ -81,7 +102,7 @@
     const d = CASCADE, base = d[0], { S, Q, W } = integrals(g, w, h), rects = [];
     const lo = Math.max(base, Math.round(Math.min(w, h) * o.minSize)), hi = Math.min(w, h) * o.maxSize;
     for (let s = lo / base; base * s <= hi; s *= o.scaleFactor) {
-      const b = Math.round(base * s), step = Math.max(1, Math.round(s * o.step)), inv = 1 / (b * b);
+      const b = Math.round(base * s), step = Math.max(1, Math.round(s * o.step)), inv = 1 / (b * b), cs = scaled(d, s, W);
       const r = o.roi || { x0: 0, y0: 0, x1: w, y1: h };
       for (let y = Math.max(0, Math.round(r.y0)); y + b < Math.min(h, r.y1); y += step) {
         for (let x = Math.max(0, Math.round(r.x0)); x + b < Math.min(w, r.x1); x += step) {
@@ -91,7 +112,7 @@
           const mean = sum * inv, v = sq * inv - mean * mean;
           // Zone unie (mur, ciel) : pas de visage, on passe vite.
           if (v < 60) continue;
-          if (passes(d, S, W, x, y, b, s, inv, Math.sqrt(v))) rects.push({ x, y, w: b, h: b });
+          if (passes(cs, S, a, inv, Math.sqrt(v))) rects.push({ x, y, w: b, h: b });
         }
       }
     }
