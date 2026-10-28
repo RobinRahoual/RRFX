@@ -1,0 +1,30 @@
+name: Partager un effet CutFX
+description: Publier un preset, un effet capturé ou une rampe dans la bibliothèque en ligne de CutFX.
+title: "[Preset] "
+labels: ["preset"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Ce formulaire est rempli par CutFX (Mes effets > Communauté > Publier). Clique sur **Submit new issue** :
+        ton effet apparaît dans la bibliothèque en ligne de tous les utilisateurs de CutFX.
+        Pour aimer un effet, ajoute la réaction 👍 sur sa page.
+  - type: input
+    id: nom
+    attributes:
+      label: Nom
+      description: Le nom affiché dans la bibliothèque.
+    validations:
+      required: true
+  - type: textarea
+    id: description
+    attributes:
+      label: Description
+      description: Pour quel genre de montage, sur quelle musique, avec quels réglages…
+  - type: textarea
+    id: code
+    attributes:
+      label: Code CutFX
+      description: Le code qui commence par CUTFX1 (CutFX le met tout seul, ou colle-le ici s'il était trop long).
+    validations:
+      required: true

@@ -58,6 +58,19 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     try { await fn(); } catch (e) { errors.push(label + ' : ' + e.message.split('\n')[0]); }
   };
 
+  // Bibliothèque en ligne : GitHub remplacé par deux presets publiés.
+  const zipCode = items => 'CUTFX0:' + Buffer.from(JSON.stringify({ cutfx: 1, items })).toString('base64url');
+  const issues = [
+    { number: 12, title: '[Preset] Zoom drop', state: 'open', html_url: 'https://github.com/RobinRahoual/CutFX/issues/12', created_at: '2026-10-01T10:00:00Z', user: { login: 'monteuse' }, reactions: { '+1': 7 },
+      body: '### Nom\n\nZoom drop\n\n### Description\n\nPour les drops en 120 BPM\n\n### Code CutFX\n\n' + zipCode([{ type: 'preset', name: 'Zoom drop', cat: 'zooms', data: { base: 'zoom-in', params: { frames: 6 } } }]) },
+    { number: 13, title: '[Preset] Rampe douce', state: 'open', html_url: 'https://github.com/RobinRahoual/CutFX/issues/13', created_at: '2026-10-05T10:00:00Z', user: { login: 'robin' }, reactions: { '+1': 2 },
+      body: '### Nom\n\nRampe douce\n\n### Description\n\n_No response_\n\n### Code CutFX\n\n' + zipCode([{ type: 'ramp', name: 'Rampe douce', data: { points: [[0, 1], [1, 0.3]], frames: 12, segments: 8 } }]) }
+  ];
+  await page.route('https://api.github.com/**', route => {
+    const u = route.request().url();
+    if (/\/issues\?/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(issues) });
+    return route.fulfill({ status: 404, body: '{}' });
+  });
   await page.goto(url);
   await page.waitForTimeout(800);
   await snap('1-effets');
@@ -171,6 +184,31 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.modal .cta');
     await page.waitForSelector('#status.ok:has-text("ajouté")', { timeout: 3000 });
     if ((await page.locator('.list-item').count()) !== before + 1) throw new Error('l\'effet partagé n\'a pas été ajouté');
+  });
+  await step('bibliothèque en ligne', async () => {
+    await page.click('.tab[data-tab=mine]');
+    await page.click('.mine-switch .action:has-text("Communauté")');
+    await page.waitForSelector('.comm-item', { timeout: 5000 });
+    const names = await page.$$eval('.comm-item .li-name', els => els.map(e => e.textContent));
+    if (names.join() !== 'Zoom drop,Rampe douce') throw new Error('ordre inattendu : ' + names.join());
+    await page.click('.comm-item:has-text("Zoom drop") .action:has-text("Ajouter")');
+    await page.waitForSelector('#status.ok:has-text("Ajouté")', { timeout: 3000 });
+    await page.waitForSelector('.comm-item:has-text("Zoom drop") .action:has-text("Ouvrir")', { timeout: 3000 });
+    await snap('9-communaute');
+    await page.click('.mine-switch .action:has-text("Ma bibliothèque")');
+    await page.waitForSelector('.list-item:has-text("Zoom drop")', { timeout: 3000 });
+    const [popup] = await Promise.all([
+      page.waitForEvent('popup', { timeout: 5000 }),
+      (async () => {
+        await page.click('.list-item:has-text("Zoom drop") .action[title^="Publier"]');
+        await page.fill('.modal textarea', 'Mon test');
+        await page.click('.modal .cta');
+      })()
+    ]);
+    const u = new URL(popup.url());
+    if (u.searchParams.get('template') !== 'preset.yml' || !/^CUTFX[01]:/.test(u.searchParams.get('code') || '')) throw new Error('formulaire mal rempli : ' + popup.url());
+    await popup.close();
+    await page.waitForSelector('#status.ok:has-text("Formulaire ouvert")', { timeout: 3000 });
   });
   await step('tout effacer', async () => {
     await page.click('.tab[data-tab=settings]');

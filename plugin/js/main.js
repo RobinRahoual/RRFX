@@ -3,7 +3,7 @@
   'use strict';
   const Core = window.CutFXCore, Lib = window.CutFXLibrary, Pv = window.CutFXPreview;
   const Store = window.CutFXStorage, Host = window.CutFXHost, Keys = window.CutFXShortcuts, Updates = window.CutFXUpdates;
-  const Audio = window.CutFXAudio, Media = window.CutFXMedia, Share = window.CutFXShare, Packs = window.CutFXPacks;
+  const Audio = window.CutFXAudio, Media = window.CutFXMedia, Share = window.CutFXShare, Packs = window.CutFXPacks, Community = window.CutFXCommunity;
   const { h, hotText, actionGroup, picker, checkbox, row, section, CurveEditor, RampEditor, Player } = window.CutFXUI;
 
   const INSTAGRAM_URL = 'https://www.instagram.com/robin.rahoual/';
@@ -44,7 +44,8 @@
     tab: 'effects', cat: 'all', search: '', favOnly: false,
     cur: null, params: null, resolved: null, compat: null,
     player: null, rampPlayer: null, curveEd: null, rampEd: null,
-    logLines: [], shortcuts: null, capturing: null, update: null
+    logLines: [], shortcuts: null, capturing: null, update: null,
+    mineView: 'mine', comm: { list: null, loading: false, error: '', search: '', sort: 'popular', type: 'all', at: 0 }
   };
 
   // ---------------------------------------------------------------- utils
@@ -1227,6 +1228,8 @@
   function renderMineView() {
     const view = $('view-mine');
     view.innerHTML = '';
+    view.appendChild(h('div', { class: 'mine-switch' }, actionGroup([{ v: 'mine', label: 'Ma bibliothèque' }, { v: 'community', label: '🌐 Communauté' }], S.mineView, v => { S.mineView = v; renderMineView(); renderCTA(); })));
+    if (S.mineView === 'community') { renderCommunity(view); return; }
     const nameIn = h('input', { class: 'textfield', placeholder: 'Nom (par défaut : nom du clip)', value: captureOpts.name });
     nameIn.addEventListener('input', () => { captureOpts.name = nameIn.value; });
     view.appendChild(section('Capturer un effet', [
@@ -1290,6 +1293,7 @@
           btn('✎', 'Renommer', async () => { const n = await promptName('Renommer', item.name); if (n) { item.name = n; persist(); renderMineList(); } }),
           btn('⤓', 'Exporter', () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.cutfx.json')),
           btn('⇪', 'Partager (code à copier-coller)', () => shareItems([item], item.name)),
+          btn('🌐', 'Publier dans la bibliothèque en ligne', () => publishItems([item], item.name)),
           btn('✕', 'Supprimer', () => deleteItem(item), 'danger')));
       li.addEventListener('dblclick', () => openItem(item));
       list.appendChild(li);
@@ -1393,6 +1397,129 @@
     const n = addItems(items);
     if (n) status.finish('ok', plural(n, 'effet ajouté', 'effets ajoutés'), items.map(i => i.name).slice(0, 4).join(', ') + (items.length > 4 ? '…' : ''));
     else status.finish('warn', 'Rien d\'ajouté', 'Ce code ne contient pas d\'effet compatible avec cette version.');
+  }
+
+  // ---------------------------------------------------------------- bibliothèque en ligne
+
+  const decodeCode = code => Share.decode(code, Store.zip);
+  const fromCommunity = e => S.lib.items.filter(i => i.from && i.from.number === e.number);
+
+  async function loadCommunity(force) {
+    const C = S.comm;
+    if (C.loading) return;
+    C.loading = true;
+    C.error = '';
+    renderCommunityList();
+    try {
+      const r = await Community.load({ fetch: (u, o) => fetch(u, o), storage, decode: decodeCode, force });
+      C.list = r.list;
+      C.error = r.error || '';
+      C.at = Date.now();
+      if (r.error) log('Bibliothèque en ligne : ' + r.error, 'warn');
+    } finally {
+      C.loading = false;
+      renderCommunityList();
+    }
+  }
+
+  function renderCommunity(view) {
+    const C = S.comm;
+    const search = h('input', { class: 'textfield', placeholder: 'Rechercher (nom, auteur, style…)', value: C.search, spellcheck: 'false' });
+    search.addEventListener('input', () => { C.search = search.value; renderCommunityList(); });
+    const refresh = h('button', { class: 'action quiet', title: 'Relire la bibliothèque sur GitHub' }, '↻');
+    refresh.addEventListener('click', () => loadCommunity(true));
+    view.appendChild(section('Bibliothèque en ligne', [
+      h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de CutFX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
+      h('div', { class: 'search' }, search, refresh),
+      row('Trier', actionGroup([{ v: 'popular', label: 'Les plus aimés' }, { v: 'recent', label: 'Les plus récents' }], C.sort, v => { C.sort = v; renderCommunityList(); })),
+      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }], C.type, v => { C.type = v; renderCommunityList(); })),
+      h('div', { id: 'comm-list' })
+    ]));
+    view.appendChild(section('Publier', [
+      h('div', { class: 'note' }, 'Le bouton du haut (ou 🌐 sur un effet de ta bibliothèque) ouvre le formulaire de publication dans ton navigateur, déjà rempli : il reste à cliquer sur « Submit new issue » (compte GitHub gratuit). Ton effet apparaît ensuite ici pour tout le monde.')
+    ]));
+    if (!C.list || Date.now() - C.at > Community.CACHE_MS) loadCommunity(false);
+    else renderCommunityList();
+  }
+
+  // Petite vignette d'un preset ou d'un effet capturé partagé.
+  function communityThumb(it) {
+    const cv = h('canvas', { width: 160, height: 90 });
+    let entry = null;
+    if (it.type === 'preset' && Lib.byId[it.data.base]) entry = { kind: 'preset', name: it.name, def: Lib.byId[it.data.base], item: it };
+    if (it.type === 'captured') entry = { kind: 'captured', name: it.name, def: null, item: it };
+    if (entry) drawThumb(cv, entry);
+    else {
+      const g = cv.getContext('2d');
+      g.fillStyle = '#111'; g.fillRect(0, 0, 160, 90);
+      g.fillStyle = '#9ab'; g.font = '28px sans-serif'; g.textAlign = 'center'; g.fillText('⤳', 80, 56);
+    }
+    return h('div', { class: 'comm-thumb' }, cv);
+  }
+
+  function renderCommunityList() {
+    const box = $('comm-list'), C = S.comm;
+    if (!box) return;
+    box.innerHTML = '';
+    if (C.loading && !C.list) { box.appendChild(h('div', { class: 'note' }, 'Chargement de la bibliothèque…')); return; }
+    if (C.error) box.appendChild(h('div', { class: 'note warn' }, '⚠ ' + C.error));
+    const list = Community.filter(C.list || [], C);
+    if (!list.length) {
+      box.appendChild(h('div', { class: 'note' }, (C.list && C.list.length) ? 'Aucun effet ne correspond.' : 'Personne n\'a encore publié d\'effet : sois le premier !'));
+      return;
+    }
+    list.slice(0, 120).forEach(e => {
+      const mine = fromCommunity(e), date = new Date(e.created);
+      const add = h('button', { class: 'action' }, mine.length ? 'Ouvrir' : 'Ajouter');
+      add.addEventListener('click', () => {
+        if (mine.length) return openItem(mine[0]);
+        const n = addItems(e.items.map(it => Object.assign({}, it, { from: { number: e.number, author: e.author } })));
+        if (n) status.finish('ok', 'Ajouté : ' + e.name, 'Par @' + e.author + (n > 1 ? ' · ' + plural(n, 'effet') : '') + ' · dans « Mes effets ».');
+        else status.finish('warn', 'Rien d\'ajouté', 'Cet effet n\'est pas compatible avec ta version de CutFX.');
+        renderCommunityList();
+      });
+      const like = h('button', { class: 'action quiet', title: 'Ouvrir sa page pour l\'aimer (réaction 👍) ou commenter' }, '❤ ' + e.likes);
+      like.addEventListener('click', () => Host.openURL(e.url));
+      const types = e.types.map(t => Community.TYPES[t] || t).join(', ') + (e.items.length > 1 ? ' × ' + e.items.length : '');
+      box.appendChild(h('div', { class: 'comm-item' },
+        communityThumb(e.items[0]),
+        h('div', { class: 'li-text' },
+          h('div', { class: 'li-name' }, e.name),
+          h('div', { class: 'li-meta' }, types + ' · @' + e.author + ' · ' + date.toLocaleDateString('fr-FR')),
+          e.desc ? h('div', { class: 'comm-desc' }, e.desc) : null,
+          h('div', { class: 'row-buttons' }, add, like))));
+    });
+  }
+
+  // Ouvre le formulaire de publication pré-rempli (le code va dans l'adresse s'il n'est pas trop long).
+  async function publishItems(items, defaultName) {
+    if (!items.length) { status.finish('warn', 'Rien à publier', 'Ta bibliothèque est vide : enregistre un preset ou capture un effet.'); return; }
+    const name = h('input', { class: 'textfield', value: defaultName || items[0].name });
+    const desc = h('textarea', { class: 'code lyrics', rows: 4, placeholder: 'Pour quel genre de montage, sur quelle musique…' });
+    const ok = await modal('Publier dans la bibliothèque en ligne', h('div', null,
+      row('Nom', name), desc,
+      h('div', { class: 'note' }, (items.length > 1 ? plural(items.length, 'effet') + ', publiés ensemble. ' : '') + 'Le formulaire s\'ouvre dans ton navigateur : vérifie, puis « Submit new issue ». Publié sous ton nom GitHub, visible par tous.')), [
+      { label: 'Annuler', value: false }, { label: 'Ouvrir le formulaire', primary: true, value: true }]);
+    if (!ok || !name.value.trim()) return;
+    const code = Share.encode(items, Store.zip);
+    const p = Community.publishURL({ name: name.value.trim(), desc: desc.value.trim(), code });
+    if (!p.withCode) await copyText(code, null);
+    Host.openURL(p.url);
+    log('Publication ouverte dans le navigateur : ' + name.value.trim(), 'info');
+    status.finish('ok', 'Formulaire ouvert dans ton navigateur', p.withCode
+      ? 'Clique sur « Submit new issue » : ton effet apparaîtra dans la bibliothèque en ligne.'
+      : 'Le code était trop long pour l\'adresse : il est copié, colle-le dans « Code CutFX », puis « Submit new issue ».');
+  }
+
+  async function publishPicker() {
+    if (!S.lib.items.length) { status.finish('warn', 'Rien à publier', 'Enregistre un preset (＋ Preset), une rampe, ou capture un effet d\'abord.'); return; }
+    const opts = S.lib.items.slice().sort((a, b) => b.created - a.created).map(i => ({ v: i.id, label: i.name }));
+    let pick = opts[0].v;
+    const ok = await modal('Quel effet publier ?', picker(opts, pick, v => { pick = v; }), [
+      { label: 'Annuler', value: false }, { label: 'Continuer', primary: true, value: true }]);
+    if (!ok) return;
+    const item = S.lib.items.find(i => i.id === pick);
+    if (item) publishItems([item], item.name);
   }
 
   // ---------------------------------------------------------------- onglet Réglages
@@ -1612,6 +1739,7 @@
   function ctaAction() {
     if (app.tabs[S.tab]) return app.tabs[S.tab].cta();
     if (S.tab === 'ramp') return { label: 'Appliquer la rampe', run: applyRamp, enabled: true };
+    if (S.tab === 'mine' && S.mineView === 'community') return { label: 'Publier un de mes effets…', run: publishPicker, enabled: true };
     if (S.tab === 'mine') return { label: 'Capturer la sélection', run: capture, enabled: true };
     return { label: S.cur ? 'Appliquer · ' + S.cur.name : 'Appliquer', run: applyEffect, enabled: !!S.cur };
   }

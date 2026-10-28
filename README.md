@@ -6,7 +6,7 @@ Des **transitions et effets de clip musical posés en un clic autour des coupes*
 shakes, slides, glitchs, motion blur) et des **overlays** (16 fournis : light leaks, flares, bokeh, pellicule, VHS…), des **speed ramps** qui ne
 décalent jamais la coupe, la **détection des temps forts** de la musique, le **montage automatique sur le rythme**, la
 **synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, et **tes propres effets** capturés depuis Premiere,
-partageables par un simple code.
+partageables par un simple code ou publiés dans la **bibliothèque en ligne** de la communauté.
 
 **Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
 (`CutFX · …`). Seules la speed ramp et le motion blur (« CLIP FX ») se posent sur une copie du plan, parce qu'un
@@ -157,6 +157,23 @@ Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un t
   colle dans **Coller un code…**. Aucun chemin de fichier ni info perso dans le code.
 - **Importer / exporter** en `.json` pour sauvegarder tes effets.
 
+### Bibliothèque en ligne (🌐 Communauté)
+
+En haut de *Mes effets* : **Ma bibliothèque | 🌐 Communauté**. La communauté liste les effets publiés par tous les
+utilisateurs de CutFX : recherche (nom, auteur, description), tri *les plus aimés* / *les plus récents*, filtre par
+type, vignette animée. **Ajouter** range l'effet dans ta bibliothèque (il devient **Ouvrir**).
+
+- **Publier** : bouton du haut, ou 🌐 sur un de tes effets. CutFX ouvre dans ton navigateur le formulaire « Partager
+  un effet CutFX » déjà rempli (nom, description, code) : il reste à cliquer sur *Submit new issue* (compte GitHub
+  gratuit). Si le code est trop long pour l'adresse, il est copié : colle-le dans le champ *Code CutFX*.
+- **Aimer** : ❤ ouvre la page de l'effet, ajoute la réaction 👍. Le tri « les plus aimés » s'en sert.
+- **Comment ça marche** : pas de serveur. Chaque effet publié est une *issue* du dépôt GitHub de CutFX, créée par le
+  formulaire `.github/ISSUE_TEMPLATE/preset.yml` (étiquette `preset`). Le panneau lit les issues ouvertes par l'API
+  publique de GitHub (sans compte, mise en cache 10 minutes). Le code ne contient que des réglages d'effets, jamais de
+  chemin de fichier.
+- **Modération** (propriétaire du dépôt) : fermer une issue la retire de la bibliothèque. Il faut que le dépôt soit
+  **public** avec les *Issues* activées, et que le formulaire `preset.yml` soit sur la branche par défaut.
+
 Tout est enregistré dans `Documents/CutFX/library.json`.
 
 ### Annuler la dernière opération
@@ -271,6 +288,7 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/media.js            lecture du son des WAV / MOV / MP4 (PCM et AAC) par morceaux
   js/share.js            codes de partage CUTFX1
   js/packs.js            les 16 overlays fournis, dessinés image par image
+  js/community.js        bibliothèque en ligne (issues GitHub : lecture, tri, lien de publication)
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)
   js/library.js          les 20 recettes d'effets + les animations de texte
   js/preview.js          aperçus simulés
@@ -281,6 +299,7 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)
 install/                 scripts d'installation + LISEZMOI
+.github/ISSUE_TEMPLATE/  formulaire « Partager un effet CutFX » (bibliothèque en ligne)
 scripts/                 fabrication du pack, test d'interface
 tests/                   tests Node (sim.js = timeline Premiere simulée)
 ```

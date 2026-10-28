@@ -5,7 +5,7 @@
 
 var CutFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.4.0';
+    var VERSION = '1.5.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
