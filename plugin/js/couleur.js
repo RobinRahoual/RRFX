@@ -1,4 +1,4 @@
-/* RR FX — onglet Couleur : la colorimétrie comme dans Lightroom (module Développement).
+/* RR FX : onglet Couleur : la colorimétrie comme dans Lightroom (module Développement).
    Histogramme, avant/après, looks, Réglages de base, Courbe des tonalités, Mélangeur de
    couleurs, Étalonnage des couleurs, Calibrage. Le look part dans Premiere en LUT .cube sur
    un calque de réglage Lumetri, ou s'exporte en .cube et en DCTL (DaVinci Resolve). */
@@ -10,7 +10,7 @@
     const { h, actionGroup, row, fitCanvas, css } = app.UI;
 
     const PW = 480, PH = 270; // taille de calcul de l'aperçu
-    const DEFAULTS = { open: { log: true, looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: 'Mon look', target: 'clip' };
+    const DEFAULTS = { open: { log: true, fix: false, looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: 'Mon look', target: 'clip' };
     const st = () => {
       const s = app.settings();
       if (!s.color || typeof s.color !== 'object') s.color = {};
@@ -566,6 +566,7 @@
           actionGroup([{ v: 'A', label: 'Plan 1' }, { v: 'B', label: 'Plan 2' }], s.shot, v => { s.shot = v; V.src = null; app.persist(); update(true); }),
           realBtn)));
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
+      if (app.correction) view.appendChild(app.correction.panel(panel));
       view.appendChild(looksPanel());
       view.appendChild(basicPanel());
       view.appendChild(curvePanel());

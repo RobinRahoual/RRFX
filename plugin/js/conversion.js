@@ -1,4 +1,4 @@
-/* RR FX — conversion LOG → Rec.709 en un clic (onglet Couleur).
+/* RR FX : conversion LOG → Rec.709 en un clic (onglet Couleur).
    On enregistre une fois sa caméra et sa LUT de conversion (celle du fabricant, gardée dans
    Documents/RRFX/Conversion pour tous les projets, ou une LUT calculée par RR FX). Ensuite, un
    clic pose un calque de réglage Lumetri juste au-dessus des rushs, de la longueur de la
@@ -7,7 +7,7 @@
   'use strict';
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
-    const L = root.RRFXLog, D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Host } = app;
+    const L = root.RRFXLog, D = root.RRFXDevelop, A = root.RRFXAssets, Cam = root.RRFXCam, { Store, Host } = app;
     const { h, actionGroup, picker, row, checkbox } = app.UI;
 
     const EVS = [-2, -1, -0.5, 0, 0.5, 1, 1.5, 1.7, 2, 2.5, 3];
@@ -17,6 +17,8 @@
       const c = s.logconv;
       if (!Array.isArray(c.cams)) c.cams = [];
       if (!c.scope) c.scope = 'sequence';
+      if (!c.mode) c.mode = 'one';
+      if (!c.unknown) c.unknown = 'active';
       if (!c.cams.some(x => x.id === c.active)) c.active = c.cams.length ? c.cams[0].id : null;
       return c;
     };
@@ -86,39 +88,111 @@
       return lut;
     }
 
+    // ---------------------------------------------------------------- caméra de chaque rush
+
+    // Début et fin du fichier (les métadonnées y sont) et le XML Sony posé à côté, s'il existe.
+    const detected = new Map();
+    function detectCam(path, name) {
+      const key = path || name;
+      if (detected.has(key)) return detected.get(key);
+      let text = '';
+      if (path && Store.fs) {
+        try {
+          const fd = Store.fs.openSync(path, 'r'), size = Store.fs.fstatSync(fd).size, HEAD = 1 << 20, TAIL = 4 << 20;
+          const read = (pos, len) => { const b = Buffer.alloc(len); Store.fs.readSync(fd, b, 0, len, pos); return b.toString('latin1'); };
+          text = size <= HEAD + TAIL ? read(0, size) : read(0, HEAD) + read(size - TAIL, TAIL);
+          Store.fs.closeSync(fd);
+          const xml = path.replace(/\.[^.\\/]+$/, '') + 'M01.XML';
+          if (Store.fs.existsSync(xml)) text += Store.fs.readFileSync(xml, 'latin1');
+        } catch (e) { app.log('Caméra de « ' + name + ' » illisible : ' + app.errorMessage(e), 'warn'); }
+      }
+      const det = Cam.detect(text, name || path);
+      detected.set(key, det);
+      return det;
+    }
+
+    /* Range les rushs par caméra enregistrée. → { groups: [{ cam, clips }], unknown, notLog } */
+    function sortByCamera(clips) {
+      const c = st(), groups = new Map(), unknown = [], notLog = [], fallback = c.unknown === 'skip' ? null : active();
+      clips.forEach(clip => {
+        const det = detectCam(clip.path, clip.name);
+        if (det.log === false) { notLog.push(clip); return; }
+        let cam = Cam.match(det, c.cams, c.active);
+        if (!cam) { unknown.push(clip); cam = fallback; }
+        if (!cam) return;
+        if (!groups.has(cam.id)) groups.set(cam.id, { cam, clips: [] });
+        groups.get(cam.id).clips.push(clip);
+      });
+      return { groups: Array.from(groups.values()), unknown, notLog };
+    }
+
     // ---------------------------------------------------------------- un clic
 
+    function lutResult(res, files) {
+      if (!files.some(Boolean)) return 'Mode démo : dans Premiere, le calque Lumetri est posé au-dessus des rushs avec la LUT chargée.';
+      if (res.lutSet >= res.layers) return 'LUT chargée dans Lumetri (LUT d\'entrée).';
+      return 'Lumetri > Correction de base > LUT d\'entrée > Parcourir… et choisis « ' + files.filter(Boolean).map(f => Store.path.basename(f)).join(' », « ') + ' ».';
+    }
+
+    async function convertOne(cam) {
+      const c = st(), name = 'RR FX · Conversion ' + label(cam);
+      app.status.phase('LUT de conversion');
+      const file = lutFor(cam);
+      app.status.phase('Calque au-dessus des rushs');
+      const fx = await app.services.lumetriFx();
+      const res = await Host.call('logConvert', { name, lutPath: file, fxNames: fx[0].names, scope: c.scope, adjNodeId: app.settings().adjNodeId });
+      if (!res.ok) throw new Error(res.error);
+      if (file && !res.lutSet && navigator.clipboard) await navigator.clipboard.writeText(file).catch(() => {});
+      return { res, title: 'Rec.709 · ' + label(cam), detail: app.plural(res.layers, 'calque Lumetri', 'calques Lumetri') + ' au-dessus des rushs. ' + lutResult(res, [file]) };
+    }
+
+    async function convertEach() {
+      const c = st();
+      app.status.phase('Rushs de la timeline');
+      const list = await Host.call('rushList', { scope: c.scope });
+      if (!list.ok) throw new Error(list.error);
+      app.status.phase('Caméra de chaque plan');
+      const sorted = sortByCamera(list.clips);
+      if (!sorted.groups.length) throw new Error(sorted.notLog.length ? 'Aucun plan en LOG.' : 'Aucun plan ne correspond à une caméra enregistrée (marques reconnues : ' + c.cams.map(label).join(', ') + ').');
+      const files = [], groups = sorted.groups.map(g => {
+        const file = lutFor(g.cam);
+        files.push(file);
+        return { name: 'RR FX · Conversion ' + label(g.cam), lutPath: file, spans: g.clips.map(x => ({ a: x.start, b: x.end, top: x.track })) };
+      });
+      app.status.phase('Calques au-dessus des rushs');
+      const fx = await app.services.lumetriFx();
+      const res = await Host.call('placeGrades', { layer: 'conversion', groups, fxNames: fx[0].names, adjNodeId: app.settings().adjNodeId });
+      if (!res.ok) throw new Error(res.error);
+      sorted.groups.forEach(g => app.log(label(g.cam) + ' : ' + app.plural(g.clips.length, 'plan'), 'info'));
+      if (sorted.unknown.length) app.log(app.plural(sorted.unknown.length, 'plan non reconnu', 'plans non reconnus') + (c.unknown === 'skip' ? ', laissés tels quels' : ', convertis avec ' + label(active())) + ' : ' + sorted.unknown.map(x => x.name).slice(0, 8).join(', '), 'warn');
+      if (sorted.notLog.length) app.log(app.plural(sorted.notLog.length, 'plan', 'plans') + ' pas en LOG (Rec.709, HLG…), laissés tels quels : ' + sorted.notLog.map(x => x.name).slice(0, 8).join(', '), 'info');
+      const parts = sorted.groups.map(g => label(g.cam) + ' (' + g.clips.length + ')');
+      return {
+        res, title: 'Rec.709 · ' + app.plural(sorted.groups.length, 'caméra', 'caméras'),
+        detail: parts.join(', ') + (sorted.unknown.length ? ' · ' + app.plural(sorted.unknown.length, 'non reconnu', 'non reconnus') : '') + (sorted.notLog.length ? ' · ' + sorted.notLog.length + ' pas en LOG' : '') + '. ' + lutResult(res, files)
+      };
+    }
+
     function convert() {
-      const cam = active();
+      const cam = active(), c = st();
       if (!cam) {
         app.switchTab('color');
         return app.status.finish('warn', 'Aucune caméra enregistrée', 'Onglet Couleur > Conversion LOG → Rec.709 : choisis ta caméra et sa LUT, une seule fois.');
       }
-      const c = st(), name = 'RR FX · Conversion ' + label(cam);
-      return app.runTask('Rec.709 · ' + label(cam), async () => {
-        app.status.phase('LUT de conversion');
-        const file = lutFor(cam);
-        app.status.phase('Calque au-dessus des rushs');
-        const fx = await app.services.lumetriFx();
-        const res = await Host.call('logConvert', { name, lutPath: file, fxNames: fx[0].names, scope: c.scope, adjNodeId: app.settings().adjNodeId });
-        if (!res.ok) return { kind: 'error', title: 'Conversion non posée', detail: res.error };
-        if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'Rec.709 · ' + label(cam), entries: res.created });
+      return app.runTask(c.mode === 'auto' ? 'Rec.709 par caméra' : 'Rec.709 · ' + label(cam), async () => {
+        const out = c.mode === 'auto' ? await convertEach() : await convertOne(cam);
+        const res = out.res, entries = (res.created || []).slice();
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        const replaced = res.replaced ? ' L\'ancienne conversion a été remplacée.' : '';
-        if (!file) return { kind: 'ok', title: 'Rec.709 · ' + label(cam), detail: 'Mode démo : dans Premiere, le calque Lumetri est posé au-dessus des rushs avec la LUT chargée.' };
-        if (res.lutSet) {
-          return {
-            kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
-            title: 'Rec.709 · ' + label(cam),
-            detail: app.plural(res.layers, 'calque Lumetri', 'calques Lumetri') + ' au-dessus des rushs, LUT « ' + Store.path.basename(file) + ' » chargée.' + replaced + ' Pose ton look au-dessus.'
-          };
+        let detail = out.detail + (res.replaced ? ' L\'ancienne conversion a été remplacée.' : '');
+        // Option : expo et balance des blancs de chaque plan, juste après la conversion.
+        if (c.autoFix && app.correction) {
+          const fix = await app.correction.autoFixCore(c.scope);
+          entries.push.apply(entries, fix.created);
+          detail += ' · Expo et balance : ' + fix.summary;
         }
-        const copied = navigator.clipboard ? await navigator.clipboard.writeText(file).then(() => true, () => false) : false;
-        return {
-          kind: 'warn',
-          title: 'Calque posé · LUT à choisir',
-          detail: 'Lumetri > Correction de base > LUT d\'entrée > Parcourir… et choisis « ' + Store.path.basename(file) + ' »' + (copied ? ' (chemin copié)' : '') + '.' + replaced
-        };
+        if (entries.length) app.pushHistory({ date: Date.now(), label: out.title, entries });
+        const missing = Store.fs && res.lutSet < res.layers;
+        return { kind: (res.warnings && res.warnings.length) || missing ? 'warn' : 'ok', title: out.title, detail };
       });
     }
     app.actions.convert = convert;
@@ -245,9 +319,12 @@
         add.addEventListener('click', () => { edit = newCam(); refresh(); });
         box.appendChild(h('div', { class: 'row-buttons' }, add));
         if (cam) {
+          box.appendChild(row('Caméra', actionGroup([{ v: 'one', label: 'Celle cochée' }, { v: 'auto', label: 'Reconnue par plan', title: 'RR FX lit la marque et le modèle dans chaque fichier et prend la bonne LUT (les plans Sony filmés hors LOG sont laissés tels quels)' }], c.mode, v => { c.mode = v; app.persist(); refresh(); })));
           box.appendChild(row('Sur', actionGroup([{ v: 'sequence', label: 'Toute la timeline' }, { v: 'selection', label: 'Rushs choisis' }], c.scope, v => { c.scope = v; app.persist(); })));
+          if (c.mode === 'auto') box.appendChild(row('Inconnus', picker([{ v: 'active', label: 'Convertis avec ' + label(cam) }, { v: 'skip', label: 'Laissés tels quels' }], c.unknown, v => { c.unknown = v; app.persist(); }), { title: 'Plans dont la caméra n\'est pas reconnue' }));
+          box.appendChild(checkbox('Puis expo et balance des blancs auto sur chaque plan', c.autoFix, v => { c.autoFix = v; app.persist(); }));
           box.appendChild(checkbox('Aperçu en LOG (converti avant le look)', c.preview, v => { c.preview = v; app.persist(); onPreview(); }));
-          const go = h('button', { class: 'cta conv-go' }, 'Convertir en Rec.709 · ' + label(cam));
+          const go = h('button', { class: 'cta conv-go' }, c.mode === 'auto' ? 'Convertir chaque plan avec sa caméra' : 'Convertir en Rec.709 · ' + label(cam));
           go.addEventListener('click', convert);
           box.appendChild(go);
           box.appendChild(h('div', { class: 'note' }, 'Calque de réglage Lumetri juste au-dessus des rushs, sur toute leur longueur, LUT chargée en « LUT d\'entrée ». Les looks se posent au-dessus. Premiere 25 qui convertit déjà le log (Gestion des couleurs > Détection automatique du log) : coupe-la, sinon l\'image est convertie deux fois.'));

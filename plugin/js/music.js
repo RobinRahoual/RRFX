@@ -1,4 +1,4 @@
-/* RR FX — onglet Musique : temps forts, montage auto sur le rythme, synchronisation
+/* RR FX : onglet Musique : temps forts, montage auto sur le rythme, synchronisation
    son / image, et volume de la musique pour l'intensité des effets. */
 (function (root) {
   'use strict';

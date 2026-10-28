@@ -1,4 +1,4 @@
-/* RR FX — bibliothèque perso, réglages et historique sur disque
+/* RR FX : bibliothèque perso, réglages et historique sur disque
    (Documents/RRFX/library.json), ou localStorage hors de Premiere (mode démo). */
 (function (root) {
   'use strict';
@@ -111,6 +111,25 @@
     a.download = defaultName;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    return defaultName;
+  }
+
+  // Fichier binaire écrit morceau par morceau (gros packs : pas tout en mémoire). → chemin, ou null.
+  function saveBinary(chunks, defaultName, ext, title) {
+    const c = cepFs();
+    if (fs && c && c.showSaveDialogEx) {
+      const r = c.showSaveDialogEx(title || 'Enregistrer', DIR || '', [ext], defaultName);
+      if (!r || r.err || !r.data) return null;
+      const target = r.data.toLowerCase().endsWith('.' + ext) ? r.data : r.data + '.' + ext;
+      const fd = fs.openSync(target, 'w');
+      try { for (const part of chunks) fs.writeSync(fd, Buffer.from(part.buffer, part.byteOffset, part.byteLength)); } finally { fs.closeSync(fd); }
+      return target;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob(Array.from(chunks), { type: 'application/zip' }));
+    a.download = defaultName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
     return defaultName;
   }
 
@@ -232,7 +251,7 @@
   }
 
   root.RRFXStorage = {
-    load, save, exportJSON, exportText, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
+    load, save, exportJSON, exportText, saveBinary, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
     reveal, execFile, systemDirs, readJSON, writeJSON, isWin,
     fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
   };

@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.8.1';
+    var VERSION = '1.9.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -1567,7 +1567,21 @@ var RRFX = (function () {
 
     // ------------------------------------------------------------ public: conversion LOG -> Rec.709
 
-    var CONV_NAME = /^RR FX \u00b7 Conversion/, LOOK_NAME = /^RR FX \u00b7 Look/;
+    // Calques d'etalonnage RR FX, dans l'ordre ou ils s'empilent au-dessus des rushs :
+    // conversion LOG -> Rec.709, correction auto (expo, balance), raccord entre cameras. Les looks
+    // viennent au-dessus de tout ca.
+    var GRADES = {
+        conversion: { level: 1, re: /^RR FX \u00b7 Conversion/ },
+        auto: { level: 2, re: /^RR FX \u00b7 Auto/ },
+        match: { level: 3, re: /^RR FX \u00b7 Raccord/ }
+    };
+    var LOOK_NAME = /^RR FX \u00b7 Look/, COPY_NAME = /^RR FX \u00b7 /;
+
+    function gradeLevel(name) {
+        var k;
+        for (k in GRADES) if (GRADES.hasOwnProperty(k) && GRADES[k].re.test(name)) return GRADES[k].level;
+        return 0;
+    }
 
     function isGraphic(it) {
         try { if (it.isMGT && it.isMGT()) return true; } catch (e) {}
@@ -1584,26 +1598,26 @@ var RRFX = (function () {
         return ids;
     }
 
-    // Pour la conversion : 'rush' (image de la camera, copies RR FX du plan comprises), 'look'
-    // (look RR FX), 'over' (titre, overlay, ressource) ou 'layer' (autre calque de reglage).
+    // 'rush' (image de la camera, copies RR FX du plan comprises), 'grade' (conversion, auto,
+    // raccord), 'look', 'over' (titre, overlay, ressource) ou 'layer' (autre calque de reglage).
     function convKind(it, over) {
         var pi = null;
         if (isGraphic(it)) return 'over';
         try { pi = it.projectItem; } catch (e) {}
         if (!pi) return 'over';
-        if (isAdjustment(pi)) return LOOK_NAME.test(it.name) ? 'look' : 'layer';
+        if (isAdjustment(pi)) return gradeLevel(it.name) ? 'grade' : LOOK_NAME.test(it.name) ? 'look' : 'layer';
         return over[pi.nodeId] ? 'over' : 'rush';
     }
 
-    // Retire une conversion deja posee sur [a, b] : deux conversions a la suite bruleraient
-    // l'image. Un calque qui deborde est coupe (la conversion des autres plans reste).
-    function cutConversions(s, a, b, warnings) {
+    // Retire les calques d'un niveau deja poses sur [a, b] (deux conversions a la suite
+    // bruleraient l'image). Un calque qui deborde est coupe : le reste de la timeline le garde.
+    function cutLayers(s, a, b, re, warnings) {
         var n = 0, i, j, list, it, x, y, qt;
         for (i = 0; i < s.videoTracks.numTracks; i++) {
             list = clipsOf(s, i);
             for (j = 0; j < list.length; j++) {
                 it = list[j]; x = tk(it.start); y = tk(it.end);
-                if (!CONV_NAME.test(it.name) || x >= b || a >= y) continue;
+                if (!re.test(it.name) || x >= b || a >= y) continue;
                 try {
                     qt = qeSeq().getVideoTrackAt(i);
                     if (x < a) qt.razor(timecodeOf(s, a));
@@ -1613,8 +1627,8 @@ var RRFX = (function () {
             list = clipsOf(s, i);
             for (j = 0; j < list.length; j++) {
                 it = list[j]; x = tk(it.start); y = tk(it.end);
-                if (!CONV_NAME.test(it.name) || x >= b || a >= y) continue;
-                if (x < a || y > b) warnings.push('Ancienne conversion retir\u00e9e en entier sur V' + (i + 1) + ' (Premiere n\'a pas pu la couper)');
+                if (!re.test(it.name) || x >= b || a >= y) continue;
+                if (x < a || y > b) warnings.push('Ancien calque \u00ab ' + it.name + ' \u00bb retir\u00e9 en entier sur V' + (i + 1) + ' (Premiere n\'a pas pu le couper)');
                 it.remove(false, false);
                 n++;
             }
@@ -1622,22 +1636,90 @@ var RRFX = (function () {
         return n;
     }
 
-    // Un calque de reglage Lumetri juste au-dessus des rushs (sous les looks, titres et overlays),
-    // de la longueur des rushs, avec la LUT de conversion en LUT d'entree. o.scope : 'sequence'
-    // (un calque du premier au dernier rush) ou 'selection' (un calque par groupe de rushs choisis).
-    function logConvert(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], created = [], spans = [], merged = [], replaced = 0, lutSet = 0, below = 0;
-        var i, j, k, list, c, a, b, adj, top, ti, before, placed, comp, err, sel, over = overlayIds(), kind;
+    function mergeSpans(spans, f) {
+        var out = [], i, c;
+        spans.sort(function (x, y) { return x.a - y.a; });
+        for (i = 0; i < spans.length; i++) {
+            c = out.length ? out[out.length - 1] : null;
+            if (c && spans[i].a <= c.b + f) { c.b = Math.max(c.b, spans[i].b); c.top = Math.max(c.top, spans[i].top); }
+            else out.push({ a: spans[i].a, b: spans[i].b, top: spans[i].top });
+        }
+        return out;
+    }
+
+    // Pose des calques Lumetri d'etalonnage. o.layer : 'conversion', 'auto' ou 'match' ;
+    // o.groups : [{ name, lutPath, spans: [{ a, b, top }] }] (ticks ; top = piste du plan).
+    // Chaque calque va juste au-dessus des rushs de sa zone (et des calques d'etalonnage d'un
+    // niveau inferieur) : une piste est inseree si besoin, pour rester sous les looks.
+    function placeGrades(o) {
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], jobs = [], all = [], replaced = 0, lutSet = 0, below = 0;
+        var G = GRADES[o.layer] || GRADES.conversion, over = overlayIds(), adj, i, j, k, g, m, list, it, top, ti, before, placed, comp, err, kind, a, b;
         adjCache = null;
         adj = findAdjustment(o.adjNodeId);
         if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.');
+        for (k = 0; k < o.groups.length; k++) {
+            g = o.groups[k];
+            m = mergeSpans(g.spans.slice(0), f);
+            for (j = 0; j < m.length; j++) { jobs.push({ name: g.name, lutPath: g.lutPath, a: m[j].a, b: m[j].b, top: m[j].top }); all.push({ a: m[j].a, b: m[j].b, top: 0 }); }
+        }
+        if (!jobs.length) return fail('Aucun plan \u00e0 traiter.');
+        all = mergeSpans(all, f);
+        for (k = 0; k < all.length; k++) replaced += cutLayers(s, all[k].a, all[k].b, G.re, warnings);
+        jobs.sort(function (x, y) { return x.a - y.a; });
+        for (k = 0; k < jobs.length; k++) {
+            a = jobs[k].a; b = jobs[k].b; top = jobs[k].top;
+            // Au-dessus des copies RR FX du plan (rampes...) et des etalonnages d'un niveau inferieur.
+            for (i = top + 1; i < s.videoTracks.numTracks; i++) {
+                list = clipsOf(s, i);
+                for (j = 0; j < list.length; j++) {
+                    it = list[j];
+                    if (tk(it.start) >= b || a >= tk(it.end)) continue;
+                    kind = convKind(it, over);
+                    if ((kind === 'rush' && COPY_NAME.test(it.name)) || (kind === 'grade' && gradeLevel(it.name) < G.level)) top = i;
+                }
+            }
+            ti = top + 1;
+            if (ti < s.videoTracks.numTracks && !trackClear(s, ti, a, b)) {
+                // Piste occupee (look, titre...) : on glisse une piste neuve a cet endroit.
+                before = s.videoTracks.numTracks;
+                try { qeSeq().addTracks(1, ti, 0); } catch (e) {}
+                if (s.videoTracks.numTracks > before && trackClear(s, ti, a, b)) {
+                    warnings.push('Piste V' + (ti + 1) + ' ajout\u00e9e juste au-dessus des rushs');
+                    for (j = 0; j < created.length; j++) if (created[j].track >= ti) created[j].track++;
+                    for (j = k + 1; j < jobs.length; j++) if (jobs[j].top >= ti) jobs[j].top++;
+                }
+            }
+            placed = placeAdjustment(s, adj, ti, a, b, jobs[k].name, warnings);
+            created.push({ kind: 'adj', track: placed.track, start: a, name: jobs[k].name });
+            comp = addEffect(s, placed.track, a, { names: o.fxNames && o.fxNames.length ? o.fxNames : ['Lumetri Color'] }, warnings);
+            if (comp && jobs[k].lutPath) {
+                err = setInputLut(comp, jobs[k].lutPath);
+                if (err) warnings.push(err); else lutSet++;
+            }
+            // Looks, titres et overlays sous le calque : ils seraient corriges eux aussi.
+            for (i = 0; i < placed.track; i++) {
+                list = clipsOf(s, i);
+                for (j = 0; j < list.length; j++) {
+                    if (tk(list[j].start) >= b || a >= tk(list[j].end)) continue;
+                    kind = convKind(list[j], over);
+                    if (kind === 'look' || kind === 'over') below++;
+                }
+            }
+        }
+        if (below) warnings.push(below + ' look(s), titre(s) ou overlay(s) sous le calque : remonte-les au-dessus pour qu\'ils ne soient pas modifi\u00e9s.');
+        return ok({ created: created, layers: created.length, replaced: replaced, lutSet: lutSet, warnings: warnings });
+    }
+
+    // Conversion LOG -> Rec.709 d'une seule camera. o.scope : 'sequence' (un calque du premier au
+    // dernier rush) ou 'selection' (un calque par groupe de rushs choisis).
+    function logConvert(o) {
+        var s = activeSeq(), over = overlayIds(), spans = [], i, j, list, sel, a = Infinity, b = 0, top = 0;
         if (o.scope === 'selection') {
             sel = selectedVideo(s);
             // Plans desactives (angles caches du montage multicam) : rien a convertir a cet endroit.
             for (i = 0; i < sel.length; i++) if (convKind(sel[i].item, over) === 'rush' && !sel[i].item.disabled) spans.push({ a: tk(sel[i].item.start), b: tk(sel[i].item.end), top: sel[i].track });
             if (!spans.length) return fail('S\u00e9lectionne les rushs \u00e0 convertir dans la timeline.');
         } else {
-            a = Infinity; b = 0; top = 0;
             for (i = 0; i < s.videoTracks.numTracks; i++) {
                 list = clipsOf(s, i);
                 for (j = 0; j < list.length; j++) {
@@ -1648,51 +1730,120 @@ var RRFX = (function () {
             if (!(b > 0)) return fail('Aucun rush dans la s\u00e9quence.');
             spans.push({ a: a, b: b, top: top });
         }
-        spans.sort(function (x, y) { return x.a - y.a; });
-        for (i = 0; i < spans.length; i++) {
-            c = merged.length ? merged[merged.length - 1] : null;
-            if (c && spans[i].a <= c.b + f) { c.b = Math.max(c.b, spans[i].b); c.top = Math.max(c.top, spans[i].top); }
-            else merged.push({ a: spans[i].a, b: spans[i].b, top: spans[i].top });
+        return placeGrades({ layer: 'conversion', groups: [{ name: o.name, lutPath: o.lutPath, spans: spans }], adjNodeId: o.adjNodeId, fxNames: o.fxNames });
+    }
+
+    // Les plans de la sequence pour le panneau (camera, analyse) : chemin du media, piste, bornes.
+    // o.scope : 'sequence' ou 'selection'.
+    function rushList(o) {
+        var s = activeSeq(), over = overlayIds(), out = [], i, j, list, it, sel, ids = null;
+        if (o.scope === 'selection') {
+            sel = selectedVideo(s);
+            ids = {};
+            for (i = 0; i < sel.length; i++) ids[sel[i].item.nodeId] = true;
         }
-        for (k = 0; k < merged.length; k++) {
-            a = merged[k].a; b = merged[k].b;
-            replaced += cutConversions(s, a, b, warnings);
-            // Le rush le plus haut sur cette zone (copies RR FX du plan comprises).
-            top = merged[k].top;
-            for (i = top + 1; i < s.videoTracks.numTracks; i++) {
-                list = clipsOf(s, i);
-                for (j = 0; j < list.length; j++) if (tk(list[j].start) < b && a < tk(list[j].end) && convKind(list[j], over) === 'rush') top = i;
-            }
-            ti = top + 1;
-            if (ti < s.videoTracks.numTracks && !trackClear(s, ti, a, b)) {
-                // Piste occupee (look, titre...) : on glisse une piste neuve juste au-dessus des rushs.
-                before = s.videoTracks.numTracks;
-                try { qeSeq().addTracks(1, ti, 0); } catch (e) {}
-                if (s.videoTracks.numTracks > before && trackClear(s, ti, a, b)) {
-                    warnings.push('Piste V' + (ti + 1) + ' ajout\u00e9e juste au-dessus des rushs');
-                    for (j = 0; j < created.length; j++) if (created[j].track >= ti) created[j].track++;
-                    for (j = k + 1; j < merged.length; j++) if (merged[j].top >= ti) merged[j].top++;
-                }
-            }
-            placed = placeAdjustment(s, adj, ti, a, b, o.name, warnings);
-            created.push({ kind: 'adj', track: placed.track, start: a, name: o.name });
-            comp = addEffect(s, placed.track, a, { names: o.fxNames && o.fxNames.length ? o.fxNames : ['Lumetri Color'] }, warnings);
-            if (comp && o.lutPath) {
-                err = setInputLut(comp, o.lutPath);
-                if (err) warnings.push(err); else lutSet++;
-            }
-            // Looks, titres et overlays sous la conversion : ils seraient convertis eux aussi.
-            for (i = 0; i < placed.track; i++) {
-                list = clipsOf(s, i);
-                for (j = 0; j < list.length; j++) {
-                    if (tk(list[j].start) >= b || a >= tk(list[j].end)) continue;
-                    kind = convKind(list[j], over);
-                    if (kind === 'look' || kind === 'over') below++;
-                }
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                if (ids && !ids[it.nodeId]) continue;
+                if (convKind(it, over) !== 'rush' || it.disabled) continue;
+                out.push({ track: i, start: tk(it.start), end: tk(it.end), name: it.name, path: mediaPathOf(it.projectItem), copy: COPY_NAME.test(it.name) });
             }
         }
-        if (below) warnings.push(below + ' look(s), titre(s) ou overlay(s) sous le calque de conversion : remonte-les au-dessus pour qu\'ils ne soient pas convertis.');
-        return ok({ created: created, layers: created.length, replaced: replaced, lutSet: lutSet, warnings: warnings });
+        out.sort(function (x, y) { return (x.start - y.start) || (x.track - y.track); });
+        if (!out.length) return fail(o.scope === 'selection' ? 'S\u00e9lectionne des rushs dans la timeline.' : 'Aucun rush dans la s\u00e9quence.');
+        return ok({ clips: out, fps: TICKS / tpf(s) });
+    }
+
+    // Images \u00ab propres \u00bb de la timeline pour l'analyse : a chaque instant, les looks, titres,
+    // overlays et calques au-dessus sont desactives (on garde les rushs et les etalonnages de
+    // niveau < o.level). Premiere ecrit les images apres coup : le panneau attend les fichiers
+    // puis appelle framesEnd pour tout reactiver.
+    function framesBegin(o) {
+        var s = activeSeq(), f = tpf(s), q = qeSeq(), over = overlayIds(), files = [], off = [], i, j, k, list, it, t, kind, lvl = o.level || 1;
+        if (!q || !q.exportFramePNG) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
+        var times = [];
+        for (i = 0; i < o.times.length; i++) times.push(snap(o.times[i] * TICKS, f));
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                if (it.disabled) continue;
+                kind = convKind(it, over);
+                if (kind === 'rush' || (kind === 'grade' && gradeLevel(it.name) < lvl)) continue;
+                for (k = 0; k < times.length; k++) {
+                    t = times[k];
+                    if (tk(it.start) <= t && t < tk(it.end)) {
+                        if (setDisabled(it, true)) off.push({ track: i, start: tk(it.start) });
+                        break;
+                    }
+                }
+            }
+        }
+        for (i = 0; i < times.length; i++) {
+            files.push(o.folder + '/' + o.prefix + i);
+            q.exportFramePNG(timecodeOf(s, times[i]), files[i]);
+        }
+        return ok({ files: files, off: off });
+    }
+
+    function framesEnd(o) {
+        var s = activeSeq(), n = 0, i, it;
+        for (i = 0; i < o.off.length; i++) {
+            it = findItemAt(s, o.off[i].track, o.off[i].start);
+            if (it && setDisabled(it, false)) n++;
+        }
+        return ok({ restored: n });
+    }
+
+    // ------------------------------------------------------------ public: formats (9:16, 4:5, 1:1)
+
+    // Copie de la sequence active au format o.width x o.height (1080 x 1920 pour Reels, TikTok,
+    // Shorts). Chaque rush recoit l'effet Recadrage automatique de Premiere (o.reframe : noms de
+    // l'effet), qui suit le sujet ; sinon (o.mode 'fill' ou effet absent) il est agrandi pour
+    // remplir le cadre, centre. Les calques de reglage et les titres ne bougent pas.
+    function formatCopy(o) {
+        var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, before, k, i, j, list, it, comp, sc, over, kind;
+        var reframed = 0, filled = 0, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
+        if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
+        before = P.sequences.numSequences;
+        s.clone();
+        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
+        ns = P.sequences[P.sequences.numSequences - 1];
+        try { ns.name = o.name || (s.name + ' (' + o.label + ')'); } catch (e0) {}
+        st = ns.getSettings();
+        st.videoFrameWidth = W;
+        st.videoFrameHeight = H;
+        ns.setSettings(st);
+        if (Number(ns.frameSizeHorizontal) !== W || Number(ns.frameSizeVertical) !== H) warnings.push('Taille du cadre \u00e0 v\u00e9rifier : S\u00e9quence > Param\u00e8tres de la s\u00e9quence');
+        // La copie devient la sequence active : QE agit sur elle.
+        try { id = ns.sequenceID; if (P.openSequence) P.openSequence(id); } catch (e1) {}
+        if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+        s = activeSeq();
+        k = Math.max(W / oldW, H / oldH);
+        over = overlayIds();
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                kind = convKind(it, over);
+                if (kind !== 'rush' && kind !== 'over') continue;
+                if (isGraphic(it)) continue;
+                comp = null;
+                if (kind === 'rush' && o.mode !== 'fill' && o.reframe && o.reframe.length) {
+                    comp = addEffect(s, i, tk(it.start), { names: o.reframe }, reframed || filled ? [] : warnings);
+                    if (comp) { reframed++; continue; }
+                }
+                // Remplissage centre : echelle de Trajectoire multipliee par k.
+                comp = componentByMatch(findItemAt(s, i, tk(it.start)), 'AE.ADBE Motion');
+                try {
+                    sc = comp.properties[1];
+                    if (!sc.isTimeVarying || !sc.isTimeVarying()) { sc.setValue(Number(sc.getValue()) * k, true); filled++; }
+                } catch (e3) {}
+            }
+        }
+        return ok({ name: s.name, reframed: reframed, filled: filled, width: W, height: H, warnings: warnings });
     }
 
     // ------------------------------------------------------------ public: ressources (dossiers lies)
@@ -1949,6 +2100,11 @@ var RRFX = (function () {
         adjustmentFromSelection: guard(adjustmentFromSelection),
         rampResolve: guard(rampResolve),
         rampApply: guard(rampApply),
-        logConvert: guard(logConvert)
+        logConvert: guard(logConvert),
+        placeGrades: guard(placeGrades),
+        rushList: guard(rushList),
+        framesBegin: guard(framesBegin),
+        framesEnd: guard(framesEnd),
+        formatCopy: guard(formatCopy)
     };
 })();

@@ -1,6 +1,6 @@
-# RR FX — plugin Premiere Pro
+# RR FX, plugin Premiere Pro
 
-Plugin gratuit créé par **Robin Rahoual** — suis-moi sur Instagram : [@robin.rahoual](https://www.instagram.com/robin.rahoual/).
+Plugin gratuit créé par **Robin Rahoual**. Suis-moi sur Instagram : [@robin.rahoual](https://www.instagram.com/robin.rahoual/).
 
 Des **transitions et effets de clip musical posés en un clic autour des coupes** (flashs, flickers, flous, zooms,
 shakes, slides, glitchs, motion blur) et des **overlays** (16 fournis : light leaks, flares, bokeh, pellicule, VHS…), des **speed ramps** qui ne
@@ -13,7 +13,7 @@ partageables par un simple code ou publiés dans la **bibliothèque en ligne** d
 calque de réglage ne peut ni ralentir ni mélanger les images (voir « Les copies du plan »). ↶ Annuler et
 *Tout effacer* retirent tout.
 
-**[⬇ Télécharger RR FX](https://github.com/RobinRahoual/RRFX/releases/latest)** — fichier `RRFX-<version>-installation.zip`.
+**[⬇ Télécharger RR FX](https://github.com/RobinRahoual/RRFX/releases/latest)** : fichier `RRFX-<version>-installation.zip`.
 
 ## Installation
 
@@ -39,8 +39,10 @@ les speed ramps seraient impossibles. RR FX est donc une extension CEP (HTML + E
 
 ## Utilisation
 
-En haut du panneau, toujours visibles : le crédit, **▴ Réduire**, les onglets, le **bouton principal** (son action
-dépend de l'onglet) et le **bloc d'état**.
+En haut du panneau, toujours visibles : le crédit, **▴ Réduire**, les onglets (sur deux lignes si le panneau est
+étroit : aucun n'est caché), le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
+sur le titre d'une section la replie (gardé d'une session à l'autre), et chaque onglet retrouve sa position quand
+on y revient.
 
 ### Onglet Effets
 
@@ -54,7 +56,7 @@ dépend de l'onglet) et le **bloc d'état**.
 | --- | --- |
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
 | **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · **Temps forts de la musique** (détectés directement, sans poser de marqueurs) · Tête de lecture · Début / fin des clips · Clips entiers |
-| **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), ou **un effet au hasard** (même catégorie ou favoris) |
+| **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), **un effet au hasard** (même catégorie ou favoris), ou un **enchaînement** : 2 à 4 effets choisis (Maj + clic sur les cartes) qui se succèdent sur chaque temps fort, dans l'ordre ou au hasard |
 | **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`RR FX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
 | **Intensité qui suit le volume** | En option : l'intensité de chaque coupe est modulée par le volume de la musique à cet instant (doux sur un couplet, fort sur un drop) ; *Influence* règle l'écart |
 | **Durée / Intensité** | Images de chaque côté · force de toute l'animation (0–200 %) |
@@ -78,7 +80,7 @@ overlay est fabriqué en images (2 s, à la taille et à la cadence de ta séque
 hasard*, chaque coupe reçoit un overlay différent du pack.
 
 Tes propres overlays : *Ajouter des overlays* (vidéos MOV/MP4/WEBM ou images PNG/JPG) ou *Ajouter un dossier* (un
-pack entier). Un overlay se pose comme un effet — sur la coupe, toutes les coupes, les marqueurs… — sur une piste
+pack entier). Un overlay se pose comme un effet (sur la coupe, toutes les coupes, les marqueurs…) sur une piste
 au-dessus du clip, avec un fondu d'opacité animé (durée, courbe, opacité), un point de départ au hasard dans la vidéo
 (différent à chaque coupe) et un **mode de fusion** (Écran par défaut). Si le mode posé n'est pas le bon dans ta
 version de Premiere : règle-le à la main sur un clip, sélectionne-le et clique sur **Apprendre**. Les fichiers sont
@@ -129,12 +131,31 @@ tes projets** :
    (jamais deux à la suite ; une conversion de toute la timeline est coupée autour des rushs reconvertis), et
    ↶ Annuler la retire.
 
-Plusieurs caméras (A7 III + iPhone en Apple Log…) : enregistre-les toutes, clique sur celle à utiliser, sélectionne
-ses rushs et choisis *Rushs choisis* (les angles masqués du montage multicam sont ignorés). L'option *Aperçu en LOG* convertit tes vraies images (📷) avant le look dans
+Plusieurs caméras (A7 III + iPhone en Apple Log…) : enregistre-les toutes et choisis **Caméra : Reconnue par
+plan**. RR FX lit la marque et le modèle dans chaque fichier (Sony, Apple, DJI, GoPro, Panasonic, Canon, Fujifilm,
+Nikon, Blackmagic, Samsung, ARRI ; à défaut, le nom du fichier) et pose **un calque par caméra** avec la bonne LUT.
+Chez Sony, il lit même la courbe du tournage : un plan filmé en Rec.709 ou HLG est laissé tel quel. Les plans non
+reconnus prennent la caméra cochée (ou sont laissés de côté, au choix). Sinon, à la main : coche une caméra,
+sélectionne ses rushs et choisis *Rushs choisis* (les angles masqués du montage multicam sont ignorés).
+L'option **Puis expo et balance des blancs auto** enchaîne la correction de chaque plan (ci-dessous). L'option *Aperçu en LOG* convertit tes vraies images (📷) avant le look dans
 l'aperçu. Profils : Sony S-Log3 / S-Log2, Panasonic V-Log (L), Canon C-Log / C-Log2 / C-Log3, Fujifilm F-Log /
 F-Log2, Nikon N-Log, DJI D-Log (et D-Log M avec la LUT DJI), Apple Log, Blackmagic Film Gen 5, GoPro GP-Log et
 Samsung Log (LUT du fabricant), ARRI LogC3 / LogC4. Premiere 25 qui convertit déjà le log tout seul (*Gestion des
 couleurs > Détection automatique du log*) : coupe cette option, sinon l'image est convertie deux fois.
+
+### Expo, balance et raccord entre caméras (onglet Couleur)
+
+- **Expo et balance des blancs auto** : RR FX exporte l'image du milieu de chaque plan (après la conversion, sans
+  les looks ni les titres, coupés le temps de l'export), l'analyse et corrige exposition, balance des blancs et
+  noirs/blancs, avec mesure (±1,5 IL au plus ; force Légère, Normale ou Forte). Un calque Lumetri par plan, juste
+  au-dessus de la conversion ; les plans déjà justes ne sont pas touchés.
+- **Raccord entre caméras** : tête de lecture sur un plan de la caméra qui a le bon rendu, **Prendre la
+  référence** ; sélectionne les plans de l'autre caméra, **Raccorder la sélection**. RR FX égalise la luminance
+  (histogrammes), la saturation et la teinte par zone (ombres, tons moyens, hautes lumières), montre l'avant/après
+  et pose une LUT de raccord au-dessus de l'expo auto.
+
+L'ordre des calques est toujours le même, de bas en haut : rushs, **conversion**, **expo auto**, **raccord**, puis tes
+**looks**, titres et overlays. Relancer une étape remplace ses calques sans toucher aux autres.
 
 ### Onglet Couleur (façon Lightroom)
 
@@ -206,6 +227,14 @@ réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèl
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
 *Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/RRFX/Titres`).
 
+### Onglet Formats
+
+Une **copie de la séquence** au format des réseaux, en un clic : **9:16** (Reels, TikTok, Shorts), **4:5**
+(Instagram), **1:1** ou **16:9**. Les rushs reçoivent l'effet **Recadrage automatique** de Premiere, qui suit le
+sujet (analyse en arrière-plan), ou sont agrandis et centrés (*Remplir, centré*). L'aperçu montre la **zone sûre**
+(ce que cachent les boutons et la légende de l'app). La séquence d'origine n'est pas modifiée ; les titres et calques
+gardent leur place, à vérifier dans le nouveau cadre.
+
 ### Onglet Ressources
 
 **Lie le dossier de ton disque** où tu ranges tes effets, SFX, polices, LUTs, titres et overlays (*＋ Lier un
@@ -214,12 +243,12 @@ dossier…*, autant de dossiers que tu veux, disques externes compris). RR FX le
 
 | Type | Aperçu | Actions |
 | --- | --- | --- |
-| **Sons & SFX** (wav, mp3, aif, m4a, flac…) | forme d'onde, ▶ écoute | poser à la tête de lecture ou **sur chaque marqueur** (whooshs et impacts sur les coupes), sur une piste audio libre — la musique n'est jamais touchée |
+| **Sons & SFX** (wav, mp3, aif, m4a, flac…) | forme d'onde, ▶ écoute | poser à la tête de lecture ou **sur chaque marqueur** (whooshs et impacts sur les coupes), sur une piste audio libre ; la musique n'est jamais touchée |
 | **Vidéos / images** (mov, mp4, webm, png, jpg…) | image, lecture | poser au-dessus de tes plans (vidéo seule), sur chaque marqueur, **utiliser comme overlay** (onglet Effets), importer |
 | **LUTs** (.cube, .3dl, .look…) | **la LUT appliquée** au plan de test ou à ta vraie image (maintenir = avant) | calque de réglage Lumetri sur le clip (LUT chargée en *LUT d'entrée*), **installer dans Lumetri** |
 | **Polices** (ttf, otf…) | ton texte dans la police | **installer la police** (dossier de polices de l'utilisateur) |
-| **Titres** (.mogrt) | — | poser à la tête de lecture, utiliser dans l'onglet Textes |
-| **Presets** (.prfpset, exports RR FX…) | — | ajouter à Mes effets (exports RR FX), marche à suivre pour les autres |
+| **Titres** (.mogrt) | nom du modèle | poser à la tête de lecture, utiliser dans l'onglet Textes |
+| **Presets** (.prfpset, exports RR FX…) | nom du preset | ajouter à Mes effets (exports RR FX), marche à suivre pour les autres |
 
 Recherche (nom, dossier, type), filtres par type et par dossier, tri, favoris ★. Les vignettes se chargent au fil du
 défilement. L'index est gardé (`Documents/RRFX/ressources-index.json`) et relu en arrière-plan au-delà d'une heure ;
@@ -232,13 +261,17 @@ redémarrage de Premiere.
 ### Onglet Mes effets
 
 - **Preset** : sur un effet, **＋ Preset** garde tes réglages (catégorie « Mes effets »).
-- **Capture** : monte n'importe quel effet dans Premiere — sur un clip ou un calque de réglage, avec tes images clés,
-  effets tiers compris — sélectionne-le dans la timeline et clique sur **Capturer la sélection**. Effets, valeurs et
+- **Capture** : monte n'importe quel effet dans Premiere (sur un clip ou un calque de réglage, avec tes images clés,
+  effets tiers compris), sélectionne-le dans la timeline et clique sur **Capturer la sélection**. Effets, valeurs et
   animations sont enregistrés ; tu le réappliques comme un effet intégré (durée réglable par étirement, miroir
   PRE/POST automatique).
 - **Partager** (⇪ sur un effet, ou *Tout partager*) : un **code** `RRFX1:…` à envoyer en message ; la personne le
   colle dans **Coller un code…**. Aucun chemin de fichier ni info perso dans le code.
 - **Importer / exporter** en `.json` pour sauvegarder tes effets.
+- **Packs de style** (`.rrfxpack`) : *Créer un pack…* rassemble dans un seul fichier tes effets et rampes perso, tes
+  looks (et celui en cours dans l'onglet Couleur), l'animation des textes et son modèle `.mogrt`, tes overlays
+  importés (fichiers compris) et ton enchaînement d'effets. *Importer un pack…* (ou depuis l'onglet Ressources)
+  ajoute tout en un clic, fichiers rangés dans `Documents/RRFX/Packs`. C'est un ZIP ordinaire.
 
 ### Bibliothèque en ligne (🌐 Communauté)
 
@@ -266,7 +299,7 @@ de réglage, copies du plan et morceaux de rampe `RR FX · …`. Les 10 dernièr
 sont mémorisées, même après avoir fermé Premiere. Un calque renommé ou un clip modifié entre-temps n'est pas touché.
 
 **Tout effacer** (*Réglages > Nettoyage*, ou le menu du panneau) retire d'un coup tout ce que RR FX a posé dans la
-séquence ou dans la zone sélectionnée — calques, copies, overlays, textes, sons `RR FX · …` — réactive les caméras
+séquence ou dans la zone sélectionnée (calques, copies, overlays, textes, sons `RR FX · …`), réactive les caméras
 éteintes par le montage multicam et, au choix, retire les marqueurs RR FX. Tes clips ne sont pas supprimés.
 
 ### Suivi de l'opération
@@ -330,6 +363,9 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - `trackItem.disabled` (montage multicam) : si ta version ne le permet pas, RR FX le dit sans rien toucher ;
 - l'ajout d'une piste audio par QE (son de la caméra de référence, SFX des Ressources) ;
 - le dossier des LUT de l'utilisateur (`Adobe/Common/LUTs/Creative`) lu par Lumetri ;
+- la copie de séquence (`clone`, `setSettings` pour la taille du cadre), l'effet **Recadrage automatique**
+  ajouté par QE, et la désactivation temporaire des looks et titres pendant l'export des images d'analyse
+  (`exportFramePNG`) ;
 - la **LUT d'entrée de Lumetri** remplie par script (champ sans nom après *Correction de base*, connu depuis
   Premiere 23.4) et l'insertion d'une piste vidéo au milieu par QE (`addTracks`) : si Premiere refuse, le calque est
   posé quand même et le chemin de la LUT est copié ;
@@ -395,6 +431,12 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/couleur.js          onglet Couleur : histogramme, avant/après, panneaux Lightroom, looks
   js/logconv.js          conversion LOG → Rec.709 : courbes des fabricants, gamuts, LUT calculée (testé)
   js/conversion.js       caméras enregistrées, LUT de conversion, calque au-dessus des rushs en un clic
+  js/camdetect.js        caméra d'un rush d'après ses métadonnées (marque, modèle, courbe Sony) (testé)
+  js/autograde.js        analyse d'image : expo et balance auto, raccord sur une référence (testé)
+  js/correction.js       panneau Expo, balance et raccord (onglet Couleur)
+  js/formats.js          onglet Formats : copie 9:16, 4:5, 1:1, recadrage automatique, zones sûres
+  js/stylepack.js        packs de style .rrfxpack : ZIP sans dépendance, manifeste (testé)
+  js/mespacks.js         créer et importer un pack de style (Mes effets, Ressources)
   js/assets.js           ressources : indexation des dossiers liés, classement, filtres, LUT .cube (testé)
   js/ressources.js       onglet Ressources : vignettes, aperçus, actions
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)

@@ -1,4 +1,4 @@
-/* RR FX — vérification des mises à jour : au démarrage, le panneau regarde sur
+/* RR FX : vérification des mises à jour : au démarrage, le panneau regarde sur
    GitHub si une version plus récente a été publiée (au plus une fois toutes les
    6 heures). Une extension ne peut pas s'installer elle-même : on propose de
    télécharger le pack d'installation et d'ouvrir la page de la version. */

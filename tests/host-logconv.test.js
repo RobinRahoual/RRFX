@@ -165,3 +165,59 @@ test('multicam: hidden angles of the selection are skipped, the layer only cover
   assert.ok(r.ok, r.error);
   assert.deepStrictEqual(seq.videoTracks[2].items.map(i => [i._s / F, i._e / F]), [[0, 100]]);
 });
+
+test('rushList: rushes with their media path, layers and hidden angles left out', () => {
+  const env = setup();
+  const { seq, F, adj, Item } = env;
+  seq.videoTracks[1].add(new Item(seq, adj, 0, 260 * F, 0, 'RR FX · Look Nuit POST'));
+  const r = env.call('rushList', { scope: 'sequence' });
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual(r.clips.map(c => [c.track, c.start / F, c.end / F, c.path]), [[0, 0, 100, '/rushs/A001.mov'], [0, 100, 260, '/rushs/B002.mov']]);
+  seq.getSelection = () => [seq.videoTracks[0].items[1]];
+  assert.deepStrictEqual(env.call('rushList', { scope: 'selection' }).clips.map(c => c.path), ['/rushs/B002.mov']);
+});
+
+test('one camera per group: each camera gets its own conversion layer over its shots', () => {
+  const env = setup();
+  const { F } = env;
+  const r = env.call('placeGrades', { layer: 'conversion', groups: [
+    { name: 'RR FX · Conversion Sony A7 III S-Log3', lutPath: LUT, spans: [{ a: 0, b: 100 * F, top: 0 }] },
+    { name: 'RR FX · Conversion Apple iPhone Apple Log', lutPath: '/l/apple.cube', spans: [{ a: 100 * F, b: 260 * F, top: 0 }] }
+  ] });
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(r.lutSet, 2);
+  assert.deepStrictEqual(env.seq.videoTracks[1].items.map(i => [i.name.slice(19), i._s / F, i._e / F]).sort((a, b) => a[1] - b[1]), [['Sony A7 III S-Log3', 0, 100], ['Apple iPhone Apple Log', 100, 260]]);
+});
+
+test('grading order: conversion, then auto correction, then camera match, then looks', () => {
+  const env = setup();
+  const { seq, F, adj, Item } = env;
+  const look = seq.videoTracks[1].add(new Item(seq, adj, 0, 260 * F, 0, 'RR FX · Look Nuit POST'));
+  assert.ok(convert(env).ok);
+  const auto = env.call('placeGrades', { layer: 'auto', groups: [{ name: 'RR FX · Auto A001', lutPath: '/l/a.cube', spans: [{ a: 0, b: 100 * F, top: 0 }] }, { name: 'RR FX · Auto B002', lutPath: '/l/b.cube', spans: [{ a: 100 * F, b: 260 * F, top: 0 }] }] });
+  assert.ok(auto.ok, auto.error);
+  const match = env.call('placeGrades', { layer: 'match', groups: [{ name: 'RR FX · Raccord', lutPath: '/l/m.cube', spans: [{ a: 100 * F, b: 260 * F, top: 0 }] }] });
+  assert.ok(match.ok, match.error);
+  const order = seq.videoTracks.map(t => t.items.map(i => i.name.replace('RR FX · ', '').split(' ')[0]).sort().join('+')).filter(Boolean);
+  assert.deepStrictEqual(order, ['A001.mov+B002.mov', 'Conversion', 'Auto+Auto', 'Raccord', 'Look']);
+  assert.strictEqual(seq.videoTracks[4].items[0], look);
+  // Relancer l'auto remplace les calques auto, sans toucher à la conversion.
+  const again = env.call('placeGrades', { layer: 'auto', groups: [{ name: 'RR FX · Auto B002', lutPath: '/l/b2.cube', spans: [{ a: 100 * F, b: 260 * F, top: 0 }] }] });
+  assert.strictEqual(again.replaced, 1);
+  assert.strictEqual(seq.videoTracks.flatMap(t => t.items).filter(i => /Conversion/.test(i.name)).length, 1);
+});
+
+test('clean frames: looks and titles off while Premiere exports, back on afterwards', () => {
+  const env = setup();
+  const { seq, F, adj, Item } = env;
+  const look = seq.videoTracks[2].add(new Item(seq, adj, 0, 260 * F, 0, 'RR FX · Look Nuit POST'));
+  assert.ok(convert(env).ok);
+  const r = env.call('framesBegin', { times: [2, 6], level: 2, folder: '/tmp', prefix: 'x-' });
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(r.files.length, 2);
+  assert.strictEqual(look.disabled, true);
+  assert.ok(!seq.videoTracks.flatMap(t => t.items).some(i => /Conversion/.test(i.name) && i.disabled), 'conversion stays on');
+  assert.deepStrictEqual(env.frames.slice(-2).map(f => f[0] / F), [50, 150]);
+  assert.strictEqual(env.call('framesEnd', { off: r.off }).restored, 1);
+  assert.strictEqual(look.disabled, false);
+});

@@ -30,7 +30,8 @@ function makeEnv(fps) {
     'Wave Warp': ['AE.ADBE Wave Warp', [1, 10, 40, 90, 1, 0, 0, 0]],
     'Lens Distortion': ['AE.ADBE Lens Distortion', [0, 0, 0]],
     'Echo': ['AE.ADBE Echo', [-0.033, 1, 1, 1, 1]],
-    'Lumetri Color': ['AE.ADBE Lumetri', [0, null, 0, '', 0, 0, 0, 100, 0]]
+    'Lumetri Color': ['AE.ADBE Lumetri', [0, null, 0, '', 0, 0, 0, 100, 0]],
+    'Auto Reframe': ['AE.ADBE AutoReframe', [0, 1]]
   };
 
   class Param {
@@ -126,6 +127,7 @@ function makeEnv(fps) {
       createSubClip(n, t0, t1, hard, takeVideo, takeAudio) {
         subclipCalls++;
         const sub = projItem(n, 1, val(t1) - val(t0));
+        sub.path = me.path;
         sub.videoOnly = takeVideo && !takeAudio;
         sub.audioOnly = !takeVideo && takeAudio;
         sub.master = me;
@@ -164,7 +166,18 @@ function makeEnv(fps) {
     _ph: 0, videoTracks: null,
     getPlayerPosition() { return T(this._ph); },
     getSelection() { const out = []; this.videoTracks.concat(this.audioTracks).forEach(t => t.items.forEach(i => { if (i.selected) out.push(i); })); return out; },
-    getSettings() { return { videoFrameRate: T(F), videoDisplayFormat: 101 }; },
+    getSettings() { return { videoFrameRate: T(F), videoDisplayFormat: 101, videoFrameWidth: this.frameSizeHorizontal, videoFrameHeight: this.frameSizeVertical }; },
+    setSettings(st) { this.frameSizeHorizontal = st.videoFrameWidth; this.frameSizeVertical = st.videoFrameHeight; },
+    sequenceID: 'seq-1',
+    // Copie de la séquence (pistes, plans, effets), ajoutée au projet.
+    clone() {
+      const ns = Object.defineProperties({}, Object.getOwnPropertyDescriptors(this));
+      ns.name = this.name + ' Copy'; ns.sequenceID = 'seq-' + nid(); ns._markers = this._markers.slice();
+      const copyTracks = list => { const out = coll(list.map((t, i) => { const nt = new Track(ns, i); t.items.forEach(it => { const c = Object.assign(Object.create(Object.getPrototypeOf(it)), it); c.nodeId = nid(); c.seq = ns; c.components = coll(it.components.map(cm => comp(cm.matchName, cm.displayName, cm.properties.map(p => JSON.parse(JSON.stringify(p.v))), c))); nt.add(c); }); return nt; })); Object.defineProperty(out, 'numTracks', { get: () => out.length }); return out; };
+      ns.videoTracks = copyTracks(this.videoTracks); ns.audioTracks = copyTracks(this.audioTracks);
+      sequences.push(ns);
+      return true;
+    },
     _markers: [],
     // Les tests posent des nombres (ticks) ; createMarker ajoute des objets marqueur.
     get markers() {
@@ -196,6 +209,10 @@ function makeEnv(fps) {
   Object.defineProperty(seq.audioTracks, 'numTracks', { get: () => seq.audioTracks.length });
   Object.defineProperty(seq.videoTracks, 'numTracks', { get: () => seq.videoTracks.length });
   project.activeSequence = seq;
+  const sequences = coll([seq]);
+  Object.defineProperty(sequences, 'numSequences', { get: () => sequences.length });
+  project.sequences = sequences;
+  project.openSequence = id => { const f = sequences.find(x => x.sequenceID === id); if (f) project.activeSequence = f; return !!f; };
 
   // ---------------- QE
   function qeItem(it) {
@@ -239,8 +256,8 @@ function makeEnv(fps) {
       getActiveSequence() {
         return {
           exportFramePNG(tc, path) { frames.push([Number(String(tc).slice(1)), path]); },
-          getAudioTrackAt(i) { return qeTrack(seq.audioTracks[i]); },
-          getVideoTrackAt(i) { return qeTrack(seq.videoTracks[i]); },
+          getAudioTrackAt(i) { return qeTrack(project.activeSequence.audioTracks[i]); },
+          getVideoTrackAt(i) { return qeTrack(project.activeSequence.videoTracks[i]); },
           _unused(i) {
             const tr = seq.videoTracks[i];
             const items = tr.items.slice().sort((a, b) => a._s - b._s);
@@ -262,9 +279,10 @@ function makeEnv(fps) {
           },
           // Insère n pistes vidéo à l'index donné (les pistes au-dessus remontent).
           addTracks(n, idx, na) {
-            for (let k = 0; k < n; k++) seq.videoTracks.splice(idx === undefined ? seq.videoTracks.length : idx, 0, new Track(seq, 0));
-            seq.videoTracks.forEach((t, i) => { t.i = i; });
-            for (let k = 0; k < (na || 0); k++) seq.audioTracks.push(new Track(seq, seq.audioTracks.length));
+            const sq = project.activeSequence;
+            for (let k = 0; k < n; k++) sq.videoTracks.splice(idx === undefined ? sq.videoTracks.length : idx, 0, new Track(sq, 0));
+            sq.videoTracks.forEach((t, i) => { t.i = i; });
+            for (let k = 0; k < (na || 0); k++) sq.audioTracks.push(new Track(sq, sq.audioTracks.length));
           }
         };
       },

@@ -1,4 +1,4 @@
-/* RR FX — packs d'overlays fournis avec le plugin. Rien à télécharger : chaque overlay est
+/* RR FX : packs d'overlays fournis avec le plugin. Rien à télécharger : chaque overlay est
    dessiné image par image (light leaks, flares, bokeh, poussière, brûlure de pellicule,
    VHS…) sur fond noir, pour un mode de fusion Écran / Ajout. Pour Premiere, la séquence
    d'images JPEG est fabriquée une fois, à la taille de la séquence, puis gardée sur disque. */
@@ -36,7 +36,7 @@
   }
 
   // ---------------------------------------------------------------- générateurs
-  // draw(g, W, H, t, frame, def) — t de 0 à 1 sur la durée, frame = numéro d'image.
+  // draw(g, W, H, t, frame, def) : t de 0 à 1 sur la durée, frame = numéro d'image.
 
   const GENERATORS = {
     // Taches de lumière colorées qui dérivent et respirent.

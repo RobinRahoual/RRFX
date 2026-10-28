@@ -22,13 +22,14 @@
         <button class="action quiet" id="toggle-compact">▴ Réduire</button>
       </div>
       <nav class="tabs" id="tabs">
-        <button class="tab" data-tab="effects">Effets</button>
-        <button class="tab" data-tab="ramp">Rampe</button>
-        <button class="tab" data-tab="color">Couleur</button>
-        <button class="tab" data-tab="music">Musique</button>
-        <button class="tab" data-tab="titles">Textes</button>
-        <button class="tab" data-tab="assets">Ressources</button>
-        <button class="tab" data-tab="mine">Mes effets</button>
+        <button class="tab" data-tab="effects" title="Transitions et effets sur les coupes, marqueurs et temps forts">Effets</button>
+        <button class="tab" data-tab="ramp" title="Rampes de vitesse">Rampe</button>
+        <button class="tab" data-tab="color" title="Conversion LOG, expo auto, raccord, looks façon Lightroom">Couleur</button>
+        <button class="tab" data-tab="music" title="Temps forts, montage auto, synchro, multicam">Musique</button>
+        <button class="tab" data-tab="titles" title="Titres et paroles animés">Textes</button>
+        <button class="tab" data-tab="formats" title="Copie 9:16, 4:5, 1:1 pour les réseaux">Formats</button>
+        <button class="tab" data-tab="assets" title="Tes dossiers d&#39;effets, sons, LUTs, polices">Ressources</button>
+        <button class="tab" data-tab="mine" title="Effets perso, packs de style, communauté">Mes effets</button>
         <button class="tab" data-tab="settings" title="Réglages">⚙</button>
       </nav>
       <button class="cta" id="cta">Appliquer</button>
@@ -61,6 +62,7 @@
       <section class="view" id="view-color"></section>
       <section class="view" id="view-music"></section>
       <section class="view" id="view-titles"></section>
+      <section class="view" id="view-formats"></section>
       <section class="view" id="view-assets"></section>
       <section class="view" id="view-mine"></section>
       <section class="view" id="view-settings"></section>
@@ -77,6 +79,9 @@
   <script src="js/assets.js"></script>
   <script src="js/develop.js"></script>
   <script src="js/logconv.js"></script>
+  <script src="js/camdetect.js"></script>
+  <script src="js/autograde.js"></script>
+  <script src="js/stylepack.js"></script>
   <script src="js/library.js"></script>
   <script src="js/preview.js"></script>
   <script src="js/storage.js"></script>
@@ -89,6 +94,9 @@
   <script src="js/titles.js"></script>
   <script src="js/ressources.js"></script>
   <script src="js/conversion.js"></script>
+  <script src="js/correction.js"></script>
+  <script src="js/mespacks.js"></script>
+  <script src="js/formats.js"></script>
   <script src="js/couleur.js"></script>
   <script src="js/main.js"></script>
 </body>

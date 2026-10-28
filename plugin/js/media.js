@@ -1,4 +1,4 @@
-/* RR FX — lecture du son des fichiers (sans DOM, testée sous Node avec ffmpeg).
+/* RR FX : lecture du son des fichiers (sans DOM, testée sous Node avec ffmpeg).
    Lit seulement la partie utile : en-têtes, puis la fenêtre de temps demandée.
    - WAV / RF64 : PCM 8-32 bits et flottant ;
    - MOV / MP4 : son PCM (sowt, twos, in24, in32, fl32, fl64, lpcm, ipcm, fpcm, raw) décodé

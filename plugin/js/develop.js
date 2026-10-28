@@ -1,4 +1,4 @@
-/* RR FX — moteur couleur façon Lightroom (module « Développement ») : mêmes panneaux et
+/* RR FX : moteur couleur façon Lightroom (module « Développement ») : mêmes panneaux et
    mêmes réglages (Réglages de base, Courbe des tonalités, Mélangeur de couleurs,
    Étalonnage des couleurs, Calibrage). Un seul calcul, trois sorties identiques :
    l'aperçu du panneau, une LUT .cube pour Premiere (Lumetri) et un DCTL pour DaVinci
@@ -252,7 +252,7 @@
   }
 
   function toCube(lut, title) {
-    const lines = ['# Créé avec RR FX (@robin.rahoual) — onglet Couleur', 'TITLE "' + String(title || 'RR FX').replace(/"/g, '\'') + '"', 'LUT_3D_SIZE ' + lut.size, 'DOMAIN_MIN 0.0 0.0 0.0', 'DOMAIN_MAX 1.0 1.0 1.0'];
+    const lines = ['# Créé avec RR FX (@robin.rahoual), onglet Couleur', 'TITLE "' + String(title || 'RR FX').replace(/"/g, '\'') + '"', 'LUT_3D_SIZE ' + lut.size, 'DOMAIN_MIN 0.0 0.0 0.0', 'DOMAIN_MAX 1.0 1.0 1.0'];
     const d = lut.data;
     for (let i = 0; i < d.length; i += 3) lines.push(d[i].toFixed(6) + ' ' + d[i + 1].toFixed(6) + ' ' + d[i + 2].toFixed(6));
     return lines.join('\n') + '\n';

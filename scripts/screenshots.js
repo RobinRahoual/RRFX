@@ -132,6 +132,14 @@ const ISSUES = [
   await page.click('.lr-head:has-text("Looks")');
   await page.click('.lr-head:has-text("Réglages de base")');
   await shot('couleur-conversion', 900);
+  await page.click('.lr-head:has-text("Expo, balance et raccord")');
+  await page.click('.action:has-text("Prendre la référence")');
+  await page.waitForSelector('.fix-ref img');
+  await page.click('.action:has-text("Raccorder la sélection")');
+  await page.waitForSelector('.fix-preview canvas');
+  await close();
+  await shot('couleur-raccord', 900);
+  await page.click('.lr-head:has-text("Expo, balance et raccord")');
   await page.click('.action:has-text("+ Ajouter une caméra")');
   await page.selectOption('.conv-form .row:has-text("Marque") select', 'panasonic');
   await page.fill('.conv-form .row:has-text("Modèle") input', 'GH5');
@@ -155,6 +163,10 @@ const ISSUES = [
   await page.click('.tab[data-tab=titles]');
   await page.fill('textarea.lyrics', 'On roule la nuit\nLes phares dans les yeux\nRien ne nous arrête\nJusqu\'au matin');
   await shot('textes', 900);
+
+  // Formats : copie 9:16 avec les zones sûres.
+  await page.click('.tab[data-tab=formats]');
+  await shot('formats', 700);
 
   // 6-8. Ressources
   await page.click('.tab[data-tab=assets]');

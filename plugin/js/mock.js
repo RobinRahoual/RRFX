@@ -1,4 +1,4 @@
-/* RR FX — faux Premiere utilisé quand le panneau tourne hors de Premiere (mode démo). */
+/* RR FX : faux Premiere utilisé quand le panneau tourne hors de Premiere (mode démo). */
 (function (root) {
   'use strict';
   const FPS = 25, TICKS = 254016000000, F = TICKS / FPS;
@@ -21,7 +21,7 @@
   const handlers = {
     compat: () => ({ ok: true, version: root.RRFXHost ? root.RRFXHost.VERSION : '?', app: 'démo', appPath: '', missing: [], optional: [] }),
     getContext: () => ({
-      ok: true, hasSequence: true, version: 'démo', app: 'démo', name: 'Clip — démo', fps: FPS, frameW: 1920, frameH: 1080,
+      ok: true, hasSequence: true, version: 'démo', app: 'démo', name: 'Clip démo', fps: FPS, frameW: 1920, frameH: 1080,
       playhead: 12.4, selection: 2, selectionNames: ['A001_C004.mov', 'A001_C007.mov'], markers: 4,
       adj: { name: 'Calque de réglage', nodeId: 'demo' }
     }),
@@ -75,6 +75,9 @@
     readBlend: () => ({ ok: true, value: 8 }),
     placeAsset: async a => { await wait(80 * a.times.length); return { ok: true, created: a.times.map(t => ({ kind: a.kind === 'audio' ? 'aud' : 'adj', track: 2, start: t * TICKS, name: a.name })), warnings: [] }; },
     importAssets: a => ({ ok: true, imported: a.paths.length, failed: [] }),
+    rushList: a => ({ ok: true, fps: FPS, clips: [['C0001.MP4', 0, 120], ['IMG_4512.MOV', 120, 200], ['C0002.MP4', 200, 300], ['DJI_0042.MP4', 300, 380]].filter((c, i) => a.scope !== 'selection' || i < 2).map(([name, s, e]) => ({ track: 0, start: s * F, end: e * F, name, path: '', copy: false })) }),
+    placeGrades: async a => { await wait(150); const created = []; a.groups.forEach(g => g.spans.forEach(sp => created.push({ kind: 'adj', track: 1, start: sp.a, name: g.name }))); return { ok: true, created, layers: created.length, replaced: 0, lutSet: created.length, warnings: [] }; },
+    formatCopy: async a => { await wait(300); return { ok: true, name: 'Clip démo (' + a.label + ')', reframed: a.mode === 'fill' ? 0 : 6, filled: a.mode === 'fill' ? 6 : 0, width: a.width, height: a.height, warnings: [] }; },
     logConvert: async a => { await wait(200); return { ok: true, created: [{ kind: 'adj', track: 1, start: 0, name: a.name }], layers: 1, replaced: 0, lutSet: a.lutPath ? 1 : 0, warnings: [] }; },
     multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
   };

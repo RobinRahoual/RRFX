@@ -1,4 +1,4 @@
-/* RR FX — codes de partage : un ou plusieurs effets perso dans un texte à copier-coller
+/* RR FX : codes de partage : un ou plusieurs effets perso dans un texte à copier-coller
    (message, commentaire, story…). « RRFX1: » = JSON compressé (deflate) en base64url,
    « RRFX0: » = JSON non compressé (si la compression n'est pas disponible). */
 (function (root, factory) {

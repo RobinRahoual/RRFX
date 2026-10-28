@@ -1,4 +1,4 @@
-/* RR FX — bibliothèque partagée en ligne. Pas de serveur à faire tourner : chaque preset
+/* RR FX : bibliothèque partagée en ligne. Pas de serveur à faire tourner : chaque preset
    publié est une « issue » du dépôt GitHub de RR FX, créée avec le formulaire
    « Partager un effet » (.github/ISSUE_TEMPLATE/preset.yml) qui y range le code RRFX1.
    - lire : l'API publique de GitHub (sans compte), mise en cache 10 minutes ;

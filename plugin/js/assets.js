@@ -1,4 +1,4 @@
-/* RR FX — ressources : les dossiers du disque liés au plugin (effets, SFX, polices, LUTs,
+/* RR FX : ressources : les dossiers du disque liés au plugin (effets, SFX, polices, LUTs,
    titres, overlays…). Indexation, classement, recherche, et lecture des LUT .cube pour les
    aperçus. Sans DOM : testé sous Node. */
 (function (root, factory) {
@@ -14,7 +14,7 @@
     { id: 'lut', label: 'LUTs', icon: '◐', exts: ['cube', '3dl', 'look', 'lut', 'csp', 'ilut'] },
     { id: 'font', label: 'Polices', icon: 'Aa', exts: ['ttf', 'otf', 'ttc', 'otc', 'woff', 'woff2'] },
     { id: 'mogrt', label: 'Titres', icon: 'T', exts: ['mogrt'] },
-    { id: 'preset', label: 'Presets', icon: '≡', exts: ['prfpset', 'ffx', 'epr', 'aep', 'prproj'] }
+    { id: 'preset', label: 'Presets', icon: '≡', exts: ['prfpset', 'rrfxpack', 'ffx', 'epr', 'aep', 'prproj'] }
   ];
   const typeById = {};
   const extType = {};

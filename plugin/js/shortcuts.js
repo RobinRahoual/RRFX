@@ -1,4 +1,4 @@
-/* RR FX — raccourcis clavier du panneau (actifs quand le panneau a le focus).
+/* RR FX : raccourcis clavier du panneau (actifs quand le panneau a le focus).
    Une touche simple (lettre ou chiffre) par action, au choix de l'utilisateur. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();

@@ -1,4 +1,4 @@
-/* RR FX — pure logic shared by the panel and the tests (no DOM, no host). */
+/* RR FX : pure logic shared by the panel and the tests (no DOM, no host). */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.RRFXCore = factory();

@@ -250,7 +250,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.conv-cam.on:has-text("Apple iPhone 16 Pro Apple Log")', { timeout: 3000 });
     if ((await page.locator('.conv-cam').count()) !== 2) throw new Error('deux caméras attendues');
     // Aperçu converti puis un clic.
-    await page.click('.lr-panel:has-text("Conversion LOG") label.checkbox');
+    await page.click('.lr-panel:has-text("Conversion LOG") label.checkbox:has-text("Aperçu en LOG")');
     await page.click('.conv-go');
     await page.waitForSelector('#status.ok:has-text("Rec.709 · Apple iPhone 16 Pro Apple Log")', { timeout: 5000 });
     // Raccourci L avec la caméra Sony.
@@ -260,6 +260,59 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("Rec.709 · Sony A7 III S-Log3")', { timeout: 5000 });
     const saved = await page.evaluate(() => window.RRFXApp.settings().logconv);
     if (saved.cams.length !== 2 || saved.cams[0].lutName !== 'SLog3SGamut3Cine-to-709.cube' || saved.cams[1].ev !== 1) throw new Error('caméras mal enregistrées : ' + JSON.stringify(saved));
+  });
+  await step('conversion par caméra et correction auto', async () => {
+    await page.click('.tab[data-tab=color]');
+    await page.click('.lr-panel:has-text("Conversion LOG") .action:text-is("Reconnue par plan")');
+    await page.click('.lr-panel:has-text("Conversion LOG") label.checkbox:has-text("expo et balance")');
+    await page.click('.conv-go');
+    await page.waitForSelector('#status.ok:has-text("Rec.709 · 2 caméras")', { timeout: 8000 });
+    const d = await page.evaluate(() => document.getElementById('status-title').textContent + ' ' + document.getElementById('status-detail').textContent);
+    if (!/1 non reconnu/.test(d) || !/\(3\)/.test(d) || !/Expo et balance/.test(d)) throw new Error('détail inattendu : ' + d);
+    await page.click('.lr-panel:has-text("Conversion LOG") .action:text-is("Celle cochée")');
+    // Panneau Expo, balance et raccord.
+    await page.click('.lr-head:has-text("Expo, balance et raccord")');
+    await page.click('.lr-panel:has-text("Expo, balance") .action:text-is("Corriger les plans")');
+    await page.waitForSelector('#status.ok:has-text("Expo et balance auto")', { timeout: 8000 });
+    await page.click('.action:has-text("Prendre la référence")');
+    await page.waitForSelector('.fix-ref img', { timeout: 5000 });
+    await page.click('.action:has-text("Raccorder la sélection")');
+    await page.waitForSelector('#status.ok:has-text("Raccord posé")', { timeout: 8000 });
+    await page.waitForSelector('.fix-preview canvas', { timeout: 3000 });
+    await page.click('.lr-head:has-text("Expo, balance et raccord")');
+  });
+  await step('enchaînement d\'effets', async () => {
+    await page.click('.tab[data-tab=effects]');
+    await page.click('.chips .action:text-is("Tout")');
+    await page.selectOption('.section:has-text("Placement") .row:has-text("Position") select', 'markers');
+    await page.selectOption('.section:has-text("Placement") .row:has-text("Entre les coupes") select', 'chain');
+    for (const n of ['Zoom in', 'Flash blanc', 'Shake']) await page.click('#grid .card:has-text("' + n + '")', { modifiers: ['Shift'] });
+    if ((await page.locator('.chain-chip').count()) !== 3) throw new Error('3 effets attendus dans l\'enchaînement');
+    if (!/enchaînement · 3 effets/.test(await page.textContent('#cta'))) throw new Error('bouton : ' + await page.textContent('#cta'));
+    await page.click('#cta');
+    await page.waitForSelector('#status.ok:has-text("Enchaînement appliqué")', { timeout: 8000 });
+    const log = await page.evaluate(() => window.RRFXApp.S.logLines.map(l => l.message).join('\n'));
+    if (!/Enchaînement : /.test(log)) throw new Error('journal : ' + log.slice(-300));
+    await page.click('.chain-chip:has-text("Shake")');
+    await page.selectOption('.section:has-text("Placement") .row:has-text("Entre les coupes") select', 'seed');
+    await page.selectOption('.section:has-text("Placement") .row:has-text("Position") select', 'cut');
+  });
+  await step('packs de style', async () => {
+    await page.click('.tab[data-tab=mine]');
+    await page.click('.mine-switch .action:has-text("Ma bibliothèque")').catch(() => {});
+    await page.click('.action:text-is("Créer un pack…")');
+    await page.fill('.modal input.textfield', 'Style été');
+    const [dl] = await Promise.all([page.waitForEvent('download'), page.click('.modal .cta')]);
+    await page.waitForSelector('#status.ok:has-text("Style été")', { timeout: 5000 });
+    const file = path.join(tmp, 'Style ete.rrfxpack');
+    fs.copyFileSync(await dl.path(), file);
+    const before = await page.evaluate(() => window.RRFXApp.S.lib.items.length);
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.action:text-is("Importer un pack…")')]);
+    await chooser.setFiles(file);
+    await page.click('.modal .cta');
+    await page.waitForSelector('#status.ok:has-text("importé")', { timeout: 5000 });
+    const after = await page.evaluate(() => window.RRFXApp.S.lib.items.length);
+    if (after <= before) throw new Error('rien d\'ajouté (' + before + ' → ' + after + ')');
   });
   await step('intensité selon le volume', async () => {
     await page.click('.tab[data-tab=effects]');

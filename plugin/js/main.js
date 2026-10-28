@@ -1,4 +1,4 @@
-/* RR FX — panneau : onglets, bloc d'état, application des effets et des rampes. */
+/* RR FX : panneau : onglets, bloc d'état, application des effets et des rampes. */
 (function () {
   'use strict';
   const Core = window.RRFXCore, Lib = window.RRFXLibrary, Pv = window.RRFXPreview;
@@ -25,7 +25,8 @@
     { v: 'same', label: 'Identique partout' },
     { v: 'seed', label: 'Variation aléatoire' },
     { v: 'category', label: 'Effet au hasard (même catégorie)' },
-    { v: 'favorites', label: 'Effet au hasard (favoris)' }
+    { v: 'favorites', label: 'Effet au hasard (favoris)' },
+    { v: 'chain', label: 'Enchaînement (effets choisis)' }
   ];
   const RAMP_PLACEMENTS = [
     { v: 'pre', label: 'Avant la coupe' },
@@ -36,7 +37,7 @@
   const DEFAULT_SETTINGS = {
     target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', registry: {},
     tab: 'effects', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
-    volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false,
+    volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false, chain: { keys: [], order: 'cycle' },
     ramp: { points: Core.RAMP_PRESETS.intoCut.points, frames: 12, placement: 'pre', segments: 10, anchor: 'auto', interp: 'keep', preset: 'intoCut' }
   };
 
@@ -569,6 +570,44 @@
       return { kind: 'ok', title: 'Aperçu sur ta séquence', detail: 'Images autour de la coupe à ' + r.cut.toFixed(2) + ' s. « Plans de test » pour revenir.' };
     });
   }
+  /* Images « propres » de la timeline aux instants donnés (secondes) : looks, titres et
+     overlays coupés pendant l'export (level : on garde les étalonnages RR FX de niveau
+     inférieur, 2 = conversion seule). Renvoie des ImageData de largeur w. Hors de Premiere :
+     les plans de test. */
+  async function grabClean(times, level, w, onProgress) {
+    w = w || 320;
+    const toData = img => {
+      const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, h2 = Math.max(1, Math.round(w * ih / iw));
+      const c = document.createElement('canvas');
+      c.width = w; c.height = h2;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0, w, h2);
+      return g.getImageData(0, 0, w, h2);
+    };
+    const dir = Store.cacheDir();
+    if (!dir || S.demo) return times.map((t, i) => toData(Pv.shots()[i % 2 ? 'B' : 'A']));
+    Store.listFiles(dir, /^rrfx-clean-/, 400, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
+    const r = await Host.call('framesBegin', { times, level, folder: dir.replace(/\\/g, '/'), prefix: 'rrfx-clean-' + uid() + '-' });
+    if (!r.ok) throw new Error(r.error);
+    const found = new Array(r.files.length).fill(null);
+    try {
+      // Premiere écrit les images après coup (avec ou sans .png) : on les attend.
+      const limit = 40 + r.files.length * 8;
+      for (let t = 0; t < limit && found.some(f => !f); t++) {
+        r.files.forEach((f, i) => { if (!found[i]) found[i] = [f, f + '.png'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0) || null; });
+        if (onProgress) onProgress(found.filter(Boolean).length / found.length);
+        if (found.some(f => !f)) await new Promise(res => setTimeout(res, 150));
+      }
+      // Une image tout juste créée peut être encore en cours d'écriture.
+      await new Promise(res => setTimeout(res, 250));
+    } finally {
+      await Host.call('framesEnd', { off: r.off });
+    }
+    if (found.some(f => !f)) throw new Error('Premiere n\'a pas écrit toutes les images (' + dir + ').');
+    const imgs = await Promise.all(found.map(f => loadImage(fileURL(f) + '?' + Date.now())));
+    found.forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
+    return imgs.map(toData);
+  }
   function useTestShots() {
     Pv.resetShots();
     renderInspector();
@@ -725,8 +764,9 @@
         h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'overlay' && e.overlay.pack ? Packs.byId[e.overlay.pack].packName : ({ captured: 'capturé', overlay: 'overlay' })[e.kind] || 'preset') : null),
         h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, e.name),
           e.def && e.def.target ? h('span', { class: 'tag', title: 'Posé sur une copie du plan (un calque de réglage ne peut pas mélanger les images)' }, 'CLIP FX') : null,
-          isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null));
-      card.addEventListener('click', () => selectEntry(e));
+          isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null,
+          settings().vary === 'chain' && settings().chain.keys.includes(e.key) ? h('span', { class: 'chain-mark', title: 'Dans l\'enchaînement' }, String(settings().chain.keys.indexOf(e.key) + 1)) : null));
+      card.addEventListener('click', ev => (ev.shiftKey ? toggleChain(e) : selectEntry(e)));
       card.addEventListener('mouseenter', () => animateThumb(cv, e));
       card.addEventListener('mouseleave', () => { stopThumb(); drawThumb(cv, e); });
       grid.appendChild(card);
@@ -854,8 +894,9 @@
     }
     ins.appendChild(section('Placement', [
       row('Côté', sideCtl),
-      row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); })),
-      multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
+      row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); renderCTA(); })),
+      multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); renderInspector(); renderCTA(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
+      multi && st.vary === 'chain' ? chainRow() : null,
       row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
       volRows
     ]));
@@ -884,7 +925,7 @@
       rows.push(h('div', { class: 'field' }, checkbox('Étirer l\'animation à la durée', p.stretch, v => { p.stretch = v; paramChanged(true); })));
       rows.push(h('div', null, checkbox('Miroir pour l\'autre côté de la coupe', p.mirror, v => { p.mirror = v; paramChanged(true); })));
       const d = e.item.data;
-      rows.push(h('div', { class: 'note' }, (d.components || []).map(c => c.displayName).join(' · ') + ' — capturé sur ' + plural(d.frames || 0, 'image')));
+      rows.push(h('div', { class: 'note' }, (d.components || []).map(c => c.displayName).join(' · ') + ' · capturé sur ' + plural(d.frames || 0, 'image')));
     } else {
       rows.push(row('Intensité', hotText({ value: p.intensity, min: 0, max: 200, step: 1, unit: '%', onChange: (v, fin) => { p.intensity = v; paramChanged(fin); } })));
       (def.params || []).forEach(q => {
@@ -959,6 +1000,45 @@
 
   // Une entrée par zone (PRE/POST d'une coupe). Les deux côtés d'une même coupe
   // reçoivent le même effet tiré au hasard.
+  // ---------------------------------------------------------------- enchaînement d'effets
+
+  function chainEntries() {
+    const all = entries(), c = settings().chain;
+    return c.keys.map(k => all.find(x => x.key === k)).filter(Boolean);
+  }
+  const chainOn = () => {
+    const st = settings();
+    return (st.placement === 'cuts' || st.placement === 'markers' || st.placement === 'beats') && st.vary === 'chain' && chainEntries().length > 0;
+  };
+  function toggleChain(e) {
+    const c = settings().chain, i = c.keys.indexOf(e.key);
+    if (i >= 0) c.keys.splice(i, 1); else c.keys.push(e.key);
+    if (settings().vary !== 'chain' && i < 0) settings().vary = 'chain';
+    persist();
+    renderGrid();
+    renderInspector();
+    renderCTA();
+    const pl = settings().placement, multi = pl === 'cuts' || pl === 'markers' || pl === 'beats';
+    status.finish('ok', i >= 0 ? e.name + ' retiré de l\'enchaînement' : e.name + ' ajouté à l\'enchaînement', plural(c.keys.length, 'effet') + ' : ' + chainEntries().map(x => x.name).join(' → ') + (multi ? '' : '. Choisis la position Temps forts, Marqueurs ou Toutes les coupes pour l\'appliquer.'));
+  }
+
+  function chainRow() {
+    const c = settings().chain, list = chainEntries();
+    const box = h('div', { class: 'chain' });
+    list.forEach((x, i) => {
+      const chip = h('span', { class: 'chain-chip', title: 'Retirer' }, h('b', null, String(i + 1)), x.name, h('span', { class: 'chain-x' }, '✕'));
+      chip.addEventListener('click', () => toggleChain(x));
+      box.appendChild(chip);
+    });
+    const add = h('button', { class: 'action quiet', disabled: !S.cur || c.keys.includes(S.cur.key), title: 'Ou Maj + clic sur une carte' }, '+ ' + (S.cur ? S.cur.name : 'effet affiché'));
+    add.addEventListener('click', () => S.cur && toggleChain(S.cur));
+    box.appendChild(add);
+    return [
+      row('Enchaînement', box, { title: 'Les effets se succèdent sur les coupes, marqueurs ou temps forts. Maj + clic sur une carte pour ajouter ou retirer.' }),
+      list.length ? row('Ordre', actionGroup([{ v: 'cycle', label: 'Dans l\'ordre' }, { v: 'random', label: 'Au hasard' }], c.order, v => { c.order = v; persist(); })) : h('div', { class: 'note' }, 'Ajoute 2 à 4 effets : Maj + clic sur les cartes, ou le bouton ci-dessus.')
+    ];
+  }
+
   function buildPlan(e, targets, vary, rate, factors) {
     let pool = null;
     if (vary === 'favorites') {
@@ -966,6 +1046,7 @@
       if (!pool.length) log('Aucun favori : effets tirés dans la même catégorie.', 'warn');
     }
     if (vary === 'category' || (vary === 'favorites' && !pool.length)) pool = entries().filter(x => x.cat === e.cat);
+    const chain = vary === 'chain' ? chainEntries() : null;
     const runSeed = Math.floor(Math.random() * 1000) + 1;
     const cutIndex = new Map();
     return targets.map(t => {
@@ -973,7 +1054,11 @@
       if (!cutIndex.has(key)) cutIndex.set(key, cutIndex.size);
       const k = cutIndex.get(key);
       let entry = e, params = S.params;
-      if (pool && pool.length) {
+      if (chain && chain.length) {
+        // Enchaînement : les effets choisis tournent d'une coupe à l'autre (ou au hasard).
+        entry = settings().chain.order === 'random' ? chain[Math.floor(Core.hash(k, runSeed) * chain.length) % chain.length] : chain[k % chain.length];
+        params = Object.assign(defaultParams(entry), entry.kind === 'captured' ? { frames: S.params.frames } : { frames: S.params.frames, intensity: S.params.intensity });
+      } else if (pool && pool.length) {
         entry = pool[Math.floor(Core.hash(k, runSeed) * pool.length) % pool.length];
         params = Object.assign(defaultParams(entry), entry.kind === 'captured' ? { frames: S.params.frames } : { frames: S.params.frames, intensity: S.params.intensity });
       }
@@ -989,9 +1074,9 @@
   }
 
   function applyEffect() {
-    const e = S.cur;
+    const st = settings(), chained = chainOn();
+    const e = chained ? Object.assign({}, chainEntries()[0], { name: 'Enchaînement' }) : S.cur;
     if (!e) return null;
-    const st = settings();
     const multi = st.placement === 'cuts' || st.placement === 'markers' || st.placement === 'beats';
     return runTask('Application · ' + e.name, async () => {
       status.phase('Analyse de la timeline');
@@ -1305,6 +1390,7 @@
     const paste = h('button', { class: 'action' }, 'Coller un code…');
     paste.addEventListener('click', pasteCode);
     view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, 'Partager donne un code « RRFX1:… » à envoyer en message : la personne le colle dans « Coller un code… ». Fichier : ' + Store.location)]));
+    if (app.stylePacks) view.appendChild(app.stylePacks.section());
     renderMineList();
   }
 
@@ -1739,7 +1825,7 @@
   function renderShortcuts() {
     document.querySelectorAll('[data-shortcut]').forEach(b => {
       const a = b.getAttribute('data-shortcut');
-      b.textContent = S.capturing === a ? 'Appuie sur une touche…' : S.shortcuts[a] || '—';
+      b.textContent = S.capturing === a ? 'Appuie sur une touche…' : S.shortcuts[a] || 'Aucune';
     });
   }
 
@@ -1799,6 +1885,7 @@
       { id: 'beats', label: 'Poser les marqueurs des temps forts' },
       { id: 'sync', label: 'Synchroniser la sélection sur la musique' },
       { id: 'convert', label: 'Convertir le LOG en Rec.709 (caméra enregistrée)' },
+      { id: 'autoFix', label: 'Expo et balance des blancs auto' },
       { id: 'undo', label: 'Annuler la dernière opération RR FX' },
       { id: 'clear', label: 'Tout effacer (séquence)…' },
       { separator: true },
@@ -1808,6 +1895,7 @@
       if (id === 'compact') return toggleCompact();
       if (id === 'instagram') return Host.openURL(INSTAGRAM_URL);
       if (id === 'clear') return clearAll({ scope: 'sequence', markers: true });
+      if (id === 'autoFix') return app.actions.autoFix && app.actions.autoFix();
       if (SHORTCUT_ACTIONS[id]) SHORTCUT_ACTIONS[id]();
     });
   }
@@ -1817,6 +1905,7 @@
     if (S.tab === 'ramp') return { label: 'Appliquer la rampe', run: applyRamp, enabled: true };
     if (S.tab === 'mine' && S.mineView === 'community') return { label: 'Publier un de mes effets…', run: publishPicker, enabled: true };
     if (S.tab === 'mine') return { label: 'Capturer la sélection', run: capture, enabled: true };
+    if (S.tab === 'effects' && chainOn()) return { label: 'Appliquer l\'enchaînement · ' + plural(chainEntries().length, 'effet'), run: applyEffect, enabled: true };
     return { label: S.cur ? 'Appliquer · ' + S.cur.name : 'Appliquer', run: applyEffect, enabled: !!S.cur };
   }
   function renderCTA() {
@@ -1833,8 +1922,11 @@
     t.classList.toggle('more-right', t.scrollLeft + t.clientWidth < t.scrollWidth - 2);
   }
 
+  // Position de défilement de chaque onglet : on retrouve sa place en revenant.
+  const tabScroll = {};
   function switchTab(tab) {
     if (S.tab !== tab && app.tabs[S.tab] && app.tabs[S.tab].leave) app.tabs[S.tab].leave();
+    if (S.tab !== tab) tabScroll[S.tab] = $('scroll').scrollTop;
     S.tab = tab;
     settings().tab = tab;
     persist();
@@ -1857,6 +1949,7 @@
     if (app.tabs[tab]) app.tabs[tab].render($('view-' + tab));
     renderCTA();
     $('scroll').scrollTop = 0;
+    if (tabScroll[tab]) requestAnimationFrame(() => { $('scroll').scrollTop = tabScroll[tab]; });
   }
 
   // ---------------------------------------------------------------- mises à jour
@@ -1926,7 +2019,13 @@
   // Pour les autres onglets (Ressources…) : ajouter un overlay ou des effets à la bibliothèque.
   app.services.addOverlay = file => { addOverlayList([file]); if (S.tab !== 'effects') switchTab('effects'); };
   app.services.addItems = list => addItems(list);
+  // Sections repliées, gardées d'une session à l'autre.
+  window.RRFXUI.folded.get = title => !!(S.lib && settings().folded && settings().folded[title]);
+  window.RRFXUI.folded.set = (title, v) => { const f = settings().folded || (settings().folded = {}); if (v) f[title] = true; else delete f[title]; persist(); };
+  app.services.addOverlays = list => addOverlayList(list);
+  app.services.entries = () => entries();
   app.services.grabFrames = () => grabRealFrames();
+  app.services.grabClean = grabClean;
   // Lumetri Color sous son nom local (cherché une fois) ; lut : .cube chargée en LUT d'entrée.
   let lumetriLocal;
   app.services.lumetriFx = async lut => {

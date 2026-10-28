@@ -1,4 +1,4 @@
-/* RR FX — conversion LOG → Rec.709 : courbes log des fabricants, gamuts, et LUT de conversion
+/* RR FX : conversion LOG → Rec.709 : courbes log des fabricants, gamuts, et LUT de conversion
    calculée (quand on n'a pas la LUT officielle). Formules publiées par les fabricants (Sony,
    Panasonic, Canon, Fujifilm, Nikon, DJI, Apple, Blackmagic, ARRI).
 

@@ -1,4 +1,4 @@
-/* RR FX — in-panel preview. Approximates the Premiere effects on two synthetic
+/* RR FX : in-panel preview. Approximates the Premiere effects on two synthetic
    shots so parameters can be judged before anything touches the timeline. */
 (function (root) {
   'use strict';

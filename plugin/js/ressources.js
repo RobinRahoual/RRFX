@@ -1,4 +1,4 @@
-/* RR FX — onglet Ressources : les dossiers du disque liés au plugin (effets, SFX, polices,
+/* RR FX : onglet Ressources : les dossiers du disque liés au plugin (effets, SFX, polices,
    LUTs, titres, overlays…), indexés, classés, avec aperçus et actions directes vers Premiere. */
 (function (root) {
   'use strict';
@@ -417,6 +417,13 @@
       }
     }
 
+    // Pack de style RR FX (.rrfxpack) : importé comme depuis « Mes effets ».
+    async function importPackFile(e) {
+      if (!app.stylePacks) return;
+      const bytes = e.file ? new Uint8Array(await e.file.arrayBuffer()) : new Uint8Array(Store.fs.readFileSync(e.path));
+      return app.stylePacks.importPack({ name: e.fileName, bytes });
+    }
+
     async function addPresetFile(e) {
       let data;
       try { data = JSON.parse(await textOf(e)); } catch (err) { return app.status.finish('error', 'Fichier illisible', app.errorMessage(err)); }
@@ -460,7 +467,7 @@
         case 'mogrt': return { label: 'Poser le titre à la tête de lecture', run: () => place(e, 'playhead') };
         case 'lut': return { label: 'Calque de réglage Lumetri', run: () => lumetriLayer(e) };
         case 'font': return { label: 'Installer la police', run: () => installFont(e) };
-        default: return /\.(rrfx|cutfx)\.json$/i.test(e.fileName) ? { label: 'Ajouter à Mes effets', run: () => addPresetFile(e) } : { label: 'Afficher dans le dossier', run: () => reveal(e) };
+        default: return e.ext === 'rrfxpack' ? { label: 'Importer le pack de style', run: () => importPackFile(e) } : /\.(rrfx|cutfx)\.json$/i.test(e.fileName) ? { label: 'Ajouter à Mes effets', run: () => addPresetFile(e) } : { label: 'Afficher dans le dossier', run: () => reveal(e) };
       }
     }
 
@@ -631,10 +638,11 @@
         actions.push(btn('Poser à la tête de lecture', here), btn('Utiliser dans l\'onglet Textes', () => useAsTitle(e), '', 'Paroles et titres animés avec ce modèle'));
       } else {
         const rr = /\.(rrfx|cutfx)\.json$/i.test(e.fileName);
-        pv.appendChild(h('div', { class: 'note' }, rr ? 'Effets exportés depuis RR FX.'
+        pv.appendChild(h('div', { class: 'note' }, rr ? 'Effets exportés depuis RR FX.' : e.ext === 'rrfxpack' ? 'Pack de style RR FX : effets, looks, textes, overlays.'
           : e.ext === 'prfpset' ? 'Préréglage d\'effets Premiere : panneau Effets > clic droit sur « Préréglages » > Importer les préréglages…, puis choisis ce fichier.'
             : e.ext === 'epr' ? 'Préréglage d\'export (Media Encoder / Exporter).' : 'Fichier de projet ou de préréglage.'));
         if (rr) actions.push(btn('Ajouter à Mes effets', () => addPresetFile(e)));
+        if (e.ext === 'rrfxpack') actions.push(btn('Importer le pack de style', () => importPackFile(e)));
       }
       if (e.type !== 'font' && e.type !== 'lut' && e.type !== 'preset' && e.type !== 'mogrt') actions.push(btn('Importer dans le projet', () => importOne(e), 'quiet'));
       if (e.path) actions.push(btn(Store.isWin() ? 'Afficher dans l\'Explorateur' : 'Afficher dans le Finder', () => reveal(e), 'quiet'));

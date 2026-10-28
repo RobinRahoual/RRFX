@@ -1,8 +1,8 @@
-/* RR FX — pont vers Premiere (ExtendScript) et vers l'environnement CEP.
+/* RR FX : pont vers Premiere (ExtendScript) et vers l'environnement CEP.
    Hors de Premiere (simple navigateur), bascule sur RRFXMock : mode démo. */
 (function (root) {
   'use strict';
-  const VERSION = '1.8.1';
+  const VERSION = '1.9.0';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 
