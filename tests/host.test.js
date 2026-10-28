@@ -108,7 +108,7 @@ test('undo removes the adjustment layers it made, nothing else', () => {
   assert.strictEqual(env.seq.videoTracks[0].items.length, 2);
 });
 
-test('echo effect (forced clip target)', () => {
+test('echo effect directly on the clip (legacy target)', () => {
   const env = setup();
   const { res } = applyEffect(env, 'echo-blur', { target: 'clip', sides: ['post'] });
   assert.ok(res.ok, res.error);
@@ -120,7 +120,7 @@ test('echo effect (forced clip target)', () => {
 test('all built-ins apply without warnings', () => {
   Lib.EFFECTS.forEach(def => {
     const env = setup();
-    const { res } = applyEffect(env, def.id, { target: def.target === 'clip' ? 'clip' : 'adjustment' });
+    const { res } = applyEffect(env, def.id, { target: def.target || 'adjustment' });
     assert.ok(res.ok, def.id + ': ' + res.error);
     assert.deepStrictEqual(res.warnings, [], def.id);
   });
@@ -167,31 +167,50 @@ test('capture roundtrip', () => {
   assert.deepStrictEqual(res.warnings, []);
 });
 
-function rampCheck(env, placement, anchor, points, segments) {
+function rampCheck(env, placement, anchor, points, segments, extra) {
   const rr = env.call('rampResolve', { placement, frames: 12 });
   assert.ok(rr.ok, rr.error);
   const pieces = Core.rampPieces(points, rr.frames, segments);
-  const res = env.call('rampApply', { track: rr.track, clipStart: rr.clipStart, regionStart: rr.regionStart, pieces, anchor: anchor || rr.anchor, interp: 'keep' });
+  const res = env.call('rampApply', Object.assign({ track: rr.track, clipStart: rr.clipStart, clipName: rr.clipName, regionStart: rr.regionStart, pieces, anchor: anchor || rr.anchor, interp: 'keep' }, extra || {}));
   return { rr, pieces, res };
 }
 
-test('speed ramp before the cut keeps the cut and frame', () => {
+const snapshot = it => JSON.stringify([it._s, it._e, it._in, it._out, it._speed, it.components.length]);
+
+function rampLayer(env, track) {
+  return env.seq.videoTracks[track].items.filter(i => i.name === 'CutFX · Rampe').sort((a, b) => a._s - b._s);
+}
+
+test('speed ramp before the cut: on a copy layer, original untouched, cut and frame kept', () => {
   const env = setup();
+  const before = [snapshot(env.A), snapshot(env.B)];
   const srcAtCut = env.A._in + (100 * env.F - env.A._s);
   const { pieces, res } = rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 6);
   assert.ok(res.ok, res.error);
-  const items = env.seq.videoTracks[0].items.filter(i => i._s < 100 * env.F).sort((a, b) => a._s - b._s);
-  assert.strictEqual(items.length, 7);
+  assert.deepStrictEqual([snapshot(env.A), snapshot(env.B)], before, 'V1 untouched');
+  assert.strictEqual(res.track, 1);
+  const items = rampLayer(env, 1);
+  assert.strictEqual(items.length, 6);
+  assert.ok(Math.abs(items[0]._s - 88 * env.F) < 1);
+  assert.ok(Math.abs(items[5]._e - 100 * env.F) < 1, 'ends on the cut');
+  assert.ok(Math.abs(items[5]._out - srcAtCut) < 2, 'frame at the cut kept');
   for (let k = 1; k < items.length; k++) {
     assert.ok(Math.abs(items[k]._s - items[k - 1]._e) < 1, 'contiguous at ' + k);
     assert.ok(Math.abs(items[k]._in - items[k - 1]._out) < 2, 'source continuous at ' + k);
   }
-  assert.strictEqual(items[0]._s, 0);
-  assert.ok(Math.abs(items[6]._e - 100 * env.F) < 1, 'cut stays');
-  assert.ok(Math.abs(items[6]._out - srcAtCut) < 2, 'frame at cut stays');
-  items.slice(1).forEach((it, k) => assert.ok(Math.abs(it._speed - pieces[k].speed / 100) < 1e-9));
-  assert.ok(env.B._s === 100 * env.F && env.B._in === 20 * env.F, 'next clip untouched');
-  assert.deepStrictEqual(res.warnings.filter(w => /vérifier/.test(w)), []);
+  items.forEach((it, k) => assert.ok(Math.abs(it._speed - pieces[k].speed / 100) < 1e-9));
+  assert.ok(items[0].projectItem.videoOnly, 'copies come from a video-only subclip');
+  assert.strictEqual(res.created.length, 6);
+  assert.deepStrictEqual(res.warnings, []);
+});
+
+test('ramp undo from the panel history removes every piece', () => {
+  const env = setup();
+  const { res } = rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 6);
+  const u = env.call('undo', { entries: res.created });
+  assert.strictEqual(u.removed, 6);
+  assert.strictEqual(env.seq.videoTracks[1].items.length, 0);
+  assert.strictEqual(env.seq.videoTracks[0].items.length, 2);
 });
 
 test('speed ramp after the cut', () => {
@@ -199,20 +218,26 @@ test('speed ramp after the cut', () => {
   env.seq._ph = 101 * env.F;
   const { res } = rampCheck(env, 'post', null, Core.RAMP_PRESETS.outOfCut.points, 4);
   assert.ok(res.ok, res.error);
-  const items = env.seq.videoTracks[0].items.filter(i => i._s >= 100 * env.F).sort((a, b) => a._s - b._s);
-  assert.strictEqual(items.length, 5);
-  assert.strictEqual(items[0]._in, 20 * env.F, 'first frame after cut stays');
-  assert.ok(Math.abs(items[4]._e - 200 * env.F) < 1, 'clip end stays');
+  const items = rampLayer(env, 1);
+  assert.strictEqual(items.length, 4);
+  assert.strictEqual(items[0]._in, 20 * env.F, 'first frame after the cut kept');
+  assert.ok(Math.abs(items[0]._s - 100 * env.F) < 1);
+  assert.ok(Math.abs(items[3]._e - 112 * env.F) < 1);
   for (let k = 1; k < items.length; k++) assert.ok(Math.abs(items[k]._in - items[k - 1]._out) < 2);
 });
 
-test('speed ramp refuses when media is missing', () => {
+test('speed ramp refuses when media is missing, and places nothing', () => {
   const env = setup();
-  env.A._in = 0; env.A._out = 100 * env.F;
+  env.A._in = 0; env.A._out = 100 * env.F; env.A._s = 80 * env.F; env.A._e = 100 * env.F;
   const { res } = rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 6);
-  assert.ok(!res.ok);
+  assert.ok(!res.ok, 'the speed-up needs ~25 frames of media before frame 20');
   assert.ok(/Pas assez de média avant/.test(res.error), res.error);
-  assert.strictEqual(env.seq.videoTracks[0].items.length, 2, 'nothing was cut');
+  env.seq._ph = 101 * env.F;
+  env.B._in = 390 * env.F; env.B._out = 490 * env.F;
+  const after = rampCheck(env, 'post', null, Core.RAMP_PRESETS.outOfCut.points, 4).res;
+  assert.ok(!after.ok && /Pas assez de média après/.test(after.error), after.error);
+  assert.strictEqual(env.seq.videoTracks[1].items.length, 0);
+  assert.strictEqual(env.subclipCalls(), 0);
 });
 
 test('slow-mo ramp around the playhead', () => {
@@ -220,10 +245,87 @@ test('slow-mo ramp around the playhead', () => {
   env.seq._ph = 40 * env.F;
   const { res } = rampCheck(env, 'playhead', 'start', Core.RAMP_PRESETS.slowHit.points, 8);
   assert.ok(res.ok, res.error);
-  const items = env.seq.videoTracks[0].items.filter(i => i._s < 100 * env.F).sort((a, b) => a._s - b._s);
-  assert.strictEqual(items.length, 10);
-  assert.ok(Math.abs(items[9]._e - 100 * env.F) < 1);
+  const items = rampLayer(env, 1);
+  assert.strictEqual(items.length, 8);
+  assert.ok(Math.abs(items[0]._s - 34 * env.F) < 1);
+  assert.ok(Math.abs(items[7]._e - 46 * env.F) < 1);
   for (let k = 1; k < items.length; k++) assert.ok(Math.abs(items[k]._in - items[k - 1]._out) < 2);
+});
+
+test('ramp: a busy track above gets a new track inserted right above the clip', () => {
+  const env = setup();
+  applyEffect(env, 'zoom-in', { sides: ['pre'] });
+  const { res } = rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 6);
+  assert.ok(res.ok, res.error);
+  assert.strictEqual(res.track, 1, 'right above V1');
+  assert.strictEqual(rampLayer(env, 1).length, 6);
+  assert.strictEqual(env.seq.videoTracks[2].items[0].name, 'CutFX · Zoom in PRE', 'the adjustment layer stays above the ramp');
+  assert.ok(res.warnings.some(w => /insérée/.test(w)));
+});
+
+test('ramp copies the framing and effects of the clip', () => {
+  const env = setup();
+  env.A.components[1].properties[1].v = 130;
+  const pos = env.A.components[1].properties[0];
+  pos.setTimeVarying(true);
+  [80, 99].forEach((fr, n) => {
+    const t = { _t: env.A._in + fr * env.F };
+    Object.setPrototypeOf(t, Object.getPrototypeOf(env.seq.getPlayerPosition()));
+    pos.addKey(t); pos.setValueAtKey(t, n ? [0.6, 0.5] : [0.4, 0.5]);
+  });
+  const { res } = rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 3);
+  assert.ok(res.ok, res.error);
+  rampLayer(env, 1).forEach(it => {
+    assert.strictEqual(it.components[1].properties[1].v, 130, 'scale copied');
+    assert.strictEqual(it.components[1].properties[0].keys.length, 2, 'animated reframe copied');
+  });
+  const noLook = setup();
+  const r2 = rampCheck(noLook, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 3, { copyLook: false });
+  assert.ok(r2.res.ok);
+});
+
+test('ramp works when Premiere wants speeds in percent', () => {
+  const env = setup();
+  env.setSpeedPercent(true);
+  const { pieces, res } = rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 4);
+  assert.ok(res.ok, res.error);
+  rampLayer(env, 1).forEach((it, k) => assert.ok(Math.abs(it._speed - pieces[k].speed / 100) < 1e-9));
+});
+
+test('the video-only subclip is created once and reused, in a CutFX bin', () => {
+  const env = setup();
+  rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 3);
+  env.call('undo', { entries: rampCheck(setup(), 'pre', null, Core.RAMP_PRESETS.intoCut.points, 3).res.created });
+  env.seq._ph = 60 * env.F;
+  rampCheck(env, 'playhead', 'start', Core.RAMP_PRESETS.slowHit.points, 3);
+  assert.strictEqual(env.subclipCalls(), 1);
+  const cutfx = env.root.children.find(c => c.name === 'CutFX');
+  assert.ok(cutfx && cutfx.children.some(c => c.name === 'CutFX · A001.mov · vidéo'));
+});
+
+test('effects on a copy of the shot: Motion blur (Echo) never touches the clip', () => {
+  const env = setup();
+  const before = snapshot(env.B);
+  const { res } = applyEffect(env, 'echo-blur', { target: 'copy', sides: ['post'] });
+  assert.ok(res.ok, res.error);
+  assert.strictEqual(snapshot(env.B), before);
+  const copy = env.seq.videoTracks[1].items[0];
+  assert.strictEqual(copy.name, 'CutFX · Motion blur POST');
+  assert.ok(Math.abs(copy._s - 100 * env.F) < 1 && Math.abs(copy._e - 108 * env.F) < 1);
+  assert.strictEqual(copy._in, env.B._in, 'same source frames as the clip');
+  assert.strictEqual(copy.components[copy.components.length - 1].matchName, 'AE.ADBE Echo');
+  assert.strictEqual(env.call('undo', { entries: res.created }).removed, 1);
+});
+
+test('copy of a sped-up clip keeps its speed', () => {
+  const env = setup();
+  env.B._speed = 2; env.B._out = env.B._in + 200 * env.F;
+  const { res } = applyEffect(env, 'shake', { target: 'copy', sides: ['post'] });
+  assert.ok(res.ok, res.error);
+  const copy = env.seq.videoTracks[1].items[0];
+  assert.strictEqual(copy._speed, 2);
+  assert.ok(Math.abs(copy._e - 108 * env.F) < 1);
+  assert.strictEqual(copy._out - copy._in, 16 * env.F, '8 frames at 200 % = 16 frames of media');
 });
 
 test('diagnose and listEffects', () => {
@@ -317,7 +419,7 @@ test('compat reports what this Premiere offers', () => {
   const r = env.call('compat');
   assert.ok(r.ok);
   assert.deepStrictEqual(r.missing, []);
-  assert.strictEqual(r.version, '1.1.0');
+  assert.strictEqual(r.version, '1.2.0');
   assert.strictEqual(r.app, '25.6.0');
 });
 

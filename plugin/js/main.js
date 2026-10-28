@@ -33,7 +33,7 @@
   ];
   const DEFAULT_SETTINGS = {
     target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', registry: {},
-    tab: 'effects', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null,
+    tab: 'effects', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
     ramp: { points: Core.RAMP_PRESETS.intoCut.points, frames: 12, placement: 'pre', segments: 10, anchor: 'auto', interp: 'keep', preset: 'intoCut' }
   };
 
@@ -345,7 +345,8 @@
     return Core.compileEffect(entry.def, params, side, N, rate, registry());
   }
 
-  const targetFor = entry => (entry.def && entry.def.target === 'clip' ? 'clip' : settings().target);
+  // Les effets qui ont besoin des images du plan (Écho) se posent sur une copie du plan.
+  const targetFor = entry => (entry.def && entry.def.target ? entry.def.target : settings().target);
 
   function activeSides() {
     const pl = settings().placement, side = settings().side;
@@ -466,7 +467,7 @@
       const card = h('div', { class: 'card' + (S.cur && S.cur.key === e.key ? ' on' : ''), 'data-key': e.key, title: e.def ? e.def.desc : 'Effet capturé' },
         h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'captured' ? 'capturé' : 'preset') : null),
         h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, e.name),
-          e.def && e.def.target === 'clip' ? h('span', { class: 'tag' }, 'CLIP') : null,
+          e.def && e.def.target ? h('span', { class: 'tag' }, 'COPIE') : null,
           isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null));
       card.addEventListener('click', () => selectEntry(e));
       card.addEventListener('mouseenter', () => animateThumb(cv, e));
@@ -570,15 +571,15 @@
       if (pl !== 'full') opts.push({ v: 'both', label: 'PRE + POST' });
       sideCtl = actionGroup(opts, pl === 'full' ? (st.side === 'pre' ? 'pre' : 'post') : st.side, v => { st.side = v; persist(); paramChanged(true); });
     }
-    const forced = def && def.target === 'clip';
+    const forced = def && def.target;
     const multi = pl === 'cuts' || pl === 'markers';
     ins.appendChild(section('Placement', [
       row('Côté', sideCtl),
       row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); })),
       multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
       row('Cible', forced
-        ? h('span', { class: 'muted' }, 'Clip (requis par cet effet)')
-        : actionGroup([{ v: 'adjustment', label: 'Calque de réglage' }, { v: 'clip', label: 'Clip' }], st.target, v => { st.target = v; persist(); }))
+        ? h('span', { class: 'muted' }, 'Copie du plan (requise par cet effet)')
+        : actionGroup([{ v: 'adjustment', label: 'Calque de réglage' }, { v: 'copy', label: 'Copie du plan' }], st.target, v => { st.target = v; persist(); }), { title: 'Le clip d\'origine n\'est jamais modifié' })
     ]));
 
     // Paramètres
@@ -709,7 +710,7 @@
       for (let i = 0; i < plan.length; i++) {
         if (S.cancel) break;
         status.progress(i, plan.length, plan[i].label);
-        const res = await Host.call('apply', { target: plan[i].mode, name: plan[i].target.name, targets: [plan[i].target], adjNodeId: st.adjNodeId, refreshAdj: i === 0 });
+        const res = await Host.call('apply', { target: plan[i].mode, name: plan[i].target.name, targets: [plan[i].target], adjNodeId: st.adjNodeId, refreshAdj: i === 0, copyLook: st.copyLook });
         if (!res.ok) {
           failed++;
           firstError = firstError || res.error;
@@ -731,7 +732,7 @@
       if (S.cancel) return { kind: 'warn', title: 'Arrêté · ' + what + ' posée(s)', detail: 'Le reste n\'a pas été appliqué.' };
       if (failed) return { kind: 'warn', title: e.name + ' · ' + what + ', ' + plural(failed, 'échec'), detail: firstError };
       if (warnings.length) return { kind: 'warn', title: e.name + ' appliqué · ' + what, detail: plural(new Set(warnings).size, 'remarque') + ' dans le journal.' };
-      return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: targetFor(e) === 'clip' ? 'Sur le clip.' : 'Sur des calques de réglage « CutFX · … ».' };
+      return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: targetFor(e) === 'copy' ? 'Sur des copies du plan « CutFX · … », au-dessus du clip.' : 'Sur des calques de réglage « CutFX · … ».' };
     }, true);
   }
 
@@ -873,7 +874,7 @@
     const redraw = S.rampPlayer.redraw;
     S.rampPlayer.redraw = () => { frames = rampPreviewFrames(); redraw(); };
     view.appendChild(section('Aperçu', h('div', { class: 'pv-frame' }, pcv, h('span', { class: 'pv-label' }, 'Aperçu simulé'))));
-    view.appendChild(h('div', { class: 'note' }, 'Premiere ne laisse pas les scripts piloter le remappage temporel : la rampe est construite en morceaux de vitesse constante (découpe + vitesse/durée), sans décaler la coupe. Le son du clip est dissocié et laissé tel quel. Pour revenir en arrière : Ctrl+Z / Cmd+Z dans Premiere.'));
+    view.appendChild(h('div', { class: 'note' }, 'La rampe est posée sur une copie du passage, juste au-dessus du clip, en morceaux de vitesse constante (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip d\'origine, son son et la coupe ne bougent pas ; ↶ Annuler retire la copie.'));
     requestAnimationFrame(() => S.rampEd && S.rampEd.draw());
   }
 
@@ -892,15 +893,16 @@
   async function applyRamp() {
     const R = ramp();
     if (S.busy) return;
-    if (!(await confirmDialog('Appliquer la rampe ?', 'Le clip va être découpé en ' + R.segments + ' morceaux à vitesses différentes ; la coupe et la durée dans la timeline restent en place. Pour revenir en arrière : Ctrl+Z / Cmd+Z dans Premiere ou Fenêtre > Historique.', 'Appliquer', 'confirmRamp'))) return;
+    if (!(await confirmDialog('Appliquer la rampe ?', 'Une copie du passage, découpée en ' + R.segments + ' morceaux à vitesses différentes, va être posée juste au-dessus du clip. Le clip d\'origine, son son et la coupe ne bougent pas. Le bouton ↶ Annuler la retire.', 'Appliquer', 'confirmRamp'))) return;
     await runTask('Speed ramp', async () => {
       status.phase('Analyse du clip');
       const r = await Host.call('rampResolve', { placement: R.placement, frames: R.frames });
       if (!r.ok) return { kind: 'error', title: 'Rampe non appliquée', detail: r.error };
-      status.phase('Découpe et vitesses');
+      status.phase('Pose de la copie et des vitesses');
       const pieces = Core.rampPieces(R.points, r.frames, R.segments);
       const anchor = R.anchor === 'auto' ? r.anchor : R.anchor;
-      const res = await Host.call('rampApply', { track: r.track, clipStart: r.clipStart, regionStart: r.regionStart, pieces, anchor, interp: R.interp });
+      const res = await Host.call('rampApply', { track: r.track, clipStart: r.clipStart, clipName: r.clipName, regionStart: r.regionStart, pieces, anchor, interp: R.interp, copyLook: settings().copyLook });
+      if (res.created && res.created.length) pushHistory({ date: Date.now(), label: 'Rampe · ' + r.clipName, entries: res.created });
       if (!res.ok) {
         (res.warnings || []).forEach(w => log(w, 'warn'));
         return { kind: 'error', title: 'Rampe non appliquée', detail: res.error };
@@ -908,7 +910,8 @@
       (res.warnings || []).forEach(w => log(w, 'warn'));
       log('Rampe sur ' + r.clipName + ' : ' + res.pieces + ' morceaux, ' + (Math.round(res.sourceFrames * 10) / 10) + ' i de média', 'ok');
       const bad = (res.warnings || []).some(w => /vérifier/.test(w));
-      return { kind: bad ? 'warn' : 'ok', title: 'Rampe appliquée · ' + res.pieces + ' morceaux', detail: r.clipName + (bad ? ' · certains morceaux sont à vérifier (journal)' : '') };
+      const notes = (res.warnings || []).length;
+      return { kind: bad ? 'warn' : 'ok', title: 'Rampe appliquée · ' + res.pieces + ' morceaux', detail: 'Copie de ' + r.clipName + ' sur V' + (res.track + 1) + (bad ? ' · certains morceaux sont à vérifier (journal)' : notes ? ' · ' + plural(notes, 'remarque') + ' dans le journal' : '') };
     });
   }
 
@@ -1072,8 +1075,10 @@
     view.appendChild(section('Cible par défaut', [
       radioGroup([
         { v: 'adjustment', label: 'Calque de réglage au-dessus du clip (recommandé)' },
-        { v: 'clip', label: 'Directement sur le clip' }
+        { v: 'copy', label: 'Copie du plan au-dessus du clip' }
       ], st.target, v => { st.target = v; persist(); }),
+      h('div', { class: 'field' }, checkbox('Recopier le cadrage et l\'étalonnage du clip sur les copies', st.copyLook, v => { st.copyLook = v; persist(); })),
+      h('div', { class: 'note' }, 'Le clip d\'origine n\'est jamais modifié. Les copies (rampes, Motion blur, cible « Copie du plan ») viennent d\'un sous-clip vidéo seule rangé dans le chutier « CutFX » : tes pistes audio ne sont jamais touchées. Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.'),
       h('div', { class: 'note' }, 'Calque de réglage utilisé : ' + (st.adjName || 'recherche automatique dans le projet') + '. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.'),
       h('div', { class: 'row-buttons' }, find, fromSel)
     ]));
@@ -1338,6 +1343,8 @@
     S.lib.settings = Object.assign(clone(DEFAULT_SETTINGS), S.lib.settings);
     S.lib.settings.ramp = Object.assign(clone(DEFAULT_SETTINGS.ramp), S.lib.settings.ramp);
     if (!PLACEMENTS.some(p => p.v === S.lib.settings.placement)) S.lib.settings.placement = 'cut';
+    // 1.1 : la cible « Clip » modifiait le clip ; elle devient une copie du plan.
+    if (S.lib.settings.target !== 'adjustment') S.lib.settings.target = 'copy';
     S.shortcuts = Keys.withDefaults(S.lib.settings.shortcuts);
 
     applyTheme();

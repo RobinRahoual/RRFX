@@ -2,7 +2,7 @@
    Hors de Premiere (simple navigateur), bascule sur CutFXMock : mode démo. */
 (function (root) {
   'use strict';
-  const VERSION = '1.1.0';
+  const VERSION = '1.2.0';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 

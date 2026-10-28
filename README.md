@@ -6,6 +6,9 @@ Des **transitions et effets de clip musical posés en un clic autour des coupes*
 shakes, slides, glitchs, motion blur), des **speed ramps** qui ne décalent jamais la coupe, et **tes propres effets**
 capturés depuis Premiere pour les réutiliser partout.
 
+**Ton clip n'est jamais modifié** : tout se passe sur des calques au-dessus (calques de réglage, ou copies du plan pour
+les rampes et le motion blur), que le bouton ↶ Annuler retire.
+
 **[⬇ Télécharger CutFX](https://github.com/RobinRahoual/CutFX/releases/latest)** — fichier `CutFX-<version>-installation.zip`.
 
 ## Installation
@@ -47,7 +50,7 @@ dépend de l'onglet) et le **bloc d'état**.
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
 | **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · Tête de lecture · Début / fin des clips · Clips entiers |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), ou **un effet au hasard** (même catégorie ou favoris) |
-| **Cible** | Calque de réglage au-dessus du clip (nommé `CutFX · …`, recommandé) ou directement sur le clip |
+| **Cible** | Calque de réglage au-dessus du clip (nommé `CutFX · …`, recommandé) ou **copie du plan** posée juste au-dessus (pour les effets qui ont besoin des images du plan) |
 | **Durée / Intensité** | Images de chaque côté · force de toute l'animation (0–200 %) |
 | **Courbe** | Courbe d'animation éditable ; la moitié POST est le miroir de la PRE |
 
@@ -57,19 +60,31 @@ tout reste modifiable ensuite dans *Options d'effet*.
 
 **Les 20 effets** : Flash blanc, Glow flash, Dip noir, Double flash · Flicker, Stroboscope · Défocus, Flou
 directionnel · Zoom in, Zoom out, Zoom rebond, Zoom rotation (flou de mouvement réel) · Shake, Impact, Bass drop ·
-Slide, Whip pan · Onde, Bulge, Glitch · Motion blur (vraie fusion d'images, sur le clip).
+Slide, Whip pan · Onde, Bulge, Glitch · Motion blur (vraie fusion d'images, sur une copie du plan).
+
+### Les copies du plan
+
+Pour les rampes, le Motion blur et la cible « Copie du plan », CutFX pose **une copie du passage sur une piste juste
+au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de réglage) et travaille dessus :
+
+- la copie vient d'un **sous-clip vidéo seule** du rush (`CutFX · <rush> · vidéo`, chutier « CutFX », créé une fois) :
+  rien n'est posé sur les pistes audio, ta musique ne peut pas être écrasée ;
+- le **cadrage et l'étalonnage** du clip (Trajectoire, Opacité, effets, images clés comprises) sont recopiés dessus.
+  Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage (option désactivable
+  dans *Réglages*) ;
+- le clip d'origine, son son et la coupe ne bougent pas ; ↶ Annuler retire la copie.
 
 ### Onglet Speed ramp
 
 - Dessine la courbe de vitesse (10 % à 1000 %) : glisse les points, double-clic pour en ajouter ou retirer.
   Préréglages : accélération vers la coupe, décélération après, ralenti sur le temps fort, pulse…
-- **La coupe ne bouge pas** : la durée dans la timeline est conservée ; l'*ancre* choisit l'image qui reste en place.
-- CutFX vérifie qu'il y a assez de média avant de toucher à quoi que ce soit.
-- **＋ Enregistrer** garde ta rampe dans les préréglages.
+- La rampe est posée sur **une copie du passage** juste au-dessus du clip (voir « Les copies du plan ») :
+  **le clip d'origine, son son et la coupe ne bougent pas**. L'*ancre* choisit l'image qui reste en place.
+- CutFX vérifie qu'il y a assez de média avant de poser quoi que ce soit.
+- **↶ Annuler** retire la rampe ; **＋ Enregistrer** la garde dans les préréglages.
 
-Premiere ne laisse pas les scripts piloter le *remappage temporel* : la rampe est construite en morceaux de vitesse
-constante (découpe + vitesse/durée). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide. Le son du
-clip est dissocié et laissé tel quel. Pour revenir en arrière : Ctrl+Z / Cmd+Z ou *Fenêtre > Historique*.
+Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
+constante (« CutFX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
 
 ### Onglet Mes effets
 
@@ -85,7 +100,7 @@ Tout est enregistré dans `Documents/CutFX/library.json`.
 ### Annuler la dernière opération
 
 Le bouton **↶ Annuler (n)** de la ligne d'état retire ce que CutFX a posé lors de la dernière opération : les calques
-de réglage `CutFX · …` et, quand Premiere le permet, les effets ajoutés sur les clips. Les 10 dernières opérations
+de réglage, copies du plan et morceaux de rampe `CutFX · …`. Les 10 dernières opérations
 sont mémorisées, même après avoir fermé Premiere. Un calque renommé ou un clip modifié entre-temps n'est pas touché.
 
 ### Suivi de l'opération

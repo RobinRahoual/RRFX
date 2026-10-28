@@ -240,8 +240,8 @@
 
     // ---------------------------------------------------------------- motion blur
     {
-      id: 'echo-blur', name: 'Motion blur', cat: 'time', frames: 6, curve: 'easeIn', target: 'clip',
-      desc: 'Vrai flou de mouvement par fusion des images précédentes (Écho). S\'applique sur le clip.',
+      id: 'echo-blur', name: 'Motion blur', cat: 'time', frames: 6, curve: 'easeIn', target: 'copy',
+      desc: 'Vrai flou de mouvement par fusion des images précédentes (Écho), sur une copie du plan posée au-dessus.',
       params: [range('echoes', 'Images fusionnées', 4, 1, 10, '')],
       build: c => {
         const n = i => Math.round(c.p.echoes * c.k * c.env(i));

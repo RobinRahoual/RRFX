@@ -5,7 +5,7 @@
 
 var CutFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.1.0';
+    var VERSION = '1.2.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -147,13 +147,20 @@ var CutFX = (function () {
         return out;
     }
 
-    // The clip the user means: the selection, otherwise the topmost clip under the playhead.
+    // Calques posés par CutFX et calques de réglage : ce ne sont pas des « plans ».
+    function isLayer(it) {
+        if (/^CutFX \u00b7 /.test(it.name)) return true;
+        try { return !!(it.projectItem && isAdjustment(it.projectItem)); } catch (e) { return false; }
+    }
+
+    // Le plan visé : la sélection, sinon le plan le plus haut sous la tête de lecture.
     function refClip(s) {
         var sel = selectedVideo(s), ph = tk(s.getPlayerPosition()), i, c;
+        for (i = 0; i < sel.length; i++) if (!isLayer(sel[i].item)) return sel[i];
         if (sel.length) return sel[0];
         for (i = s.videoTracks.numTracks - 1; i >= 0; i--) {
             c = clipContaining(s, i, ph);
-            if (c) return { item: c, track: i };
+            if (c && !isLayer(c)) return { item: c, track: i };
         }
         return null;
     }
@@ -380,6 +387,169 @@ var CutFX = (function () {
         return n;
     }
 
+    // ------------------------------------------------------------ copies du plan (calques vidéo)
+    // Les effets « sur le plan » et les rampes ne touchent jamais le clip d'origine :
+    // CutFX pose une copie du passage sur une piste juste au-dessus et travaille dessus.
+    // La copie vient d'un sous-clip VIDÉO SEULE du rush : rien n'est posé sur les pistes
+    // audio (la musique ne peut pas être écrasée).
+
+    function cutfxBin() {
+        var root = app.project.rootItem, i, c;
+        for (i = 0; i < root.children.numItems; i++) {
+            c = root.children[i];
+            if (c.type === 2 && c.name === 'CutFX') return c;
+        }
+        return root.createBin('CutFX');
+    }
+
+    // Fin du média (le point de sortie marqué par l'utilisateur est remis après lecture).
+    function mediaEndOf(pi) {
+        var marked = null, end = null;
+        try { marked = tk(pi.getOutPoint(1)); } catch (e) {}
+        try { pi.clearOutPoint(); end = tk(pi.getOutPoint(1)); } catch (e2) { end = marked; }
+        try { if (marked !== null && end !== null && Math.abs(marked - end) > 1) pi.setOutPoint(marked / TICKS, 4); } catch (e3) {}
+        return end;
+    }
+
+    function videoSource(item) {
+        var master = item.projectItem, name, sub, end, bin;
+        if (!master) throw new Error('Ce clip n\'a pas de média source (séquence imbriquée ?)');
+        name = 'CutFX · ' + master.name + ' · vidéo';
+        sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (sub) return sub;
+        end = mediaEndOf(master);
+        if (!(end > 0)) throw new Error('Durée du média « ' + master.name + ' » illisible');
+        sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 1, 0);
+        if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (!sub) throw new Error('Premiere n\'a pas créé le sous-clip vidéo de « ' + master.name + ' »');
+        bin = cutfxBin();
+        try { sub.moveBin(bin); } catch (e) {}
+        return sub;
+    }
+
+    // Piste juste au-dessus du clip (sous les calques de réglage), ajoutée si besoin.
+    function layerTrack(s, srcTrack, a, b, warnings) {
+        var idx = srcTrack + 1, before = s.videoTracks.numTracks;
+        if (idx < before && trackClear(s, idx, a, b)) return idx;
+        try { qeSeq().addTracks(1, idx, 0); } catch (e) {}
+        if (s.videoTracks.numTracks > before && trackClear(s, idx, a, b)) {
+            warnings.push('Piste vidéo insérée au-dessus de V' + (srcTrack + 1));
+            return idx;
+        }
+        warnings.push('Copie posée plus haut que V' + (idx + 1) + ' : vérifie qu\'elle reste sous tes calques de réglage');
+        return pickTrack(s, idx, a, b, warnings);
+    }
+
+    // Pose `source` (in/out = inT/outT) à la position a de la piste ti.
+    function placeOn(s, ti, source, a, inT, outT) {
+        var tr = s.videoTracks[ti], before = {}, list = clipsOf(s, ti), i, it;
+        try { source.setInPoint(inT / TICKS, 4); source.setOutPoint(outT / TICKS, 4); } catch (e) {}
+        for (i = 0; i < list.length; i++) before[list[i].nodeId] = true;
+        tr.overwriteClip(source, mkTime(a));
+        it = findItemAt(s, ti, a);
+        if (!it) {
+            list = clipsOf(s, ti);
+            for (i = 0; i < list.length; i++) if (!before[list[i].nodeId]) list[i].remove(false, false);
+            tr.overwriteClip(source, a / TICKS);
+            it = findItemAt(s, ti, a);
+        }
+        try { source.clearInPoint(); source.clearOutPoint(); } catch (e2) {}
+        if (!it) throw new Error('Impossible de poser la copie sur V' + (ti + 1));
+        if (Math.abs(tk(it.inPoint) - inT) > 1 || Math.abs(tk(it.outPoint) - outT) > 1) {
+            try { setSource(it, inT, outT); } catch (e3) {}
+        }
+        return it;
+    }
+
+    // Vitesse d'un élément via QE. Facteur (2 = 200 %) ou pourcentage selon la version de
+    // Premiere : on vérifie la première fois et on retient la bonne échelle.
+    var speedScale = null;
+    function setSpeedAt(s, ti, start, factor) {
+        var q = qeItemFor(s, ti, start), got;
+        if (!q) throw new Error('Élément introuvable pour changer sa vitesse');
+        if (speedScale) { q.setSpeed(factor * speedScale, '', false, false, false); return; }
+        q.setSpeed(factor, '', false, false, false);
+        got = findItemAt(s, ti, start).getSpeed();
+        if (Math.abs(got - factor) < 0.01) { speedScale = 1; return; }
+        q.setSpeed(factor * 100, '', false, false, false);
+        got = findItemAt(s, ti, start).getSpeed();
+        if (Math.abs(got - factor) < 0.01) { speedScale = 100; return; }
+        throw new Error('Premiere n\'a pas accepté le changement de vitesse (lu : ' + got + ')');
+    }
+
+    function copyParam(p, q) {
+        var keys, j, v;
+        if (p.isTimeVarying()) {
+            keys = p.getKeys();
+            if (!keys || !keys.length) return true;
+            if (!q.isTimeVarying()) q.setTimeVarying(true);
+            for (j = 0; j < keys.length; j++) {
+                v = plainValue(p.getValueAtKey(keys[j]));
+                if (!v.ok) return false;
+                q.addKey(keys[j]);
+                q.setValueAtKey(keys[j], v.v, j === keys.length - 1);
+            }
+            return true;
+        }
+        v = plainValue(p.getValue());
+        if (!v.ok) return false;
+        if (q.isTimeVarying()) q.setTimeVarying(false);
+        q.setValue(v.v, true);
+        return true;
+    }
+
+    // Recopie le cadrage (Trajectoire, Opacité) et les effets du clip d'origine sur la copie.
+    function copyLook(s, src, ti, start, warnings) {
+        var comps = src.components, i, j, c, dc, skipped = 0, lost = [];
+        for (i = 0; i < comps.numItems; i++) {
+            c = comps[i];
+            if (/time ?remap/i.test(c.matchName)) continue;
+            if (c.matchName === 'AE.ADBE Motion' || c.matchName === 'AE.ADBE Opacity') dc = componentByMatch(findItemAt(s, ti, start), c.matchName);
+            else dc = addEffect(s, ti, start, { names: [c.displayName], matchName: c.matchName }, warnings);
+            if (!dc) { lost.push(c.displayName); continue; }
+            for (j = 0; j < c.properties.numItems && j < dc.properties.numItems; j++) {
+                try { if (!copyParam(c.properties[j], dc.properties[j])) skipped++; } catch (e) { skipped++; }
+            }
+        }
+        if (lost.length) warnings.push('Effets du clip non recopiés : ' + lost.join(', '));
+        if (skipped) warnings.push(skipped + ' réglage(s) du clip non recopié(s) (courbes, LUT…) : étalonne plutôt sur un calque de réglage');
+    }
+
+    function placeCopy(s, srcItem, srcTrack, a, b, name, o, warnings) {
+        var S0 = tk(srcItem.start), I0 = tk(srcItem.inPoint), s0 = 1, srcA, need, ti, it, src;
+        try { s0 = srcItem.getSpeed(); } catch (e) {}
+        if (!(s0 > 0)) s0 = 1;
+        var reversed = false;
+        try { reversed = !!(srcItem.isSpeedReversed && srcItem.isSpeedReversed()); } catch (e2) {}
+        if (reversed) throw new Error('Les clips inversés ne sont pas pris en charge');
+        srcA = I0 + (a - S0) * s0;
+        need = (b - a) * s0;
+        src = videoSource(srcItem);
+        ti = layerTrack(s, srcTrack, a, a + Math.max(b - a, need), warnings);
+        placeOn(s, ti, src, a, srcA, srcA + need);
+        if (Math.abs(s0 - 1) > 0.001) setSpeedAt(s, ti, a, s0);
+        it = findItemAt(s, ti, a);
+        fixSpan(it, a, b);
+        try { it.name = name; } catch (e3) {}
+        if (o.copyLook !== false) copyLook(s, srcItem, ti, a, warnings);
+        return { item: findItemAt(s, ti, a), track: ti };
+    }
+
+    // Un élément par sa position et son nom, sur sa piste ou ailleurs (une piste a pu être insérée).
+    function findNamed(s, track, start, name) {
+        var it = findItemAt(s, track, start), i;
+        if (it && (!name || it.name === name)) return it;
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            it = findItemAt(s, i, start);
+            if (it && (!name || it.name === name)) return it;
+        }
+        return null;
+    }
+
+    function findClip(s, track, start, name) {
+        return findNamed(s, track, start, name) || findItemAt(s, track, start);
+    }
+
     // ------------------------------------------------------------ public: context
 
     function appVersion() {
@@ -436,7 +606,7 @@ var CutFX = (function () {
 
     function resolve(o) {
         var s = activeSeq(), f = tpf(s), N = Math.max(1, Math.round(o.frames || 8)), ph = snap(tk(s.getPlayerPosition()), f);
-        var targets = [], warnings = [], direct = o.target === 'clip', sides = o.sides || ['pre', 'post'];
+        var targets = [], warnings = [], direct = o.target === 'clip' || o.target === 'copy', sides = o.sides || ['pre', 'post'];
         var i, j, ref, track, cut, c, list, a, b;
 
         function add(side, start, end, clip, refTrack, clipTrack) {
@@ -526,7 +696,7 @@ var CutFX = (function () {
 
     function apply(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, j, t, adj = null, placed, track, start, comp, n = 0;
-        if (o.target !== 'clip') {
+        if (o.target === 'adjustment' || !o.target) {
             // Début d'un lot : on revérifie que le calque de réglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
             adj = findAdjustment(o.adjNodeId);
@@ -542,6 +712,14 @@ var CutFX = (function () {
                 item = findItemAt(s, track, start);
                 if (!item) { warnings.push('Clip introuvable'); continue; }
                 entry = { kind: 'clip', track: track, start: start, name: item.name, added: [] };
+            } else if (o.target === 'copy') {
+                if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de plan pour ' + t.side.toUpperCase()); continue; }
+                item = findClip(s, t.clipTrack, t.clipStart, t.clipName);
+                if (!item) { warnings.push('Plan introuvable'); continue; }
+                placed = placeCopy(s, item, t.clipTrack, t.start, t.end, label, o, warnings);
+                track = placed.track;
+                start = t.start;
+                entry = { kind: 'adj', track: track, start: start, name: label };
             } else {
                 try {
                     placed = placeAdjustment(s, adj, t.track + 1, t.start, t.end, label, warnings);
@@ -594,7 +772,7 @@ var CutFX = (function () {
         // Newest first: effects stacked on the same clip come off in reverse order.
         for (i = o.entries.length - 1; i >= 0; i--) {
             e = o.entries[i];
-            it = findItemAt(s, e.track, e.start);
+            it = e.kind === 'adj' ? findNamed(s, e.track, e.start, e.name) : findItemAt(s, e.track, e.start);
             if (e.kind === 'adj') {
                 if (it && it.name === e.name) {
                     it.remove(false, false);
@@ -792,12 +970,16 @@ var CutFX = (function () {
         if (Math.abs(tk(it.end) - b) > 1) { try { it.end = mkTime(b); } catch (e2) {} }
     }
 
+    // La rampe est posée sur une copie du passage, en morceaux de vitesse constante
+    // (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip
+    // d'origine, son son et la coupe ne bougent pas ; chaque morceau s'appelle
+    // « CutFX · Rampe » et l'annulation du panneau les retire.
     function rampApply(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], item, S, E, I, s0 = 1, R0 = o.regionStart, R1, K = o.pieces.length;
-        var bnd = [R0], L = [], total = 0, k, srcStart, srcEnd, beforeIn, afterOut, mediaEnd = null, cuts = [], qt, q, it, calib = null, got, srcK, plan = [];
-        item = findItemAt(s, o.track, o.clipStart);
-        if (!item) return fail('Clip introuvable : il a bougé depuis l\'aperçu. Réessayez.');
-        S = tk(item.start); E = tk(item.end); I = tk(item.inPoint);
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], item, S, I, s0 = 1, R0 = o.regionStart, R1, K = o.pieces.length;
+        var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'CutFX · Rampe';
+        item = findClip(s, o.track, o.clipStart, o.clipName);
+        if (!item) return fail('Clip introuvable : il a bougé depuis l\'analyse. Réessaie.');
+        S = tk(item.start); I = tk(item.inPoint);
         try { s0 = item.getSpeed(); } catch (e) {}
         if (!(s0 > 0)) s0 = 1;
         try { if (item.isSpeedReversed && item.isSpeedReversed()) return fail('Les clips inversés ne sont pas pris en charge.'); } catch (e2) {}
@@ -809,83 +991,50 @@ var CutFX = (function () {
         }
         R1 = bnd[K];
         srcStart = o.anchor === 'end' ? I + (R1 - S) * s0 - total : I + (R0 - S) * s0;
-        srcEnd = srcStart + total;
-        beforeIn = srcStart - (R0 - S) * s0;
-        afterOut = srcEnd + (E - R1) * s0;
-        if (beforeIn < -f / 2) {
-            return fail('Pas assez de média avant : il manque ' + Math.ceil(-beforeIn / f) + ' images. Choisissez l\'ancre "Début de zone" ou réduisez la vitesse.');
+        if (srcStart < -f / 2) {
+            return fail('Pas assez de média avant : il manque ' + Math.ceil(-srcStart / f) + ' images. Choisis l\'ancre « Garder l\'image de début » ou réduis la vitesse.');
         }
-        try { mediaEnd = tk(item.projectItem.getOutPoint(1)); } catch (e3) {}
-        if (mediaEnd && afterOut > mediaEnd + f / 2) {
-            return fail('Pas assez de média après : il manque ' + Math.ceil((afterOut - mediaEnd) / f) + ' images. Choisissez l\'ancre "Fin de zone", réduisez la vitesse, ou retirez le point de sortie du média source.');
+        srcStart = Math.max(0, srcStart);
+        try { end = mediaEndOf(item.projectItem); } catch (e3) {}
+        if (end && srcStart + total > end + f / 2) {
+            return fail('Pas assez de média après : il manque ' + Math.ceil((srcStart + total - end) / f) + ' images. Choisis l\'ancre « Garder l\'image de fin » ou réduis la vitesse.');
         }
 
-        // Video only: the clip's audio would no longer line up.
-        try {
-            var sel = s.getSelection(), i;
-            for (i = 0; i < sel.length; i++) sel[i].setSelected(false, false);
-            item.setSelected(true, true);
-            if (s.unlinkSelection) { s.unlinkSelection(); warnings.push('Audio dissocié de la vidéo (laissé intact)'); }
-        } catch (e4) {}
-
-        if (R0 > S + f / 2) cuts.push(R0);
-        for (k = 1; k < K; k++) cuts.push(bnd[k]);
-        if (R1 < E - f / 2) cuts.push(R1);
-        qt = qeSeq().getVideoTrackAt(o.track);
-        for (k = 0; k < cuts.length; k++) qt.razor(timecodeOf(s, cuts[k]));
-
-        for (k = 0; k < K; k++) {
-            if (!findItemAt(s, o.track, bnd[k])) return fail('La découpe a échoué (morceau ' + (k + 1) + '). Annulez avec Ctrl+Z / Cmd+Z.');
-        }
-
+        src = videoSource(item);
+        reach = R1;
         srcK = srcStart;
         for (k = 0; k < K; k++) {
             plan.push({ a: bnd[k], b: bnd[k + 1], inT: srcK, outT: srcK + L[k], speed: o.pieces[k].speed / 100 });
+            reach = Math.max(reach, bnd[k] + L[k]);
             srcK += L[k];
         }
+        ti = layerTrack(s, o.track, R0, reach, warnings);
 
+        // Dans l'ordre : chaque morceau est posé à 100 % puis mis à sa vitesse, ce qui le
+        // ramène exactement à sa place ; la place du suivant est encore libre.
         for (k = 0; k < K; k++) {
-            q = qeItemFor(s, o.track, plan[k].a);
-            if (!q) return fail('Morceau ' + (k + 1) + ' introuvable pour QE.');
-            if (calib === null) {
-                q.setSpeed(plan[k].speed, '', false, false, false);
-                got = findItemAt(s, o.track, plan[k].a).getSpeed();
-                if (Math.abs(got - plan[k].speed) < 0.01) calib = 1;
-                else {
-                    q.setSpeed(plan[k].speed * 100, '', false, false, false);
-                    got = findItemAt(s, o.track, plan[k].a).getSpeed();
-                    if (Math.abs(got - plan[k].speed) < 0.01) calib = 100;
-                    else return fail('Premiere n\'a pas accepté le changement de vitesse (lu : ' + got + ').');
-                }
-            } else {
-                q.setSpeed(plan[k].speed * calib, '', false, false, false);
-            }
+            placeOn(s, ti, src, plan[k].a, plan[k].inT, plan[k].outT);
+            setSpeedAt(s, ti, plan[k].a, plan[k].speed);
+            it = findItemAt(s, ti, plan[k].a);
+            try { setSource(it, plan[k].inT, plan[k].outT); } catch (e4) {}
+            fixSpan(it, plan[k].a, plan[k].b);
+            try { it.name = label; } catch (e5) {}
+            created.push({ kind: 'adj', track: ti, start: plan[k].a, name: label });
             if (o.interp && o.interp !== 'keep') {
                 try {
-                    if (q.setTimeInterpolationType) q.setTimeInterpolationType(o.interp === 'flow' ? 2 : 1);
-                } catch (e5) { if (k === 0) warnings.push('Interpolation temporelle à régler à la main (Clip > Options vidéo)'); }
+                    var q = qeItemFor(s, ti, plan[k].a);
+                    if (q && q.setTimeInterpolationType) q.setTimeInterpolationType(o.interp === 'flow' ? 2 : 1);
+                    else if (k === 0) warnings.push('Interpolation temporelle à régler à la main (Clip > Options vidéo)');
+                } catch (e6) { if (k === 0) warnings.push('Interpolation temporelle à régler à la main (Clip > Options vidéo)'); }
             }
         }
-
-        if (R0 > S + f / 2) plan.push({ a: S, b: R0, inT: beforeIn, outT: srcStart });
-        if (R1 < E - f / 2) plan.push({ a: R1, b: E, inT: srcEnd, outT: afterOut });
-
-        // Two passes: a piece may only reach its slot once its neighbour has moved.
-        var pass, bad = [];
-        for (pass = 0; pass < 2; pass++) {
-            for (k = 0; k < plan.length; k++) {
-                it = findItemAt(s, o.track, plan[k].a) || clipContaining(s, o.track, plan[k].a + f / 2);
-                if (!it) continue;
-                try { setSource(it, plan[k].inT, plan[k].outT); } catch (e6) {}
-                fixSpan(it, plan[k].a, plan[k].b);
-            }
-        }
-        for (k = 0; k < plan.length; k++) {
-            it = findItemAt(s, o.track, plan[k].a);
+        for (k = 0; k < K; k++) {
+            it = findItemAt(s, ti, plan[k].a);
             if (!it || Math.abs(tk(it.end) - plan[k].b) > f / 2) bad.push(k + 1);
+            else if (o.copyLook !== false) copyLook(s, item, ti, plan[k].a, k === 0 ? warnings : []);
         }
         if (bad.length) warnings.push('Morceaux à vérifier : ' + bad.join(', '));
-        return ok({ pieces: K, sourceFrames: total / f, warnings: warnings, mode: calib === 100 ? 'percent' : 'factor' });
+        return ok({ pieces: K, sourceFrames: total / f, track: ti, created: created, warnings: warnings });
     }
 
     return {

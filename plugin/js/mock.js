@@ -50,7 +50,9 @@
     rampResolve: a => ({ ok: true, fps: FPS, track: 0, clipStart: 0, clipEnd: 300 * F, clipName: 'A001_C004.mov', regionStart: 300 * F - a.frames * F, regionEnd: 300 * F, frames: a.frames, speed: 1, anchor: a.placement === 'pre' ? 'end' : 'start' }),
     rampApply: async a => {
       await wait(400);
-      return { ok: true, pieces: a.pieces.length, sourceFrames: a.pieces.reduce((s, p) => s + p.frames * p.speed / 100, 0), warnings: [] };
+      let at = a.regionStart;
+      const created = a.pieces.map(p => { const e = { kind: 'adj', track: 1, start: at, name: 'CutFX · Rampe' }; at += p.frames * F; return e; });
+      return { ok: true, pieces: a.pieces.length, sourceFrames: a.pieces.reduce((s, p) => s + p.frames * p.speed / 100, 0), track: 1, created, warnings: [] };
     }
   };
 

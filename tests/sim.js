@@ -40,6 +40,7 @@ function makeEnv(fps) {
     setValueAtKey(t, v) { const k = this.keys.find(k => k.t === t._t); if (!k) throw new Error('no key at ' + t._t); k.v = v; }
     getKeys() { return this.keys ? this.keys.map(k => T(k.t)) : null; }
     getValue() { return this.v; }
+    getValueAtKey(t) { const k = this.keys && this.keys.find(x => x.t === t._t); if (!k) throw new Error('no key'); return k.v; }
     setValue(v) { if (this.keys) throw new Error('setValue on animated'); this.v = v; }
     getValueAtTime(t) {
       if (!this.keys || !this.keys.length) return this.v;
@@ -68,6 +69,7 @@ function makeEnv(fps) {
   };
   let removable = true;
   let secondsOnly = false;
+  let speedPercent = false;
   function comp(matchName, displayName, values, owner) {
     const names = PARAM_NAMES[matchName] || [];
     const c = { matchName, displayName, properties: coll(values.map((v, i) => new Param(names[i] || displayName + ' p' + i, v))) };
@@ -110,13 +112,30 @@ function makeEnv(fps) {
   const project = {
     rootItem: null, activeSequence: null
   };
+  const parents = new Map();
+  let subclipCalls = 0;
   function projItem(name, type, dur) {
-    return {
+    const me = {
       name, type, nodeId: nid(), _inP: 0, _outP: dur, _dur: dur, children: coll([]),
+      createSubClip(n, t0, t1, hard, takeVideo, takeAudio) {
+        subclipCalls++;
+        const sub = projItem(n, 1, val(t1) - val(t0));
+        sub.videoOnly = takeVideo && !takeAudio;
+        const parent = parents.get(me) || root;
+        parent.children.push(sub); parents.set(sub, parent);
+        return sub;
+      },
+      moveBin(b) {
+        const parent = parents.get(me);
+        if (parent) parent.children.splice(parent.children.indexOf(me), 1);
+        b.children.push(me); parents.set(me, b);
+      },
+      createBin(n) { const b = projItem(n, 2, 0); me.children.push(b); parents.set(b, me); return b; },
       setInPoint(s) { this._inP = s * TICKS; }, setOutPoint(s) { this._outP = s * TICKS; },
       getInPoint() { return T(this._inP); }, getOutPoint() { return T(this._outP); },
       clearInPoint() { this._inP = 0; }, clearOutPoint() { this._outP = this._dur; }
     };
+    return me;
   }
   const root = projItem('root', 3, 0);
   const bin = projItem('Footage', 2, 0);
@@ -125,6 +144,8 @@ function makeEnv(fps) {
   const adj = projItem('Calque de réglage', 1, 125 * F);
   root.children.push(bin, adj);
   bin.children.push(media, media2);
+  [bin, adj].forEach(x => parents.set(x, root));
+  [media, media2].forEach(x => parents.set(x, bin));
   project.rootItem = root;
 
   const seq = {
@@ -150,6 +171,7 @@ function makeEnv(fps) {
       type: 'Clip', start: { ticks: String(it._s) }, name: it.name,
       addVideoEffect(eff) { const [mn, vals] = EFFECTS[eff.name]; it.components.push(comp(mn, eff.name, JSON.parse(JSON.stringify(vals)), it)); },
       setSpeed(v) {
+        if (speedPercent) v = v / 100;
         // factor semantics; non-ripple: keep start, clamp end to next clip
         const ins = it._in, srcDur = it._out - it._in;
         it._speed = v;
@@ -183,7 +205,11 @@ function makeEnv(fps) {
               }
             };
           },
-          addTracks(n) { for (let k = 0; k < n; k++) seq.videoTracks.push(new Track(seq, seq.videoTracks.length)); }
+          // Insère n pistes vidéo à l'index donné (les pistes au-dessus remontent).
+          addTracks(n, idx) {
+            for (let k = 0; k < n; k++) seq.videoTracks.splice(idx === undefined ? seq.videoTracks.length : idx, 0, new Track(seq, 0));
+            seq.videoTracks.forEach((t, i) => { t.i = i; });
+          }
         };
       },
       getVideoEffectByName(n) { return EFFECTS[n] ? { name: n } : null; },
@@ -194,7 +220,7 @@ function makeEnv(fps) {
 
   const ctx = vm.createContext({ app, qe, Time });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
-  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, root, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('CutFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('CutFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };
