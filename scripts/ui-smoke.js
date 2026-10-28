@@ -360,7 +360,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForFunction(() => /YouTube face cam|revoir|possible/.test(document.getElementById('status-title').textContent), null, { timeout: 90000 });
     const t = await page.textContent('#status-title'), rep = await page.textContent('.section:has-text("Dernier montage express")');
     if (!/Ton montage est prêt/.test(t)) throw new Error('express : ' + t + ' / ' + rep);
-    if (!/Couper les silences · \d+ silences coupés/.test(rep) || !/Zoom un plan sur deux/.test(rep)) throw new Error('rapport : ' + rep);
+    if (!/Couper les silences · \d+ silences coupés/.test(rep) || !/Zoom visage/.test(rep)) throw new Error('rapport : ' + rep);
   });
   await step('parole : silences, sous-titres, bandeau', async () => {
     await page.click('.tab[data-tab=speech]');
@@ -370,6 +370,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('parole');
     await page.click('.section:has-text("Couper les silences") button.selected:has-text("Couper les silences")');
     await page.waitForSelector('#status:has-text("silences coupés")', { timeout: 10000 });
+    await page.click('button:has-text("Zoomer sur le visage")');
+    await page.waitForSelector('#status:has-text("Zoom visage appliqué")', { timeout: 15000 });
+    if (!/Visage suivi dans 0 plan/.test(await page.textContent('#status-detail'))) throw new Error('suivi : ' + await page.textContent('#status-detail'));
     await page.fill('.section:has-text("Sous-titres") textarea', '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2\n00:00:04,000 --> 00:00:05,000\nMerci');
     await page.click('.section:has-text("Sous-titres") .action:has-text("Mot par mot")');
     if (!/2 sous-titres lus → 6 textes/.test(await page.textContent('.section:has-text("Sous-titres")'))) throw new Error('sous-titres non lus');

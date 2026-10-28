@@ -24,7 +24,7 @@
       const body = h('div', { class: 'wl' },
         h('div', { class: 'wl-lead' }, 'Le couteau suisse gratuit du montage dans Premiere : transitions, silences, sous-titres, couleur, formats, pour toutes tes vidéos.'),
         card('⚡', 'Express : ton montage en un clic', 'Choisis un style (Reels, interview, aftermovie, YouTube, clip…) : RR FX enchaîne coupe des silences, montage sur le rythme, couleur, transitions, sons, textes et format.'),
-        card('🎙', 'Parole : vidéos qui parlent', 'Silences coupés, zoom un plan sur deux, sous-titres .srt animés, bandeau nom et fonction.'),
+        card('🎙', 'Parole : vidéos qui parlent', 'Silences coupés, zoom visage qui suit les yeux, sous-titres .srt animés, bandeau nom et fonction.'),
         card('✨', 'Effets et transitions', 'Plus de 30 transitions et mouvements (push, zoom lent, Ken Burns, punch-in…) sur une coupe, toutes les coupes ou les temps forts.'),
         card('🎨', 'Couleur et formats', 'LOG → Rec.709, expo auto, raccord entre caméras, looks ; copies 9:16, 4:5, 1:1 recadrées ou sur fond flou.'),
         card('🔍', 'Tout au clavier', 'Ctrl+K (ou /) cherche une action, un effet, un look ou un style.'),
@@ -57,7 +57,7 @@
       act('Appliquer le look en cours', 'Action', () => A.applyLook && A.applyLook());
       act('Poser les paroles', 'Action', () => A.titles && A.titles());
       act('Couper les silences', 'Action', () => A.cutSilences && A.cutSilences());
-      act('Zoom un plan sur deux (jump cuts)', 'Action', () => A.punchIn && A.punchIn());
+      act('Zoom visage (yeux suivis, un plan sur deux)', 'Action', () => A.punchIn && A.punchIn());
       act('Poser les sous-titres (.srt)', 'Action', () => A.captions && A.captions());
       act('Poser un bandeau nom et fonction', 'Action', () => A.lowerThird && A.lowerThird());
       act('Créer la copie 9:16', 'Action', () => A.formatCopy && A.formatCopy());

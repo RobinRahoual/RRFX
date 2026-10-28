@@ -25,7 +25,8 @@ test('one version everywhere', () => {
 test('index.html loads every panel script, each exists and compiles', () => {
   const html = read('plugin/index.html');
   const scripts = [...html.matchAll(/<script src="([^"]+)"/g)].map(m => m[1]);
-  const onDisk = fs.readdirSync(path.join(plugin, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f);
+  const onDisk = fs.readdirSync(path.join(plugin, 'js')).filter(f => f.endsWith('.js')).map(f => 'js/' + f)
+    .concat(fs.readdirSync(path.join(plugin, 'js', 'vendor')).filter(f => f.endsWith('.js')).map(f => 'js/vendor/' + f));
   assert.deepStrictEqual(scripts.slice().sort(), onDisk.sort());
   assert.strictEqual(scripts[scripts.length - 1], 'js/main.js', 'main.js last');
   scripts.forEach(s => assert.doesNotThrow(() => new vm.Script(fs.readFileSync(path.join(plugin, s), 'utf8'), { filename: s }), s));

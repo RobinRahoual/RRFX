@@ -77,12 +77,30 @@ Toutes les animations sont écrites en images clés dans les effets natifs de Pr
 Flou directionnel, Luminosité et contraste, Décalage, Déformation de la vague, Distorsion de l'objectif, Écho) :
 tout reste modifiable ensuite dans *Options d'effet*.
 
-**Les 32 effets** : Flash blanc, Glow flash, Dip noir, Double flash, Fondu au blanc, Fondu au noir · Flicker,
+**Les 34 effets** : Flash blanc, Glow flash, Dip noir, Double flash, Fondu au blanc, Fondu au noir · Flicker,
 Stroboscope · Défocus, Flou directionnel, Fondu flou · Zoom in, Zoom out, Zoom rebond, Zoom rotation (flou de
 mouvement réel), Zoom lent, Zoom traversant, Pop · Shake, Impact, Bass drop · Slide, Whip pan, Push · Onde, Bulge,
-Glitch · **Mouvements** sur tout le plan : Punch-in, Ken Burns (photos et plans fixes d'événement), Respiration,
+Glitch · **Mouvements** sur tout le plan : **Zoom visage** et **Zoom visage progressif** (voir plus bas), Punch-in, Ken Burns (photos et plans fixes d'événement), Respiration,
 Caméra à l'épaule · Motion blur (vraie fusion d'images, sur une copie du plan). Choisir un mouvement passe la
 position sur *Clips entiers*.
+
+### Zoom visage
+
+*Zoom visage* et *Zoom visage progressif* (catégorie Mouvements) zooment sur la personne qui parle en gardant son
+regard en place. Pour chaque plan visé, RR FX exporte quelques images propres de la timeline (une toutes les
+demi-secondes environ, sans looks ni titres), y cherche le visage (détecteur de Viola-Jones d'OpenCV, intégré au
+panneau, rien n'est envoyé en ligne), en déduit la ligne des yeux et la suit sur toute la durée du plan. Le zoom
+est posé sur un calque de réglage (effet Transformer) avec peu d'images clés, modifiables ensuite.
+
+| Réglage | Rôle |
+| --- | --- |
+| **Zoom** | +20 % par défaut (*progressif* : de 100 % à 115 % sur le plan) |
+| **Yeux** | *À leur place* : le zoom se fait autour des yeux, ils ne bougent pas à l'écran ; *Recentrés* : ils viennent au milieu, au tiers haut, sans jamais laisser voir de bord |
+| **Suivi** | *Doux* (mouvement posé), *Serré* (colle aux mouvements de tête) ou *Fixe* (une seule position) |
+| **Arrivée** | *Sèche* (punch-in) ou *Douce* (le zoom s'installe sur 8 images) |
+
+Visage de face, assez grand et éclairé : c'est ce que le détecteur reconnaît le mieux. Dans un plan où il ne
+trouve pas de visage, le zoom se fait vers le haut du cadre et le journal le signale.
 
 ### Overlays
 
@@ -254,8 +272,9 @@ Pour tout ce qui parle : YouTube, vlogs, interviews, podcasts filmés, témoigna
   seulement** (un marqueur au début de chaque silence). Avec deux caméras, RR FX ne coupe que là où personne ne
   parle. À faire avant d'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées (RR FX
   les nomme).
-- **Zoom un plan sur deux** : un punch-in sur un plan sur deux de la séquence ; la coupe devient un changement de
-  cadre.
+- **Zoom visage** : sur un plan sur deux (ou tous) de la séquence, un zoom (+20 % par défaut) sur les yeux, qui
+  sont suivis ; la coupe devient un changement de cadre et le regard ne bouge pas. *Yeux* : à leur place ou
+  recentrés. Décoche *Suivre le visage* pour un punch-in fixe vers le haut du cadre.
 - **Sous-titres** : importe ou colle un `.srt` / `.vtt` (Premiere : *Texte > Transcription*, puis *Sous-titres >
   Exporter en fichier SRT*). Chaque sous-titre devient un texte animé (modèle de l'onglet Textes), en phrase
   entière, 3 mots ou **mot par mot** (style TikTok, temps partagé selon la longueur des mots). *Départ du

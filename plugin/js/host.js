@@ -2,7 +2,7 @@
    Hors de Premiere (simple navigateur), bascule sur RRFXMock : mode démo. */
 (function (root) {
   'use strict';
-  const VERSION = '2.0.0';
+  const VERSION = '2.1.0';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 

@@ -78,11 +78,13 @@ textes. Un compte rendu clair à la fin : ce qui a été fait, étape par étape
 
 ### ⚡ Transitions et effets en un clic
 
-**32 effets** prêts à l'emploi, pour toutes tes vidéos :
+**34 effets** prêts à l'emploi, pour toutes tes vidéos :
 
 - **Transitions modernes** : push, zoom lent, zoom traversant, pop, fondus au blanc et au noir, fondu flou.
-- **Mouvements** sur tout le plan : Ken Burns (photos d'événement), zoom lent, respiration, caméra à l'épaule,
-  punch-in.
+- **Zoom visage** : RR FX trouve le visage dans chaque plan et zoome sur les yeux **en les suivant** (+20 % par
+  défaut). Les yeux restent à leur place à l'écran, ou sont recentrés : parfait pour la face cam et les interviews.
+  En coupe sèche, en arrivée douce ou en zoom progressif.
+- **Mouvements** sur tout le plan : Ken Burns (photos d'événement), zoom lent, caméra à l'épaule, punch-in.
 - **Effets de clip** : flashs, flickers, zooms, shakes, glitchs, motion blur.
 
 Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toutes les coupes de la séquence**,
@@ -91,7 +93,7 @@ Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toute
 - Tout reste modifiable ensuite dans *Options d'effet*, comme si tu l'avais fait à la main.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/effets-mouvements.png" alt="Mouvements : Ken Burns, zoom lent, punch-in" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/effets-mouvements.png" alt="Zoom visage qui suit les yeux" width="300"></td>
 </tr>
 <tr>
 <td width="44%"><img src="docs/captures/outils/parole.png" alt="Couper les silences" width="300"></td>
@@ -105,7 +107,7 @@ RR FX écoute le son et te montre les blancs en rouge, avant de toucher à quoi 
 - **Couper** : les blancs sont retirés, l'image et le son recollés et toujours synchro.
 - Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque silence.
 - Sensibilité, silence minimum et marge autour des mots réglables.
-- Puis **Zoom un plan sur deux** : chaque jump cut devient un changement de cadre.
+- Puis **Zoom visage** : un plan sur deux resserré sur les yeux, chaque jump cut devient un changement de cadre.
 
 </td>
 </tr>

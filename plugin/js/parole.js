@@ -2,7 +2,8 @@
    vidéos d'entreprise, conférences) :
    - Couper les silences : RR FX écoute le son des plans choisis, trouve les blancs et les
      retire en recollant la suite (sur une copie de la séquence par défaut).
-   - Zooms sur les jump cuts : un punch-in un plan sur deux.
+   - Zoom visage : un plan sur deux (ou tous) resserré sur les yeux, qui sont suivis : la coupe
+     devient un changement de cadre et le regard ne bouge pas.
    - Sous-titres : un .srt / .vtt posé en textes animés, en phrases ou en mots courts.
    - Bandeau nom et fonction (lower third). */
 (function (root) {
@@ -14,6 +15,7 @@
 
     const DEFAULTS = {
       level: 'normal', minSilence: 0.5, pad: 0.12, mode: 'copy', remap: true,
+      faceAmount: 20, faceAlt: true, faceTrack: true, faceFrame: 'keep',
       srt: '', words: 0, capAnim: 'pop', capFrom: 'start',
       name: '', role: '', lowerDur: 5, lowerPos: 'left', lowerAnim: 'slide-up'
     };
@@ -85,13 +87,14 @@
 
     // ---------------------------------------------------------------- punch-in
 
+    // Zoom visage (yeux suivis) ou punch-in centré, sur un plan sur deux ou tous les plans.
     function punchIn() {
-      const e = app.services.entryByKey('b:punch-in');
+      const x = st(), e = app.services.entryByKey(x.faceTrack ? 'b:face-zoom' : 'b:punch-in');
       if (!e) return null;
       const s = app.settings(), keep = { placement: s.placement, alternate: s.alternate, vary: s.vary }, cur = app.S.cur, params = app.S.params;
-      Object.assign(s, { placement: 'allclips', alternate: true, vary: 'seed' });
+      Object.assign(s, { placement: 'allclips', alternate: !!x.faceAlt, vary: 'seed' });
       app.S.cur = e;
-      app.S.params = app.services.defaultParams(e);
+      app.S.params = Object.assign(app.services.defaultParams(e), { amount: x.faceAmount }, x.faceTrack ? { frame: x.faceFrame } : { frame: 'up' });
       const done = app.actions.applyEffect();
       const restore = () => { Object.assign(s, keep); app.S.cur = cur; app.S.params = params; app.persist(); };
       if (done && done.then) return done.then(v => { restore(); return v; }, err => { restore(); throw err; });
@@ -201,11 +204,15 @@
       ]));
       draw();
 
-      // Jump cuts
-      const punch = h('button', { class: 'action' }, 'Zoom un plan sur deux');
+      // Zoom visage
+      const punch = h('button', { class: 'action selected' }, 'Zoomer sur le visage');
       punch.addEventListener('click', punchIn);
-      view.appendChild(section('Zooms sur les jump cuts', [
-        h('div', { class: 'note' }, 'Après la coupe des silences : un plan sur deux est resserré (punch-in), la coupe devient un changement de cadre, comme sur YouTube. Sur tous les plans de la séquence.'),
+      view.appendChild(section('Zoom visage', [
+        h('div', { class: 'note' }, 'RR FX trouve le visage dans chaque plan et zoome sur les yeux en les suivant : ils restent à leur place à l\'écran pendant que le cadre se resserre. Après la coupe des silences, un plan sur deux : chaque jump cut devient un changement de cadre.'),
+        row('Zoom', hotText({ value: x.faceAmount, min: 5, max: 60, step: 1, unit: '%', onChange: v => { x.faceAmount = v; app.persist(); } })),
+        row('Plans', actionGroup([{ v: true, label: 'Un sur deux' }, { v: false, label: 'Tous' }], x.faceAlt, v => { x.faceAlt = v; app.persist(); }), { title: 'Sur tous les plans de la séquence' }),
+        row('Yeux', actionGroup([{ v: 'keep', label: 'À leur place' }, { v: 'center', label: 'Recentrés' }], x.faceFrame, v => { x.faceFrame = v; app.persist(); })),
+        h('div', { class: 'field' }, app.UI.checkbox('Suivre le visage (sinon : zoom fixe vers le haut du cadre)', x.faceTrack, v => { x.faceTrack = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, punch)
       ]));
 

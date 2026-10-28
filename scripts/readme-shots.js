@@ -65,7 +65,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('effets');
   // Transitions douces et mouvements : la catégorie Mouvements.
   await page.click('.chips .action:has-text("Mouvements")');
-  await page.click('#grid .card:has-text("Ken Burns")');
+  await page.click('#grid .card:has-text("Zoom visage") >> nth=0');
   await close();
   await shot('effets-mouvements', null, 700);
   await page.click('.chips .action:has-text("Tout")');

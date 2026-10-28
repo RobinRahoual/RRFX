@@ -1094,6 +1094,8 @@
       if (vary !== 'same' && params.seed !== undefined) params = Object.assign({}, params, { seed: ((params.seed + k * 17 + runSeed) % 99) + 1 });
       const f = factors ? factors.get(key) : 1;
       if (f && f !== 1 && params.intensity != null) params = Object.assign({}, params, { intensity: Core.clamp(Math.round(params.intensity * f), 0, 200) });
+      // Zoom visage : les yeux suivis dans ce plan (sinon, des yeux typiques d'une face cam).
+      if (t.face && entry.def && entry.def.face) params = Object.assign({}, params, { face: t.face });
       return {
         entry, mode: targetFor(entry), label: entry.name + ' ' + t.side.toUpperCase(),
         overlay: entry.kind === 'overlay' ? { path: entry.overlay.path, name: entry.overlay.name, kind: entry.overlay.kind, pack: entry.overlay.pack, start: params.start, seed: runSeed + k } : undefined,
@@ -1138,6 +1140,16 @@
       // « Un plan sur deux » (punch-in sur les jump cuts) : un clip visé sur deux, dans l'ordre.
       if (isFull(st.placement) && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
       if (!r.targets.length) return { kind: 'warn', title: 'Un seul plan', detail: '« Un plan sur deux » : sélectionne au moins deux clips.' };
+      // Zoom visage : le visage est cherché dans chaque plan visé, puis suivi image par image.
+      let faceNote = '';
+      if ((chained ? chainEntries() : [e]).some(x => x.def && x.def.face) && app.services.trackFaces) {
+        status.phase('Recherche du visage');
+        const tr = await app.services.trackFaces(r.targets, S.params.follow || 'smooth');
+        r.targets.forEach((t, i) => { t.face = tr.faces[i]; });
+        const found = tr.faces.filter(Boolean).length;
+        faceNote = found === r.targets.length ? 'Visage suivi dans ' + plural(found, 'plan') + '.' : 'Visage suivi dans ' + found + ' plan(s) sur ' + r.targets.length + ' ; ailleurs, zoom vers le haut du cadre.';
+        if (found < r.targets.length) log('Visage introuvable dans ' + plural(r.targets.length - found, 'plan') + ' : zoom vers le haut du cadre (visage de face, assez grand et éclairé ?).', 'warn');
+      }
       const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
       if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };
       // Overlays de pack : fabriqués une fois à la taille de la séquence.
@@ -1188,7 +1200,8 @@
       log(e.name + ' : ' + what + (failed ? ', ' + plural(failed, 'échec') : ''), failed ? 'warn' : 'ok');
       if (S.cancel) return { kind: 'warn', title: 'Arrêté · ' + what + ' posée(s)', detail: 'Le reste n\'a pas été appliqué.' };
       if (failed) return { kind: 'warn', title: e.name + ' · ' + what + ', ' + plural(failed, 'échec'), detail: firstError };
-      if (warnings.length) return { kind: 'warn', title: e.name + ' appliqué · ' + what, detail: plural(new Set(warnings).size, 'remarque') + ' dans le journal.' };
+      if (warnings.length) return { kind: 'warn', title: e.name + ' appliqué · ' + what, detail: (faceNote ? faceNote + ' ' : '') + plural(new Set(warnings).size, 'remarque') + ' dans le journal.' };
+      if (faceNote) return { kind: faceNote.includes('introuvable') || faceNote.includes(' sur ') ? 'warn' : 'ok', title: e.name + ' appliqué · ' + what, detail: faceNote };
       const on = { copy: 'Sur une copie du plan (CLIP FX) au-dessus du clip.', overlay: 'Overlays posés au-dessus du clip.', adjustment: 'Sur des calques de réglage « RR FX · … ».' };
       return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: on[targetFor(e)] || on.adjustment };
     }, true);

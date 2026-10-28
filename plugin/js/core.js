@@ -314,6 +314,7 @@
           props.push(Object.assign(base, { static: roundValue(src) }));
         }
       });
+      if (def.sparse) props.forEach(pr => { if (pr.values) pr.sparse = true; });
       if (props.length) out.push({ type: fx.type, names: reg.names, matchName: reg.matchName, intrinsic: reg.intrinsic || null, props });
     });
     return out;
@@ -323,12 +324,24 @@
   // Les valeurs sont calculées image par image ; seules les images clés utiles
   // partent vers Premiere : au milieu d'une plage de valeurs identiques, une clé
   // ne change rien (chaque appel ExtendScript coûte du temps).
-  function keysFromValues(values) {
+  // sparse : une clé qui tombe sur la ligne droite entre ses voisines gardées ne change rien
+  // non plus (interpolation linéaire de Premiere) ; utile pour les longs mouvements suivis.
+  const near = (a, b) => (Array.isArray(a) ? a.every((v, j) => Math.abs(v - b[j]) < 7e-4) : Math.abs(a - b) < 7e-4);
+  const mix = (a, b, u) => (Array.isArray(a) ? a.map((v, j) => v + (b[j] - v) * u) : a + (b - a) * u);
+  function keysFromValues(values, sparse) {
     const out = [];
+    let last = -1;
     for (let i = 0; i < values.length; i++) {
       const inner = i > 0 && i < values.length - 1;
       if (inner && sameValue(values[i - 1], values[i]) && sameValue(values[i], values[i + 1])) continue;
+      if (inner && sparse && last >= 0 && typeof values[i] !== 'string') {
+        // La ligne de la dernière clé gardée à l'image suivante passe-t-elle par tout l'entre-deux ?
+        let fits = true;
+        for (let j = last + 1; j <= i && fits; j++) fits = near(values[j], mix(values[last], values[i + 1], (j - last) / (i + 1 - last)));
+        if (fits) continue;
+      }
       out.push([i, values[i]]);
+      last = i;
     }
     return out;
   }
@@ -337,8 +350,9 @@
     return fxList.map(fx => Object.assign({}, fx, {
       props: fx.props.map(pr => {
         if (!pr.values) return pr;
-        const o = Object.assign({}, pr, { keys: keysFromValues(pr.values) });
+        const o = Object.assign({}, pr, { keys: keysFromValues(pr.values, pr.sparse) });
         delete o.values;
+        delete o.sparse;
         return o;
       })
     }));

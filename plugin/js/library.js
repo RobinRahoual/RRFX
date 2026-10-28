@@ -33,6 +33,27 @@
 
   const backOut = t => { const c1 = 1.70158, c3 = c1 + 1, u = t - 1; return 1 + c3 * u * u * u + c1 * u * u; };
 
+  /* Zoom « visage » : c.p.face = position des yeux à chaque image (0 à 1), trouvée par le
+     panneau (faces.js) ; sans elle (aperçu), des yeux typiques d'une face cam. Ancre au centre :
+     « à leur place », les yeux restent au même endroit de l'écran ; « recentrés », ils vont au
+     milieu, au tiers haut, sans laisser voir de bord. */
+  const FACE_EYES = [0.5, 0.4];
+  function faceZoom(c, grow) {
+    const eye = i => (c.p.face && c.p.face.length ? c.p.face[Math.min(c.p.face.length - 1, Math.max(0, i))] : FACE_EYES);
+    const z = i => 1 + c.p.amount / 100 * c.k * grow(i);
+    const pos = i => {
+      const e = eye(i), zz = z(i);
+      if (c.p.frame !== 'center') return [0.5 + (e[0] - 0.5) * (1 - zz), 0.5 + (e[1] - 0.5) * (1 - zz)];
+      const m = (zz - 1) / 2, cl = v => Math.min(0.5 + m, Math.max(0.5 - m, v));
+      return [cl(0.5 - (e[0] - 0.5) * zz), cl(0.4 - (e[1] - 0.5) * zz)];
+    };
+    return [{ type: 'transform', props: { scale: i => 100 * z(i), position: pos } }];
+  }
+  const FACE_PARAMS = [
+    select('frame', 'Yeux', 'keep', [{ v: 'keep', label: 'À leur place' }, { v: 'center', label: 'Recentrés' }]),
+    select('follow', 'Suivi', 'smooth', [{ v: 'smooth', label: 'Doux' }, { v: 'tight', label: 'Serré' }, { v: 'fixed', label: 'Fixe' }])
+  ];
+
   const transformBlur = (c, extra) => Object.assign({ compShutter: false, shutter: c.p.mblur == null ? 0 : c.p.mblur }, extra);
 
   function shake(c, o) {
@@ -305,6 +326,22 @@
       desc: 'Recadrage serré instantané pour masquer un jump cut. Pose-le en « Clips entiers » sur un plan sur deux.',
       params: [range('amount', 'Zoom', 15, 0, 60, '%'), select('frame', 'Cadrage', 'center', [{ v: 'center', label: 'Centre' }, { v: 'up', label: 'Visage (haut)' }])],
       build: c => [{ type: 'transform', props: { scale: 100 + c.p.amount * c.k, position: c.p.frame === 'up' ? [0.5, 0.5 + c.p.amount * c.k / 400] : [0.5, 0.5] } }]
+    },
+    {
+      id: 'face-zoom', name: 'Zoom visage', cat: 'motion', frames: 100, noCurve: true, face: true, sparse: true,
+      desc: 'Face cam, interview : RR FX trouve le visage et zoome sur les yeux en les suivant. Ils restent à leur place à l\'écran, ou recentrés.',
+      params: [range('amount', 'Zoom', 20, 0, 80, '%')].concat(FACE_PARAMS, [select('arrive', 'Arrivée', 'cut', [{ v: 'cut', label: 'Sèche' }, { v: 'smooth', label: 'Douce' }])]),
+      build: c => {
+        // Arrivée douce : le zoom s'installe sur les 8 premières images.
+        const grow = i => (c.p.arrive === 'smooth' ? 1 - Math.pow(1 - Math.min(1, i / 8), 3) : 1);
+        return faceZoom(c, grow);
+      }
+    },
+    {
+      id: 'face-push', name: 'Zoom visage progressif', cat: 'motion', frames: 100, noCurve: true, face: true, sparse: true,
+      desc: 'Zoom avant lent sur tout le plan, centré sur les yeux qui sont suivis : l\'émotion monte sans perdre le regard.',
+      params: [range('amount', 'Zoom', 15, 0, 60, '%')].concat(FACE_PARAMS),
+      build: c => faceZoom(c, i => (c.N <= 1 ? 1 : i / (c.N - 1)))
     },
     {
       id: 'ken-burns', name: 'Ken Burns', cat: 'motion', frames: 100, noCurve: true,

@@ -50,9 +50,12 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/stylepack.js        packs de style .rrfxpack : ZIP sans dépendance, manifeste (testé)
   js/mespacks.js         créer et importer un pack de style (Mes effets, Ressources)
   js/express.js          onglet Express : vérifications, styles, étapes enchaînées, compte rendu
-  js/recipes.js          styles de montage par domaine (recettes) et étapes du montage express (testé)
+  js/recipes.js          styles de montage (recettes) et étapes du montage express (testé)
   js/speech.js           silences dans le son, lecture .srt / .vtt, sous-titres courts (testé)
-  js/parole.js           onglet Parole : couper les silences, punch-in, sous-titres, bandeau
+  js/faces.js            détection du visage (Viola-Jones), suivi des yeux, cadrage du zoom visage (testé)
+  js/vendor/haar-face.js cascade « visage de face » d'OpenCV (licences BSD / Intel en tête du fichier)
+  js/visage.js           images des plans et suivi du visage pour les zooms visage
+  js/parole.js           onglet Parole : couper les silences, zoom visage, sous-titres, bandeau
   js/sons.js             sons fournis (whooshs, impacts, riser, glitch) fabriqués par le plugin, WAV (testé)
   js/diagnostic.js       test de compatibilité Premiere (Réglages)
   js/installer.js        mise à jour en un clic : téléchargement, vérification, sauvegarde, retour arrière (testé)

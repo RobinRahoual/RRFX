@@ -126,7 +126,7 @@
     { id: 'convert', label: 'Conversion LOG', desc: 'Rec.709 avec la LUT de chaque caméra' },
     { id: 'fix', label: 'Expo et balance auto', desc: 'Chaque plan corrigé' },
     { id: 'look', label: 'Look', desc: 'L\'étalonnage du style sur toute la séquence' },
-    { id: 'punch', label: 'Zoom un plan sur deux', desc: 'Punch-in sur les jump cuts' },
+    { id: 'punch', label: 'Zoom visage', desc: 'Un plan sur deux resserré sur les yeux, qui sont suivis' },
     { id: 'effects', label: 'Effets', desc: 'Les effets du style, enchaînés' },
     { id: 'sfx', label: 'Sons', desc: 'Whooshs et impacts calés sur les transitions' },
     { id: 'titles', label: 'Paroles', desc: 'Les paroles de l\'onglet Textes, une par temps fort' },

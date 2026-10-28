@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.0.0';
+    var VERSION = '2.1.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
