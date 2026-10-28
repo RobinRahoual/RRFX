@@ -110,5 +110,55 @@
     return true;
   }
 
-  root.CutFXStorage = { load, save, exportJSON, importJSON, openFolder, location: FILE || 'navigateur (localStorage)', onDisk: !!fs };
+  // Dossier de travail (images d'aperçu…), créé au besoin.
+  function cacheDir() {
+    if (!fs) return null;
+    const d = path.join(DIR, 'cache');
+    fs.mkdirSync(d, { recursive: true });
+    return d;
+  }
+
+  // Compression des codes de partage (zlib de Node), sinon null.
+  const zip = (() => {
+    if (!nodeRequire) return null;
+    try {
+      const z = nodeRequire('zlib');
+      return { deflate: b => new Uint8Array(z.deflateRawSync(Buffer.from(b))), inflate: b => new Uint8Array(z.inflateRawSync(Buffer.from(b))) };
+    } catch (e) { return null; }
+  })();
+
+  // Fichiers choisis par l'utilisateur (chemins), via la boîte de dialogue de CEP.
+  function pickFiles(title, types, directory) {
+    const c = cepFs();
+    if (!fs || !c || !c.showOpenDialogEx) return null;
+    const r = c.showOpenDialogEx(!directory, !!directory, title, DIR || '', directory ? [] : types);
+    if (!r || r.err || !r.data) return [];
+    return r.data;
+  }
+
+  // Tous les fichiers d'un dossier (récursif, limité) dont l'extension convient.
+  function listFiles(dir, exts, max, depth) {
+    if (!fs) return [];
+    const out = [];
+    const walk = (d, level) => {
+      if (out.length >= max || level > depth) return;
+      let names = [];
+      try { names = fs.readdirSync(d); } catch (e) { return; }
+      names.forEach(n => {
+        if (out.length >= max || n[0] === '.') return;
+        const full = path.join(d, n);
+        let st;
+        try { st = fs.statSync(full); } catch (e) { return; }
+        if (st.isDirectory()) walk(full, level + 1);
+        else if (exts.test(n)) out.push(full);
+      });
+    };
+    walk(dir, 0);
+    return out;
+  }
+
+  root.CutFXStorage = {
+    load, save, exportJSON, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
+    fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
+  };
 })(typeof self !== 'undefined' ? self : this);

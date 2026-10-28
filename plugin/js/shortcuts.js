@@ -10,10 +10,12 @@
     apply: 'Appliquer l\'effet choisi',
     ramp: 'Appliquer la rampe',
     undo: 'Annuler la dernière opération',
-    capture: 'Capturer la sélection'
+    capture: 'Capturer la sélection',
+    beats: 'Poser les temps forts',
+    sync: 'Synchroniser la sélection'
   };
 
-  const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C' };
+  const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S' };
 
   /* Touche utilisable comme raccourci (lettre ou chiffre, sans Ctrl/Cmd/Alt), sinon null. */
   function normalizeKey(event) {

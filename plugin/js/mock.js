@@ -19,7 +19,7 @@
   }
 
   const handlers = {
-    compat: () => ({ ok: true, version: root.CutFXHost ? root.CutFXHost.VERSION : '?', app: 'démo', missing: [], optional: [] }),
+    compat: () => ({ ok: true, version: root.CutFXHost ? root.CutFXHost.VERSION : '?', app: 'démo', appPath: '', missing: [], optional: [] }),
     getContext: () => ({
       ok: true, hasSequence: true, version: 'démo', app: 'démo', name: 'Clip — démo', fps: FPS, frameW: 1920, frameH: 1080,
       playhead: 12.4, selection: 2, selectionNames: ['A001_C004.mov', 'A001_C007.mov'], markers: 4,
@@ -53,8 +53,28 @@
       let at = a.regionStart;
       const created = a.pieces.map(p => { const e = { kind: 'adj', track: 1, start: at, name: 'CutFX · Rampe' }; at += p.frames * F; return e; });
       return { ok: true, pieces: a.pieces.length, sourceFrames: a.pieces.reduce((s, p) => s + p.frames * p.speed / 100, 0), track: 1, created, warnings: [] };
-    }
+    },
+    // 1.3 : musique, montage, textes, nettoyage (la musique de démo n'a pas de fichier : choisis-en un).
+    markerList: () => ({ ok: true, markers: markers.slice(), playhead: 0, range: null }),
+    addMarkers: a => {
+      const removed = a.replace ? markers.length : 0;
+      if (a.replace) markers.length = 0;
+      a.times.forEach(t => markers.push({ t, name: a.name }));
+      markers.sort((x, y) => x.t - y.t);
+      return { ok: true, added: a.times.length, removed };
+    },
+    clearAll: a => { const n = a.markers ? markers.length : 0; if (a.markers) markers.length = 0; return { ok: true, removed: 3, markers: n }; },
+    musicInfo: () => ({ ok: true, name: 'Musique (démo)', path: '', track: 0, start: 0, end: 60, inPoint: 0, speed: 1 }),
+    projectRushes: () => ({ ok: true, rushes: ['A001_C004.mov', 'A001_C007.mov', 'A002_C001.mov'].map((n, i) => ({ nodeId: 'demo' + i, name: n, path: '', inT: 0, outT: 8 + i * 3 })) }),
+    placeRushes: async a => { await wait(a.items.length * 60); return { ok: true, created: a.items.map(it => ({ kind: 'adj', track: 1, start: it.seqStart * TICKS, name: a.label })), track: 1, warnings: [] }; },
+    cutAtTimes: a => ({ ok: true, cuts: a.times.length, clips: 2 }),
+    syncInfo: () => ({ ok: true, music: null, musicError: 'Mode démo : pas de musique dans la séquence.', clips: [], rushes: [] }),
+    moveClips: a => ({ ok: true, moved: a.moves.length, warnings: [] }),
+    grabFrames: () => ({ ok: false, error: 'Mode démo : il faut Premiere pour exporter des images de la séquence.' }),
+    placeTitle: async a => { await wait(60); return { ok: true, created: [{ kind: 'adj', track: 2, start: a.start * TICKS, name: 'CutFX · Texte' }], track: 2, warnings: [] }; },
+    readBlend: () => ({ ok: true, value: 8 })
   };
+  const markers = [];
 
   root.CutFXMock = {
     async call(fn, arg) {

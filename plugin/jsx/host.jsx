@@ -5,7 +5,7 @@
 
 var CutFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.2.0';
+    var VERSION = '1.3.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -412,7 +412,11 @@ var CutFX = (function () {
     }
 
     function videoSource(item) {
-        var master = item.projectItem, name, sub, end, bin;
+        return videoSourceOf(item.projectItem);
+    }
+
+    function videoSourceOf(master) {
+        var name, sub, end, bin;
         if (!master) throw new Error('Ce clip n\'a pas de média source (séquence imbriquée ?)');
         name = 'CutFX · ' + master.name + ' · vidéo';
         sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
@@ -582,7 +586,11 @@ var CutFX = (function () {
             if (!s.markers) optional.push('Sequence.markers');
         }
         if (!app.getCurrentProjectViewSelection) optional.push('app.getCurrentProjectViewSelection');
-        return ok({ version: VERSION, app: appVersion(), missing: missing, optional: optional });
+        if (s && !s.importMGT) optional.push('Sequence.importMGT');
+        try { if (qe && qe.project && !qeSeq().exportFramePNG) optional.push('QE exportFramePNG'); } catch (e2) {}
+        var appPath = '';
+        try { appPath = String(app.path || ''); } catch (e3) {}
+        return ok({ version: VERSION, app: appVersion(), appPath: appPath, missing: missing, optional: optional });
     }
 
     function getContext(o) {
@@ -696,6 +704,7 @@ var CutFX = (function () {
 
     function apply(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, j, t, adj = null, placed, track, start, comp, n = 0;
+        if (o.target === 'overlay' && !o.overlay) return fail('Overlay manquant');
         if (o.target === 'adjustment' || !o.target) {
             // Début d'un lot : on revérifie que le calque de réglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
@@ -705,6 +714,7 @@ var CutFX = (function () {
         for (i = 0; i < o.targets.length; i++) {
             t = o.targets[i];
             var label = (t.name || o.name) + ' ' + t.side.toUpperCase(), entry, item;
+            if (o.target === 'overlay' && !t.name) t.name = o.name;
             if (o.target === 'clip') {
                 if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de clip pour ' + t.side.toUpperCase()); continue; }
                 track = t.clipTrack;
@@ -712,6 +722,12 @@ var CutFX = (function () {
                 item = findItemAt(s, track, start);
                 if (!item) { warnings.push('Clip introuvable'); continue; }
                 entry = { kind: 'clip', track: track, start: start, name: item.name, added: [] };
+            } else if (o.target === 'overlay') {
+                placed = placeOverlay(s, o.overlay, t, i, warnings);
+                if (!placed) continue;
+                track = placed.track;
+                start = t.start;
+                entry = { kind: 'adj', track: track, start: start, name: label };
             } else if (o.target === 'copy') {
                 if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de plan pour ' + t.side.toUpperCase()); continue; }
                 item = findClip(s, t.clipTrack, t.clipStart, t.clipName);
@@ -917,6 +933,403 @@ var CutFX = (function () {
         return ok({ name: sel[0].name, nodeId: sel[0].nodeId });
     }
 
+
+    // ------------------------------------------------------------ outils communs (v1.3)
+
+    function secs(ticks) { return ticks / TICKS; }
+
+    function mediaPathOf(pi) {
+        try { return String(pi.getMediaPath()); } catch (e) { return ''; }
+    }
+
+    function samePath(a, b) {
+        return String(a).replace(/\\/g, '/').toLowerCase() === String(b).replace(/\\/g, '/').toLowerCase();
+    }
+
+    function namedBin(name) {
+        var root = app.project.rootItem, i, c;
+        for (i = 0; i < root.children.numItems; i++) {
+            c = root.children[i];
+            if (c.type === 2 && c.name === name) return c;
+        }
+        return root.createBin(name);
+    }
+
+    function itemForPath(path, binName) {
+        var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
+        if (found) return found;
+        app.project.importFiles([path], true, namedBin(binName), false);
+        return walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
+    }
+
+    function audioClipsOf(s) {
+        var out = [], i, j, tr;
+        if (!s.audioTracks) return out;
+        for (i = 0; i < s.audioTracks.numTracks; i++) {
+            tr = s.audioTracks[i];
+            for (j = 0; j < tr.clips.numItems; j++) out.push({ item: tr.clips[j], track: i });
+        }
+        return out;
+    }
+
+    // Limites des clips sélectionnés (hors calques), ou null.
+    function selectionRange(s) {
+        var sel = selectedVideo(s), lo = Infinity, hi = -Infinity, i;
+        for (i = 0; i < sel.length; i++) {
+            if (isLayer(sel[i].item)) continue;
+            lo = Math.min(lo, tk(sel[i].item.start));
+            hi = Math.max(hi, tk(sel[i].item.end));
+        }
+        return lo < hi ? { a: lo, b: hi } : null;
+    }
+
+    // ------------------------------------------------------------ public: marqueurs
+
+    function markerList(o) {
+        var s = activeSeq(), out = [], ms, m, guard = 0;
+        try { ms = s.markers; m = ms ? ms.getFirstMarker() : null; } catch (e) { m = null; }
+        while (m && guard++ < 10000) {
+            out.push({ t: secs(tk(m.start)), name: String(m.name || '') });
+            try { m = ms.getNextMarker(m); } catch (e2) { m = null; }
+        }
+        out.sort(function (x, y) { return x.t - y.t; });
+        return ok({ markers: out, playhead: secs(tk(s.getPlayerPosition())), range: (function (r) { return r ? { a: secs(r.a), b: secs(r.b) } : null; })(selectionRange(s)) });
+    }
+
+    function removeMarkers(s, prefix, a, b) {
+        var ms = s.markers, m, list = [], i, t, guard = 0;
+        if (!ms) return 0;
+        m = ms.getFirstMarker();
+        while (m && guard++ < 10000) {
+            t = tk(m.start);
+            if (String(m.name || '').substr(0, prefix.length) === prefix && t >= a && t <= b) list.push(m);
+            m = ms.getNextMarker(m);
+        }
+        for (i = 0; i < list.length; i++) ms.deleteMarker(list[i]);
+        return list.length;
+    }
+
+    // Pose des marqueurs aux temps donnés (secondes de séquence), nommés « CutFX · … ».
+    function addMarkers(o) {
+        var s = activeSeq(), f = tpf(s), ms = s.markers, i, t, m, n = 0, removed = 0, seen = {};
+        if (!ms || !ms.createMarker) return fail('Cette version de Premiere ne permet pas de poser des marqueurs par script.');
+        if (o.replace) removed = removeMarkers(s, 'CutFX', o.from != null ? o.from * TICKS - f : -Infinity, o.to != null ? o.to * TICKS + f : Infinity);
+        for (i = 0; i < o.times.length; i++) {
+            t = snap(o.times[i] * TICKS, f);
+            if (seen[t]) continue;
+            seen[t] = true;
+            m = ms.createMarker(t / TICKS);
+            try { m.name = o.name || 'CutFX · temps fort'; } catch (e) {}
+            try { if (m.setColorByIndex) m.setColorByIndex(o.color == null ? 3 : o.color); } catch (e2) {}
+            n++;
+        }
+        return ok({ added: n, removed: removed });
+    }
+
+    // ------------------------------------------------------------ public: tout effacer
+
+    function clearAll(o) {
+        var s = activeSeq(), range = o.scope === 'selection' ? selectionRange(s) : null, removed = 0, markers = 0, i, j, list, it;
+        if (o.scope === 'selection' && !range) return fail('Sélectionne les clips de la zone à nettoyer.');
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                if (!/^CutFX · /.test(it.name)) continue;
+                if (range && !(tk(it.start) < range.b && range.a < tk(it.end))) continue;
+                it.remove(false, false);
+                removed++;
+            }
+        }
+        if (o.markers) markers = removeMarkers(s, 'CutFX', range ? range.a : -Infinity, range ? range.b : Infinity);
+        return ok({ removed: removed, markers: markers });
+    }
+
+    // ------------------------------------------------------------ public: musique, rushs
+
+    // La musique : le clip son sélectionné, sinon le plus long clip son de la séquence.
+    function musicInfo(o) {
+        var s = activeSeq(), f = tpf(s), sel = s.getSelection(), vids = selectedVideo(s), best = null, list, i, it, d, bd = -1, tr = 0, sp = 1;
+        // Le son lié à un clip vidéo sélectionné (son de la caméra) n'est pas la musique.
+        function linkedToSelection(a) {
+            for (var k = 0; k < vids.length; k++) {
+                if (Math.abs(tk(vids[k].item.start) - tk(a.start)) < f / 2 && Math.abs(tk(vids[k].item.end) - tk(a.end)) < f / 2) return true;
+            }
+            return false;
+        }
+        if (sel) for (i = 0; i < sel.length; i++) if (sel[i].mediaType === 'Audio' && !linkedToSelection(sel[i])) { best = sel[i]; break; }
+        // Sinon : le plus long son qui n'accompagne aucune image (la musique n'a pas de vidéo).
+        function withVideo(a) {
+            for (var t = 0; t < s.videoTracks.numTracks; t++) {
+                var v = clipsOf(s, t);
+                for (var k = 0; k < v.length; k++) {
+                    if (Math.abs(tk(v[k].start) - tk(a.start)) < f / 2 && Math.abs(tk(v[k].end) - tk(a.end)) < f / 2) return true;
+                }
+            }
+            return false;
+        }
+        list = audioClipsOf(s);
+        for (var pass = 0; pass < 2 && !best && !it; pass++) {
+            for (i = 0; i < list.length; i++) {
+                if (linkedToSelection(list[i].item) || (pass === 0 && withVideo(list[i].item))) continue;
+                d = tk(list[i].item.end) - tk(list[i].item.start);
+                if (d > bd) { bd = d; it = list[i].item; tr = list[i].track; }
+            }
+        }
+        if (best) for (i = 0; i < list.length; i++) if (list[i].item.nodeId === best.nodeId) tr = list[i].track;
+        best = best || it;
+        if (!best) return fail('Aucun son dans la séquence : pose ta musique sur une piste audio.');
+        try { sp = best.getSpeed(); } catch (e) {}
+        return ok({
+            name: best.name, path: best.projectItem ? mediaPathOf(best.projectItem) : '', track: tr,
+            start: secs(tk(best.start)), end: secs(tk(best.end)), inPoint: secs(tk(best.inPoint)), speed: sp || 1
+        });
+    }
+
+    // Rushs sélectionnés dans le panneau Projet, avec leur plage utile (points d'entrée/sortie).
+    function projectRushes(o) {
+        var sel = app.getCurrentProjectViewSelection ? app.getCurrentProjectViewSelection() : null, out = [], i, pi, a, b, isSeq;
+        if (!sel || !sel.length) return fail('Sélectionne des rushs dans le panneau Projet.');
+        for (i = 0; i < sel.length; i++) {
+            pi = sel[i];
+            isSeq = false;
+            try { isSeq = !!(pi.isSequence && pi.isSequence()); } catch (e) {}
+            if (pi.type !== 1 || isSeq || isAdjustment(pi)) continue;
+            a = 0; b = 0;
+            try { a = tk(pi.getInPoint(1)); b = tk(pi.getOutPoint(1)); } catch (e2) {}
+            if (!(b > a)) b = mediaEndOf(pi);
+            out.push({ nodeId: pi.nodeId, name: pi.name, path: mediaPathOf(pi), inT: secs(a), outT: secs(b) });
+        }
+        if (!out.length) return fail('Aucun rush vidéo dans la sélection du panneau Projet.');
+        return ok({ rushes: out });
+    }
+
+    // Pose des extraits de rushs (vidéo seule) : items [{ nodeId, seqStart, seqEnd, srcIn }] en secondes.
+    function placeRushes(o) {
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, x, pi, sub, a, b, lo = Infinity, hi = -Infinity, ti, it, label = o.label || 'CutFX · Montage', cache = {};
+        for (i = 0; i < o.items.length; i++) {
+            lo = Math.min(lo, snap(o.items[i].seqStart * TICKS, f));
+            hi = Math.max(hi, snap(o.items[i].seqEnd * TICKS, f));
+        }
+        if (!(hi > lo)) return fail('Rien à poser.');
+        ti = o.track != null && o.track < s.videoTracks.numTracks && trackClear(s, o.track, lo, hi) ? o.track : pickTrack(s, o.minTrack || 0, lo, hi, warnings);
+        for (i = 0; i < o.items.length; i++) {
+            x = o.items[i];
+            try {
+                if (!cache[x.nodeId]) {
+                    pi = walk(app.project.rootItem, function (c) { return c.nodeId === x.nodeId; });
+                    if (!pi) throw new Error('rush introuvable dans le projet');
+                    cache[x.nodeId] = videoSourceOf(pi);
+                }
+                sub = cache[x.nodeId];
+                a = snap(x.seqStart * TICKS, f);
+                b = snap(x.seqEnd * TICKS, f);
+                if (b <= a) continue;
+                it = placeOn(s, ti, sub, a, x.srcIn * TICKS, x.srcIn * TICKS + (b - a));
+                fixSpan(it, a, b);
+                try { it.name = label; } catch (e) {}
+                created.push({ kind: 'adj', track: ti, start: a, name: label });
+            } catch (err) {
+                warnings.push((x.name || 'Rush') + ' : ' + err.toString());
+            }
+        }
+        return ok({ created: created, track: ti, warnings: warnings });
+    }
+
+    // ------------------------------------------------------------ public: découpe sur le rythme
+
+    function cutAtTimes(o) {
+        var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs = qeSeq(), cuts = 0, i, j, k, c, a, b, t, audio = audioClipsOf(s), plan = [];
+        for (i = 0; i < sel.length; i++) {
+            c = sel[i].item;
+            if (isLayer(c)) continue;
+            a = tk(c.start); b = tk(c.end);
+            var tracks = [], times = [];
+            for (k = 0; k < audio.length; k++) {
+                if (Math.abs(tk(audio[k].item.start) - a) < f / 2 && Math.abs(tk(audio[k].item.end) - b) < f / 2) tracks.push(audio[k].track);
+            }
+            for (j = 0; j < o.times.length; j++) {
+                t = snap(o.times[j] * TICKS, f);
+                if (t > a + f / 2 && t < b - f / 2) times.push(t);
+            }
+            plan.push({ track: sel[i].track, audio: tracks, times: times });
+        }
+        if (!plan.length) return fail('Sélectionne dans la timeline les clips à découper.');
+        for (i = 0; i < plan.length; i++) {
+            for (j = 0; j < plan[i].times.length; j++) {
+                t = timecodeOf(s, plan[i].times[j]);
+                qs.getVideoTrackAt(plan[i].track).razor(t);
+                for (k = 0; k < plan[i].audio.length; k++) qs.getAudioTrackAt(plan[i].audio[k]).razor(t);
+                cuts++;
+            }
+        }
+        return ok({ cuts: cuts, clips: plan.length });
+    }
+
+    // ------------------------------------------------------------ public: synchronisation
+
+    function syncInfo(o) {
+        var s = activeSeq(), sel = selectedVideo(s), clips = [], i, c, sp, m = parse(musicInfo({})), r;
+        for (i = 0; i < sel.length; i++) {
+            c = sel[i].item;
+            if (isLayer(c) || !c.projectItem) continue;
+            sp = 1;
+            try { sp = c.getSpeed(); } catch (e) {}
+            clips.push({
+                track: sel[i].track, name: c.name, path: mediaPathOf(c.projectItem),
+                start: secs(tk(c.start)), end: secs(tk(c.end)), inPoint: secs(tk(c.inPoint)), outPoint: secs(tk(c.outPoint)), speed: sp || 1
+            });
+        }
+        r = clips.length ? null : parse(projectRushes({}));
+        return ok({ music: m.ok ? m : null, musicError: m.ok ? '' : m.error, clips: clips, rushes: r && r.ok ? r.rushes : [] });
+    }
+
+    function trackClearExcept(s, ti, a, b, self) {
+        var list = clipsOf(s, ti), i;
+        for (i = 0; i < list.length; i++) {
+            if (list[i].nodeId === self.nodeId) continue;
+            if (tk(list[i].start) < b && a < tk(list[i].end)) return false;
+        }
+        return true;
+    }
+
+    // Décale un élément ; vérifie le résultat (la façon d'appeler move() varie selon les versions).
+    function shift(it, delta) {
+        var before = tk(it.start), target = before + delta;
+        try { it.move(mkTime(delta)); } catch (e) {}
+        if (Math.abs(tk(it.start) - target) <= 1) return true;
+        if (Math.abs(tk(it.start) - before) <= 1) {
+            try { it.move(delta / TICKS); } catch (e2) {}
+            if (Math.abs(tk(it.start) - target) <= 1) return true;
+        }
+        return false;
+    }
+
+    // moves : [{ track, start (s), name, delta (s) }] — clips de la timeline, avec leur son lié.
+    function moveClips(o) {
+        var s = activeSeq(), f = tpf(s), moved = 0, warnings = [], i, k, mv, it, a, b, d, audio, linked;
+        for (i = 0; i < o.moves.length; i++) {
+            mv = o.moves[i];
+            it = findClip(s, mv.track, snap(mv.start * TICKS, f), mv.name);
+            if (!it) { warnings.push(mv.name + ' : introuvable'); continue; }
+            d = snap(mv.delta * TICKS, f);
+            if (!d) { moved++; continue; }
+            a = tk(it.start); b = tk(it.end);
+            if (a + d < 0) { warnings.push(mv.name + ' : il faudrait le placer avant le début de la séquence'); continue; }
+            if (!trackClearExcept(s, mv.track, a + d, b + d, it)) { warnings.push(mv.name + ' : la place est occupée sur V' + (mv.track + 1)); continue; }
+            audio = audioClipsOf(s);
+            linked = [];
+            for (k = 0; k < audio.length; k++) {
+                if (Math.abs(tk(audio[k].item.start) - a) < f / 2 && Math.abs(tk(audio[k].item.end) - b) < f / 2) linked.push(audio[k].item);
+            }
+            if (!shift(it, d)) { warnings.push(mv.name + ' : Premiere a refusé le déplacement'); continue; }
+            for (k = 0; k < linked.length; k++) {
+                if (Math.abs(tk(linked[k].start) - (a + d)) > 1 && !shift(linked[k], d)) warnings.push(mv.name + ' : son lié non déplacé');
+            }
+            moved++;
+        }
+        return ok({ moved: moved, warnings: warnings });
+    }
+
+    // ------------------------------------------------------------ public: aperçu sur la vraie image
+
+    function grabFrames(o) {
+        var s = activeSeq(), f = tpf(s), ph = snap(tk(s.getPlayerPosition()), f), ref = refClip(s), track = ref ? ref.track : 0, cut = nearestEdit(s, track, ph), q = qeSeq(), files = [], times, i;
+        if (cut === null) cut = ph;
+        if (!q || !q.exportFramePNG) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
+        times = [Math.max(0, cut - f), cut];
+        for (i = 0; i < times.length; i++) {
+            files.push(o.folder + '/' + o.prefix + i);
+            q.exportFramePNG(timecodeOf(s, times[i]), files[i]);
+        }
+        return ok({ files: files, cut: secs(cut) });
+    }
+
+    // ------------------------------------------------------------ public: textes (MOGRT)
+
+    function setMgtText(item, text) {
+        var comp = null, i, p, v, obj;
+        try { comp = item.getMGTComponent(); } catch (e) {}
+        if (!comp) return false;
+        for (i = 0; i < comp.properties.numItems; i++) {
+            p = comp.properties[i];
+            try { v = p.getValue(); } catch (e2) { continue; }
+            if (typeof v !== 'string') continue;
+            obj = null;
+            if (/^\s*\{/.test(v)) { try { obj = eval('(' + v + ')'); } catch (e3) { obj = null; } }
+            if (obj && obj.textEditValue !== undefined) {
+                obj.textEditValue = text;
+                p.setValue(str(obj), true);
+                return true;
+            }
+            if (!obj && /source|text|texte|titre|title|lyric|parole/i.test(p.displayName)) {
+                p.setValue(text, true);
+                return true;
+            }
+        }
+        return false;
+    }
+
+    // Un texte : modèle .mogrt posé de start à end (s), texte remplacé, animation (fx) ajoutée.
+    function placeTitle(o) {
+        var s = activeSeq(), f = tpf(s), warnings = [], a = snap(o.start * TICKS, f), b = snap(o.end * TICKS, f), ti = o.track, it, j, comp, label = 'CutFX · Texte', textSet;
+        if (!s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un modèle de texte par script.');
+        if (!(b > a)) return fail('Durée nulle');
+        if (ti === null || ti === undefined) {
+            // Le modèle arrive avec sa propre durée : la piste doit être libre bien au-delà.
+            ti = pickTrack(s, o.minTrack || 0, a, Math.max(b, o.spanEnd ? o.spanEnd * TICKS : b) + 60 * TICKS, warnings);
+        }
+        it = s.importMGT(o.mogrt, String(a), ti, 0);
+        if (!it || !it.start) it = findItemAt(s, ti, a);
+        if (!it) return fail('Premiere n\'a pas posé le modèle de texte (fichier .mogrt valide ?)');
+        if (Math.abs(tk(it.end) - b) > 1) it.end = mkTime(b);
+        try { it.name = label; } catch (e) {}
+        textSet = setMgtText(findItemAt(s, ti, a), o.text);
+        if (!textSet) warnings.push('Texte non remplacé : ce modèle n\'a pas de champ texte modifiable');
+        for (j = 0; j < (o.fx || []).length; j++) {
+            try {
+                comp = addEffect(s, ti, a, o.fx[j], warnings);
+                if (comp) setProps(s, findItemAt(s, ti, a), comp, o.fx[j], a, f, warnings);
+            } catch (err) {
+                warnings.push(o.fx[j].names[0] + ' : ' + err.toString());
+            }
+        }
+        return ok({ created: [{ kind: 'adj', track: ti, start: a, name: label }], track: ti, warnings: warnings });
+    }
+
+    // ------------------------------------------------------------ overlays
+
+    function placeOverlay(s, ov, t, n, warnings) {
+        var f = tpf(s), pi = itemForPath(ov.path, 'CutFX Overlays'), src, dur, len = t.end - t.start, inT = 0, ti, it, r;
+        if (!pi) { warnings.push('Overlay introuvable : ' + ov.path); return null; }
+        if (ov.kind === 'image') {
+            src = pi;
+            ti = pickTrack(s, t.track + 1, t.start, t.start + Math.max(len, 30 * TICKS), warnings);
+            it = placeOn(s, ti, src, t.start, 0, len);
+        } else {
+            dur = mediaEndOf(pi);
+            if (dur && dur < len) { warnings.push('« ' + pi.name + ' » est plus court que l\'effet : raccourci'); len = Math.max(f, Math.floor(dur / f) * f); }
+            r = Math.abs(Math.sin((n + 1) * 12.9898 + (ov.seed || 1) * 78.233) * 43758.5453) % 1;
+            if (dur && ov.start === 'middle') inT = (dur - len) / 2;
+            else if (dur && ov.start === 'random') inT = r * (dur - len);
+            src = videoSourceOf(pi);
+            ti = pickTrack(s, t.track + 1, t.start, t.start + len, warnings);
+            it = placeOn(s, ti, src, t.start, inT, inT + len);
+        }
+        fixSpan(it, t.start, t.start + len);
+        try { it.name = (t.name || 'CutFX · Overlay') + ' ' + t.side.toUpperCase(); } catch (e) {}
+        return { item: findItemAt(s, ti, t.start), track: ti };
+    }
+
+    // Mode de fusion de l'Opacité du clip sélectionné (pour l'apprendre une fois).
+    function readBlend(o) {
+        var s = activeSeq(), sel = selectedVideo(s), c;
+        if (!sel.length) return fail('Sélectionne un clip dont tu as réglé le mode de fusion.');
+        c = componentByMatch(sel[0].item, 'AE.ADBE Opacity');
+        if (!c || !c.properties[1]) return fail('Opacité introuvable sur ce clip.');
+        return ok({ value: c.properties[1].getValue() });
+    }
+
     // ------------------------------------------------------------ public: speed ramps
     // Premiere does not expose Time Remapping to scripts, so a ramp is built from
     // constant-speed pieces: the zone is razored, each piece gets its speed and its
@@ -1040,6 +1453,18 @@ var CutFX = (function () {
     return {
         version: VERSION,
         compat: guard(compat),
+        markerList: guard(markerList),
+        addMarkers: guard(addMarkers),
+        clearAll: guard(clearAll),
+        musicInfo: guard(musicInfo),
+        projectRushes: guard(projectRushes),
+        placeRushes: guard(placeRushes),
+        cutAtTimes: guard(cutAtTimes),
+        syncInfo: guard(syncInfo),
+        moveClips: guard(moveClips),
+        grabFrames: guard(grabFrames),
+        placeTitle: guard(placeTitle),
+        readBlend: guard(readBlend),
         getContext: guard(getContext),
         resolve: guard(resolve),
         apply: guard(apply),

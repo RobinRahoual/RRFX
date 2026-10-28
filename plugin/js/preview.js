@@ -57,9 +57,25 @@
 
   let SHOTS = null;
   function shots() {
-    if (!SHOTS) SHOTS = { A: shotA(), B: shotB() };
+    if (!SHOTS) SHOTS = { A: shotA(), B: shotB(), real: false };
     return SHOTS;
   }
+
+  // Remplit le cadre 16:9 avec une image (recadrée au centre).
+  function cover(img) {
+    const c = makeCanvas(W, H), g = c.getContext('2d');
+    const iw = img.naturalWidth || img.videoWidth || img.width, ih = img.naturalHeight || img.videoHeight || img.height;
+    const k = Math.max(W / iw, H / ih);
+    g.fillStyle = '#000';
+    g.fillRect(0, 0, W, H);
+    g.drawImage(img, (W - iw * k) / 2, (H - ih * k) / 2, iw * k, ih * k);
+    return c;
+  }
+
+  // Les images de la séquence autour de la coupe remplacent les plans de test.
+  function setShots(a, b) { SHOTS = { A: cover(a), B: cover(b), real: true }; }
+  function resetShots() { SHOTS = null; }
+  const isReal = () => !!(SHOTS && SHOTS.real);
 
   // ---------------------------------------------------------------- state
 
@@ -81,7 +97,7 @@
   function stateAt(spec, i) {
     const s = baseState();
     if (!spec) return s;
-    spec.forEach(fx => fx.props.forEach(pr => {
+    spec.forEach(fx => !fx.overlay && fx.props.forEach(pr => {
       if (!pr.key) return;
       const v = valueAt(pr, i);
       switch (fx.type + '.' + pr.key) {
@@ -249,5 +265,5 @@
     g.restore();
   }
 
-  root.CutFXPreview = { W, H, stateAt, render, buildTimeline, renderTimelineFrame, drawRampScene, shots };
+  root.CutFXPreview = { W, H, stateAt, render, buildTimeline, renderTimelineFrame, drawRampScene, shots, setShots, resetShots, isReal, cover };
 })(typeof self !== 'undefined' ? self : this);

@@ -250,8 +250,53 @@
     }
   ];
 
+  // ---------------------------------------------------------------- animations de texte
+  // Entrée = côté POST (de l'état caché à l'état normal), sortie = côté PRE.
+  const backOut = t => { const c1 = 1.70158, c3 = c1 + 1, u = t - 1; return 1 + c3 * u * u * u + c1 * u * u; };
+  const TITLE_ANIMS = [
+    { id: 'fade', name: 'Fondu', frames: 6, curve: 'easeInOut', params: [],
+      build: c => [{ type: 'transform', props: { opacity: i => 100 - 100 * c.env(i) } }] },
+    { id: 'pop', name: 'Pop', frames: 7, noCurve: true, params: [range('amount', 'Rebond', 100, 0, 200, '%')],
+      build: c => {
+        // Progression vers l'état normal : 1 = visible ; avec un léger dépassement à l'entrée.
+        const shown = i => (c.side === 'post' ? backOut(1 - c.tp(i)) : 1 - c.tp(i) * c.tp(i));
+        const k = c.p.amount / 100;
+        const scale = i => { const v = shown(i); return 100 * Math.max(0, v > 1 ? 1 + (v - 1) * k : v); };
+        return [{ type: 'transform', props: { scale, opacity: i => c.clamp(100 * Math.min(1, shown(i) * 2), 0, 100) } }];
+      } },
+    { id: 'zoom-blur', name: 'Zoom flou', frames: 8, curve: 'expoIn', params: [range('amount', 'Zoom', 30, 0, 150, '%'), range('blur', 'Flou', 30, 0, 150, '')],
+      build: c => [
+        { type: 'transform', props: { scale: i => 100 + c.p.amount * c.env(i), opacity: i => 100 - 100 * c.env(i), compShutter: false, shutter: 180 } },
+        { type: 'gaussian', props: { blur: i => c.p.blur * c.env(i), repeat: true } }
+      ] },
+    { id: 'slide-up', name: 'Glissement', frames: 8, curve: 'expoIn', params: [select('dir', 'Depuis', 'down', [{ v: 'down', label: '↑' }, { v: 'up', label: '↓' }, { v: 'left', label: '→' }, { v: 'right', label: '←' }]), range('distance', 'Distance', 8, 0, 50, '%')],
+      build: c => {
+        const d = { down: [0, 1], up: [0, -1], left: [-1, 0], right: [1, 0] }[c.p.dir] || [0, 1], D = c.p.distance / 100;
+        return [
+          { type: 'transform', props: { position: i => [0.5 + d[0] * D * c.env(i), 0.5 + d[1] * D * c.env(i)], opacity: i => 100 - 100 * c.env(i), compShutter: false, shutter: 180 } },
+          { type: 'directional', props: { direction: d[0] ? 90 : 0, length: i => 60 * c.vel(i) * c.env(i) } }
+        ];
+      } },
+    { id: 'blur', name: 'Flou', frames: 8, curve: 'easeInOut', params: [range('blur', 'Flou', 40, 0, 200, '')],
+      build: c => [
+        { type: 'gaussian', props: { blur: i => c.p.blur * c.env(i), repeat: true } },
+        { type: 'transform', props: { opacity: i => 100 - 100 * c.env(i) } }
+      ] },
+    { id: 'impact', name: 'Impact', frames: 8, curve: 'expoIn', params: [range('amount', 'Secousse', 3, 0, 15, '%', 0.5)],
+      build: c => [{ type: 'transform', props: {
+        scale: i => 100 + 18 * c.env(i),
+        position: i => [0.5 + c.p.amount / 100 * c.env(i) * c.noise(i * 0.8, 3), 0.5 + c.p.amount / 100 * c.env(i) * c.noise(i * 0.8, 9)],
+        opacity: i => c.side === 'post' ? 100 : 100 - 100 * c.env(i),
+        compShutter: false, shutter: 220
+      } }] },
+    { id: 'none', name: 'Aucune', frames: 0, params: [], build: () => [] }
+  ];
+
   const byId = {};
   EFFECTS.forEach(e => { byId[e.id] = e; });
 
-  return { CATEGORIES, EFFECTS, byId };
+  const titleById = {};
+  TITLE_ANIMS.forEach(a => { titleById[a.id] = a; });
+
+  return { CATEGORIES, EFFECTS, byId, TITLE_ANIMS, titleById };
 });

@@ -23,9 +23,11 @@
       </div>
       <nav class="tabs" id="tabs">
         <button class="tab" data-tab="effects">Effets</button>
-        <button class="tab" data-tab="ramp">Speed ramp</button>
+        <button class="tab" data-tab="ramp">Rampe</button>
+        <button class="tab" data-tab="music">Musique</button>
+        <button class="tab" data-tab="titles">Textes</button>
         <button class="tab" data-tab="mine">Mes effets</button>
-        <button class="tab" data-tab="settings">Réglages</button>
+        <button class="tab" data-tab="settings" title="Réglages">⚙</button>
       </nav>
       <button class="cta" id="cta">Appliquer</button>
       <div id="status" class="status idle">
@@ -54,6 +56,8 @@
     <div class="scroll" id="scroll">
       <section class="view" id="view-effects"></section>
       <section class="view" id="view-ramp"></section>
+      <section class="view" id="view-music"></section>
+      <section class="view" id="view-titles"></section>
       <section class="view" id="view-mine"></section>
       <section class="view" id="view-settings"></section>
     </div>
@@ -61,6 +65,9 @@
   <div id="modal-root"></div>
 
   <script src="js/core.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/media.js"></script>
+  <script src="js/share.js"></script>
   <script src="js/library.js"></script>
   <script src="js/preview.js"></script>
   <script src="js/storage.js"></script>
@@ -69,6 +76,8 @@
   <script src="js/mock.js"></script>
   <script src="js/host.js"></script>
   <script src="js/widgets.js"></script>
+  <script src="js/music.js"></script>
+  <script src="js/titles.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

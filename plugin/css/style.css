@@ -119,9 +119,10 @@ body.scrubbing, body.scrubbing * { cursor: ew-resize !important; }
 
 /* ---------- Onglets ---------- */
 
-.tabs { display: flex; gap: 2px; margin: 0 -2px; border-bottom: 1px solid var(--border); }
+.tabs { display: flex; gap: 2px; margin: 0 -2px; border-bottom: 1px solid var(--border); overflow-x: auto; scrollbar-width: none; }
+.tabs::-webkit-scrollbar { display: none; }
 .tab {
-  position: relative; height: 28px; padding: 0 8px; border: 0; background: none;
+  position: relative; flex: none; height: 28px; padding: 0 7px; border: 0; background: none;
   color: var(--text-muted); cursor: pointer; font-weight: 600; white-space: nowrap;
 }
 .tab:hover { color: var(--text); }
@@ -314,3 +315,12 @@ textarea.code:focus { border-color: var(--accent); }
   font-weight: 700; font-size: 14px; cursor: pointer;
 }
 .button-secondary:hover { border-color: var(--text); }
+
+/* ---------- 1.3 : overlays, musique, textes, partage ---------- */
+
+.add-card { border-style: dashed; border-color: var(--field-border); }
+.add-thumb { display: flex; align-items: center; justify-content: center; font-size: 22px; color: var(--text-muted); background: transparent; }
+.add-card:hover .add-thumb { color: var(--text); }
+.wave-canvas { display: block; width: 100%; height: 90px; border-radius: 4px; background: var(--field); cursor: crosshair; touch-action: none; }
+textarea.lyrics { font-family: inherit; font-size: 12px; line-height: 1.5; white-space: pre-wrap; }
+textarea.share-code { word-break: break-all; white-space: pre-wrap; }

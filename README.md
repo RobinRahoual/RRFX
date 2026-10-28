@@ -3,11 +3,15 @@
 Plugin gratuit créé par **Robin Rahoual** — suis-moi sur Instagram : [@robin.rahoual](https://www.instagram.com/robin.rahoual/).
 
 Des **transitions et effets de clip musical posés en un clic autour des coupes** (flashs, flickers, flous, zooms,
-shakes, slides, glitchs, motion blur), des **speed ramps** qui ne décalent jamais la coupe, et **tes propres effets**
-capturés depuis Premiere pour les réutiliser partout.
+shakes, slides, glitchs, motion blur) et des **overlays** (light leaks, grain, flares…), des **speed ramps** qui ne
+décalent jamais la coupe, la **détection des temps forts** de la musique, le **montage automatique sur le rythme**, la
+**synchro son/image en un clic**, des **titres et paroles animés**, et **tes propres effets** capturés depuis Premiere,
+partageables par un simple code.
 
-**Ton clip n'est jamais modifié** : tout se passe sur des calques au-dessus (calques de réglage, ou copies du plan pour
-les rampes et le motion blur), que le bouton ↶ Annuler retire.
+**Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
+(`CutFX · …`). Seules la speed ramp et le motion blur (« CLIP FX ») se posent sur une copie du plan, parce qu'un
+calque de réglage ne peut ni ralentir ni mélanger les images (voir « Les copies du plan »). ↶ Annuler et
+*Tout effacer* retirent tout.
 
 **[⬇ Télécharger CutFX](https://github.com/RobinRahoual/CutFX/releases/latest)** — fichier `CutFX-<version>-installation.zip`.
 
@@ -41,7 +45,8 @@ dépend de l'onglet) et le **bloc d'état**.
 ### Onglet Effets
 
 1. Place la tête de lecture près d'une coupe, sélectionne des clips, ou pose des **marqueurs** sur les temps forts.
-2. Choisis un effet : le survol d'une vignette l'anime, l'aperçu montre le résultat sur deux plans de test.
+2. Choisis un effet : le survol d'une vignette l'anime, l'aperçu montre le résultat sur deux plans de test, ou sur
+   **ta vraie image** (bouton 📷 *Ma vraie image* : deux images de ta séquence autour de la coupe la plus proche).
 3. Règle-le comme dans *Options d'effet* : glisse les **valeurs bleues** (Maj = ×10, clic = saisie).
 4. Clique sur **Appliquer · <effet>**.
 
@@ -50,7 +55,8 @@ dépend de l'onglet) et le **bloc d'état**.
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
 | **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · Tête de lecture · Début / fin des clips · Clips entiers |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), ou **un effet au hasard** (même catégorie ou favoris) |
-| **Cible** | Calque de réglage au-dessus du clip (nommé `CutFX · …`, recommandé) ou **copie du plan** posée juste au-dessus (pour les effets qui ont besoin des images du plan) |
+| **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`CutFX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
+| **Intensité qui suit le volume** | En option : l'intensité de chaque coupe est modulée par le volume de la musique à cet instant (doux sur un couplet, fort sur un drop) ; *Influence* règle l'écart |
 | **Durée / Intensité** | Images de chaque côté · force de toute l'animation (0–200 %) |
 | **Courbe** | Courbe d'animation éditable ; la moitié POST est le miroir de la PRE |
 
@@ -62,9 +68,18 @@ tout reste modifiable ensuite dans *Options d'effet*.
 directionnel · Zoom in, Zoom out, Zoom rebond, Zoom rotation (flou de mouvement réel) · Shake, Impact, Bass drop ·
 Slide, Whip pan · Onde, Bulge, Glitch · Motion blur (vraie fusion d'images, sur une copie du plan).
 
+### Overlays
+
+Catégorie **Overlays** : *Ajouter des overlays* (vidéos MOV/MP4/WEBM ou images PNG/JPG) ou *Ajouter un dossier* (un
+pack entier). Un overlay se pose comme un effet — sur la coupe, toutes les coupes, les marqueurs… — sur une piste
+au-dessus du clip, avec un fondu d'opacité animé (durée, courbe, opacité), un point de départ au hasard dans la vidéo
+(différent à chaque coupe) et un **mode de fusion** (Écran par défaut). Si le mode posé n'est pas le bon dans ta
+version de Premiere : règle-le à la main sur un clip, sélectionne-le et clique sur **Apprendre**. Les fichiers sont
+importés dans le chutier « CutFX Overlays ».
+
 ### Les copies du plan
 
-Pour les rampes, le Motion blur et la cible « Copie du plan », CutFX pose **une copie du passage sur une piste juste
+Pour les rampes et le Motion blur (« CLIP FX », comme chez 2WIN), CutFX pose **une copie du passage sur une piste juste
 au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de réglage) et travaille dessus :
 
 - la copie vient d'un **sous-clip vidéo seule** du rush (`CutFX · <rush> · vidéo`, chutier « CutFX », créé une fois) :
@@ -86,6 +101,33 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
 Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
 constante (« CutFX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
 
+### Onglet Musique
+
+La musique est le plus long clip son de la séquence (ou le clip son sélectionné). **Analyser** la lit et affiche sa
+forme d'onde avec les temps forts. Formats : WAV, AIFF, MP3, et le son des MOV/MP4. Si le fichier est introuvable ou
+illisible, **Choisir un fichier…** : il est calé sur la musique de la séquence.
+
+- **Temps forts** : détection *grosse caisse*, *tous les coups*, *caisse claire et charleston* ou *grille du tempo*,
+  avec sensibilité, écart minimum et « garder un temps sur 1/2/4/8 ». Le bouton principal pose un **marqueur**
+  `CutFX · …` sur chacun (les anciens marqueurs CutFX de la zone sont remplacés). Les effets (Position *Marqueurs de
+  la séquence*), les textes et le montage auto s'en servent.
+- **Montage auto sur le rythme** : sélectionne des rushs dans le panneau *Projet* ; ils sont posés l'un après l'autre,
+  un plan tous les 1/2/4/8 temps, dans l'ordre ou au hasard, extrait au hasard / début / milieu / à la suite, sur une
+  piste libre et **en vidéo seule** (ta musique n'est pas touchée). **Découper les clips sélectionnés** coupe à chaque
+  marqueur.
+- **Synchroniser le son et l'image** (touche **S**) : pour un tournage en playback, CutFX compare le son de la caméra
+  à la musique (corrélation par bandes de fréquences) et **cale l'image en un clic**. Clips sélectionnés dans la
+  timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste
+  libre. Chaque clip affiche son décalage et la fiabilité ; un résultat douteux n'est pas appliqué.
+
+### Onglet Textes
+
+Titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mot par texte), choisis le rythme
+(*marqueurs*, *temps forts détectés* ou *durée fixe*) et l'animation (Fondu, Pop, Zoom flou, Glissement, Flou, Impact,
+réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèle de texte** `.mogrt` : ceux de
+Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
+*Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/CutFX/Titres`).
+
 ### Onglet Mes effets
 
 - **Preset** : sur un effet, **＋ Preset** garde tes réglages (catégorie « Mes effets »).
@@ -93,7 +135,9 @@ constante (« CutFX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux
   effets tiers compris — sélectionne-le dans la timeline et clique sur **Capturer la sélection**. Effets, valeurs et
   animations sont enregistrés ; tu le réappliques comme un effet intégré (durée réglable par étirement, miroir
   PRE/POST automatique).
-- **Importer / exporter** en `.json` pour sauvegarder ou partager tes effets.
+- **Partager** (⇪ sur un effet, ou *Tout partager*) : un **code** `CUTFX1:…` à envoyer en message ; la personne le
+  colle dans **Coller un code…**. Aucun chemin de fichier ni info perso dans le code.
+- **Importer / exporter** en `.json` pour sauvegarder tes effets.
 
 Tout est enregistré dans `Documents/CutFX/library.json`.
 
@@ -102,6 +146,10 @@ Tout est enregistré dans `Documents/CutFX/library.json`.
 Le bouton **↶ Annuler (n)** de la ligne d'état retire ce que CutFX a posé lors de la dernière opération : les calques
 de réglage, copies du plan et morceaux de rampe `CutFX · …`. Les 10 dernières opérations
 sont mémorisées, même après avoir fermé Premiere. Un calque renommé ou un clip modifié entre-temps n'est pas touché.
+
+**Tout effacer** (*Réglages > Nettoyage*, ou le menu du panneau) retire d'un coup tout ce que CutFX a posé dans la
+séquence ou dans la zone sélectionnée — calques, copies, overlays, textes `CutFX · …` — et, au choix, les marqueurs
+CutFX. Tes clips ne sont pas touchés.
 
 ### Suivi de l'opération
 
@@ -113,7 +161,7 @@ après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dan
 ### Sans cliquer : menu et raccourcis
 
 Le menu du panneau (☰ en haut à droite du panneau) propose : appliquer l'effet, appliquer la rampe, capturer,
-annuler, mode réduit.
+poser les temps forts, synchroniser, annuler, tout effacer, mode réduit.
 
 Quand le panneau CutFX est sélectionné (clique dedans), une touche suffit :
 
@@ -123,6 +171,8 @@ Quand le panneau CutFX est sélectionné (clique dedans), une touche suffit :
 | **R** | Appliquer la rampe |
 | **U** | Annuler la dernière opération |
 | **C** | Capturer la sélection |
+| **B** | Poser les marqueurs des temps forts |
+| **S** | Synchroniser la sélection sur la musique |
 | **Échap** | Arrêter l'opération en cours |
 
 Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche puis appuie sur la nouvelle
@@ -146,6 +196,18 @@ il a besoin existent toujours et affiche « Plugin à mettre à jour » dans le 
 Si un effet reste introuvable : *Réglages > Avancé*, *Lister les effets vidéo*, puis ajoute son nom exact, par ex.
 `{"wave": {"names": ["Déformation de la vague"]}}`. *Analyser le clip sélectionné* liste les paramètres de chaque
 effet avec leur numéro.
+
+### Fonctions de Premiere à confirmer
+
+Ces fonctions sont utilisées par CutFX 1.3 mais peu documentées par Adobe ; elles sont testées sur une timeline
+simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le journal (*Voir le détail*) dit laquelle :
+
+- `exportFramePNG` (aperçu sur la vraie image) ;
+- `importMGT` et le remplacement du texte d'un `.mogrt` (onglet Textes) ;
+- le numéro du **mode de fusion** dans l'Opacité (overlays : bouton *Apprendre* en secours) ;
+- `createMarker` / `move` (marqueurs, synchro) ;
+- le décodage du son **AAC** des MOV/MP4 dans le panneau : s'il échoue, exporte le son en WAV, ou utilise
+  *Clip > Synchroniser* de Premiere.
 
 ## Performances
 
@@ -180,9 +242,14 @@ Change `version` dans `package.json`, `plugin/CSXS/manifest.xml`, `plugin/js/hos
 plugin/                  l'extension CEP (copiée telle quelle dans le dossier des extensions Adobe)
   CSXS/manifest.xml      manifeste (Premiere Pro 15.0+)
   index.html, css/       panneau
-  js/main.js             onglets, bloc d'état, application, historique, raccourcis, menu
+  js/main.js             onglets, bloc d'état, application, overlays, partage, historique, raccourcis, menu
+  js/music.js            onglet Musique : temps forts, montage auto, synchro son/image, volume
+  js/titles.js           onglet Textes : titres et paroles animés (.mogrt)
+  js/audio.js            analyse du son : filtres, attaques, tempo, volume, corrélation (sans DOM, testé)
+  js/media.js            lecture du son des WAV / MOV / MP4 (PCM et AAC) par morceaux
+  js/share.js            codes de partage CUTFX1
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)
-  js/library.js          les 20 recettes d'effets (ajouter un effet = ajouter une entrée)
+  js/library.js          les 20 recettes d'effets + les animations de texte
   js/preview.js          aperçus simulés
   js/widgets.js          composants façon Spectrum, valeurs glissables, éditeurs de courbes
   js/storage.js          bibliothèque perso sur disque

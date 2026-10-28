@@ -92,6 +92,8 @@ function makeEnv(fps) {
     isSpeedReversed() { return false; }
     setSelected(b) { this.selected = b; }
     remove() { this.track.items.splice(this.track.items.indexOf(this), 1); }
+    move(t) { const d = val(t); this._s += d; this._e += d; }
+    getMGTComponent() { return this._mgt || null; }
   }
 
   class Track {
@@ -131,6 +133,7 @@ function makeEnv(fps) {
         b.children.push(me); parents.set(me, b);
       },
       createBin(n) { const b = projItem(n, 2, 0); me.children.push(b); parents.set(b, me); return b; },
+      getMediaPath() { return me.path || ''; },
       setInPoint(s) { this._inP = s * TICKS; }, setOutPoint(s) { this._outP = s * TICKS; },
       getInPoint() { return T(this._inP); }, getOutPoint() { return T(this._outP); },
       clearInPoint() { this._inP = 0; }, clearOutPoint() { this._outP = this._dur; }
@@ -141,27 +144,50 @@ function makeEnv(fps) {
   const bin = projItem('Footage', 2, 0);
   const media = projItem('A001.mov', 1, 400 * F);
   const media2 = projItem('B002.mov', 1, 400 * F);
+  const song = projItem('song.wav', 1, 3000 * F);
+  media.path = '/rushs/A001.mov'; media2.path = '/rushs/B002.mov'; song.path = '/music/song.wav';
   const adj = projItem('Calque de réglage', 1, 125 * F);
   root.children.push(bin, adj);
-  bin.children.push(media, media2);
+  bin.children.push(media, media2, song);
   [bin, adj].forEach(x => parents.set(x, root));
-  [media, media2].forEach(x => parents.set(x, bin));
+  [media, media2, song].forEach(x => parents.set(x, bin));
   project.rootItem = root;
 
   const seq = {
     name: 'Seq 01', timebase: String(F), frameSizeHorizontal: 1920, frameSizeVertical: 1080,
     _ph: 0, videoTracks: null,
     getPlayerPosition() { return T(this._ph); },
-    getSelection() { const out = []; this.videoTracks.forEach(t => t.items.forEach(i => { if (i.selected) out.push(i); })); return out; },
+    getSelection() { const out = []; this.videoTracks.concat(this.audioTracks).forEach(t => t.items.forEach(i => { if (i.selected) out.push(i); })); return out; },
     getSettings() { return { videoFrameRate: T(F), videoDisplayFormat: 101 }; },
     _markers: [],
+    // Les tests posent des nombres (ticks) ; createMarker ajoute des objets marqueur.
     get markers() {
-      const list = this._markers.slice().sort((a, b) => a - b).map(t => ({ start: T(t) }));
-      return { numMarkers: list.length, getFirstMarker: () => list[0] || null, getNextMarker: m => list[list.indexOf(m) + 1] || null };
+      const self = this;
+      self._markers = self._markers.map(x => (typeof x === 'number' ? { _t: x, name: '' } : x));
+      self._markers.forEach(m => { m.start = T(m._t); });
+      const sorted = () => self._markers.slice().sort((x, y) => x._t - y._t);
+      return {
+        get numMarkers() { return self._markers.length; },
+        getFirstMarker: () => sorted()[0] || null,
+        getNextMarker: m => { const l = sorted(); return l[l.indexOf(m) + 1] || null; },
+        createMarker(sec) { const m = { _t: Math.round(sec * TICKS), name: '', start: T(Math.round(sec * TICKS)), setColorByIndex(c) { this.color = c; } }; self._markers.push(m); return m; },
+        deleteMarker(m) { self._markers.splice(self._markers.indexOf(m), 1); }
+      };
+    },
+    importMGT(path, ticks, vIdx) {
+      const pi = projItem(path.split('/').pop(), 1, 250 * F);
+      const a = Number(ticks), tr = this.videoTracks[vIdx];
+      tr.items.slice().forEach(x => { if (x._s < a + 250 * F && a < x._e) throw new Error('sim: importMGT over a clip'); });
+      const it = tr.add(new Item(this, pi, a, a + 250 * F, 0, 'Graphic'));
+      it._mgt = { properties: coll([new Param('Source Text', '{"textEditValue":"Title","fontSize":40}'), new Param('Position', [0.5, 0.5])]) };
+      mgtCalls.push(path);
+      return it;
     },
     unlinkSelection() { this._unlinked = true; }
   };
   seq.videoTracks = coll([new Track(seq, 0), new Track(seq, 1), new Track(seq, 2)]);
+  seq.audioTracks = coll([new Track(seq, 0), new Track(seq, 1)]);
+  Object.defineProperty(seq.audioTracks, 'numTracks', { get: () => seq.audioTracks.length });
   Object.defineProperty(seq.videoTracks, 'numTracks', { get: () => seq.videoTracks.length });
   project.activeSequence = seq;
 
@@ -182,11 +208,34 @@ function makeEnv(fps) {
       }
     };
   }
+  function qeTrack(tr) {
+    const items = tr.items.slice().sort((a, b) => a._s - b._s);
+    const list = [];
+    let cur = 0;
+    items.forEach(x => { if (x._s > cur) list.push({ type: 'Empty', start: { ticks: String(cur) } }); list.push(qeItem(x)); cur = x._e; });
+    return {
+      numItems: list.length, getItemAt: k => list[k],
+      razor(tc) {
+        const t = Number(String(tc).slice(1));
+        const it = tr.items.find(x => x._s < t && t < x._e);
+        if (!it) return;
+        const b = new Item(seq, it.projectItem, t, it._e, it._in + (t - it._s) * it._speed, it.name);
+        b._speed = it._speed; b._out = it._out; b.mediaType = it.mediaType;
+        it._out = it._in + (t - it._s) * it._speed; it._e = t;
+        tr.add(b);
+      }
+    };
+  }
+  const frames = [], mgtCalls = [];
+  let projectSelection = null;
   const qe = {
     project: {
       getActiveSequence() {
         return {
-          getVideoTrackAt(i) {
+          exportFramePNG(tc, path) { frames.push([Number(String(tc).slice(1)), path]); },
+          getAudioTrackAt(i) { return qeTrack(seq.audioTracks[i]); },
+          getVideoTrackAt(i) { return qeTrack(seq.videoTracks[i]); },
+          _unused(i) {
             const tr = seq.videoTracks[i];
             const items = tr.items.slice().sort((a, b) => a._s - b._s);
             const list = [];
@@ -216,11 +265,15 @@ function makeEnv(fps) {
       getVideoEffectList() { return Object.keys(EFFECTS); }
     }
   };
-  const app = { project, version: '25.6.0', enableQE() {}, getCurrentProjectViewSelection() { return [adj]; } };
+  project.importFiles = (paths, suppress, targetBin) => {
+    paths.forEach(p => { const it = projItem(p.split('/').pop(), 1, /\.(png|jpg)$/i.test(p) ? 125 * F : 60 * F); it.path = p; targetBin.children.push(it); parents.set(it, targetBin); });
+    return true;
+  };
+  const app = { project, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
 
   const ctx = vm.createContext({ app, qe, Time });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
-  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('CutFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, song, projItem, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('CutFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };

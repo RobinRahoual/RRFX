@@ -158,7 +158,7 @@
     },
     opacity: {
       matchName: 'AE.ADBE Opacity', intrinsic: 'opacity', names: [],
-      props: { opacity: 0 }
+      props: { opacity: 0, blend: 1 }
     }
   };
 
@@ -405,6 +405,123 @@
     return out;
   }
 
+  // ---------------------------------------------------------------- overlays
+  // Un overlay (fichier vidéo ou image) posé sur la coupe : opacité qui monte jusqu'à la
+  // coupe (PRE) ou redescend après (POST), mode de fusion fixe.
+  function compileOverlay(params, side, N, blendValue) {
+    N = Math.max(1, Math.round(N));
+    const ctx = makeCtx(N, side, params, 25), max = clamp(params.intensity == null ? 100 : params.intensity, 0, 100);
+    const values = [];
+    for (let i = 0; i < N; i++) values.push(round3(max * ctx.env(i)));
+    const props = [values.every(v => v === values[0]) ? { key: 'opacity', index: 0, static: values[0] } : { key: 'opacity', index: 0, values }];
+    if (blendValue !== null && blendValue !== undefined && blendValue !== '') props.push({ key: 'blend', index: 1, static: Number(blendValue), raw: true });
+    return [{ type: 'opacity', names: [], matchName: 'AE.ADBE Opacity', intrinsic: 'opacity', overlay: true, props }];
+  }
+
+  // ---------------------------------------------------------------- textes et paroles
+
+  function splitLyrics(text, mode) {
+    const lines = String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+    if (mode === 'words') return lines.join(' ').split(/\s+/).filter(Boolean);
+    return lines;
+  }
+
+  // Place chaque morceau de texte sur un temps : du temps i au temps i+1 (ou durée fixe).
+  // opts : { from, fixed (s), lastDur (s), maxDur (s), gap (s) }
+  function titleTimeline(chunks, times, opts) {
+    opts = opts || {};
+    const from = opts.from || 0, out = [];
+    if (opts.fixed) {
+      chunks.forEach((text, i) => out.push({ text, start: from + i * opts.fixed, end: from + (i + 1) * opts.fixed - (opts.gap || 0) }));
+      return out;
+    }
+    const t = (times || []).filter(x => x >= from - 1e-6).sort((a, b) => a - b);
+    for (let i = 0; i < chunks.length && i < t.length; i++) {
+      let end = i + 1 < t.length ? t[i + 1] - (opts.gap || 0) : t[i] + (opts.lastDur || 2);
+      if (opts.maxDur) end = Math.min(end, t[i] + opts.maxDur);
+      if (end > t[i]) out.push({ text: chunks[i], start: t[i], end });
+    }
+    return out;
+  }
+
+  // Animation d'entrée (POST : de l'état caché à l'état normal) et de sortie (PRE),
+  // réunies sur un seul jeu d'images clés couvrant toute la durée du texte.
+  function titleSpec(anim, params, durFrames, inF, outF, fps, registry) {
+    durFrames = Math.max(1, Math.round(durFrames));
+    inF = Math.max(0, Math.min(Math.round(inF), durFrames));
+    outF = Math.max(0, Math.min(Math.round(outF), durFrames - inF));
+    const parts = [];
+    if (inF) parts.push({ at: 0, spec: compileEffect(anim, params, 'post', inF, fps, registry) });
+    if (outF) parts.push({ at: durFrames - outF, spec: compileEffect(anim, params, 'pre', outF, fps, registry) });
+    const byType = new Map();
+    parts.forEach(part => part.spec.forEach(fx => {
+      if (!byType.has(fx.type)) byType.set(fx.type, { fx: Object.assign({}, fx, { props: [] }), props: new Map() });
+      const slot = byType.get(fx.type);
+      fx.props.forEach(pr => {
+        if (!slot.props.has(pr.key)) slot.props.set(pr.key, Object.assign({}, pr, { keys: [], values: undefined, static: undefined, consts: [] }));
+        const acc = slot.props.get(pr.key);
+        if (pr.values) pr.values.forEach((v, i) => acc.keys.push([part.at + i, v]));
+        else acc.consts.push([part.at, pr.static]);
+      });
+    }));
+    const out = [];
+    byType.forEach(slot => {
+      slot.props.forEach(acc => {
+        const p = Object.assign({}, acc);
+        delete p.values; delete p.static; delete p.consts;
+        if (!acc.keys.length) {
+          delete p.keys;
+          p.static = acc.consts[0][1];
+        } else {
+          // Une valeur constante d'une des deux parties (ex. pas d'animation de sortie) tient sa plage.
+          acc.consts.forEach(([at, v]) => acc.keys.push([at, v]));
+          p.keys = acc.keys.sort((a, b) => a[0] - b[0]);
+        }
+        slot.fx.props.push(p);
+      });
+      out.push(slot.fx);
+    });
+    return out;
+  }
+
+  // ---------------------------------------------------------------- montage auto sur le rythme
+
+  // beats : temps (s) triés ; rushes : [{ id, inT, outT }] (plage utilisable, s).
+  // opts : { every, order: 'sequence' | 'random', pick: 'start' | 'middle' | 'random' | 'continue', seed }
+  function planAutoEdit(beats, rushes, opts) {
+    opts = opts || {};
+    const every = Math.max(1, Math.round(opts.every || 1)), out = [];
+    if (!rushes.length || beats.length < 2) return out;
+    const t = beats.slice().sort((a, b) => a - b), seed = opts.seed || 1;
+    let n = 0, cycle = [], last = -1;
+    const cursor = rushes.map(r => r.inT);
+    const nextRush = k => {
+      if (opts.order !== 'random') return k % rushes.length;
+      if (!cycle.length) {
+        cycle = rushes.map((r, i) => i);
+        for (let i = cycle.length - 1; i > 0; i--) { const j = Math.floor(hash(n * 31 + i, seed) * (i + 1)); const x = cycle[i]; cycle[i] = cycle[j]; cycle[j] = x; }
+        if (cycle.length > 1 && cycle[cycle.length - 1] === last) { const x = cycle[0]; cycle[0] = cycle[cycle.length - 1]; cycle[cycle.length - 1] = x; }
+      }
+      return cycle.pop();
+    };
+    for (let k = 0; k + every < t.length; k += every, n++) {
+      const ri = nextRush(n), r = rushes[ri], dur = Math.max(0, r.outT - r.inT);
+      last = ri;
+      const want = t[k + every] - t[k], len = Math.min(want, dur);
+      if (len <= 0) continue;
+      let srcIn = r.inT;
+      if (opts.pick === 'middle') srcIn = r.inT + (dur - len) / 2;
+      else if (opts.pick === 'random') srcIn = r.inT + hash(n * 7 + 3, seed + 11) * (dur - len);
+      else if (opts.pick === 'continue') {
+        if (cursor[ri] + len > r.outT) cursor[ri] = r.inT;
+        srcIn = cursor[ri];
+        cursor[ri] += len;
+      }
+      out.push({ rush: ri, id: r.id, seqStart: t[k], seqEnd: t[k] + len, srcIn, short: len < want - 1e-6 });
+    }
+    return out;
+  }
+
   // ---------------------------------------------------------------- speed ramps
   // Points: [{ t: 0..1, v: speed % }]. Interpolated in log space with a
   // monotone cubic so the curve never overshoots between points.
@@ -474,6 +591,7 @@
     clamp, lerp, CURVE_PRESETS, curveValue, bezier, hash, smoothNoise,
     REGISTRY, EFFECT_PATTERNS, normName, resolveEffectNames, mergeRegistry, typeForMatchName, keyForIndex,
     paramDefaults, makeCtx, compileEffect, keysFromValues, toWire, resampleValues, fitValues, compileCaptured,
+    compileOverlay, splitLyrics, titleTimeline, titleSpec, planAutoEdit,
     rampFunction, rampPieces, rampSourceFrames, RAMP_PRESETS
   };
 });

@@ -3,7 +3,8 @@
   'use strict';
   const Core = window.CutFXCore, Lib = window.CutFXLibrary, Pv = window.CutFXPreview;
   const Store = window.CutFXStorage, Host = window.CutFXHost, Keys = window.CutFXShortcuts, Updates = window.CutFXUpdates;
-  const { h, hotText, actionGroup, picker, checkbox, radioGroup, row, section, CurveEditor, RampEditor, Player } = window.CutFXUI;
+  const Audio = window.CutFXAudio, Media = window.CutFXMedia, Share = window.CutFXShare;
+  const { h, hotText, actionGroup, picker, checkbox, row, section, CurveEditor, RampEditor, Player } = window.CutFXUI;
 
   const INSTAGRAM_URL = 'https://www.instagram.com/robin.rahoual/';
   const LONG_TASK_MS = 8000; // au-delà, signal de fin
@@ -34,6 +35,7 @@
   const DEFAULT_SETTINGS = {
     target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', registry: {},
     tab: 'effects', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
+    volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false,
     ramp: { points: Core.RAMP_PRESETS.intoCut.points, frames: 12, placement: 'pre', segments: 10, anchor: 'auto', interp: 'keep', preset: 'intoCut' }
   };
 
@@ -52,7 +54,14 @@
   const settings = () => S.lib.settings;
   const registry = () => Core.mergeRegistry(settings().registry, S.resolved);
   const fps = () => (S.ctx && S.ctx.fps) || 25;
-  const catLabel = id => (Lib.CATEGORIES.find(c => c.id === id) || { label: id === 'mine' ? 'Mes effets' : id }).label;
+  const CATS = Lib.CATEGORIES.concat([{ id: 'overlay', label: 'Overlays' }]);
+  const catLabel = id => (CATS.find(c => c.id === id) || { label: id === 'mine' ? 'Mes effets' : id }).label;
+  // Modes de fusion de l'Opacité de Premiere (valeurs de script) et leur équivalent pour l'aperçu.
+  const BLENDS = [
+    { v: 8, label: 'Écran', css: 'screen' }, { v: 10, label: 'Densité linéaire - (Ajout)', css: 'lighter' },
+    { v: 7, label: 'Éclaircir', css: 'lighten' }, { v: 12, label: 'Incrustation', css: 'overlay' },
+    { v: 13, label: 'Lumière tamisée', css: 'soft-light' }, { v: 3, label: 'Produit', css: 'multiply' }, { v: 0, label: 'Normal', css: 'source-over' }
+  ];
   const plural = (n, one, many) => n + ' ' + (n > 1 ? (many || one + 's') : one);
   const errorMessage = e => (e && e.message ? e.message : String(e));
   const clone = o => JSON.parse(JSON.stringify(o));
@@ -328,12 +337,14 @@
         out.push({ key: 'u:' + item.id, kind: 'captured', name: item.name, cat: item.cat || 'mine', def: null, item });
       }
     });
+    (settings().overlays || []).forEach(o => out.push({ key: 'o:' + o.id, kind: 'overlay', name: o.name, cat: 'overlay', def: null, overlay: o }));
     return out;
   }
 
   const entryByKey = key => entries().find(e => e.key === key) || null;
 
   function defaultParams(entry) {
+    if (entry.kind === 'overlay') return { frames: 10, intensity: 85, curve: Core.curveValue('easeInOut'), start: entry.overlay.start || 'random' };
     if (entry.kind === 'captured') return { frames: Math.max(1, entry.item.data.frames || 8), stretch: true, mirror: true };
     const p = Core.paramDefaults(entry.def);
     if (entry.kind === 'preset') Object.assign(p, clone(entry.item.data.params || {}));
@@ -341,12 +352,14 @@
   }
 
   function compileFor(entry, params, side, N, rate) {
+    if (entry.kind === 'overlay') return Core.compileOverlay(params, side, N, settings().overlayBlend);
     if (entry.kind === 'captured') return Core.compileCaptured(entry.item.data, side, N, { stretch: params.stretch, mirror: params.mirror }, registry());
     return Core.compileEffect(entry.def, params, side, N, rate, registry());
   }
 
-  // Les effets qui ont besoin des images du plan (Écho) se posent sur une copie du plan.
-  const targetFor = entry => (entry.def && entry.def.target ? entry.def.target : settings().target);
+  // Tous les effets se posent sur un calque de réglage. Seuls ceux qui ont besoin des images
+  // du plan (Motion blur / Écho : « CLIP FX ») se posent sur une copie du plan.
+  const targetFor = entry => (entry.kind === 'overlay' ? 'overlay' : entry.def && entry.def.target ? entry.def.target : 'adjustment');
 
   function activeSides() {
     const pl = settings().placement, side = settings().side;
@@ -374,7 +387,135 @@
     return Pv.buildTimeline(specs, { pre: N, post: N }, 6);
   }
 
+  // ---------------------------------------------------------------- overlays (médias)
+
+  const fileURL = p => {
+    const u = String(p).replace(/\\/g, '/');
+    return 'file://' + (u[0] === '/' ? '' : '/') + encodeURI(u).replace(/#/g, '%23').replace(/\?/g, '%3F');
+  };
+  const ovMedia = new Map();
+  // L'image ou la vidéo d'un overlay, chargée une fois (lecture en boucle, muette).
+  function overlayMedia(o, onReady) {
+    let m = ovMedia.get(o.id);
+    if (!m) {
+      const isImage = o.kind === 'image';
+      const el = isImage ? new Image() : document.createElement('video');
+      m = { el, ready: false, waiting: [] };
+      ovMedia.set(o.id, m);
+      const ok = () => { m.ready = true; m.waiting.splice(0).forEach(f => f()); };
+      if (isImage) el.onload = ok;
+      else {
+        el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto';
+        el.addEventListener('loadeddata', () => { try { el.currentTime = Math.min(1, (el.duration || 2) * 0.3); } catch (e) { /* lecture seule */ } ok(); }, { once: true });
+      }
+      el.onerror = () => { m.failed = true; };
+      el.src = o.url || fileURL(o.path);
+    }
+    if (m.ready) onReady && onReady(m);
+    else if (onReady) m.waiting.push(() => onReady(m));
+    return m;
+  }
+
+  function blendCss(v) { return (BLENDS.find(b => b.v === Number(v)) || BLENDS[0]).css; }
+
+  function drawOverlayOn(g, entry, alpha) {
+    const m = overlayMedia(entry.overlay);
+    if (!m.ready || alpha <= 0.001) return;
+    const el = m.el, cw = g.canvas.width, ch = g.canvas.height;
+    const iw = el.videoWidth || el.naturalWidth || 16, ih = el.videoHeight || el.naturalHeight || 9, k = Math.max(cw / iw, ch / ih);
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.globalAlpha = Math.min(1, alpha);
+    g.globalCompositeOperation = blendCss(settings().overlayBlend);
+    try { g.drawImage(el, (cw - iw * k) / 2, (ch - ih * k) / 2, iw * k, ih * k); } catch (e) { /* vidéo pas encore lisible */ }
+    g.restore();
+  }
+
+  const OVERLAY_FILES = /\.(mov|mp4|m4v|webm|png|jpe?g)$/i;
+  function overlayFrom(file) {
+    const p = typeof file === 'string' ? file : file.path || file.name;
+    const name = String(p).split(/[\\/]/).pop().replace(/\.[^.]+$/, '');
+    return { id: uid(), name, path: p, kind: /\.(png|jpe?g)$/i.test(p) ? 'image' : 'video', start: 'random', url: typeof file === 'string' ? undefined : file.url };
+  }
+  function addOverlayList(list) {
+    const st = settings(), known = new Set(st.overlays.map(o => o.path));
+    const fresh = list.map(overlayFrom).filter(o => OVERLAY_FILES.test(o.path) && !known.has(o.path));
+    if (!fresh.length) { status.finish('warn', 'Aucun overlay ajouté', 'Formats pris en charge : MOV, MP4, WEBM, PNG, JPG (ou déjà dans la liste).'); return; }
+    st.overlays = st.overlays.concat(fresh);
+    persist();
+    S.cat = 'overlay';
+    S.cur = entryByKey('o:' + fresh[0].id);
+    S.params = defaultParams(S.cur);
+    renderEffectsView();
+    status.finish('ok', plural(fresh.length, 'overlay ajouté', 'overlays ajoutés'), 'Choisis-en un, règle sa durée et son mode de fusion, puis applique-le sur tes coupes.');
+  }
+  function addOverlays(fromFolder) {
+    if (fromFolder === true) {
+      const dirs = Store.pickFiles('Choisir un dossier d\'overlays', [], true);
+      if (dirs && dirs.length) addOverlayList(Store.listFiles(dirs[0], OVERLAY_FILES, 200, 3));
+      return;
+    }
+    const picked = Store.pickFiles('Choisir des overlays (vidéos ou images)', ['mov', 'mp4', 'm4v', 'webm', 'png', 'jpg', 'jpeg']);
+    if (picked) { if (picked.length) addOverlayList(picked); return; }
+    // Hors de Premiere (démo) : sélecteur du navigateur.
+    const input = h('input', { type: 'file', class: 'hidden', multiple: true, accept: 'video/*,image/png,image/jpeg' });
+    input.addEventListener('change', () => addOverlayList(Array.from(input.files).map(f => ({ name: f.name, url: URL.createObjectURL(f) }))));
+    input.click();
+  }
+  async function learnBlend() {
+    const r = await Host.call('readBlend', {});
+    if (!r.ok) return status.finish('error', 'Mode de fusion illisible', r.error);
+    settings().overlayBlend = Number(r.value);
+    settings().overlayBlendLearned = true;
+    persist();
+    renderInspector();
+    const known = BLENDS.find(b => b.v === Number(r.value));
+    status.finish('ok', 'Mode de fusion appris', (known ? known.label : 'valeur ' + r.value) + ' : utilisé pour tous les overlays.');
+  }
+
+  // Aperçu sur la vraie image : 2 images exportées autour de la coupe la plus proche.
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const img = new Image();
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error('image illisible'));
+      img.src = src;
+    });
+  }
+  function grabRealFrames() {
+    return runTask('Aperçu réel', async () => {
+      const dir = Store.cacheDir();
+      if (!dir) return { kind: 'warn', title: 'Disponible dans Premiere', detail: 'L\'aperçu sur ta séquence exporte deux images de la timeline : il faut le panneau dans Premiere.' };
+      Store.listFiles(dir, /^cutfx-frame-/, 50, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
+      status.phase('Export de deux images autour de la coupe');
+      const r = await Host.call('grabFrames', { folder: dir.replace(/\\/g, '/'), prefix: 'cutfx-frame-' + uid() + '-' });
+      if (!r.ok) return { kind: 'error', title: 'Aperçu réel impossible', detail: r.error };
+      // Premiere écrit les fichiers après coup : on attend qu'ils existent (avec ou sans .png).
+      const found = [];
+      for (let t = 0; t < 40 && found.length < r.files.length; t++) {
+        found.length = 0;
+        r.files.forEach(f => { const g = [f, f + '.png'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0); if (g) found.push(g); });
+        if (found.length < r.files.length) await new Promise(res => setTimeout(res, 150));
+      }
+      if (found.length < r.files.length) return { kind: 'error', title: 'Aperçu réel impossible', detail: 'Premiere n\'a pas écrit les images (' + dir + ').' };
+      const imgs = await Promise.all(found.map(f => loadImage(fileURL(f) + '?' + Date.now())));
+      Pv.setShots(imgs[0], imgs[1]);
+      renderInspector();
+      return { kind: 'ok', title: 'Aperçu sur ta séquence', detail: 'Images autour de la coupe à ' + r.cut.toFixed(2) + ' s. « Plans de test » pour revenir.' };
+    });
+  }
+  function useTestShots() {
+    Pv.resetShots();
+    renderInspector();
+  }
+
   function drawThumb(canvas, entry) {
+    if (entry.kind === 'overlay') {
+      const g = canvas.getContext('2d');
+      Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
+      overlayMedia(entry.overlay, () => { Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null); drawOverlayOn(g, entry, 0.9); });
+      return;
+    }
     try {
       const p = defaultParams(entry);
       const side = entry.kind === 'captured' ? (entry.item.data.origin || 'post') : 'pre';
@@ -392,6 +533,7 @@
   let thumbAnim = null;
   function animateThumb(canvas, entry) {
     stopThumb();
+    if (entry.kind === 'overlay') return;
     let frames;
     try { frames = previewFrames(entry, defaultParams(entry), ['pre', 'post']); } catch (e) { return; }
     let n = 0, last = 0;
@@ -422,7 +564,7 @@
     view.appendChild(h('div', { class: 'search' }, search, fav));
 
     const chips = h('div', { class: 'chips' });
-    [{ id: 'all', label: 'Tout' }].concat(Lib.CATEGORIES, [{ id: 'mine', label: 'Mes effets' }]).forEach(c => {
+    [{ id: 'all', label: 'Tout' }].concat(CATS, [{ id: 'mine', label: 'Mes effets' }]).forEach(c => {
       const b = h('button', { class: 'action' + (S.cat === c.id ? ' selected' : '') }, c.label);
       b.addEventListener('click', () => {
         S.cat = c.id;
@@ -456,7 +598,18 @@
     stopThumb();
     grid.innerHTML = '';
     const list = visibleEntries();
+    if (S.cat === 'overlay') {
+      const add = h('div', { class: 'card add-card', title: 'Light leaks, grain, poussière, flares… (vidéos ou images)' }, h('div', { class: 'thumb add-thumb' }, '＋'), h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, 'Ajouter des overlays')));
+      add.addEventListener('click', () => addOverlays(false));
+      grid.appendChild(add);
+      if (Store.onDisk) {
+        const folder = h('div', { class: 'card add-card', title: 'Ajoute toutes les vidéos et images d\'un dossier (pack d\'overlays)' }, h('div', { class: 'thumb add-thumb' }, '▤'), h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, 'Ajouter un dossier')));
+        folder.addEventListener('click', () => addOverlays(true));
+        grid.appendChild(folder);
+      }
+    }
     if (!list.length) {
+      if (S.cat === 'overlay') return;
       grid.appendChild(h('div', { class: 'empty' }, S.cat === 'mine'
         ? 'Aucun effet perso : enregistre un preset (« ＋ Preset » sur un effet) ou capture un clip dans « Mes effets ».'
         : 'Aucun effet ne correspond.'));
@@ -465,7 +618,7 @@
     list.forEach(e => {
       const cv = h('canvas', { width: 160, height: 90 });
       const card = h('div', { class: 'card' + (S.cur && S.cur.key === e.key ? ' on' : ''), 'data-key': e.key, title: e.def ? e.def.desc : 'Effet capturé' },
-        h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'captured' ? 'capturé' : 'preset') : null),
+        h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, ({ captured: 'capturé', overlay: 'overlay' })[e.kind] || 'preset') : null),
         h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, e.name),
           e.def && e.def.target ? h('span', { class: 'tag' }, 'COPIE') : null,
           isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null));
@@ -524,9 +677,10 @@
     save.addEventListener('click', saveAsPreset);
     ins.appendChild(h('div', { class: 'effect-head' },
       h('span', { class: 'effect-name' }, e.name),
-      h('span', { class: 'badge' }, e.kind === 'captured' ? 'capturé' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
+      h('span', { class: 'badge' }, e.kind === 'captured' ? 'capturé' : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
       h('div', { class: 'effect-tools' }, star, save)));
     if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
+    if (e.kind === 'overlay') ins.appendChild(h('div', { class: 'note' }, e.overlay.path || e.overlay.name));
 
     // Aperçu
     const cv = h('canvas', { class: 'pv-canvas', width: 640, height: 360 });
@@ -540,6 +694,10 @@
       draw: n => {
         if (!pvFrames[n]) return;
         Pv.renderTimelineFrame(g, pvFrames, n);
+        if (S.cur && S.cur.kind === 'overlay') {
+          const f = pvFrames[n], pr = f.spec && f.spec[0].props.find(x => x.key === 'opacity');
+          if (pr) drawOverlayOn(g, S.cur, (pr.values ? pr.values[Math.min(f.i, pr.values.length - 1)] : pr.static) / 100);
+        }
         const head = $('pv-head');
         if (head) head.style.left = (n / Math.max(1, pvFrames.length - 1) * 100) + '%';
       }
@@ -559,7 +717,12 @@
       strip.addEventListener('pointerup', up);
     });
     buildStrip(strip);
-    ins.appendChild(h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, 'Aperçu simulé')), h('div', { class: 'pv-bar' }, play, strip)));
+    if (e.kind === 'overlay') overlayMedia(e.overlay, m => { if (m.el.play) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
+    const real = h('button', { class: 'action quiet', title: Pv.isReal() ? 'Revenir aux plans de test' : 'Utiliser les images de ta séquence autour de la coupe la plus proche' }, Pv.isReal() ? 'Plans de test' : '📷 Ma vraie image');
+    real.addEventListener('click', () => (Pv.isReal() ? useTestShots() : grabRealFrames()));
+    ins.appendChild(h('div', { class: 'preview' },
+      h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, Pv.isReal() ? 'Aperçu sur ta séquence' : 'Aperçu simulé')),
+      h('div', { class: 'pv-bar' }, play, strip, real)));
 
     // Placement
     const pl = st.placement;
@@ -573,18 +736,42 @@
     }
     const forced = def && def.target;
     const multi = pl === 'cuts' || pl === 'markers';
+    const where = e.kind === 'overlay' ? 'Overlay posé au-dessus du clip'
+      : forced ? 'CLIP FX : copie du plan au-dessus du clip' : 'Calque de réglage au-dessus du clip';
+    const volRows = [];
+    if (e.kind !== 'captured') {
+      volRows.push(h('div', { class: 'field' }, checkbox('Intensité qui suit le volume de la musique', st.volumeFollow, v => { st.volumeFollow = v; persist(); renderInspector(); })));
+      if (st.volumeFollow) volRows.push(row('Influence', hotText({ value: st.volumeInfluence, min: 0, max: 100, step: 5, unit: '%', onChange: v => { st.volumeInfluence = v; persist(); } })));
+    }
     ins.appendChild(section('Placement', [
       row('Côté', sideCtl),
       row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); })),
       multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
-      row('Cible', forced
-        ? h('span', { class: 'muted' }, 'Copie du plan (requise par cet effet)')
-        : actionGroup([{ v: 'adjustment', label: 'Calque de réglage' }, { v: 'copy', label: 'Copie du plan' }], st.target, v => { st.target = v; persist(); }), { title: 'Le clip d\'origine n\'est jamais modifié' })
+      row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
+      volRows
     ]));
 
     // Paramètres
     const rows = [row('Durée', hotText({ value: p.frames, min: 1, max: 240, step: 1, unit: 'i', onChange: (v, fin) => { p.frames = v; paramChanged(fin); } }), { title: 'Durée de chaque côté, en images' })];
-    if (e.kind === 'captured') {
+    if (e.kind === 'overlay') {
+      rows.push(row('Opacité', hotText({ value: Math.min(100, p.intensity), min: 0, max: 100, step: 1, unit: '%', onChange: (v, fin) => { p.intensity = v; paramChanged(fin); } })));
+      rows.push(row('Départ dans l\'overlay', actionGroup([{ v: 'random', label: 'Au hasard' }, { v: 'start', label: 'Début' }, { v: 'middle', label: 'Milieu' }], p.start, v => { p.start = v; })));
+      const blendOpts = BLENDS.map(b => ({ v: String(b.v), label: b.label }));
+      if (!BLENDS.some(b => b.v === Number(st.overlayBlend))) blendOpts.unshift({ v: String(st.overlayBlend), label: 'Mode appris (' + st.overlayBlend + ')' });
+      const learn = h('button', { class: 'action quiet', title: 'Règle le mode de fusion voulu sur un clip dans Premiere, sélectionne-le, puis clique ici' }, 'Apprendre');
+      learn.addEventListener('click', learnBlend);
+      rows.push(row('Mode de fusion', h('div', { class: 'row-ctl' }, picker(blendOpts, String(st.overlayBlend), v => { st.overlayBlend = Number(v); persist(); paramChanged(true); }), learn)));
+      const remove = h('button', { class: 'action quiet danger' }, 'Retirer de la liste');
+      remove.addEventListener('click', () => {
+        st.overlays = st.overlays.filter(o => o.id !== e.overlay.id);
+        persist();
+        S.cur = entries()[0];
+        S.params = defaultParams(S.cur);
+        renderGrid();
+        renderInspector();
+      });
+      rows.push(h('div', { class: 'row-buttons' }, remove));
+    } else if (e.kind === 'captured') {
       rows.push(h('div', { class: 'field' }, checkbox('Étirer l\'animation à la durée', p.stretch, v => { p.stretch = v; paramChanged(true); })));
       rows.push(h('div', null, checkbox('Miroir pour l\'autre côté de la coupe', p.mirror, v => { p.mirror = v; paramChanged(true); })));
       const d = e.item.data;
@@ -601,7 +788,7 @@
     ins.appendChild(section('Paramètres', rows, reset));
 
     // Courbe
-    if (def && !def.noCurve) {
+    if ((def && !def.noCurve) || e.kind === 'overlay') {
       const ccv = h('canvas', { class: 'curve-canvas' });
       const presetPick = picker(Object.keys(Core.CURVE_PRESETS).map(k => ({ v: k, label: Core.CURVE_PRESETS[k].label })).concat([{ v: 'custom', label: 'Personnalisée' }]),
         curvePresetName(p.curve), v => { if (v !== 'custom') { p.curve = Core.curveValue(v); paramChanged(true); } });
@@ -663,7 +850,7 @@
 
   // Une entrée par zone (PRE/POST d'une coupe). Les deux côtés d'une même coupe
   // reçoivent le même effet tiré au hasard.
-  function buildPlan(e, targets, vary, rate) {
+  function buildPlan(e, targets, vary, rate, factors) {
     let pool = null;
     if (vary === 'favorites') {
       pool = entries().filter(isFav);
@@ -682,8 +869,11 @@
         params = Object.assign(defaultParams(entry), entry.kind === 'captured' ? { frames: S.params.frames } : { frames: S.params.frames, intensity: S.params.intensity });
       }
       if (vary !== 'same' && params.seed !== undefined) params = Object.assign({}, params, { seed: ((params.seed + k * 17 + runSeed) % 99) + 1 });
+      const f = factors ? factors.get(key) : 1;
+      if (f && f !== 1 && params.intensity != null) params = Object.assign({}, params, { intensity: Core.clamp(Math.round(params.intensity * f), 0, 200) });
       return {
         entry, mode: targetFor(entry), label: entry.name + ' ' + t.side.toUpperCase(),
+        overlay: entry.kind === 'overlay' ? { path: entry.overlay.path, name: entry.overlay.name, kind: entry.overlay.kind, start: params.start, seed: runSeed + k } : undefined,
         target: Object.assign({}, t, { name: 'CutFX · ' + entry.name, fx: Core.toWire(compileFor(entry, params, t.side, t.frames, rate)) })
       };
     });
@@ -701,7 +891,20 @@
         (r.warnings || []).forEach(w => log(w, 'warn'));
         return { kind: 'error', title: 'Rien n\'a été appliqué', detail: r.error };
       }
-      const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps);
+      // Intensité selon le volume de la musique à chaque coupe.
+      let factors = null;
+      if (st.volumeFollow && e.kind !== 'captured' && app.services.volumeFactors) {
+        status.phase('Volume de la musique');
+        try {
+          const cuts = Array.from(new Set(r.targets.map(t => (t.side === 'pre' ? t.end : t.start))));
+          const tps = 254016000000, vals = await app.services.volumeFactors(cuts.map(c => c / tps), st.volumeInfluence);
+          factors = new Map(cuts.map((c, i) => [c, vals[i]]));
+          log('Intensité selon le volume : ' + vals.map(v => '×' + v.toFixed(2)).join(' '), 'info');
+        } catch (err) {
+          log('Volume de la musique indisponible : ' + errorMessage(err), 'warn');
+        }
+      }
+      const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
       if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };
 
       status.phase(plan.length > 1 ? 'Pose des effets' : 'Pose de l\'effet');
@@ -710,7 +913,7 @@
       for (let i = 0; i < plan.length; i++) {
         if (S.cancel) break;
         status.progress(i, plan.length, plan[i].label);
-        const res = await Host.call('apply', { target: plan[i].mode, name: plan[i].target.name, targets: [plan[i].target], adjNodeId: st.adjNodeId, refreshAdj: i === 0, copyLook: st.copyLook });
+        const res = await Host.call('apply', { target: plan[i].mode, name: plan[i].target.name, overlay: plan[i].overlay, targets: [plan[i].target], adjNodeId: st.adjNodeId, refreshAdj: i === 0, copyLook: st.copyLook });
         if (!res.ok) {
           failed++;
           firstError = firstError || res.error;
@@ -732,7 +935,8 @@
       if (S.cancel) return { kind: 'warn', title: 'Arrêté · ' + what + ' posée(s)', detail: 'Le reste n\'a pas été appliqué.' };
       if (failed) return { kind: 'warn', title: e.name + ' · ' + what + ', ' + plural(failed, 'échec'), detail: firstError };
       if (warnings.length) return { kind: 'warn', title: e.name + ' appliqué · ' + what, detail: plural(new Set(warnings).size, 'remarque') + ' dans le journal.' };
-      return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: targetFor(e) === 'copy' ? 'Sur des copies du plan « CutFX · … », au-dessus du clip.' : 'Sur des calques de réglage « CutFX · … ».' };
+      const on = { copy: 'Sur une copie du plan (CLIP FX) au-dessus du clip.', overlay: 'Overlays posés au-dessus du clip.', adjustment: 'Sur des calques de réglage « CutFX · … ».' };
+      return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: on[targetFor(e)] || on.adjustment };
     }, true);
   }
 
@@ -776,6 +980,25 @@
       if (r.skipped) parts.push(r.skipped + ' laissé(s) tel quel (modifié depuis, ou à annuler avec Ctrl+Z / Cmd+Z)');
       log('Annulation de ' + last.label + ' : ' + (parts.join(', ') || 'rien à retirer'), r.skipped ? 'warn' : 'ok');
       return { kind: r.skipped ? 'warn' : 'ok', title: 'Annulation terminée', detail: parts.join(' · ') };
+    });
+  }
+
+  async function clearAll(o) {
+    if (S.busy) return;
+    const where = o.scope === 'selection' ? 'dans la zone sélectionnée' : 'dans toute la séquence';
+    const yes = await modal('Tout effacer ' + where + ' ?', h('p', null, 'Les calques, copies, overlays et textes « CutFX · … »' + (o.markers ? ' et les marqueurs CutFX' : '') + ' seront retirés. Tes clips restent intacts. Ctrl+Z / Cmd+Z dans Premiere pour revenir en arrière.'), [
+      { label: 'Garder', value: false }, { label: 'Tout effacer', primary: true, value: true }]);
+    if (!yes) return;
+    await runTask('Nettoyage', async () => {
+      status.phase('Retrait des éléments CutFX');
+      const r = await Host.call('clearAll', { scope: o.scope, markers: o.markers });
+      if (!r.ok) return { kind: 'error', title: 'Nettoyage impossible', detail: r.error };
+      if (o.scope === 'sequence') { S.lib.history = []; persist(); renderUndo(); }
+      const parts = [plural(r.removed, 'élément retiré', 'éléments retirés')];
+      if (o.markers) parts.push(plural(r.markers, 'marqueur retiré', 'marqueurs retirés'));
+      log('Nettoyage ' + where + ' : ' + parts.join(', '), 'ok');
+      if (app.tabs.music && S.tab === 'music' && app.tabs.music.redraw) app.tabs.music.redraw();
+      return { kind: 'ok', title: r.removed || r.markers ? 'Séquence nettoyée' : 'Rien à effacer', detail: parts.join(' · ') };
     });
   }
 
@@ -935,7 +1158,11 @@
     imp.addEventListener('click', importItems);
     const exp = h('button', { class: 'action' }, 'Tout exporter…');
     exp.addEventListener('click', () => exportItems(S.lib.items, 'CutFX-bibliotheque.json'));
-    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'note' }, 'Fichier : ' + Store.location)]));
+    const shareAll = h('button', { class: 'action' }, 'Tout partager');
+    shareAll.addEventListener('click', () => shareItems(S.lib.items, 'Ma bibliothèque'));
+    const paste = h('button', { class: 'action' }, 'Coller un code…');
+    paste.addEventListener('click', pasteCode);
+    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, 'Partager donne un code « CUTFX1:… » à envoyer en message : la personne le colle dans « Coller un code… ». Fichier : ' + Store.location)]));
     renderMineList();
   }
 
@@ -980,6 +1207,7 @@
           btn('Ouvrir', 'Ouvrir', () => openItem(item)),
           btn('✎', 'Renommer', async () => { const n = await promptName('Renommer', item.name); if (n) { item.name = n; persist(); renderMineList(); } }),
           btn('⤓', 'Exporter', () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.cutfx.json')),
+          btn('⇪', 'Partager (code à copier-coller)', () => shareItems([item], item.name)),
           btn('✕', 'Supprimer', () => deleteItem(item), 'danger')));
       li.addEventListener('dblclick', () => openItem(item));
       list.appendChild(li);
@@ -1027,25 +1255,62 @@
     }
   }
 
+  // Ajoute à la bibliothèque les éléments valides ; renvoie leur nombre.
+  function addItems(list) {
+    let n = 0;
+    list.forEach(it => {
+      if (!it || ['preset', 'captured', 'ramp'].indexOf(it.type) < 0 || !it.data || typeof it.name !== 'string') return;
+      if (it.type === 'preset' && !Lib.byId[it.data.base]) return;
+      if (it.type === 'captured' && !Array.isArray(it.data.components)) return;
+      if (it.type === 'ramp' && !Array.isArray(it.data.points)) return;
+      S.lib.items.push(Object.assign({}, it, { id: uid(), created: Date.now() }));
+      n++;
+    });
+    persist();
+    renderMineList();
+    return n;
+  }
+
   async function importItems() {
     let packs = [];
     try { packs = await Store.importJSON(); } catch (e) { status.finish('error', 'Import impossible', errorMessage(e)); return; }
     if (!packs.length) return;
-    let n = 0;
-    packs.forEach(pack => {
-      (pack && Array.isArray(pack.items) ? pack.items : []).forEach(it => {
-        if (!it || ['preset', 'captured', 'ramp'].indexOf(it.type) < 0 || !it.data || typeof it.name !== 'string') return;
-        if (it.type === 'preset' && !Lib.byId[it.data.base]) return;
-        if (it.type === 'captured' && !Array.isArray(it.data.components)) return;
-        if (it.type === 'ramp' && !Array.isArray(it.data.points)) return;
-        S.lib.items.push(Object.assign({}, it, { id: uid(), created: Date.now() }));
-        n++;
-      });
-    });
-    persist();
-    renderMineList();
+    const n = addItems([].concat.apply([], packs.map(pack => (pack && Array.isArray(pack.items) ? pack.items : []))));
     if (n) status.finish('ok', plural(n, 'élément importé', 'éléments importés'), 'Dans « Mes effets ».');
     else status.finish('warn', 'Rien d\'importé', 'Aucun effet CutFX valide dans ce fichier.');
+  }
+
+  function copyText(text, field) {
+    if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => copyText(text, null));
+    if (field) { field.focus(); field.select(); }
+    let done = false;
+    try { done = document.execCommand('copy'); } catch (e) { done = false; }
+    return Promise.resolve(done);
+  }
+
+  function shareItems(items, label) {
+    if (!items.length) { status.finish('warn', 'Rien à partager', 'La bibliothèque est vide.'); return; }
+    const code = Share.encode(items, Store.zip);
+    const field = h('textarea', { class: 'code share-code', readonly: true, rows: 4, spellcheck: 'false' }, code);
+    const msg = h('div', { class: 'note' }, plural(items.length, 'élément', 'éléments') + ' · ' + code.length + ' caractères. Envoie ce code : il se colle dans CutFX > Mes effets > « Coller un code… ».');
+    const copy = h('button', { class: 'action' }, 'Copier');
+    copy.addEventListener('click', () => copyText(code, field).then(ok => { copy.textContent = ok ? 'Copié ✓' : 'Sélectionne et copie (Ctrl/Cmd+C)'; field.select(); }));
+    modal('Partager · ' + label, h('div', null, field, msg, h('div', { class: 'row-buttons' }, copy)), [{ label: 'Fermer', primary: true, value: true }]);
+    setTimeout(() => { field.focus(); field.select(); }, 0);
+    log('Code de partage créé : ' + label + ' (' + plural(items.length, 'élément', 'éléments') + ')', 'info');
+  }
+
+  async function pasteCode() {
+    const field = h('textarea', { class: 'code share-code', rows: 4, spellcheck: 'false', placeholder: 'CUTFX1:…' });
+    setTimeout(() => field.focus(), 0);
+    const code = await modal('Coller un code CutFX', h('div', null, field, h('div', { class: 'note' }, 'Colle ici un code reçu (il commence par « CUTFX1: »).')), [
+      { label: 'Annuler', value: null }, { label: 'Ajouter', primary: true, value: () => field.value }]);
+    if (!code) return;
+    let items;
+    try { items = Share.decode(code, Store.zip); } catch (e) { status.finish('error', 'Code invalide', errorMessage(e)); return; }
+    const n = addItems(items);
+    if (n) status.finish('ok', plural(n, 'effet ajouté', 'effets ajoutés'), items.map(i => i.name).slice(0, 4).join(', ') + (items.length > 4 ? '…' : ''));
+    else status.finish('warn', 'Rien d\'ajouté', 'Ce code ne contient pas d\'effet compatible avec cette version.');
   }
 
   // ---------------------------------------------------------------- onglet Réglages
@@ -1072,15 +1337,23 @@
       renderSettingsView();
       status.finish('ok', 'Calque de réglage défini', r.name);
     });
-    view.appendChild(section('Cible par défaut', [
-      radioGroup([
-        { v: 'adjustment', label: 'Calque de réglage au-dessus du clip (recommandé)' },
-        { v: 'copy', label: 'Copie du plan au-dessus du clip' }
-      ], st.target, v => { st.target = v; persist(); }),
-      h('div', { class: 'field' }, checkbox('Recopier le cadrage et l\'étalonnage du clip sur les copies', st.copyLook, v => { st.copyLook = v; persist(); })),
-      h('div', { class: 'note' }, 'Le clip d\'origine n\'est jamais modifié. Les copies (rampes, Motion blur, cible « Copie du plan ») viennent d\'un sous-clip vidéo seule rangé dans le chutier « CutFX » : tes pistes audio ne sont jamais touchées. Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.'),
+    view.appendChild(section('Calques', [
+      h('div', { class: 'note' }, 'Comme 2WIN, CutFX pose les effets sur des calques de réglage « CutFX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « CutFX ») : tes pistes audio ne sont jamais touchées.'),
+      h('div', { class: 'field' }, checkbox('Recopier le cadrage et l\'étalonnage du clip sur les copies CLIP FX', st.copyLook, v => { st.copyLook = v; persist(); })),
+      h('div', { class: 'note' }, 'Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.'),
       h('div', { class: 'note' }, 'Calque de réglage utilisé : ' + (st.adjName || 'recherche automatique dans le projet') + '. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.'),
       h('div', { class: 'row-buttons' }, find, fromSel)
+    ]));
+
+    // Nettoyage
+    const clean = { scope: 'sequence', markers: true };
+    const wipe = h('button', { class: 'action danger' }, 'Tout effacer');
+    wipe.addEventListener('click', () => clearAll(clean));
+    view.appendChild(section('Nettoyage', [
+      h('div', { class: 'note' }, 'Retire tout ce que CutFX a posé : calques de réglage, copies CLIP FX, overlays et textes « CutFX · … ». Tes clips ne sont pas touchés.'),
+      row('Zone', actionGroup([{ v: 'sequence', label: 'Toute la séquence' }, { v: 'selection', label: 'Zone sélectionnée' }], clean.scope, v => { clean.scope = v; })),
+      h('div', { class: 'field' }, checkbox('Retirer aussi les marqueurs CutFX (temps forts)', clean.markers, v => { clean.markers = v; })),
+      h('div', { class: 'row-buttons' }, wipe)
     ]));
 
     // Effets Premiere détectés
@@ -1174,7 +1447,9 @@
     apply: () => applyEffect(),
     ramp: () => applyRamp(),
     undo: () => undoLast(),
-    capture: () => capture()
+    capture: () => capture(),
+    beats: () => app.actions.beats && app.actions.beats(),
+    sync: () => app.actions.sync && app.actions.sync()
   };
 
   function renderShortcuts() {
@@ -1237,18 +1512,23 @@
       { id: 'apply', label: 'Appliquer l\'effet choisi' },
       { id: 'ramp', label: 'Appliquer la rampe' },
       { id: 'capture', label: 'Capturer la sélection' },
+      { id: 'beats', label: 'Poser les marqueurs des temps forts' },
+      { id: 'sync', label: 'Synchroniser la sélection sur la musique' },
       { id: 'undo', label: 'Annuler la dernière opération CutFX' },
+      { id: 'clear', label: 'Tout effacer (séquence)…' },
       { separator: true },
       { id: 'compact', label: 'Mode réduit', checked: settings().compact },
       { id: 'instagram', label: '@robin.rahoual sur Instagram' }
     ], id => {
       if (id === 'compact') return toggleCompact();
       if (id === 'instagram') return Host.openURL(INSTAGRAM_URL);
+      if (id === 'clear') return clearAll({ scope: 'sequence', markers: true });
       if (SHORTCUT_ACTIONS[id]) SHORTCUT_ACTIONS[id]();
     });
   }
 
   function ctaAction() {
+    if (app.tabs[S.tab]) return app.tabs[S.tab].cta();
     if (S.tab === 'ramp') return { label: 'Appliquer la rampe', run: applyRamp, enabled: true };
     if (S.tab === 'mine') return { label: 'Capturer la sélection', run: capture, enabled: true };
     return { label: S.cur ? 'Appliquer · ' + S.cur.name : 'Appliquer', run: applyEffect, enabled: !!S.cur };
@@ -1260,6 +1540,7 @@
   }
 
   function switchTab(tab) {
+    if (S.tab !== tab && app.tabs[S.tab] && app.tabs[S.tab].leave) app.tabs[S.tab].leave();
     S.tab = tab;
     settings().tab = tab;
     persist();
@@ -1275,6 +1556,7 @@
     if (tab === 'ramp') renderRampView();
     if (tab === 'mine') renderMineView();
     if (tab === 'settings') renderSettingsView();
+    if (app.tabs[tab]) app.tabs[tab].render($('view-' + tab));
     renderCTA();
     $('scroll').scrollTop = 0;
   }
@@ -1333,6 +1615,21 @@
     window.addEventListener('resize', () => { clearTimeout(rt); rt = setTimeout(() => { if (S.curveEd) S.curveEd.draw(); if (S.rampEd) S.rampEd.draw(); }, 60); });
   }
 
+  // ---------------------------------------------------------------- modules (Musique, Textes…)
+
+  const app = {
+    S, Core, Lib, Pv, Store, Host, Audio, Media, Share,
+    UI: window.CutFXUI, settings, persist, log, status, runTask, modal, promptName, confirmDialog,
+    plural, clone, errorMessage, pushHistory, renderCTA, switchTab, fps, registry, uid,
+    tabs: {}, actions: {}, services: {}
+  };
+  window.CutFXApp = app;
+  function loadFeatures() {
+    (window.CutFXFeatures || []).forEach(feature => {
+      try { feature(app); } catch (e) { log('Module du panneau indisponible : ' + errorMessage(e), 'error'); }
+    });
+  }
+
   async function boot() {
     try {
       S.lib = Store.load();
@@ -1343,8 +1640,9 @@
     S.lib.settings = Object.assign(clone(DEFAULT_SETTINGS), S.lib.settings);
     S.lib.settings.ramp = Object.assign(clone(DEFAULT_SETTINGS.ramp), S.lib.settings.ramp);
     if (!PLACEMENTS.some(p => p.v === S.lib.settings.placement)) S.lib.settings.placement = 'cut';
-    // 1.1 : la cible « Clip » modifiait le clip ; elle devient une copie du plan.
-    if (S.lib.settings.target !== 'adjustment') S.lib.settings.target = 'copy';
+    // 1.3 : tout se pose sur un calque de réglage (sauf CLIP FX, imposé par l'effet).
+    S.lib.settings.target = 'adjustment';
+    if (!Array.isArray(S.lib.settings.overlays)) S.lib.settings.overlays = [];
     S.shortcuts = Keys.withDefaults(S.lib.settings.shortcuts);
 
     applyTheme();
@@ -1355,7 +1653,8 @@
     S.params = defaultParams(S.cur);
     status.reset();
     renderUndo();
-    switchTab(['effects', 'ramp', 'mine', 'settings'].indexOf(settings().tab) >= 0 ? settings().tab : 'effects');
+    loadFeatures();
+    switchTab(['effects', 'ramp', 'mine', 'settings'].concat(Object.keys(app.tabs)).indexOf(settings().tab) >= 0 ? settings().tab : 'effects');
 
     const init = await Host.init();
     S.demo = init.demo;

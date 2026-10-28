@@ -167,3 +167,66 @@ test('ramp curve never overshoots between points (monotone)', () => {
   for (let t = 0; t <= 1; t += 0.005) assert.ok(f(t) <= 400.0001 && f(t) >= 99.999, 't=' + t + ' ' + f(t));
   assert.strictEqual(Core.rampFunction([])(0.5), 100);
 });
+
+test('overlay: opacity rises to the cut (PRE) or fades after it (POST), blend mode kept', () => {
+  const pre = Core.compileOverlay({ intensity: 80, curve: 'easeIn' }, 'pre', 5, 8)[0];
+  assert.strictEqual(pre.intrinsic, 'opacity');
+  const op = pre.props.find(p => p.key === 'opacity').values;
+  assert.strictEqual(op[0], 0);
+  assert.strictEqual(op[4], 80);
+  assert.deepStrictEqual(pre.props.find(p => p.key === 'blend'), { key: 'blend', index: 1, static: 8, raw: true });
+  const post = Core.compileOverlay({ intensity: 150 }, 'post', 3, null)[0];
+  assert.strictEqual(post.props.find(p => p.key === 'opacity').values[0], 100, 'capped at 100 %');
+  assert.strictEqual(post.props.find(p => p.key === 'blend'), undefined);
+});
+
+test('lyrics: lines or words, placed from marker to marker', () => {
+  assert.deepStrictEqual(Core.splitLyrics('  Je cours\n\n  vers toi \r\nencore', 'lines'), ['Je cours', 'vers toi', 'encore']);
+  assert.deepStrictEqual(Core.splitLyrics('Je cours\nvers toi', 'words'), ['Je', 'cours', 'vers', 'toi']);
+  const tl = Core.titleTimeline(['a', 'b', 'c'], [4, 1, 2, 3, 0.5], { from: 1, gap: 0.1, lastDur: 1.5 });
+  assert.deepStrictEqual(tl.map(x => [x.text, x.start, +x.end.toFixed(3)]), [['a', 1, 1.9], ['b', 2, 2.9], ['c', 3, 3.9]]);
+  const last = Core.titleTimeline(['a', 'b'], [1, 2], { lastDur: 1.5, maxDur: 0.8 });
+  assert.deepStrictEqual(last.map(x => x.end), [1.8, 2.8]);
+  const fixed = Core.titleTimeline(['a', 'b'], null, { from: 10, fixed: 2 });
+  assert.deepStrictEqual(fixed.map(x => [x.start, x.end]), [[10, 12], [12, 14]]);
+  assert.deepStrictEqual(Core.titleTimeline(['a', 'b', 'c'], [1], {}).length, 1, 'no more markers = no more text');
+});
+
+test('title animations: hidden at both ends, normal in the middle, one key set per property', () => {
+  Lib.TITLE_ANIMS.filter(a => a.id !== 'none').forEach(a => {
+    const spec = Core.titleSpec(a, Core.paramDefaults(a), 50, 8, 6, 25);
+    const tr = spec.find(f => f.type === 'transform');
+    const op = tr && tr.props.find(p => p.key === 'opacity');
+    if (op && op.keys) {
+      const at = f => { const k = op.keys.filter(x => x[0] <= f).pop(); return k[1]; };
+      assert.ok(at(25) > 99, a.id + ' visible in the middle');
+      if (a.id !== 'impact') assert.ok(op.keys[0][1] < 1, a.id + ' hidden at the start');
+      assert.ok(op.keys[op.keys.length - 1][1] < 1, a.id + ' hidden at the end');
+      assert.ok(op.keys.every((k, i) => i === 0 || k[0] > op.keys[i - 1][0]), a.id + ' keys in order');
+      assert.ok(op.keys[op.keys.length - 1][0] === 49);
+    }
+  });
+  const pop = Core.titleSpec(Lib.titleById.pop, Core.paramDefaults(Lib.titleById.pop), 40, 7, 0, 25)[0].props.find(p => p.key === 'scale').keys;
+  assert.ok(Math.max(...pop.map(k => k[1])) > 104, 'pop overshoots');
+  assert.strictEqual(pop[pop.length - 1][1], 100);
+  assert.deepStrictEqual(Core.titleSpec(Lib.titleById.none, {}, 40, 8, 8, 25), []);
+  const short = Core.titleSpec(Lib.titleById.fade, Core.paramDefaults(Lib.titleById.fade), 5, 8, 8, 25)[0].props[0].keys;
+  assert.ok(short.every(k => k[0] < 5), 'animations squeezed into a short text');
+});
+
+test('auto edit: one shot per N beats, in order or shuffled, never the same rush twice in a row', () => {
+  const beats = [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5, 4];
+  const rushes = [{ id: 'a', inT: 0, outT: 10 }, { id: 'b', inT: 5, outT: 6 }, { id: 'c', inT: 1, outT: 30 }];
+  const seq = Core.planAutoEdit(beats, rushes, { every: 2 });
+  assert.deepStrictEqual(seq.map(s => [s.id, s.seqStart, s.seqEnd]), [['a', 0, 1], ['b', 1, 2], ['c', 2, 3], ['a', 3, 4]]);
+  assert.deepStrictEqual(seq.map(s => s.srcIn), [0, 5, 1, 0]);
+  const mid = Core.planAutoEdit(beats, rushes, { every: 4, pick: 'middle' });
+  assert.strictEqual(mid[0].srcIn, 4, 'middle of a 10 s rush for a 2 s slot');
+  assert.ok(mid[1].short && mid[1].seqEnd - mid[1].seqStart === 1, 'rush shorter than the slot');
+  const cont = Core.planAutoEdit(beats, [rushes[0]], { every: 1, pick: 'continue' });
+  assert.deepStrictEqual(cont.map(s => s.srcIn), [0, 0.5, 1, 1.5, 2, 2.5, 3, 3.5]);
+  const rnd = Core.planAutoEdit(Array.from({ length: 40 }, (_, i) => i * 0.5), rushes, { order: 'random', pick: 'random', seed: 5 });
+  rnd.forEach((s, i) => { if (i) assert.notStrictEqual(s.id, rnd[i - 1].id); });
+  rnd.forEach(s => { const r = rushes.find(x => x.id === s.id); assert.ok(s.srcIn >= r.inT - 1e-9 && s.srcIn + (s.seqEnd - s.seqStart) <= r.outT + 1e-9); });
+  assert.deepStrictEqual(Core.planAutoEdit([1], rushes, {}), []);
+});

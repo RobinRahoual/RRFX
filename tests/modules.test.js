@@ -29,7 +29,7 @@ test('shortcuts: key codes registered with Premiere (Mac and Windows)', () => {
   const win = Keys.keyInterest(map, false).map(k => k.keyCode);
   assert.ok(mac.includes(Keys.MAC_CODES.A) && mac.includes(53), 'A and Escape on Mac');
   assert.ok(win.includes(65) && win.includes(27), 'A and Escape on Windows');
-  assert.ok(!win.includes(66), 'unassigned keys stay with Premiere');
+  assert.ok(!win.includes(81), 'unassigned keys stay with Premiere');
 });
 
 function memoryStorage() {
