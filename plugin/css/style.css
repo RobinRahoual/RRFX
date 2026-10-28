@@ -477,3 +477,5 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .pal-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .pal-kind { flex: none; font-size: 11px; color: var(--text-muted); }
 .pal-empty { padding: 8px; }
+.chips.domains { margin-top: 4px; align-items: center; }
+.chips-label { font-size: 11px; color: var(--text-muted); margin-right: 2px; }

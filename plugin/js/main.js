@@ -718,10 +718,31 @@
       chips.appendChild(b);
     });
     view.appendChild(chips);
+    const doms = h('div', { class: 'chips domains' }, h('span', { class: 'chips-label' }, 'Pour'));
+    [{ id: 'all', label: 'Tout' }].concat(Lib.DOMAINS).forEach(d => {
+      const b = h('button', { class: 'action' + ((settings().domain || 'all') === d.id ? ' selected' : ''), title: d.label }, d.icon ? d.icon + ' ' + d.label : d.label);
+      b.addEventListener('click', () => {
+        settings().domain = d.id;
+        persist();
+        doms.querySelectorAll('.action').forEach(x => x.classList.remove('selected'));
+        b.classList.add('selected');
+        renderGrid();
+      });
+      doms.appendChild(b);
+    });
+    view.appendChild(doms);
     view.appendChild(h('div', { class: 'grid', id: 'grid' }));
     view.appendChild(h('div', { id: 'inspector' }));
     renderGrid();
     renderInspector();
+  }
+
+  // Domaines d'un effet : intégrés (bibliothèque), overlays fournis (selon le pack), les tiens partout.
+  const PACK_USES = { leak: ['clip', 'social', 'event', 'corporate'], flare: ['clip', 'social', 'event', 'corporate'], bokeh: ['clip', 'social', 'event', 'corporate'], dust: ['clip', 'social', 'event'], burn: ['clip', 'social', 'event'], vhs: ['clip', 'social', 'youtube'], rgb: ['clip', 'social', 'youtube'], sweep: ['clip', 'social', 'corporate', 'event', 'youtube'] };
+  function usesOf(e) {
+    if (e.kind === 'builtin' || e.kind === 'preset') return (e.def && e.def.uses) || [];
+    if (e.kind === 'overlay' && e.overlay.pack) return PACK_USES[e.overlay.pack.split('-')[0]] || Lib.DOMAINS.map(d => d.id);
+    return Lib.DOMAINS.map(d => d.id);
   }
 
   function visibleEntries() {
@@ -731,6 +752,8 @@
       if (S.cat === 'mine' && e.kind === 'builtin') return false;
       if (S.cat !== 'all' && S.cat !== 'mine' && e.cat !== S.cat) return false;
       if (q && Core.normName(e.name + ' ' + catLabel(e.cat)).indexOf(q) < 0) return false;
+      const dom = settings().domain || 'all';
+      if (dom !== 'all' && usesOf(e).indexOf(dom) < 0) return false;
       return true;
     });
   }
@@ -778,6 +801,12 @@
     S.cur = e;
     if (!keepParams) S.params = defaultParams(e);
     if (e.kind === 'captured' && e.item.data.origin && settings().placement !== 'full' && settings().side !== 'both') settings().side = e.item.data.origin;
+    // Les mouvements (Ken Burns, zoom lent, punch-in…) se posent sur tout le plan.
+    if (e.def && e.def.cat === 'motion' && settings().placement !== 'full') {
+      settings().placement = 'full';
+      persist();
+      status.finish('ok', e.name + ' : sur les clips entiers', 'Ce mouvement dure tout le plan. Sélectionne tes clips, puis applique.');
+    }
     const grid = $('grid');
     if (grid) grid.querySelectorAll('.card').forEach(c => c.classList.toggle('on', c.dataset.key === e.key));
     renderInspector();
@@ -897,6 +926,7 @@
       row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); renderCTA(); })),
       multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); renderInspector(); renderCTA(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
       multi && st.vary === 'chain' ? chainRow() : null,
+      pl === 'full' ? row('Plans', actionGroup([{ v: false, label: 'Tous' }, { v: true, label: 'Un sur deux' }], !!st.alternate, v => { st.alternate = v; persist(); }), { title: 'Un sur deux : alterne cadrage large et serré, pour masquer les jump cuts' }) : null,
       row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
       volRows,
       row('Son sur les coupes', picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: 'Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)' })
@@ -1122,6 +1152,9 @@
           log('Volume de la musique indisponible : ' + errorMessage(err), 'warn');
         }
       }
+      // « Un plan sur deux » (punch-in sur les jump cuts) : un clip visé sur deux, dans l'ordre.
+      if (st.placement === 'full' && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
+      if (!r.targets.length) return { kind: 'warn', title: 'Un seul plan', detail: '« Un plan sur deux » : sélectionne au moins deux clips.' };
       const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
       if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };
       // Overlays de pack : fabriqués une fois à la taille de la séquence.

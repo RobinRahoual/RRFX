@@ -15,8 +15,28 @@
     { id: 'shake', label: 'Shakes' },
     { id: 'slide', label: 'Slides' },
     { id: 'distort', label: 'Distorsions' },
+    { id: 'motion', label: 'Mouvements' },
     { id: 'time', label: 'Motion blur' }
   ];
+
+  /* Domaines de montage : à quoi sert chaque effet (filtre « Pour » de l'onglet Effets). */
+  const DOMAINS = [
+    { id: 'clip', label: 'Clip musical', icon: '🎵' },
+    { id: 'social', label: 'Réseaux sociaux', icon: '📱' },
+    { id: 'corporate', label: 'Entreprise', icon: '💼' },
+    { id: 'event', label: 'Événementiel', icon: '🎉' },
+    { id: 'youtube', label: 'YouTube', icon: '▶' }
+  ];
+  const ALL = DOMAINS.map(d => d.id);
+  // Domaines des effets existants (les nouveaux les déclarent eux-mêmes).
+  const USES = {
+    'flash-white': ['clip', 'social', 'event'], 'flash-glow': ['clip', 'social', 'event'], 'flash-black': ALL, 'flash-double': ['clip', 'social'],
+    flicker: ['clip', 'social'], strobe: ['clip'], defocus: ALL, 'blur-directional': ['clip', 'social', 'youtube'],
+    'zoom-in': ALL, 'zoom-out': ['clip', 'social', 'youtube'], 'zoom-bounce': ['clip', 'social', 'youtube'], 'zoom-spin': ['clip', 'social'],
+    shake: ['clip', 'social', 'youtube'], 'shake-impact': ['clip', 'social', 'youtube'], 'shake-bass': ['clip'],
+    slide: ['clip', 'social', 'corporate', 'youtube'], 'whip-pan': ['clip', 'social', 'event', 'youtube'],
+    wave: ['clip'], lens: ['clip', 'social'], glitch: ['clip', 'social', 'youtube'], 'echo-blur': ['clip', 'social', 'event']
+  };
 
   const range = (key, label, def, min, max, unit, step) => ({ key, label, type: 'range', def, min, max, unit: unit || '', step: step || 1 });
   const select = (key, label, def, options) => ({ key, label, type: 'select', def, options });
@@ -29,6 +49,8 @@
   const DIR_OPTIONS = [
     { v: 'left', label: '←' }, { v: 'right', label: '→' }, { v: 'up', label: '↑' }, { v: 'down', label: '↓' }
   ];
+
+  const backOut = t => { const c1 = 1.70158, c3 = c1 + 1, u = t - 1; return 1 + c3 * u * u * u + c1 * u * u; };
 
   const transformBlur = (c, extra) => Object.assign({ compShutter: false, shutter: c.p.mblur == null ? 0 : c.p.mblur }, extra);
 
@@ -238,6 +260,103 @@
       }
     },
 
+    // ---------------------------------------------------------------- transitions douces et modernes
+    {
+      id: 'push', name: 'Push', cat: 'slide', frames: 10, curve: 'easeInOut', uses: ['social', 'corporate', 'event', 'youtube'],
+      desc: 'Les deux plans glissent ensemble, propre et moderne (présentations, contenus de marque).',
+      params: [select('dir', 'Direction', 'left', DIR_OPTIONS), range('distance', 'Distance', 100, 0, 100, '%'), range('blur', 'Flou', 50, 0, 300, '')],
+      build: c => slide(c)
+    },
+    {
+      id: 'zoom-smooth', name: 'Zoom doux', cat: 'zoom', frames: 12, curve: 'easeInOut', uses: ['corporate', 'event', 'youtube', 'social'],
+      desc: 'Zoom avant fluide et discret à travers la coupe.',
+      params: [range('amount', 'Zoom', 22, 0, 100, '%'), MBLUR(150)],
+      build: c => [{ type: 'transform', props: transformBlur(c, { scale: i => 100 + c.p.amount * c.k * c.env(i) }) }]
+    },
+    {
+      id: 'zoom-through', name: 'Zoom traversant', cat: 'zoom', frames: 8, curve: 'expoIn', uses: ['social', 'clip', 'youtube'],
+      desc: 'On plonge dans l\'image : gros zoom flou qui traverse la coupe.',
+      params: [range('amount', 'Zoom', 160, 0, 400, '%'), range('blur', 'Flou', 35, 0, 150, ''), MBLUR(300)],
+      build: c => [
+        { type: 'transform', props: transformBlur(c, { scale: i => 100 + c.p.amount * c.k * c.env(i) }) },
+        { type: 'gaussian', props: { blur: i => c.p.blur * c.k * c.env(i), repeat: true } }
+      ]
+    },
+    {
+      id: 'pop-in', name: 'Pop', cat: 'zoom', frames: 8, noCurve: true, uses: ['social', 'corporate', 'youtube'],
+      desc: 'Le plan arrive avec un petit rebond d\'échelle, très « réseaux sociaux ».',
+      params: [range('amount', 'Rebond', 12, 0, 40, '%')],
+      build: c => {
+        // Côté POST : de petit à normal avec dépassement ; côté PRE : léger rétrécissement.
+        const shown = i => (c.side === 'post' ? backOut(1 - c.tp(i)) : 1 - c.tp(i) * c.tp(i) * 0.5);
+        return [{ type: 'transform', props: { scale: i => 100 - c.p.amount * c.k * (1 - shown(i)) } }];
+      }
+    },
+    {
+      id: 'fade-white', name: 'Fondu lumineux', cat: 'flash', frames: 14, curve: 'easeInOut', uses: ['event', 'corporate', 'social'],
+      desc: 'Fondu doux vers le blanc, élégant (mariages, aftermovies, films de marque).',
+      params: [range('glow', 'Halo', 20, 0, 100, '%')],
+      build: c => {
+        const fx = [{ type: 'bc', props: { brightness: i => Math.min(100, 85 * c.k * c.env(i)), contrast: i => -30 * c.k * c.env(i) } }];
+        if (c.p.glow > 0) fx.push({ type: 'gaussian', props: { blur: i => c.p.glow * 0.6 * c.k * c.env(i), repeat: true } });
+        return fx;
+      }
+    },
+    {
+      id: 'fade-black', name: 'Fondu au noir', cat: 'flash', frames: 16, curve: 'easeInOut', uses: ['corporate', 'event', 'youtube'],
+      desc: 'Fondu au noir posé, pour changer de partie ou de lieu.',
+      params: [],
+      build: c => [{ type: 'transform', props: { opacity: i => c.clamp(100 - 100 * c.k * c.env(i), 0, 100) } }]
+    },
+    {
+      id: 'blur-dissolve', name: 'Flou fondu', cat: 'blur', frames: 12, curve: 'easeInOut', uses: ['corporate', 'event', 'youtube', 'social'],
+      desc: 'Le plan se floute puis le suivant se précise : transition douce et sobre.',
+      params: [range('amount', 'Flou', 45, 0, 200, ''), range('fade', 'Assombrir', 15, 0, 60, '%')],
+      build: c => [
+        { type: 'gaussian', props: { blur: i => c.p.amount * c.k * c.env(i), repeat: true } },
+        { type: 'bc', props: { brightness: i => -c.p.fade * c.k * c.env(i) } }
+      ]
+    },
+
+    // ---------------------------------------------------------------- mouvements sur tout le plan
+    {
+      id: 'punch-in', name: 'Punch-in', cat: 'motion', frames: 25, noCurve: true, uses: ['youtube', 'corporate', 'social'],
+      desc: 'Recadrage serré instantané pour masquer un jump cut. Pose-le en « Clips entiers » sur un plan sur deux.',
+      params: [range('amount', 'Zoom', 15, 0, 60, '%'), select('frame', 'Cadrage', 'center', [{ v: 'center', label: 'Centre' }, { v: 'up', label: 'Visage (haut)' }])],
+      build: c => [{ type: 'transform', props: { scale: 100 + c.p.amount * c.k, position: c.p.frame === 'up' ? [0.5, 0.5 + c.p.amount * c.k / 400] : [0.5, 0.5] } }]
+    },
+    {
+      id: 'ken-burns', name: 'Ken Burns', cat: 'motion', frames: 100, noCurve: true, uses: ['event', 'corporate', 'youtube', 'social'],
+      desc: 'Zoom et panoramique lents sur tout le plan : idéal pour les photos (diaporamas, mariages, souvenirs).',
+      params: [range('amount', 'Zoom', 12, 0, 50, '%'), select('dir', 'Panoramique', 'none', [{ v: 'none', label: 'Aucun' }].concat(DIR_OPTIONS)), select('way', 'Sens', 'in', [{ v: 'in', label: 'Avant' }, { v: 'out', label: 'Arrière' }])],
+      build: c => {
+        // Progression sur toute la durée, quel que soit le côté.
+        const t = i => (c.N <= 1 ? 1 : i / (c.N - 1));
+        const z = i => (c.p.way === 'out' ? 1 - t(i) : t(i));
+        const d = DIRS[c.p.dir] || [0, 0], pan = c.p.amount / 100 * 0.35 * c.k;
+        return [{ type: 'transform', props: transformBlur(c, { scale: i => 100 + c.p.amount * c.k * z(i), position: i => [0.5 + d[0] * pan * (t(i) - 0.5), 0.5 + d[1] * pan * (t(i) - 0.5)] }) }];
+      }
+    },
+    {
+      id: 'breathe', name: 'Zoom lent', cat: 'motion', frames: 100, noCurve: true, uses: ['youtube', 'corporate', 'event'],
+      desc: 'Zoom avant très lent sur tout le plan : une interview ou un face caméra prend vie.',
+      params: [range('amount', 'Zoom', 6, 0, 30, '%')],
+      build: c => [{ type: 'transform', props: { scale: i => 100 + c.p.amount * c.k * (c.N <= 1 ? 1 : i / (c.N - 1)) } }]
+    },
+    {
+      id: 'handheld', name: 'Caméra à l\'épaule', cat: 'motion', frames: 100, noCurve: true, uses: ['social', 'event', 'youtube', 'clip'],
+      desc: 'Léger flottement de caméra sur tout le plan, pour un rendu vivant et naturel.',
+      params: [range('amount', 'Amplitude', 1.2, 0, 6, '%', 0.1), range('rotation', 'Rotation', 0.6, 0, 5, '°', 0.1), SEED],
+      build: c => {
+        const a = c.p.amount / 100 * c.k, s = c.p.seed;
+        return [{ type: 'transform', props: {
+          position: i => [0.5 + a * c.noise(i * 0.045, s), 0.5 + a * c.noise(i * 0.045, s + 17)],
+          rotation: i => c.p.rotation * c.k * c.noise(i * 0.035, s + 31),
+          scale: 100 + c.p.amount * 2.4 * c.k
+        } }];
+      }
+    },
+
     // ---------------------------------------------------------------- motion blur
     {
       id: 'echo-blur', name: 'Motion blur', cat: 'time', frames: 6, curve: 'easeIn', target: 'copy',
@@ -252,7 +371,6 @@
 
   // ---------------------------------------------------------------- animations de texte
   // Entrée = côté POST (de l'état caché à l'état normal), sortie = côté PRE.
-  const backOut = t => { const c1 = 1.70158, c3 = c1 + 1, u = t - 1; return 1 + c3 * u * u * u + c1 * u * u; };
   const TITLE_ANIMS = [
     { id: 'fade', name: 'Fondu', frames: 6, curve: 'easeInOut', params: [],
       build: c => [{ type: 'transform', props: { opacity: i => 100 - 100 * c.env(i) } }] },
@@ -293,10 +411,10 @@
   ];
 
   const byId = {};
-  EFFECTS.forEach(e => { byId[e.id] = e; });
+  EFFECTS.forEach(e => { if (!e.uses) e.uses = USES[e.id] || ALL; byId[e.id] = e; });
 
   const titleById = {};
   TITLE_ANIMS.forEach(a => { titleById[a.id] = a; });
 
-  return { CATEGORIES, EFFECTS, byId, TITLE_ANIMS, titleById };
+  return { CATEGORIES, DOMAINS, EFFECTS, byId, TITLE_ANIMS, titleById };
 });
