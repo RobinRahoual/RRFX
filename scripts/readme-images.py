@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Images du README à partir des captures (npm run screenshots) : bannière, vignettes de la
-galerie (haut de chaque page), et captures allégées (256 couleurs, presque sans perte).
+"""Images du README à partir des captures (npm run screenshots) : bannière, captures par outil
+encadrées, et captures pleine page allégées (256 couleurs, presque sans perte).
 
     python3 scripts/readme-images.py docs/captures
 """
@@ -37,15 +37,26 @@ for im in shots:
 out = out.resize((1600, round(out.height * 1600 / out.width)), Image.LANCZOS)
 out.save(os.path.join(folder, 'banniere.png'), optimize=True)
 
-# Vignettes de la galerie : le haut de chaque page (même hauteur), et captures allégées.
-os.makedirs(os.path.join(folder, 'apercus'), exist_ok=True)
+# Captures pleine page allégées (256 couleurs, presque sans perte).
 for path in sorted(glob.glob(os.path.join(folder, '[0-9]*.png'))):
+    light(Image.open(path), path)
+
+# Captures par outil (scripts/readme-shots.js) : coins arrondis et ombre douce sur fond
+# transparent, lisibles en thème clair comme en thème sombre de GitHub. Une capture déjà
+# encadrée (plus grande que la fenêtre de 760 x 1520) n'est pas retraitée.
+M, SH = 28, 18
+for path in sorted(glob.glob(os.path.join(folder, 'outils', '*.png'))):
     im = Image.open(path).convert('RGB')
-    top = im.crop((0, 0, im.width, min(1240, im.height)))
-    if top.height < 1240:
-        pad = Image.new('RGB', (im.width, 1240), top.getpixel((0, top.height - 1)))
-        pad.paste(top, (0, 0))
-        top = pad
-    light(top, os.path.join(folder, 'apercus', os.path.basename(path)))
-    light(im, path)
+    if im.size != (760, 1520):
+        continue
+    canvas = Image.new('RGBA', (im.width + 2 * M, im.height + 2 * M), (0, 0, 0, 0))
+    shadow = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
+    ImageDraw.Draw(shadow).rounded_rectangle((M - 4, M + 6, M + im.width + 4, M + im.height + 10), R + 4, fill=(0, 0, 0, 70))
+    from PIL import ImageFilter
+    canvas = Image.alpha_composite(canvas, shadow.filter(ImageFilter.GaussianBlur(SH / 2)))
+    layer = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
+    layer.paste(im, (M, M), rounded(im))
+    canvas = Image.alpha_composite(canvas, layer)
+    canvas.save(path, optimize=True)
+
 print('Images du README à jour dans ' + folder)
