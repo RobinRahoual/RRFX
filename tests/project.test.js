@@ -52,6 +52,10 @@ test('host.jsx is plain ES3 and runs', () => {
   const ctx = vm.createContext({});
   vm.runInContext(src, ctx);
   assert.strictEqual(typeof ctx.RRFX.apply, 'function');
+  // $.evalFile lit le fichier sans BOM : selon le système, « é » ou « · » seraient mal lus
+  // (noms « RR FX · … » non reconnus). Tout est en ASCII, les accents en \u00e9.
+  const line = src.split('\n').findIndex(l => /[^\x00-\x7f]/.test(l));
+  assert.strictEqual(line, -1, 'caractère non ASCII ligne ' + (line + 1));
 });
 
 test('the Windows installer keeps CRLF line endings and no parentheses in messages', () => {

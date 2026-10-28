@@ -1,11 +1,11 @@
-/* RR FX — Premiere Pro side (ExtendScript, ES3).
+/* RR FX - Premiere Pro side (ExtendScript, ES3).
    Every public function takes a JSON string and returns a JSON string:
    { ok: true, ... } or { ok: false, error: "..." }.
    Times travel as ticks (numbers); 254016000000 ticks = 1 second. */
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.8.0';
+    var VERSION = '1.8.1';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -88,7 +88,7 @@ var RRFX = (function () {
 
     function activeSeq() {
         var s = app.project.activeSequence;
-        if (!s) throw new Error('Aucune séquence active');
+        if (!s) throw new Error('Aucune s\u00e9quence active');
         return s;
     }
 
@@ -125,8 +125,8 @@ var RRFX = (function () {
         return null;
     }
 
-    // Clips vidéo sélectionnés avec leur piste. Un seul passage sur la timeline (appelé
-    // toutes les 2 s par le panneau : doit rester rapide sur les longues séquences).
+    // Clips video selectionnes avec leur piste. Un seul passage sur la timeline (appele
+    // toutes les 2 s par le panneau : doit rester rapide sur les longues sequences).
     function selectedVideo(s) {
         var sel = s.getSelection(), out = [], ids = {}, n = 0, i, j, tr, c;
         if (!sel || !sel.length) return out;
@@ -146,13 +146,13 @@ var RRFX = (function () {
         return out;
     }
 
-    // Calques posés par RR FX et calques de réglage : ce ne sont pas des « plans ».
+    // Calques poses par RR FX et calques de reglage : ce ne sont pas des " plans ".
     function isLayer(it) {
         if (/^RR FX \u00b7 /.test(it.name)) return true;
         try { return !!(it.projectItem && isAdjustment(it.projectItem)); } catch (e) { return false; }
     }
 
-    // Le plan visé : la sélection, sinon le plan le plus haut sous la tête de lecture.
+    // Le plan vise : la selection, sinon le plan le plus haut sous la tete de lecture.
     function refClip(s) {
         var sel = selectedVideo(s), ph = tk(s.getPlayerPosition()), i, c;
         for (i = 0; i < sel.length; i++) if (!isLayer(sel[i].item)) return sel[i];
@@ -210,15 +210,15 @@ var RRFX = (function () {
         before = s.videoTracks.numTracks;
         try { qeSeq().addTracks(1, before, 0); } catch (e) {}
         if (s.videoTracks.numTracks > before) {
-            warnings.push('Piste vidéo V' + (before + 1) + ' ajoutée');
+            warnings.push('Piste vid\u00e9o V' + (before + 1) + ' ajout\u00e9e');
             return before;
         }
-        throw new Error('Aucune piste libre au-dessus du clip. Ajoutez une piste vidéo.');
+        throw new Error('Aucune piste libre au-dessus du clip. Ajoutez une piste vid\u00e9o.');
     }
 
     // ------------------------------------------------------------ adjustment layer
 
-    var ADJ_NAME = /adjustment layer|calque de r[ée]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione/i;
+    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione/i;
 
     function walk(item, fn) {
         var i, c;
@@ -262,14 +262,14 @@ var RRFX = (function () {
         tr.overwriteClip(adj, mkTime(a));
         it = findItemAt(s, ti, a);
         if (!it) {
-            // Ce Premiere attend des secondes : on retire ce qui a été posé ailleurs, puis on recommence.
+            // Ce Premiere attend des secondes : on retire ce qui a ete pose ailleurs, puis on recommence.
             list = clipsOf(s, ti);
             for (i = 0; i < list.length; i++) if (!before[list[i].nodeId]) list[i].remove(false, false);
             tr.overwriteClip(adj, a / TICKS);
             it = findItemAt(s, ti, a);
         }
         try { adj.clearInPoint(); adj.clearOutPoint(); } catch (e3) {}
-        if (!it) throw new Error('Impossible de poser le calque de réglage');
+        if (!it) throw new Error('Impossible de poser le calque de r\u00e9glage');
         if (Math.abs(tk(it.end) - b) > 1) it.end = mkTime(b);
         try { it.name = name; } catch (e4) {}
         return { item: it, track: ti };
@@ -288,7 +288,7 @@ var RRFX = (function () {
 
     function addEffect(s, track, start, fx, warnings) {
         var item = findItemAt(s, track, start), before, q, eff = null, i, c;
-        if (!item) throw new Error('Élément introuvable sur V' + (track + 1));
+        if (!item) throw new Error('\u00c9l\u00e9ment introuvable sur V' + (track + 1));
         if (fx.intrinsic) return componentByMatch(item, fx.intrinsic === 'motion' ? 'AE.ADBE Motion' : 'AE.ADBE Opacity');
         before = item.components.numItems;
         q = qeItemFor(s, track, start);
@@ -297,17 +297,17 @@ var RRFX = (function () {
             try { eff = qe.project.getVideoEffectByName(fx.names[i]); } catch (e) { eff = null; }
         }
         if (!eff) {
-            warnings.push('Effet introuvable : "' + fx.names[0] + '" (voir Réglages > Correspondance des effets)');
+            warnings.push('Effet introuvable : "' + fx.names[0] + '" (voir R\u00e9glages > Correspondance des effets)');
             return null;
         }
         q.addVideoEffect(eff);
         item = findItemAt(s, track, start);
         if (!item || item.components.numItems <= before) {
-            warnings.push('Premiere a refusé l\'effet "' + fx.names[0] + '"');
+            warnings.push('Premiere a refus\u00e9 l\'effet "' + fx.names[0] + '"');
             return null;
         }
         c = item.components[item.components.numItems - 1];
-        if (fx.matchName && c.matchName !== fx.matchName) warnings.push('"' + fx.names[0] + '" : effet ajouté = ' + c.matchName);
+        if (fx.matchName && c.matchName !== fx.matchName) warnings.push('"' + fx.names[0] + '" : effet ajout\u00e9 = ' + c.matchName);
         return c;
     }
 
@@ -344,7 +344,7 @@ var RRFX = (function () {
             for (i = 0; i < comp.properties.numItems; i++) {
                 q = comp.properties[i];
                 if (q && looksLike(q.displayName, sp.match)) {
-                    warnings.push(fx.names[0] + ' : « ' + q.displayName + ' » utilisé (#' + i + ' au lieu de #' + sp.index + ')');
+                    warnings.push(fx.names[0] + ' : \u00ab ' + q.displayName + ' \u00bb utilis\u00e9 (#' + i + ' au lieu de #' + sp.index + ')');
                     return q;
                 }
             }
@@ -357,11 +357,11 @@ var RRFX = (function () {
         for (i = 0; i < fx.props.length; i++) {
             sp = fx.props[i];
             p = paramFor(comp, sp, fx, warnings);
-            if (!p) { warnings.push(fx.names[0] + ' : paramètre #' + sp.index + ' absent'); continue; }
+            if (!p) { warnings.push(fx.names[0] + ' : param\u00e8tre #' + sp.index + ' absent'); continue; }
             try {
                 pixels = sp.point && !sp.raw ? isPixelPoint(p) : false;
                 if (sp.keys || sp.values) {
-                    // keys : [[image, valeur], …] ; values : une valeur par image.
+                    // keys : [[image, valeur], ...] ; values : une valeur par image.
                     var keys = sp.keys, k;
                     if (!keys) {
                         keys = [];
@@ -387,11 +387,11 @@ var RRFX = (function () {
         return n;
     }
 
-    // ------------------------------------------------------------ copies du plan (calques vidéo)
-    // Les effets « sur le plan » et les rampes ne touchent jamais le clip d'origine :
+    // ------------------------------------------------------------ copies du plan (calques video)
+    // Les effets " sur le plan " et les rampes ne touchent jamais le clip d'origine :
     // RR FX pose une copie du passage sur une piste juste au-dessus et travaille dessus.
-    // La copie vient d'un sous-clip VIDÉO SEULE du rush : rien n'est posé sur les pistes
-    // audio (la musique ne peut pas être écrasée).
+    // La copie vient d'un sous-clip VIDEO SEULE du rush : rien n'est pose sur les pistes
+    // audio (la musique ne peut pas etre ecrasee).
 
     function rrfxBin() {
         var root = app.project.rootItem, i, c;
@@ -402,7 +402,7 @@ var RRFX = (function () {
         return root.createBin('RR FX');
     }
 
-    // Fin du média (le point de sortie marqué par l'utilisateur est remis après lecture).
+    // Fin du media (le point de sortie marque par l'utilisateur est remis apres lecture).
     function mediaEndOf(pi) {
         var marked = null, end = null;
         try { marked = tk(pi.getOutPoint(1)); } catch (e) {}
@@ -417,30 +417,30 @@ var RRFX = (function () {
 
     function videoSourceOf(master) {
         var name, sub, end, bin;
-        if (!master) throw new Error('Ce clip n\'a pas de média source (séquence imbriquée ?)');
-        name = 'RR FX · ' + master.name + ' · vidéo';
+        if (!master) throw new Error('Ce clip n\'a pas de m\u00e9dia source (s\u00e9quence imbriqu\u00e9e ?)');
+        name = 'RR FX \u00b7 ' + master.name + ' \u00b7 vid\u00e9o';
         sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
         if (sub) return sub;
         end = mediaEndOf(master);
-        if (!(end > 0)) throw new Error('Durée du média « ' + master.name + ' » illisible');
+        if (!(end > 0)) throw new Error('Dur\u00e9e du m\u00e9dia \u00ab ' + master.name + ' \u00bb illisible');
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 1, 0);
         if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
-        if (!sub) throw new Error('Premiere n\'a pas créé le sous-clip vidéo de « ' + master.name + ' »');
+        if (!sub) throw new Error('Premiere n\'a pas cr\u00e9\u00e9 le sous-clip vid\u00e9o de \u00ab ' + master.name + ' \u00bb');
         bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
         return sub;
     }
 
-    // Sous-clip son seul d'un rush (pour poser le son de la caméra de référence).
+    // Sous-clip son seul d'un rush (pour poser le son de la camera de reference).
     function audioSourceOf(master) {
-        var name = 'RR FX · ' + master.name + ' · son', sub, end, bin;
+        var name = 'RR FX \u00b7 ' + master.name + ' \u00b7 son', sub, end, bin;
         sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
         if (sub) return sub;
         end = mediaEndOf(master);
-        if (!(end > 0)) throw new Error('Durée du média « ' + master.name + ' » illisible');
+        if (!(end > 0)) throw new Error('Dur\u00e9e du m\u00e9dia \u00ab ' + master.name + ' \u00bb illisible');
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 0, 1);
         if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
-        if (!sub) throw new Error('Premiere n\'a pas créé le sous-clip son de « ' + master.name + ' »');
+        if (!sub) throw new Error('Premiere n\'a pas cr\u00e9\u00e9 le sous-clip son de \u00ab ' + master.name + ' \u00bb');
         bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
         return sub;
@@ -456,13 +456,13 @@ var RRFX = (function () {
         return true;
     }
 
-    // Première piste audio libre sur [a, b], ajoutée en dernier si besoin.
+    // Premiere piste audio libre sur [a, b], ajoutee en dernier si besoin.
     function pickAudioTrack(s, a, b, warnings) {
         var i, before = s.audioTracks.numTracks;
         for (i = 0; i < before; i++) if (audioTrackClear(s, i, a, b)) return i;
         try { qeSeq().addTracks(0, 0, 1, 1, before); } catch (e) {}
         if (s.audioTracks.numTracks > before) {
-            warnings.push('Piste audio A' + (before + 1) + ' ajoutée');
+            warnings.push('Piste audio A' + (before + 1) + ' ajout\u00e9e');
             return before;
         }
         throw new Error('Aucune piste audio libre : ajoute une piste audio.');
@@ -475,20 +475,20 @@ var RRFX = (function () {
         return null;
     }
 
-    // Piste juste au-dessus du clip (sous les calques de réglage), ajoutée si besoin.
+    // Piste juste au-dessus du clip (sous les calques de reglage), ajoutee si besoin.
     function layerTrack(s, srcTrack, a, b, warnings) {
         var idx = srcTrack + 1, before = s.videoTracks.numTracks;
         if (idx < before && trackClear(s, idx, a, b)) return idx;
         try { qeSeq().addTracks(1, idx, 0); } catch (e) {}
         if (s.videoTracks.numTracks > before && trackClear(s, idx, a, b)) {
-            warnings.push('Piste vidéo insérée au-dessus de V' + (srcTrack + 1));
+            warnings.push('Piste vid\u00e9o ins\u00e9r\u00e9e au-dessus de V' + (srcTrack + 1));
             return idx;
         }
-        warnings.push('Copie posée plus haut que V' + (idx + 1) + ' : vérifie qu\'elle reste sous tes calques de réglage');
+        warnings.push('Copie pos\u00e9e plus haut que V' + (idx + 1) + ' : v\u00e9rifie qu\'elle reste sous tes calques de r\u00e9glage');
         return pickTrack(s, idx, a, b, warnings);
     }
 
-    // Pose `source` (in/out = inT/outT) à la position a de la piste ti.
+    // Pose `source` (in/out = inT/outT) a la position a de la piste ti.
     function placeOn(s, ti, source, a, inT, outT) {
         var tr = s.videoTracks[ti], before = {}, list = clipsOf(s, ti), i, it;
         try { source.setInPoint(inT / TICKS, 4); source.setOutPoint(outT / TICKS, 4); } catch (e) {}
@@ -509,12 +509,12 @@ var RRFX = (function () {
         return it;
     }
 
-    // Vitesse d'un élément via QE. Facteur (2 = 200 %) ou pourcentage selon la version de
-    // Premiere : on vérifie la première fois et on retient la bonne échelle.
+    // Vitesse d'un element via QE. Facteur (2 = 200 %) ou pourcentage selon la version de
+    // Premiere : on verifie la premiere fois et on retient la bonne echelle.
     var speedScale = null;
     function setSpeedAt(s, ti, start, factor) {
         var q = qeItemFor(s, ti, start), got;
-        if (!q) throw new Error('Élément introuvable pour changer sa vitesse');
+        if (!q) throw new Error('\u00c9l\u00e9ment introuvable pour changer sa vitesse');
         if (speedScale) { q.setSpeed(factor * speedScale, '', false, false, false); return; }
         q.setSpeed(factor, '', false, false, false);
         got = findItemAt(s, ti, start).getSpeed();
@@ -522,7 +522,7 @@ var RRFX = (function () {
         q.setSpeed(factor * 100, '', false, false, false);
         got = findItemAt(s, ti, start).getSpeed();
         if (Math.abs(got - factor) < 0.01) { speedScale = 100; return; }
-        throw new Error('Premiere n\'a pas accepté le changement de vitesse (lu : ' + got + ')');
+        throw new Error('Premiere n\'a pas accept\u00e9 le changement de vitesse (lu : ' + got + ')');
     }
 
     function copyParam(p, q) {
@@ -546,7 +546,7 @@ var RRFX = (function () {
         return true;
     }
 
-    // Recopie le cadrage (Trajectoire, Opacité) et les effets du clip d'origine sur la copie.
+    // Recopie le cadrage (Trajectoire, Opacite) et les effets du clip d'origine sur la copie.
     function copyLook(s, src, ti, start, warnings) {
         var comps = src.components, i, j, c, dc, skipped = 0, lost = [];
         for (i = 0; i < comps.numItems; i++) {
@@ -559,8 +559,8 @@ var RRFX = (function () {
                 try { if (!copyParam(c.properties[j], dc.properties[j])) skipped++; } catch (e) { skipped++; }
             }
         }
-        if (lost.length) warnings.push('Effets du clip non recopiés : ' + lost.join(', '));
-        if (skipped) warnings.push(skipped + ' réglage(s) du clip non recopié(s) (courbes, LUT…) : étalonne plutôt sur un calque de réglage');
+        if (lost.length) warnings.push('Effets du clip non recopi\u00e9s : ' + lost.join(', '));
+        if (skipped) warnings.push(skipped + ' r\u00e9glage(s) du clip non recopi\u00e9(s) (courbes, LUT\u2026) : \u00e9talonne plut\u00f4t sur un calque de r\u00e9glage');
     }
 
     function placeCopy(s, srcItem, srcTrack, a, b, name, o, warnings) {
@@ -569,7 +569,7 @@ var RRFX = (function () {
         if (!(s0 > 0)) s0 = 1;
         var reversed = false;
         try { reversed = !!(srcItem.isSpeedReversed && srcItem.isSpeedReversed()); } catch (e2) {}
-        if (reversed) throw new Error('Les clips inversés ne sont pas pris en charge');
+        if (reversed) throw new Error('Les clips invers\u00e9s ne sont pas pris en charge');
         srcA = I0 + (a - S0) * s0;
         need = (b - a) * s0;
         src = videoSource(srcItem);
@@ -583,7 +583,7 @@ var RRFX = (function () {
         return { item: findItemAt(s, ti, a), track: ti };
     }
 
-    // Un élément par sa position et son nom, sur sa piste ou ailleurs (une piste a pu être insérée).
+    // Un element par sa position et son nom, sur sa piste ou ailleurs (une piste a pu etre inseree).
     function findNamed(s, track, start, name) {
         var it = findItemAt(s, track, start), i;
         if (it && (!name || it.name === name)) return it;
@@ -677,10 +677,10 @@ var RRFX = (function () {
                     if (direct && !outgoing) { warnings.push('Pas de clip avant la coupe'); continue; }
                     a = cutTicks - N * f;
                     if (direct) a = Math.max(a, tk(outgoing.start));
-                    if (a < 0) warnings.push('PRE raccourci (début de séquence)');
+                    if (a < 0) warnings.push('PRE raccourci (d\u00e9but de s\u00e9quence)');
                     add('pre', a, cutTicks, outgoing, tr, tr);
                 } else if (sides[j] === 'post') {
-                    if (direct && !incoming) { warnings.push('Pas de clip après la coupe'); continue; }
+                    if (direct && !incoming) { warnings.push('Pas de clip apr\u00e8s la coupe'); continue; }
                     b = cutTicks + N * f;
                     if (direct) b = Math.min(b, tk(incoming.end));
                     add('post', cutTicks, b, incoming, tr, tr);
@@ -700,19 +700,19 @@ var RRFX = (function () {
                 o.placement === 'cut' ? clipEndingAt(s, track, cut) : clipContaining(s, track, cut - f),
                 clipContaining(s, track, cut));
         } else if (o.placement === 'sequence') {
-            // Toute la séquence : une zone du début à la fin du dernier plan (looks…).
+            // Toute la sequence : une zone du debut a la fin du dernier plan (looks...).
             hi = 0;
             for (i = 0; i < s.videoTracks.numTracks; i++) { list = clipsOf(s, i); if (list.length) hi = Math.max(hi, tk(list[list.length - 1].end)); }
-            if (!(hi > 0)) return fail('La séquence est vide.');
+            if (!(hi > 0)) return fail('La s\u00e9quence est vide.');
             add('post', 0, hi, null, 0, 0);
         } else if (o.placement === 'markers') {
             ref = refClip(s);
             track = ref ? ref.track : 0;
             list = selectedVideo(s);
-            // o.times (secondes) : temps forts détectés par le panneau, à la place des marqueurs.
+            // o.times (secondes) : temps forts detectes par le panneau, a la place des marqueurs.
             var times = [], lo = -Infinity, hi = Infinity, seen = {}, tm;
             if (o.times) { for (i = 0; i < o.times.length; i++) times.push(o.times[i] * TICKS); } else times = markerTimes(s);
-            if (!times.length) return fail(o.times ? 'Aucun temps fort détecté.' : 'Aucun marqueur dans la séquence. Posez-en sur les temps forts (touche M pendant la lecture).');
+            if (!times.length) return fail(o.times ? 'Aucun temps fort d\u00e9tect\u00e9.' : 'Aucun marqueur dans la s\u00e9quence. Posez-en sur les temps forts (touche M pendant la lecture).');
             if (list.length) {
                 lo = Infinity; hi = -Infinity;
                 for (i = 0; i < list.length; i++) { lo = Math.min(lo, tk(list[i].item.start)); hi = Math.max(hi, tk(list[i].item.end)); }
@@ -724,7 +724,7 @@ var RRFX = (function () {
                 seen[tm] = true;
                 atCut(tm, track, clipContaining(s, track, tm - f), clipContaining(s, track, tm));
             }
-            if (!targets.length) return fail('Aucun marqueur dans les clips sélectionnés.', { warnings: warnings });
+            if (!targets.length) return fail('Aucun marqueur dans les clips s\u00e9lectionn\u00e9s.', { warnings: warnings });
         } else if (o.placement === 'cuts') {
             list = selectedVideo(s);
             for (i = 1; i < list.length; i++) {
@@ -733,14 +733,14 @@ var RRFX = (function () {
                     atCut(tk(list[i].item.start), list[i].track, list[i - 1].item, list[i].item);
                 }
             }
-            if (!targets.length) return fail('Sélectionnez au moins deux clips qui se suivent sur la même piste.');
+            if (!targets.length) return fail('S\u00e9lectionnez au moins deux clips qui se suivent sur la m\u00eame piste.');
         } else {
             list = selectedVideo(s);
             if (!list.length) {
                 ref = refClip(s);
                 if (ref) list = [ref];
             }
-            if (!list.length) return fail('Sélectionnez un clip dans la timeline.');
+            if (!list.length) return fail('S\u00e9lectionnez un clip dans la timeline.');
             for (i = 0; i < list.length; i++) {
                 c = list[i].item;
                 if (o.placement === 'clipStart') add('post', tk(c.start), Math.min(tk(c.start) + N * f, tk(c.end)), c, list[i].track, list[i].track);
@@ -748,7 +748,7 @@ var RRFX = (function () {
                 else add(sides[0] || 'post', tk(c.start), tk(c.end), c, list[i].track, list[i].track);
             }
         }
-        if (!targets.length) return fail('Rien à faire ici : placez la tête de lecture près d\'une coupe ou sélectionnez un clip.', { warnings: warnings });
+        if (!targets.length) return fail('Rien \u00e0 faire ici : placez la t\u00eate de lecture pr\u00e8s d\'une coupe ou s\u00e9lectionnez un clip.', { warnings: warnings });
         return ok({ fps: TICKS / f, frameW: s.frameSizeHorizontal, frameH: s.frameSizeVertical, targets: targets, warnings: warnings });
     }
 
@@ -758,10 +758,10 @@ var RRFX = (function () {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, j, t, adj = null, placed, track, start, comp, n = 0, lutSet = 0;
         if (o.target === 'overlay' && !o.overlay) return fail('Overlay manquant');
         if (o.target === 'adjustment' || !o.target) {
-            // Début d'un lot : on revérifie que le calque de réglage est toujours dans le projet.
+            // Debut d'un lot : on reverifie que le calque de reglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
             adj = findAdjustment(o.adjNodeId);
-            if (!adj) return fail('Aucun calque de réglage dans le projet. Crée-en un : Fichier > Nouveau > Calque de réglage.');
+            if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.');
         }
         for (i = 0; i < o.targets.length; i++) {
             t = o.targets[i];
@@ -792,10 +792,10 @@ var RRFX = (function () {
                 try {
                     placed = placeAdjustment(s, adj, t.track + 1, t.start, t.end, label, warnings);
                 } catch (e1) {
-                    // Calque de réglage supprimé du projet depuis : on le recherche une fois.
+                    // Calque de reglage supprime du projet depuis : on le recherche une fois.
                     adjCache = null;
                     adj = findAdjustment(o.adjNodeId);
-                    if (!adj) return fail('Le calque de réglage a disparu du projet. Crée-en un : Fichier > Nouveau > Calque de réglage.', { created: created, warnings: warnings });
+                    if (!adj) return fail('Le calque de r\u00e9glage a disparu du projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.', { created: created, warnings: warnings });
                     placed = placeAdjustment(s, adj, t.track + 1, t.start, t.end, label, warnings);
                 }
                 track = placed.track;
@@ -803,7 +803,7 @@ var RRFX = (function () {
                 entry = { kind: 'adj', track: track, start: start, name: label };
             }
             created.push(entry);
-            // Une erreur sur un effet ne fait pas perdre ce qui est déjà posé (l'annulation le retrouve).
+            // Une erreur sur un effet ne fait pas perdre ce qui est deja pose (l'annulation le retrouve).
             for (j = 0; j < t.fx.length; j++) {
                 try {
                     comp = addEffect(s, track, start, t.fx[j], warnings);
@@ -811,7 +811,7 @@ var RRFX = (function () {
                     if (entry.added && !t.fx[j].intrinsic) entry.added.push(comp.matchName);
                     item = findItemAt(s, track, start);
                     n += setProps(s, item, comp, t.fx[j], t.start, f, warnings);
-                    // Look ou conversion : la LUT .cube va dans la « LUT d'entrée » de Lumetri.
+                    // Look ou conversion : la LUT .cube va dans la " LUT d'entree " de Lumetri.
                     if (t.fx[j].lut) {
                         var lutErr = setInputLut(comp, t.fx[j].lut);
                         if (lutErr) warnings.push(lutErr); else lutSet++;
@@ -887,7 +887,7 @@ var RRFX = (function () {
     function capture(o) {
         var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), it, S, E, comps, out = [], k0 = null, k1 = null, skipped = 0;
         var ci, pi, c, mn, intrinsic, entry, p, pe, keys, j, kt, v, D = 0, origin = 'post';
-        if (!sel.length) return fail('Sélectionnez dans la timeline le clip ou calque de réglage qui porte vos effets.');
+        if (!sel.length) return fail('S\u00e9lectionnez dans la timeline le clip ou calque de r\u00e9glage qui porte vos effets.');
         it = sel[0].item;
         S = tk(it.start);
         E = tk(it.end);
@@ -943,7 +943,7 @@ var RRFX = (function () {
                         pe.values.push(v.v);
                     }
                     delete pe.animated;
-                    // Une valeur illisible : le paramètre entier est ignoré plutôt que mal rejoué.
+                    // Une valeur illisible : le parametre entier est ignore plutot que mal rejoue.
                     if (!pe.values) { out[ci].props.splice(pi, 1); pi--; skipped++; }
                 }
             }
@@ -961,7 +961,7 @@ var RRFX = (function () {
 
     function diagnose(o) {
         var s = activeSeq(), sel = selectedVideo(s), lines = [], it, i, j, c, p, v;
-        if (!sel.length) return fail('Sélectionnez un clip dans la timeline.');
+        if (!sel.length) return fail('S\u00e9lectionnez un clip dans la timeline.');
         it = sel[0].item;
         lines.push('Clip : ' + it.name + '  (V' + (sel[0].track + 1) + ')');
         for (i = 0; i < it.components.numItems; i++) {
@@ -971,7 +971,7 @@ var RRFX = (function () {
             for (j = 0; j < c.properties.numItems; j++) {
                 p = c.properties[j];
                 try { v = p.getValue(); v = (v && v.length !== undefined && typeof v !== 'string') ? '[' + v.join(', ') + ']' : String(v); } catch (e) { v = '?'; }
-                if (v.length > 60) v = v.substr(0, 60) + '…';
+                if (v.length > 60) v = v.substr(0, 60) + '\u2026';
                 lines.push('    #' + j + '  ' + p.displayName + ' = ' + v);
             }
         }
@@ -994,7 +994,7 @@ var RRFX = (function () {
 
     function adjustmentFromSelection(o) {
         var sel = app.getCurrentProjectViewSelection ? app.getCurrentProjectViewSelection() : null;
-        if (!sel || !sel.length) return fail('Sélectionnez votre calque de réglage dans le panneau Projet.');
+        if (!sel || !sel.length) return fail('S\u00e9lectionnez votre calque de r\u00e9glage dans le panneau Projet.');
         adjCache = sel[0];
         return ok({ name: sel[0].name, nodeId: sel[0].nodeId });
     }
@@ -1021,8 +1021,8 @@ var RRFX = (function () {
         return root.createBin(name);
     }
 
-    // Élément du projet pour un fichier (importé si besoin). stills : séquence d'images
-    // numérotées, dont `path` est la première image.
+    // Element du projet pour un fichier (importe si besoin). stills : sequence d'images
+    // numerotees, dont `path` est la premiere image.
     function itemForPath(path, binName, stills) {
         var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); }), bin, before = {}, i;
         if (found) return found;
@@ -1030,8 +1030,8 @@ var RRFX = (function () {
         for (i = 0; i < bin.children.numItems; i++) before[bin.children[i].nodeId] = true;
         app.project.importFiles([path], true, bin, !!stills);
         found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
-        // Une séquence d'images ne garde pas toujours le chemin de sa première image : on prend
-        // l'élément que l'import vient d'ajouter au chutier.
+        // Une sequence d'images ne garde pas toujours le chemin de sa premiere image : on prend
+        // l'element que l'import vient d'ajouter au chutier.
         if (!found) {
             for (i = bin.children.numItems - 1; i >= 0 && !found; i--) {
                 if (bin.children[i].type === 1 && !before[bin.children[i].nodeId]) found = bin.children[i];
@@ -1050,7 +1050,7 @@ var RRFX = (function () {
         return out;
     }
 
-    // Limites des clips sélectionnés (hors calques), ou null.
+    // Limites des clips selectionnes (hors calques), ou null.
     function selectionRange(s) {
         var sel = selectedVideo(s), lo = Infinity, hi = -Infinity, i;
         for (i = 0; i < sel.length; i++) {
@@ -1087,7 +1087,7 @@ var RRFX = (function () {
         return list.length;
     }
 
-    // Pose des marqueurs aux temps donnés (secondes de séquence), nommés « RR FX · … ».
+    // Pose des marqueurs aux temps donnes (secondes de sequence), nommes " RR FX . ... ".
     function addMarkers(o) {
         var s = activeSeq(), f = tpf(s), ms = s.markers, i, t, m, n = 0, removed = 0, seen = {};
         if (!ms || !ms.createMarker) return fail('Cette version de Premiere ne permet pas de poser des marqueurs par script.');
@@ -1097,7 +1097,7 @@ var RRFX = (function () {
             if (seen[t]) continue;
             seen[t] = true;
             m = ms.createMarker(t / TICKS);
-            try { m.name = o.name || 'RR FX · temps fort'; } catch (e) {}
+            try { m.name = o.name || 'RR FX \u00b7 temps fort'; } catch (e) {}
             try { if (m.setColorByIndex) m.setColorByIndex(o.color == null ? 3 : o.color); } catch (e2) {}
             n++;
         }
@@ -1108,12 +1108,12 @@ var RRFX = (function () {
 
     function clearAll(o) {
         var s = activeSeq(), range = o.scope === 'selection' ? selectionRange(s) : null, removed = 0, markers = 0, i, j, list, it;
-        if (o.scope === 'selection' && !range) return fail('Sélectionne les clips de la zone à nettoyer.');
+        if (o.scope === 'selection' && !range) return fail('S\u00e9lectionne les clips de la zone \u00e0 nettoyer.');
         for (i = 0; i < s.videoTracks.numTracks; i++) {
             list = clipsOf(s, i);
             for (j = 0; j < list.length; j++) {
                 it = list[j];
-                if (!/^RR FX · /.test(it.name)) continue;
+                if (!/^RR FX \u00b7 /.test(it.name)) continue;
                 if (range && !(tk(it.start) < range.b && range.a < tk(it.end))) continue;
                 it.remove(false, false);
                 removed++;
@@ -1124,24 +1124,24 @@ var RRFX = (function () {
             for (j = 0; j < s.audioTracks[i].clips.numItems; j++) list.push(s.audioTracks[i].clips[j]);
             for (j = 0; j < list.length; j++) {
                 it = list[j];
-                if (!/^RR FX · /.test(it.name)) continue;
+                if (!/^RR FX \u00b7 /.test(it.name)) continue;
                 if (range && !(tk(it.start) < range.b && range.a < tk(it.end))) continue;
                 it.remove(false, false);
                 removed++;
             }
         }
         if (o.markers) markers = removeMarkers(s, 'RR FX', range ? range.a : -Infinity, range ? range.b : Infinity);
-        // Montage multicam : les plans désactivés par RR FX sont réactivés.
+        // Montage multicam : les plans desactives par RR FX sont reactives.
         if (o.multicam) removed += multicamEnable(s, null, range ? range.a : -Infinity, range ? range.b : Infinity);
         return ok({ removed: removed, markers: markers });
     }
 
     // ------------------------------------------------------------ public: musique, rushs
 
-    // La musique : le clip son sélectionné, sinon le plus long clip son de la séquence.
+    // La musique : le clip son selectionne, sinon le plus long clip son de la sequence.
     function musicInfo(o) {
         var s = activeSeq(), f = tpf(s), sel = s.getSelection(), vids = selectedVideo(s), best = null, list, i, it, d, bd = -1, tr = 0, sp = 1;
-        // Le son lié à un clip vidéo sélectionné (son de la caméra) n'est pas la musique.
+        // Le son lie a un clip video selectionne (son de la camera) n'est pas la musique.
         function linkedToSelection(a) {
             for (var k = 0; k < vids.length; k++) {
                 if (Math.abs(tk(vids[k].item.start) - tk(a.start)) < f / 2 && Math.abs(tk(vids[k].item.end) - tk(a.end)) < f / 2) return true;
@@ -1149,7 +1149,7 @@ var RRFX = (function () {
             return false;
         }
         if (sel) for (i = 0; i < sel.length; i++) if (sel[i].mediaType === 'Audio' && !linkedToSelection(sel[i])) { best = sel[i]; break; }
-        // Sinon : le plus long son qui n'accompagne aucune image (la musique n'a pas de vidéo).
+        // Sinon : le plus long son qui n'accompagne aucune image (la musique n'a pas de video).
         function withVideo(a) {
             for (var t = 0; t < s.videoTracks.numTracks; t++) {
                 var v = clipsOf(s, t);
@@ -1162,7 +1162,7 @@ var RRFX = (function () {
         list = audioClipsOf(s);
         for (var pass = 0; pass < 2 && !best && !it; pass++) {
             for (i = 0; i < list.length; i++) {
-                // Le son posé par RR FX (caméra de référence) n'est jamais la musique.
+                // Le son pose par RR FX (camera de reference) n'est jamais la musique.
                 if (/^RR FX \u00b7 /.test(list[i].item.name) || linkedToSelection(list[i].item) || (pass === 0 && withVideo(list[i].item))) continue;
                 d = tk(list[i].item.end) - tk(list[i].item.start);
                 if (d > bd) { bd = d; it = list[i].item; tr = list[i].track; }
@@ -1170,7 +1170,7 @@ var RRFX = (function () {
         }
         if (best) for (i = 0; i < list.length; i++) if (list[i].item.nodeId === best.nodeId) tr = list[i].track;
         best = best || it;
-        if (!best) return fail('Aucun son dans la séquence : pose ta musique sur une piste audio.');
+        if (!best) return fail('Aucun son dans la s\u00e9quence : pose ta musique sur une piste audio.');
         try { sp = best.getSpeed(); } catch (e) {}
         return ok({
             name: best.name, path: best.projectItem ? mediaPathOf(best.projectItem) : '', track: tr,
@@ -1178,10 +1178,10 @@ var RRFX = (function () {
         });
     }
 
-    // Rushs sélectionnés dans le panneau Projet, avec leur plage utile (points d'entrée/sortie).
+    // Rushs selectionnes dans le panneau Projet, avec leur plage utile (points d'entree/sortie).
     function projectRushes(o) {
         var sel = app.getCurrentProjectViewSelection ? app.getCurrentProjectViewSelection() : null, out = [], i, pi, a, b, isSeq;
-        if (!sel || !sel.length) return fail('Sélectionne des rushs dans le panneau Projet.');
+        if (!sel || !sel.length) return fail('S\u00e9lectionne des rushs dans le panneau Projet.');
         for (i = 0; i < sel.length; i++) {
             pi = sel[i];
             isSeq = false;
@@ -1192,12 +1192,12 @@ var RRFX = (function () {
             if (!(b > a)) b = mediaEndOf(pi);
             out.push({ nodeId: pi.nodeId, name: pi.name, path: mediaPathOf(pi), inT: secs(a), outT: secs(b) });
         }
-        if (!out.length) return fail('Aucun rush vidéo dans la sélection du panneau Projet.');
+        if (!out.length) return fail('Aucun rush vid\u00e9o dans la s\u00e9lection du panneau Projet.');
         return ok({ rushes: out });
     }
 
-    // Pose des extraits de rushs (vidéo seule) : items [{ nodeId, seqStart, seqEnd, srcIn }] en secondes.
-    // Son d'un rush sur une piste audio libre (synchro multicam : son de la caméra de référence).
+    // Pose des extraits de rushs (video seule) : items [{ nodeId, seqStart, seqEnd, srcIn }] en secondes.
+    // Son d'un rush sur une piste audio libre (synchro multicam : son de la camera de reference).
     function placeRushAudio(s, master, a, b, inT, label, created, warnings) {
         var src, ai, tr, it;
         try {
@@ -1208,22 +1208,22 @@ var RRFX = (function () {
             tr.overwriteClip(src, mkTime(a));
             try { src.clearInPoint(); src.clearOutPoint(); } catch (e2) {}
             it = findAudioAt(s, ai, a);
-            if (!it) throw new Error('son non posé');
+            if (!it) throw new Error('son non pos\u00e9');
             fixSpan(it, a, b);
             try { it.name = label; } catch (e3) {}
             created.push({ kind: 'aud', track: ai, start: a, name: label });
         } catch (err) {
-            warnings.push(master.name + ' : son de référence non posé (' + err.toString() + ')');
+            warnings.push(master.name + ' : son de r\u00e9f\u00e9rence non pos\u00e9 (' + err.toString() + ')');
         }
     }
 
     function placeRushes(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, x, pi, sub, a, b, lo = Infinity, hi = -Infinity, ti, it, label = o.label || 'RR FX · Montage', cache = {};
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, x, pi, sub, a, b, lo = Infinity, hi = -Infinity, ti, it, label = o.label || 'RR FX \u00b7 Montage', cache = {};
         for (i = 0; i < o.items.length; i++) {
             lo = Math.min(lo, snap(o.items[i].seqStart * TICKS, f));
             hi = Math.max(hi, snap(o.items[i].seqEnd * TICKS, f));
         }
-        if (!(hi > lo)) return fail('Rien à poser.');
+        if (!(hi > lo)) return fail('Rien \u00e0 poser.');
         ti = o.track != null && o.track < s.videoTracks.numTracks && trackClear(s, o.track, lo, hi) ? o.track : pickTrack(s, o.minTrack || 0, lo, hi, warnings);
         for (i = 0; i < o.items.length; i++) {
             x = o.items[i];
@@ -1250,7 +1250,7 @@ var RRFX = (function () {
         return ok({ created: created, track: ti, warnings: warnings });
     }
 
-    // ------------------------------------------------------------ public: découpe sur le rythme
+    // ------------------------------------------------------------ public: decoupe sur le rythme
 
     function cutAtTimes(o) {
         var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs = qeSeq(), cuts = 0, i, j, k, c, a, b, t, audio = audioClipsOf(s), plan = [];
@@ -1268,7 +1268,7 @@ var RRFX = (function () {
             }
             plan.push({ track: sel[i].track, audio: tracks, times: times });
         }
-        if (!plan.length) return fail('Sélectionne dans la timeline les clips à découper.');
+        if (!plan.length) return fail('S\u00e9lectionne dans la timeline les clips \u00e0 d\u00e9couper.');
         for (i = 0; i < plan.length; i++) {
             for (j = 0; j < plan[i].times.length; j++) {
                 t = timecodeOf(s, plan[i].times[j]);
@@ -1307,7 +1307,7 @@ var RRFX = (function () {
         return true;
     }
 
-    // Décale un élément ; vérifie le résultat (la façon d'appeler move() varie selon les versions).
+    // Decale un element ; verifie le resultat (la facon d'appeler move() varie selon les versions).
     function shift(it, delta) {
         var before = tk(it.start), target = before + delta;
         try { it.move(mkTime(delta)); } catch (e) {}
@@ -1319,7 +1319,7 @@ var RRFX = (function () {
         return false;
     }
 
-    // moves : [{ track, start (s), name, delta (s) }] — clips de la timeline, avec leur son lié.
+    // moves : [{ track, start (s), name, delta (s) }] - clips de la timeline, avec leur son lie.
     function moveClips(o) {
         var s = activeSeq(), f = tpf(s), moved = 0, warnings = [], i, k, mv, it, a, b, d, audio, linked;
         for (i = 0; i < o.moves.length; i++) {
@@ -1329,16 +1329,16 @@ var RRFX = (function () {
             d = snap(mv.delta * TICKS, f);
             if (!d) { moved++; continue; }
             a = tk(it.start); b = tk(it.end);
-            if (a + d < 0) { warnings.push(mv.name + ' : il faudrait le placer avant le début de la séquence'); continue; }
-            if (!trackClearExcept(s, mv.track, a + d, b + d, it)) { warnings.push(mv.name + ' : la place est occupée sur V' + (mv.track + 1)); continue; }
+            if (a + d < 0) { warnings.push(mv.name + ' : il faudrait le placer avant le d\u00e9but de la s\u00e9quence'); continue; }
+            if (!trackClearExcept(s, mv.track, a + d, b + d, it)) { warnings.push(mv.name + ' : la place est occup\u00e9e sur V' + (mv.track + 1)); continue; }
             audio = audioClipsOf(s);
             linked = [];
             for (k = 0; k < audio.length; k++) {
                 if (Math.abs(tk(audio[k].item.start) - a) < f / 2 && Math.abs(tk(audio[k].item.end) - b) < f / 2) linked.push(audio[k].item);
             }
-            if (!shift(it, d)) { warnings.push(mv.name + ' : Premiere a refusé le déplacement'); continue; }
+            if (!shift(it, d)) { warnings.push(mv.name + ' : Premiere a refus\u00e9 le d\u00e9placement'); continue; }
             for (k = 0; k < linked.length; k++) {
-                if (Math.abs(tk(linked[k].start) - (a + d)) > 1 && !shift(linked[k], d)) warnings.push(mv.name + ' : son lié non déplacé');
+                if (Math.abs(tk(linked[k].start) - (a + d)) > 1 && !shift(linked[k], d)) warnings.push(mv.name + ' : son li\u00e9 non d\u00e9plac\u00e9');
             }
             moved++;
         }
@@ -1346,17 +1346,17 @@ var RRFX = (function () {
     }
 
     // ------------------------------------------------------------ public: montage multicam
-    // Les caméras synchronisées sont empilées (une piste par caméra). À chaque temps,
-    // une seule reste active : les autres plans sont désactivés (rien n'est supprimé).
+    // Les cameras synchronisees sont empilees (une piste par camera). A chaque temps,
+    // une seule reste active : les autres plans sont desactives (rien n'est supprime).
 
     function setDisabled(it, v) {
         try { it.disabled = v; } catch (e) { return false; }
         return it.disabled === v;
     }
 
-    // Réactive les plans désactivés par RR FX (nom d'origine suivi de « · RR FX off »).
+    // Reactive les plans desactives par RR FX (nom d'origine suivi de " . RR FX off ").
     function multicamEnable(s, tracks, a, b) {
-        var n = 0, i, j, list, it, tag = ' · RR FX off';
+        var n = 0, i, j, list, it, tag = ' \u00b7 RR FX off';
         for (i = 0; i < s.videoTracks.numTracks; i++) {
             if (tracks && !inList(tracks, i)) continue;
             list = clipsOf(s, i);
@@ -1391,7 +1391,7 @@ var RRFX = (function () {
         return false;
     }
 
-    // Un plan coupé en t (t strictement à l'intérieur, pas déjà sur une coupe).
+    // Un plan coupe en t (t strictement a l'interieur, pas deja sur une coupe).
     function inside(list, t, f) {
         var i;
         for (i = 0; i < list.length; i++) if (list[i].a < t - f / 2 && t + f / 2 < list[i].b) return true;
@@ -1400,7 +1400,7 @@ var RRFX = (function () {
 
     function multicamSwitch(o) {
         var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs, cams = [], lo = Infinity, hi = -Infinity, i, j, k, c, t, bounds, lists = [], probe;
-        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' · RR FX off', a, b, offN = 0, p, x;
+        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' \u00b7 RR FX off', a, b, offN = 0, p, x;
         for (i = 0; i < sel.length; i++) {
             c = sel[i].item;
             if (isLayer(c)) continue;
@@ -1408,20 +1408,20 @@ var RRFX = (function () {
             lo = Math.min(lo, tk(c.start)); hi = Math.max(hi, tk(c.end));
         }
         cams.sort(function (x1, y1) { return x1 - y1; });
-        if (cams.length < 2) return fail('Sélectionne les plans de deux caméras ou plus, synchronisées et empilées (une piste par caméra).');
+        if (cams.length < 2) return fail('S\u00e9lectionne les plans de deux cam\u00e9ras ou plus, synchronis\u00e9es et empil\u00e9es (une piste par cam\u00e9ra).');
         bounds = [lo];
         for (j = 0; j < o.times.length; j++) {
             t = snap(o.times[j] * TICKS, f);
             if (t > bounds[bounds.length - 1] + f / 2 && t < hi - f / 2) bounds.push(t);
         }
         bounds.push(hi);
-        if (bounds.length < 3) return fail('Aucun temps dans la zone sélectionnée.');
-        // Avant de couper quoi que ce soit : ce Premiere sait-il désactiver un plan par script ?
+        if (bounds.length < 3) return fail('Aucun temps dans la zone s\u00e9lectionn\u00e9e.');
+        // Avant de couper quoi que ce soit : ce Premiere sait-il desactiver un plan par script ?
         probe = sel[0].item;
-        if (!setDisabled(probe, !probe.disabled)) return fail('Cette version de Premiere ne permet pas de désactiver un plan par script.');
+        if (!setDisabled(probe, !probe.disabled)) return fail('Cette version de Premiere ne permet pas de d\u00e9sactiver un plan par script.');
         setDisabled(probe, !probe.disabled);
         multicamEnable(s, cams, lo, hi);
-        // Coupe chaque caméra à chaque temps (le son n'est pas touché).
+        // Coupe chaque camera a chaque temps (le son n'est pas touche).
         qs = qeSeq();
         for (k = 0; k < cams.length; k++) {
             x = spans(s, cams[k]);
@@ -1446,7 +1446,7 @@ var RRFX = (function () {
             if (pick !== prev) switches++;
             prev = pick;
             seg.push(pick);
-            // Les listes sont triées : chaque piste avance son curseur au lieu de tout relire.
+            // Les listes sont triees : chaque piste avance son curseur au lieu de tout relire.
             for (k = 0; k < lists.length; k++) {
                 p = lists[k];
                 while (p.next < p.items.length && p.items[p.next].b <= a + f / 2) p.next++;
@@ -1464,7 +1464,7 @@ var RRFX = (function () {
         return ok({ segments: bounds.length - 1, switches: switches, cams: cams.length, disabled: offN, plan: seg, entry: { kind: 'mc', tracks: cams, a: lo, b: hi } });
     }
 
-    // ------------------------------------------------------------ public: aperçu sur la vraie image
+    // ------------------------------------------------------------ public: apercu sur la vraie image
 
     function grabFrames(o) {
         var s = activeSeq(), f = tpf(s), ph = snap(tk(s.getPlayerPosition()), f), ref = refClip(s), track = ref ? ref.track : 0, cut = nearestEdit(s, track, ph), q = qeSeq(), files = [], times, i;
@@ -1503,22 +1503,22 @@ var RRFX = (function () {
         return false;
     }
 
-    // Un texte : modèle .mogrt posé de start à end (s), texte remplacé, animation (fx) ajoutée.
+    // Un texte : modele .mogrt pose de start a end (s), texte remplace, animation (fx) ajoutee.
     function placeTitle(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], a = snap(o.start * TICKS, f), b = snap(o.end * TICKS, f), ti = o.track, it, j, comp, label = 'RR FX · Texte', textSet;
-        if (!s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un modèle de texte par script.');
-        if (!(b > a)) return fail('Durée nulle');
+        var s = activeSeq(), f = tpf(s), warnings = [], a = snap(o.start * TICKS, f), b = snap(o.end * TICKS, f), ti = o.track, it, j, comp, label = 'RR FX \u00b7 Texte', textSet;
+        if (!s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un mod\u00e8le de texte par script.');
+        if (!(b > a)) return fail('Dur\u00e9e nulle');
         if (ti === null || ti === undefined) {
-            // Le modèle arrive avec sa propre durée : la piste doit être libre bien au-delà.
+            // Le modele arrive avec sa propre duree : la piste doit etre libre bien au-dela.
             ti = pickTrack(s, o.minTrack || 0, a, Math.max(b, o.spanEnd ? o.spanEnd * TICKS : b) + 60 * TICKS, warnings);
         }
         it = s.importMGT(o.mogrt, String(a), ti, 0);
         if (!it || !it.start) it = findItemAt(s, ti, a);
-        if (!it) return fail('Premiere n\'a pas posé le modèle de texte (fichier .mogrt valide ?)');
+        if (!it) return fail('Premiere n\'a pas pos\u00e9 le mod\u00e8le de texte (fichier .mogrt valide ?)');
         if (Math.abs(tk(it.end) - b) > 1) it.end = mkTime(b);
         try { it.name = label; } catch (e) {}
         textSet = setMgtText(findItemAt(s, ti, a), o.text);
-        if (!textSet) warnings.push('Texte non remplacé : ce modèle n\'a pas de champ texte modifiable');
+        if (!textSet) warnings.push('Texte non remplac\u00e9 : ce mod\u00e8le n\'a pas de champ texte modifiable');
         for (j = 0; j < (o.fx || []).length; j++) {
             try {
                 comp = addEffect(s, ti, a, o.fx[j], warnings);
@@ -1530,13 +1530,13 @@ var RRFX = (function () {
         return ok({ created: [{ kind: 'adj', track: ti, start: a, name: label }], track: ti, warnings: warnings });
     }
 
-    // ------------------------------------------------------------ Lumetri : LUT d'entrée
+    // ------------------------------------------------------------ Lumetri : LUT d'entree
 
-    // Premiere range la LUT d'entrée personnalisée dans le champ texte sans nom deux crans après
-    // « Correction de base », et ne l'utilise que si le menu « LUT d'entrée » (quatre crans après)
-    // vaut 1. Le chemin doit finir par un séparateur. Le second menu du même nom n'est pas touché.
-    var BASIC_NAME = /^(basic correction|correction de base|grundkorrektur|grundlegende korrektur|corrección básica|correzione di base|correção básica)$/i;
-    var INPUT_LUT = /^(input lut|lut d.entrée|eingabe-lut|lut de entrada|lut di input|lut di ingresso)$/i;
+    // Premiere range la LUT d'entree personnalisee dans le champ texte sans nom deux crans apres
+    // " Correction de base ", et ne l'utilise que si le menu " LUT d'entree " (quatre crans apres)
+    // vaut 1. Le chemin doit finir par un separateur. Le second menu du meme nom n'est pas touche.
+    var BASIC_NAME = /^(basic correction|correction de base|grundkorrektur|grundlegende korrektur|correcci\u00f3n b\u00e1sica|correzione di base|corre\u00e7\u00e3o b\u00e1sica)$/i;
+    var INPUT_LUT = /^(input lut|lut d.entr\u00e9e|eingabe-lut|lut de entrada|lut di input|lut di ingresso)$/i;
 
     function inputLutSlot(comp) {
         var P = comp.properties, n = P.numItems, i, basic = -1;
@@ -1546,10 +1546,10 @@ var RRFX = (function () {
         return basic;
     }
 
-    // Renvoie '' si la LUT est chargée, sinon la raison.
+    // Renvoie '' si la LUT est chargee, sinon la raison.
     function setInputLut(comp, path) {
         var b = inputLutSlot(comp), P, clean, stored, back;
-        if (b < 0) return 'LUT d\'entrée introuvable dans Lumetri : choisis-la à la main (Correction de base > LUT d\'entrée > Parcourir…)';
+        if (b < 0) return 'LUT d\'entr\u00e9e introuvable dans Lumetri : choisis-la \u00e0 la main (Correction de base > LUT d\'entr\u00e9e > Parcourir\u2026)';
         P = comp.properties;
         clean = String(path).replace(/[\\\/]+$/, '');
         stored = clean + (/\\/.test(clean) ? '\\' : '/');
@@ -1558,46 +1558,94 @@ var RRFX = (function () {
             P[b + 2].setValue(stored, true);
             P[b + 4].setValue(1, true);
             back = String(P[b + 2].getValue()).replace(/[\\\/]+$/, '');
-            if (back !== clean || Number(P[b + 4].getValue()) !== 1) return 'Premiere n\'a pas gardé la LUT d\'entrée : choisis-la à la main (Correction de base > LUT d\'entrée > Parcourir…)';
+            if (back !== clean || Number(P[b + 4].getValue()) !== 1) return 'Premiere n\'a pas gard\u00e9 la LUT d\'entr\u00e9e : choisis-la \u00e0 la main (Correction de base > LUT d\'entr\u00e9e > Parcourir\u2026)';
         } catch (e1) {
-            return 'LUT d\'entrée refusée par Premiere (' + e1.toString() + ') : choisis-la à la main';
+            return 'LUT d\'entr\u00e9e refus\u00e9e par Premiere (' + e1.toString() + ') : choisis-la \u00e0 la main';
         }
         return '';
     }
 
-    // ------------------------------------------------------------ public: conversion LOG → Rec.709
+    // ------------------------------------------------------------ public: conversion LOG -> Rec.709
 
-    var CONV_NAME = /^RR FX · Conversion/;
+    var CONV_NAME = /^RR FX \u00b7 Conversion/, LOOK_NAME = /^RR FX \u00b7 Look/;
 
     function isGraphic(it) {
         try { if (it.isMGT && it.isMGT()) return true; } catch (e) {}
         try { return !!(it.getMGTComponent && it.getMGTComponent()); } catch (e2) { return false; }
     }
-    function isRush(it) { return !isLayer(it) && !isGraphic(it); }
 
-    // Un calque de réglage Lumetri juste au-dessus des rushs (sous les looks, titres et overlays),
-    // de la longueur des rushs, avec la LUT de conversion en LUT d'entrée. o.scope : 'sequence'
+    // Elements du projet ranges par RR FX dans des chutiers d'habillage (overlays, ressources).
+    function overlayIds() {
+        var ids = {}, root = app.project.rootItem, i, c;
+        for (i = 0; i < root.children.numItems; i++) {
+            c = root.children[i];
+            if (c.type === 2 && (c.name === 'RR FX Overlays' || c.name === 'RR FX Ressources')) walk(c, function (x) { ids[x.nodeId] = true; return false; });
+        }
+        return ids;
+    }
+
+    // Pour la conversion : 'rush' (image de la camera, copies RR FX du plan comprises), 'look'
+    // (look RR FX), 'over' (titre, overlay, ressource) ou 'layer' (autre calque de reglage).
+    function convKind(it, over) {
+        var pi = null;
+        if (isGraphic(it)) return 'over';
+        try { pi = it.projectItem; } catch (e) {}
+        if (!pi) return 'over';
+        if (isAdjustment(pi)) return LOOK_NAME.test(it.name) ? 'look' : 'layer';
+        return over[pi.nodeId] ? 'over' : 'rush';
+    }
+
+    // Retire une conversion deja posee sur [a, b] : deux conversions a la suite bruleraient
+    // l'image. Un calque qui deborde est coupe (la conversion des autres plans reste).
+    function cutConversions(s, a, b, warnings) {
+        var n = 0, i, j, list, it, x, y, qt;
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j]; x = tk(it.start); y = tk(it.end);
+                if (!CONV_NAME.test(it.name) || x >= b || a >= y) continue;
+                try {
+                    qt = qeSeq().getVideoTrackAt(i);
+                    if (x < a) qt.razor(timecodeOf(s, a));
+                    if (y > b) qt.razor(timecodeOf(s, b));
+                } catch (e) {}
+            }
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j]; x = tk(it.start); y = tk(it.end);
+                if (!CONV_NAME.test(it.name) || x >= b || a >= y) continue;
+                if (x < a || y > b) warnings.push('Ancienne conversion retir\u00e9e en entier sur V' + (i + 1) + ' (Premiere n\'a pas pu la couper)');
+                it.remove(false, false);
+                n++;
+            }
+        }
+        return n;
+    }
+
+    // Un calque de reglage Lumetri juste au-dessus des rushs (sous les looks, titres et overlays),
+    // de la longueur des rushs, avec la LUT de conversion en LUT d'entree. o.scope : 'sequence'
     // (un calque du premier au dernier rush) ou 'selection' (un calque par groupe de rushs choisis).
     function logConvert(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], spans = [], merged = [], replaced = 0, lutSet = 0, below = 0;
-        var i, j, k, list, c, a, b, adj, top, ti, before, placed, comp, err, sel;
+        var i, j, k, list, c, a, b, adj, top, ti, before, placed, comp, err, sel, over = overlayIds(), kind;
         adjCache = null;
         adj = findAdjustment(o.adjNodeId);
-        if (!adj) return fail('Aucun calque de réglage dans le projet. Crée-en un : Fichier > Nouveau > Calque de réglage.');
+        if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.');
         if (o.scope === 'selection') {
             sel = selectedVideo(s);
-            for (i = 0; i < sel.length; i++) if (isRush(sel[i].item)) spans.push({ a: tk(sel[i].item.start), b: tk(sel[i].item.end), top: sel[i].track });
-            if (!spans.length) return fail('Sélectionne les rushs à convertir dans la timeline.');
+            // Plans desactives (angles caches du montage multicam) : rien a convertir a cet endroit.
+            for (i = 0; i < sel.length; i++) if (convKind(sel[i].item, over) === 'rush' && !sel[i].item.disabled) spans.push({ a: tk(sel[i].item.start), b: tk(sel[i].item.end), top: sel[i].track });
+            if (!spans.length) return fail('S\u00e9lectionne les rushs \u00e0 convertir dans la timeline.');
         } else {
             a = Infinity; b = 0; top = 0;
             for (i = 0; i < s.videoTracks.numTracks; i++) {
                 list = clipsOf(s, i);
                 for (j = 0; j < list.length; j++) {
-                    if (!isRush(list[j])) continue;
+                    if (convKind(list[j], over) !== 'rush') continue;
                     a = Math.min(a, tk(list[j].start)); b = Math.max(b, tk(list[j].end)); top = Math.max(top, i);
                 }
             }
-            if (!(b > 0)) return fail('Aucun rush dans la séquence.');
+            if (!(b > 0)) return fail('Aucun rush dans la s\u00e9quence.');
             spans.push({ a: a, b: b, top: top });
         }
         spans.sort(function (x, y) { return x.a - y.a; });
@@ -1606,24 +1654,22 @@ var RRFX = (function () {
             if (c && spans[i].a <= c.b + f) { c.b = Math.max(c.b, spans[i].b); c.top = Math.max(c.top, spans[i].top); }
             else merged.push({ a: spans[i].a, b: spans[i].b, top: spans[i].top });
         }
-        // Une conversion déjà posée là est remplacée : deux conversions à la suite brûleraient l'image.
-        for (i = 0; i < s.videoTracks.numTracks; i++) {
-            list = clipsOf(s, i);
-            for (j = 0; j < list.length; j++) {
-                if (!CONV_NAME.test(list[j].name)) continue;
-                for (k = 0; k < merged.length; k++) {
-                    if (tk(list[j].start) < merged[k].b && merged[k].a < tk(list[j].end)) { list[j].remove(false, false); replaced++; break; }
-                }
-            }
-        }
         for (k = 0; k < merged.length; k++) {
-            a = merged[k].a; b = merged[k].b; ti = merged[k].top + 1;
+            a = merged[k].a; b = merged[k].b;
+            replaced += cutConversions(s, a, b, warnings);
+            // Le rush le plus haut sur cette zone (copies RR FX du plan comprises).
+            top = merged[k].top;
+            for (i = top + 1; i < s.videoTracks.numTracks; i++) {
+                list = clipsOf(s, i);
+                for (j = 0; j < list.length; j++) if (tk(list[j].start) < b && a < tk(list[j].end) && convKind(list[j], over) === 'rush') top = i;
+            }
+            ti = top + 1;
             if (ti < s.videoTracks.numTracks && !trackClear(s, ti, a, b)) {
-                // Piste occupée (look, titre…) : on glisse une piste neuve juste au-dessus des rushs.
+                // Piste occupee (look, titre...) : on glisse une piste neuve juste au-dessus des rushs.
                 before = s.videoTracks.numTracks;
                 try { qeSeq().addTracks(1, ti, 0); } catch (e) {}
                 if (s.videoTracks.numTracks > before && trackClear(s, ti, a, b)) {
-                    warnings.push('Piste V' + (ti + 1) + ' ajoutée juste au-dessus des rushs');
+                    warnings.push('Piste V' + (ti + 1) + ' ajout\u00e9e juste au-dessus des rushs');
                     for (j = 0; j < created.length; j++) if (created[j].track >= ti) created[j].track++;
                     for (j = k + 1; j < merged.length; j++) if (merged[j].top >= ti) merged[j].top++;
                 }
@@ -1635,35 +1681,39 @@ var RRFX = (function () {
                 err = setInputLut(comp, o.lutPath);
                 if (err) warnings.push(err); else lutSet++;
             }
-            // Titres et calques sous la conversion : ils seraient convertis eux aussi.
+            // Looks, titres et overlays sous la conversion : ils seraient convertis eux aussi.
             for (i = 0; i < placed.track; i++) {
                 list = clipsOf(s, i);
-                for (j = 0; j < list.length; j++) if (!isRush(list[j]) && tk(list[j].start) < b && a < tk(list[j].end)) below++;
+                for (j = 0; j < list.length; j++) {
+                    if (tk(list[j].start) >= b || a >= tk(list[j].end)) continue;
+                    kind = convKind(list[j], over);
+                    if (kind === 'look' || kind === 'over') below++;
+                }
             }
         }
-        if (below) warnings.push(below + ' titre(s) ou calque(s) sous le calque de conversion : remonte-les au-dessus pour qu\'ils ne soient pas convertis.');
+        if (below) warnings.push(below + ' look(s), titre(s) ou overlay(s) sous le calque de conversion : remonte-les au-dessus pour qu\'ils ne soient pas convertis.');
         return ok({ created: created, layers: created.length, replaced: replaced, lutSet: lutSet, warnings: warnings });
     }
 
-    // ------------------------------------------------------------ public: ressources (dossiers liés)
+    // ------------------------------------------------------------ public: ressources (dossiers lies)
 
-    // Piste vidéo la plus haute qui a une image à l'instant t (-1 : aucune).
+    // Piste video la plus haute qui a une image a l'instant t (-1 : aucune).
     function topTrackAt(s, t) {
         var i;
         for (i = s.videoTracks.numTracks - 1; i >= 0; i--) if (clipContaining(s, i, t)) return i;
         return -1;
     }
 
-    // Pose une ressource du disque à chaque instant de o.times (s) : vidéo (sans son, au-dessus
-    // de tout), image (o.imageDur s), son (piste audio libre) ou modèle de titre .mogrt.
-    // Les éléments gardent leur nom : « Tout effacer » ne les retire pas, ↶ Annuler oui.
+    // Pose une ressource du disque a chaque instant de o.times (s) : video (sans son, au-dessus
+    // de tout), image (o.imageDur s), son (piste audio libre) ou modele de titre .mogrt.
+    // Les elements gardent leur nom : " Tout effacer " ne les retire pas, ? Annuler oui.
     function placeAsset(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, k, a, pi = null, src, dur, ti, ai, it, tr, used = [];
-        if (!o.times || !o.times.length) return fail('Aucun endroit où poser.');
-        if (o.kind === 'mogrt' && !s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un modèle de titre par script.');
+        if (!o.times || !o.times.length) return fail('Aucun endroit o\u00f9 poser.');
+        if (o.kind === 'mogrt' && !s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un mod\u00e8le de titre par script.');
         if (o.kind !== 'mogrt') {
             pi = itemForPath(o.path, 'RR FX Ressources', false);
-            if (!pi) return fail('Premiere n\'a pas importé ce fichier (format pris en charge ?)');
+            if (!pi) return fail('Premiere n\'a pas import\u00e9 ce fichier (format pris en charge ?)');
         }
         if (o.kind === 'video') src = videoSourceOf(pi);
         for (i = 0; i < o.times.length; i++) {
@@ -1671,7 +1721,7 @@ var RRFX = (function () {
             try {
                 if (o.kind === 'audio') {
                     dur = mediaEndOf(pi) || 2 * TICKS;
-                    // Les sons d'un même lot restent groupés sur les mêmes pistes.
+                    // Les sons d'un meme lot restent groupes sur les memes pistes.
                     ai = -1;
                     for (k = 0; k < used.length && ai < 0; k++) if (audioTrackClear(s, used[k], a, a + dur)) ai = used[k];
                     if (ai < 0) { ai = pickAudioTrack(s, a, a + dur, warnings); if (!inList(used, ai)) used.push(ai); }
@@ -1679,7 +1729,7 @@ var RRFX = (function () {
                     tr.overwriteClip(pi, mkTime(a));
                     it = findAudioAt(s, ai, a);
                     if (!it) { tr.overwriteClip(pi, a / TICKS); it = findAudioAt(s, ai, a); }
-                    if (!it) throw new Error('son non posé');
+                    if (!it) throw new Error('son non pos\u00e9');
                     created.push({ kind: 'aud', track: ai, start: a, name: it.name });
                     continue;
                 }
@@ -1687,10 +1737,10 @@ var RRFX = (function () {
                     ti = pickTrack(s, topTrackAt(s, a) + 1, a, a + 10 * TICKS, warnings);
                     it = s.importMGT(o.path, String(a), ti, 0);
                     if (!it || !it.start) it = findItemAt(s, ti, a);
-                    if (!it) throw new Error('modèle non posé (fichier .mogrt valide ?)');
+                    if (!it) throw new Error('mod\u00e8le non pos\u00e9 (fichier .mogrt valide ?)');
                 } else {
                     dur = o.kind === 'image' ? Math.max(1, Math.round((o.imageDur || 5) * TICKS / f)) * f : mediaEndOf(pi);
-                    if (!(dur > 0)) throw new Error('durée du média illisible');
+                    if (!(dur > 0)) throw new Error('dur\u00e9e du m\u00e9dia illisible');
                     ti = pickTrack(s, topTrackAt(s, a) + 1, a, a + dur, warnings);
                     it = placeOn(s, ti, o.kind === 'video' ? src : pi, a, 0, dur);
                     fixSpan(it, a, a + dur);
@@ -1698,14 +1748,14 @@ var RRFX = (function () {
                 }
                 created.push({ kind: 'adj', track: ti, start: a, name: it.name });
             } catch (err) {
-                warnings.push(String(o.name || o.path) + ' à ' + (Math.round(a / TICKS * 100) / 100) + ' s : ' + err.toString());
+                warnings.push(String(o.name || o.path) + ' \u00e0 ' + (Math.round(a / TICKS * 100) / 100) + ' s : ' + err.toString());
             }
         }
-        if (!created.length) return fail(warnings[0] || 'Rien n\'a été posé.', { warnings: warnings });
+        if (!created.length) return fail(warnings[0] || 'Rien n\'a \u00e9t\u00e9 pos\u00e9.', { warnings: warnings });
         return ok({ created: created, warnings: warnings });
     }
 
-    // Importe des fichiers du disque dans le chutier « RR FX Ressources » (sans rien poser).
+    // Importe des fichiers du disque dans le chutier " RR FX Ressources " (sans rien poser).
     function importAssets(o) {
         var n = 0, failed = [], i;
         for (i = 0; i < o.paths.length; i++) {
@@ -1720,7 +1770,7 @@ var RRFX = (function () {
     function placeOverlay(s, ov, t, n, warnings) {
         var f = tpf(s), pi = itemForPath(ov.path, 'RR FX Overlays', ov.kind === 'sequence'), src, dur, len = t.end - t.start, inT = 0, ti, it, r;
         if (!pi) { warnings.push('Overlay introuvable : ' + ov.path); return null; }
-        // Séquence d'images d'un pack : cadence de la séquence, pas de son à protéger.
+        // Sequence d'images d'un pack : cadence de la sequence, pas de son a proteger.
         if (ov.kind === 'sequence' && ov.fps) { try { pi.setOverrideFrameRate(ov.fps); } catch (e0) {} }
         if (ov.kind === 'image') {
             src = pi;
@@ -1728,7 +1778,7 @@ var RRFX = (function () {
             it = placeOn(s, ti, src, t.start, 0, len);
         } else {
             dur = mediaEndOf(pi);
-            if (dur && dur < len) { warnings.push('« ' + pi.name + ' » est plus court que l\'effet : raccourci'); len = Math.max(f, Math.floor(dur / f) * f); }
+            if (dur && dur < len) { warnings.push('\u00ab ' + pi.name + ' \u00bb est plus court que l\'effet : raccourci'); len = Math.max(f, Math.floor(dur / f) * f); }
             r = Math.abs(Math.sin((n + 1) * 12.9898 + (ov.seed || 1) * 78.233) * 43758.5453) % 1;
             if (dur && ov.start === 'middle') inT = (dur - len) / 2;
             else if (dur && ov.start === 'random') inT = r * (dur - len);
@@ -1737,16 +1787,16 @@ var RRFX = (function () {
             it = placeOn(s, ti, src, t.start, inT, inT + len);
         }
         fixSpan(it, t.start, t.start + len);
-        try { it.name = (t.name || 'RR FX · Overlay') + ' ' + t.side.toUpperCase(); } catch (e) {}
+        try { it.name = (t.name || 'RR FX \u00b7 Overlay') + ' ' + t.side.toUpperCase(); } catch (e) {}
         return { item: findItemAt(s, ti, t.start), track: ti };
     }
 
-    // Mode de fusion de l'Opacité du clip sélectionné (pour l'apprendre une fois).
+    // Mode de fusion de l'Opacite du clip selectionne (pour l'apprendre une fois).
     function readBlend(o) {
         var s = activeSeq(), sel = selectedVideo(s), c;
-        if (!sel.length) return fail('Sélectionne un clip dont tu as réglé le mode de fusion.');
+        if (!sel.length) return fail('S\u00e9lectionne un clip dont tu as r\u00e9gl\u00e9 le mode de fusion.');
         c = componentByMatch(sel[0].item, 'AE.ADBE Opacity');
-        if (!c || !c.properties[1]) return fail('Opacité introuvable sur ce clip.');
+        if (!c || !c.properties[1]) return fail('Opacit\u00e9 introuvable sur ce clip.');
         return ok({ value: c.properties[1].getValue() });
     }
 
@@ -1760,7 +1810,7 @@ var RRFX = (function () {
         var ref = refClip(s), track = ref ? ref.track : 0, clip = null, cut, a, b, anchor = 'start';
         if (o.placement === 'pre' || o.placement === 'post') {
             cut = nearestEdit(s, track, ph);
-            if (cut === null) return fail('Aucune coupe trouvée sur la piste V' + (track + 1));
+            if (cut === null) return fail('Aucune coupe trouv\u00e9e sur la piste V' + (track + 1));
             if (o.placement === 'pre') {
                 clip = clipEndingAt(s, track, cut);
                 if (!clip) return fail('Pas de clip qui se termine sur cette coupe.');
@@ -1772,11 +1822,11 @@ var RRFX = (function () {
             }
         } else if (o.placement === 'playhead') {
             clip = ref ? (selectedVideo(s).length ? ref.item : clipContaining(s, track, ph)) : null;
-            if (!clip) return fail('Placez la tête de lecture sur un clip.');
+            if (!clip) return fail('Placez la t\u00eate de lecture sur un clip.');
             a = Math.max(tk(clip.start), ph - Math.floor(N / 2) * f);
             b = Math.min(tk(clip.end), a + N * f);
         } else {
-            if (!ref) return fail('Sélectionnez un clip.');
+            if (!ref) return fail('S\u00e9lectionnez un clip.');
             clip = ref.item;
             a = tk(clip.start); b = tk(clip.end);
         }
@@ -1803,19 +1853,19 @@ var RRFX = (function () {
         if (Math.abs(tk(it.end) - b) > 1) { try { it.end = mkTime(b); } catch (e2) {} }
     }
 
-    // La rampe est posée sur une copie du passage, en morceaux de vitesse constante
+    // La rampe est posee sur une copie du passage, en morceaux de vitesse constante
     // (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip
     // d'origine, son son et la coupe ne bougent pas ; chaque morceau s'appelle
-    // « RR FX · Rampe » et l'annulation du panneau les retire.
+    // " RR FX . Rampe " et l'annulation du panneau les retire.
     function rampApply(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], item, S, I, s0 = 1, R0 = o.regionStart, R1, K = o.pieces.length;
-        var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'RR FX · Rampe';
+        var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'RR FX \u00b7 Rampe';
         item = findClip(s, o.track, o.clipStart, o.clipName);
-        if (!item) return fail('Clip introuvable : il a bougé depuis l\'analyse. Réessaie.');
+        if (!item) return fail('Clip introuvable : il a boug\u00e9 depuis l\'analyse. R\u00e9essaie.');
         S = tk(item.start); I = tk(item.inPoint);
         try { s0 = item.getSpeed(); } catch (e) {}
         if (!(s0 > 0)) s0 = 1;
-        try { if (item.isSpeedReversed && item.isSpeedReversed()) return fail('Les clips inversés ne sont pas pris en charge.'); } catch (e2) {}
+        try { if (item.isSpeedReversed && item.isSpeedReversed()) return fail('Les clips invers\u00e9s ne sont pas pris en charge.'); } catch (e2) {}
 
         for (k = 0; k < K; k++) {
             bnd.push(bnd[k] + o.pieces[k].frames * f);
@@ -1825,12 +1875,12 @@ var RRFX = (function () {
         R1 = bnd[K];
         srcStart = o.anchor === 'end' ? I + (R1 - S) * s0 - total : I + (R0 - S) * s0;
         if (srcStart < -f / 2) {
-            return fail('Pas assez de média avant : il manque ' + Math.ceil(-srcStart / f) + ' images. Choisis l\'ancre « Garder l\'image de début » ou réduis la vitesse.');
+            return fail('Pas assez de m\u00e9dia avant : il manque ' + Math.ceil(-srcStart / f) + ' images. Choisis l\'ancre \u00ab Garder l\'image de d\u00e9but \u00bb ou r\u00e9duis la vitesse.');
         }
         srcStart = Math.max(0, srcStart);
         try { end = mediaEndOf(item.projectItem); } catch (e3) {}
         if (end && srcStart + total > end + f / 2) {
-            return fail('Pas assez de média après : il manque ' + Math.ceil((srcStart + total - end) / f) + ' images. Choisis l\'ancre « Garder l\'image de fin » ou réduis la vitesse.');
+            return fail('Pas assez de m\u00e9dia apr\u00e8s : il manque ' + Math.ceil((srcStart + total - end) / f) + ' images. Choisis l\'ancre \u00ab Garder l\'image de fin \u00bb ou r\u00e9duis la vitesse.');
         }
 
         src = videoSource(item);
@@ -1843,8 +1893,8 @@ var RRFX = (function () {
         }
         ti = layerTrack(s, o.track, R0, reach, warnings);
 
-        // Dans l'ordre : chaque morceau est posé à 100 % puis mis à sa vitesse, ce qui le
-        // ramène exactement à sa place ; la place du suivant est encore libre.
+        // Dans l'ordre : chaque morceau est pose a 100 % puis mis a sa vitesse, ce qui le
+        // ramene exactement a sa place ; la place du suivant est encore libre.
         for (k = 0; k < K; k++) {
             placeOn(s, ti, src, plan[k].a, plan[k].inT, plan[k].outT);
             setSpeedAt(s, ti, plan[k].a, plan[k].speed);
@@ -1857,8 +1907,8 @@ var RRFX = (function () {
                 try {
                     var q = qeItemFor(s, ti, plan[k].a);
                     if (q && q.setTimeInterpolationType) q.setTimeInterpolationType(o.interp === 'flow' ? 2 : 1);
-                    else if (k === 0) warnings.push('Interpolation temporelle à régler à la main (Clip > Options vidéo)');
-                } catch (e6) { if (k === 0) warnings.push('Interpolation temporelle à régler à la main (Clip > Options vidéo)'); }
+                    else if (k === 0) warnings.push('Interpolation temporelle \u00e0 r\u00e9gler \u00e0 la main (Clip > Options vid\u00e9o)');
+                } catch (e6) { if (k === 0) warnings.push('Interpolation temporelle \u00e0 r\u00e9gler \u00e0 la main (Clip > Options vid\u00e9o)'); }
             }
         }
         for (k = 0; k < K; k++) {
@@ -1866,7 +1916,7 @@ var RRFX = (function () {
             if (!it || Math.abs(tk(it.end) - plan[k].b) > f / 2) bad.push(k + 1);
             else if (o.copyLook !== false) copyLook(s, item, ti, plan[k].a, k === 0 ? warnings : []);
         }
-        if (bad.length) warnings.push('Morceaux à vérifier : ' + bad.join(', '));
+        if (bad.length) warnings.push('Morceaux \u00e0 v\u00e9rifier : ' + bad.join(', '));
         return ok({ pieces: K, sourceFrames: total / f, track: ti, created: created, warnings: warnings });
     }
 

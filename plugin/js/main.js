@@ -574,18 +574,35 @@
     renderInspector();
   }
 
+  // Vignettes déjà dessinées, par jeu d'images de test : changer d'onglet ou de catégorie ne
+  // recalcule pas les flous et les filés de chaque carte.
+  const thumbCache = new WeakMap();
   function drawThumb(canvas, entry) {
-    if (entry.kind === 'overlay' && entry.overlay.pack) {
-      const g = canvas.getContext('2d');
-      Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
-      drawOverlayOn(g, entry, 0.95, Math.round(fps() * 0.8));
-      return;
-    }
-    if (entry.kind === 'overlay') {
+    if (entry.kind === 'overlay' && !entry.overlay.pack) {
       const g = canvas.getContext('2d');
       Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
       overlayMedia(entry.overlay, () => { Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null); drawOverlayOn(g, entry, 0.9); });
       return;
+    }
+    const shots = Pv.shots();
+    let cache = thumbCache.get(shots);
+    if (!cache) thumbCache.set(shots, cache = new Map());
+    const key = entry.key + '|' + canvas.width + 'x' + canvas.height + '|' + (entry.overlay ? fps() : entry.item ? window.RRFXAssets.hashText(JSON.stringify(entry.item.data)) : '');
+    const hit = cache.get(key), g = canvas.getContext('2d');
+    if (hit) { g.drawImage(hit, 0, 0); return; }
+    if (!paintThumb(canvas, entry)) return;
+    const copy = document.createElement('canvas');
+    copy.width = canvas.width; copy.height = canvas.height;
+    copy.getContext('2d').drawImage(canvas, 0, 0);
+    cache.set(key, copy);
+  }
+
+  function paintThumb(canvas, entry) {
+    if (entry.kind === 'overlay') {
+      const g = canvas.getContext('2d');
+      Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
+      drawOverlayOn(g, entry, 0.95, Math.round(fps() * 0.8));
+      return true;
     }
     try {
       const p = defaultParams(entry);
@@ -596,8 +613,10 @@
       // Un pic tout noir (dips) ne dit rien : on montre l'image d'avant.
       if (Pv.stateAt(spec, i).opacity < 0.15) { i = j; j = side === 'pre' ? Math.max(0, i - 1) : Math.min(N - 1, i + 1); }
       Pv.render(canvas.getContext('2d'), Pv.shots()[side === 'pre' ? 'A' : 'B'], Pv.stateAt(spec, i), Pv.stateAt(spec, j));
+      return true;
     } catch (e) {
       log('Vignette « ' + entry.name + ' » : ' + errorMessage(e), 'warn');
+      return false;
     }
   }
 
@@ -1908,6 +1927,15 @@
   app.services.addOverlay = file => { addOverlayList([file]); if (S.tab !== 'effects') switchTab('effects'); };
   app.services.addItems = list => addItems(list);
   app.services.grabFrames = () => grabRealFrames();
+  // Lumetri Color sous son nom local (cherché une fois) ; lut : .cube chargée en LUT d'entrée.
+  let lumetriLocal;
+  app.services.lumetriFx = async lut => {
+    if (lumetriLocal === undefined) {
+      const r = await Host.call('listEffects', { filter: 'lumetri' });
+      lumetriLocal = (r.ok && r.names.find(n => /lumetri/i.test(n) && !/preset|préréglage/i.test(n))) || null;
+    }
+    return [{ type: 'lumetri', names: (lumetriLocal ? [lumetriLocal] : []).concat(window.RRFXAssets.LUMETRI_NAMES), props: [], lut: lut || undefined }];
+  };
   app.fileURL = fileURL;
   function loadFeatures() {
     (window.RRFXFeatures || []).forEach(feature => {

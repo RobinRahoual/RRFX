@@ -216,7 +216,18 @@
   }
 
   // Effet Lumetri dans les langues de Premiere (pour le calque de réglage « LUT »).
+  // Nom de fichier sans accents ni caractères interdits (Windows, macOS).
+  function fileSlug(s, fallback, max) {
+    return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\- .]+/g, '').trim().replace(/\s+/g, ' ').slice(0, max || 60).trim() || fallback || 'fichier';
+  }
+  // Empreinte d'un texte (FNV-1a 32 bits, sur tout le texte) pour nommer un fichier d'après son contenu.
+  function hashText(text) {
+    let x = 0x811c9dc5;
+    for (let i = 0; i < text.length; i++) { x ^= text.charCodeAt(i); x = Math.imul(x, 0x01000193); }
+    return (x >>> 0).toString(36);
+  }
+
   const LUMETRI_NAMES = ['Lumetri Color', 'Couleur Lumetri', 'Lumetri-Farbe', 'Color Lumetri', 'Colore Lumetri', 'Cor Lumetri'];
 
-  return { TYPES, typeById, classify, extOf, baseName, scanFolder, fromFileList, entries, folders, filter, counts, formatSize, parseCube, applyLut, LUMETRI_NAMES, SKIP_DIRS };
+  return { TYPES, typeById, classify, extOf, baseName, scanFolder, fromFileList, entries, folders, filter, counts, formatSize, parseCube, applyLut, fileSlug, hashText, LUMETRI_NAMES, SKIP_DIRS };
 });

@@ -22,7 +22,7 @@
     };
     const active = () => { const c = st(); return c.cams.find(x => x.id === c.active) || null; };
     const label = cam => L.camLabel(cam) || 'Ma caméra';
-    const slug = s => String(s || 'camera').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\- .]+/g, '').trim().replace(/\s+/g, ' ').slice(0, 60) || 'camera';
+    const slug = s => A.fileSlug(s, 'camera');
     const evText = ev => (ev > 0 ? '+' : '') + String(ev).replace('.', ',') + ' IL';
     const dir = () => Store.path.join(Store.dir, 'Conversion');
     const demoLuts = new Map(); // mode démo : LUT importées gardées en mémoire (pas de disque)
@@ -50,18 +50,19 @@
       return { path: out, name: Store.path.basename(file) };
     }
 
-    // La LUT à poser : celle du fabricant, ou la LUT calculée (écrite une fois par réglage).
+    // La LUT à poser : celle du fabricant, ou la LUT calculée. Son nom porte l'empreinte du
+    // contenu : un calque déjà posé garde sa LUT si le calcul ou les réglages changent.
     function lutFor(cam) {
       if (!Store.fs) return '';
       if (cam.mode !== 'calc') {
         if (!cam.lut || !Store.fs.existsSync(cam.lut)) throw new Error('LUT de ' + label(cam) + ' introuvable' + (cam.lut ? ' (' + cam.lut + ')' : '') + ' : réimporte-la dans l\'onglet Couleur.');
         return cam.lut;
       }
-      const name = 'RRFX ' + slug(label(cam)) + ' vers Rec709' + (cam.ev ? ' ' + String(cam.ev).replace('.', ',') + 'EV' : '') + (cam.contrast && cam.contrast !== 'standard' ? ' ' + cam.contrast : '') + '.cube';
-      const file = Store.path.join(dir(), name);
+      const cube = D.toCube(L.buildLut(cam.profile, { size: 33, ev: cam.ev, contrast: cam.contrast }), label(cam) + ' vers Rec.709');
+      const file = Store.path.join(dir(), 'RRFX ' + slug(label(cam)) + ' vers Rec709 ' + A.hashText(cube) + '.cube');
       if (!Store.fs.existsSync(file)) {
         Store.fs.mkdirSync(dir(), { recursive: true });
-        Store.fs.writeFileSync(file, D.toCube(L.buildLut(cam.profile, { size: 33, ev: cam.ev, contrast: cam.contrast }), label(cam) + ' vers Rec.709'), 'utf8');
+        Store.fs.writeFileSync(file, cube, 'utf8');
       }
       return file;
     }
@@ -71,7 +72,7 @@
     function previewLut() {
       const cam = active();
       if (!cam || !st().preview) return null;
-      const key = JSON.stringify([cam.id, cam.mode, cam.profile, cam.ev, cam.contrast, cam.lut, cam.lutName]);
+      const key = JSON.stringify([cam.id, cam.mode, cam.profile, cam.ev, cam.contrast, cam.lut, cam.lutName, cam.lutStamp]);
       if (previewCache.key === key) return previewCache.lut;
       let lut = null;
       try {
@@ -87,11 +88,6 @@
 
     // ---------------------------------------------------------------- un clic
 
-    async function lumetriName() {
-      const r = await Host.call('listEffects', { filter: 'lumetri' });
-      return (r.ok && r.names.find(n => /lumetri/i.test(n) && !/preset|préréglage/i.test(n))) || null;
-    }
-
     function convert() {
       const cam = active();
       if (!cam) {
@@ -103,8 +99,8 @@
         app.status.phase('LUT de conversion');
         const file = lutFor(cam);
         app.status.phase('Calque au-dessus des rushs');
-        const found = await lumetriName();
-        const res = await Host.call('logConvert', { name, lutPath: file, fxNames: (found ? [found] : []).concat(A.LUMETRI_NAMES), scope: c.scope, adjNodeId: app.settings().adjNodeId });
+        const fx = await app.services.lumetriFx();
+        const res = await Host.call('logConvert', { name, lutPath: file, fxNames: fx[0].names, scope: c.scope, adjNodeId: app.settings().adjNodeId });
         if (!res.ok) return { kind: 'error', title: 'Conversion non posée', detail: res.error };
         if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'Rec.709 · ' + label(cam), entries: res.created });
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
@@ -136,7 +132,7 @@
     }
 
     function importLut(cam, refresh) {
-      const done = (path, name) => { cam.lut = path; cam.lutName = name; refresh(); };
+      const done = (path, name) => { cam.lut = path; cam.lutName = name; cam.lutStamp = Date.now(); refresh(); };
       const files = Store.pickFiles('LUT de conversion vers Rec.709 (.cube)', ['cube']);
       if (files === null) {
         // Hors de Premiere : lecture dans le navigateur (aperçu seulement).

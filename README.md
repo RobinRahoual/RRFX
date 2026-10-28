@@ -123,12 +123,14 @@ tes projets** :
    et un rendu Doux, Standard ou Contrasté ;
 3. **Convertir en Rec.709** (ou la touche **L**, ou le menu du panneau) : un **calque de réglage Lumetri** est posé
    **juste au-dessus des rushs**, du premier au dernier rush de la timeline (ou au-dessus des **rushs choisis**),
-   avec la LUT chargée en *LUT d'entrée*. Si la piste du dessus est prise (look, titre…), une piste est insérée :
-   la conversion passe toujours **avant** les looks. Reconvertir **remplace** l'ancienne conversion (jamais deux à la
-   suite), et ↶ Annuler la retire.
+   avec la LUT chargée en *LUT d'entrée*. Les copies du plan posées par RR FX (rampes…) comptent comme des rushs ;
+   les looks, titres et overlays restent au-dessus. Si la piste du dessus est prise, une piste est insérée : la
+   conversion passe toujours **avant** les looks. Reconvertir **remplace** l'ancienne conversion à cet endroit
+   (jamais deux à la suite ; une conversion de toute la timeline est coupée autour des rushs reconvertis), et
+   ↶ Annuler la retire.
 
 Plusieurs caméras (A7 III + iPhone en Apple Log…) : enregistre-les toutes, clique sur celle à utiliser, sélectionne
-ses rushs et choisis *Rushs choisis*. L'option *Aperçu en LOG* convertit tes vraies images (📷) avant le look dans
+ses rushs et choisis *Rushs choisis* (les angles masqués du montage multicam sont ignorés). L'option *Aperçu en LOG* convertit tes vraies images (📷) avant le look dans
 l'aperçu. Profils : Sony S-Log3 / S-Log2, Panasonic V-Log (L), Canon C-Log / C-Log2 / C-Log3, Fujifilm F-Log /
 F-Log2, Nikon N-Log, DJI D-Log (et D-Log M avec la LUT DJI), Apple Log, Blackmagic Film Gen 5, GoPro GP-Log et
 Samsung Log (LUT du fabricant), ARRI LogC3 / LogC4. Premiere 25 qui convertit déjà le log tout seul (*Gestion des
@@ -214,7 +216,7 @@ dossier…*, autant de dossiers que tu veux, disques externes compris). RR FX le
 | --- | --- | --- |
 | **Sons & SFX** (wav, mp3, aif, m4a, flac…) | forme d'onde, ▶ écoute | poser à la tête de lecture ou **sur chaque marqueur** (whooshs et impacts sur les coupes), sur une piste audio libre — la musique n'est jamais touchée |
 | **Vidéos / images** (mov, mp4, webm, png, jpg…) | image, lecture | poser au-dessus de tes plans (vidéo seule), sur chaque marqueur, **utiliser comme overlay** (onglet Effets), importer |
-| **LUTs** (.cube, .3dl, .look…) | **la LUT appliquée** au plan de test ou à ta vraie image (maintenir = avant) | calque de réglage Lumetri sur le clip (le chemin de la LUT est copié), **installer dans Lumetri** |
+| **LUTs** (.cube, .3dl, .look…) | **la LUT appliquée** au plan de test ou à ta vraie image (maintenir = avant) | calque de réglage Lumetri sur le clip (LUT chargée en *LUT d'entrée*), **installer dans Lumetri** |
 | **Polices** (ttf, otf…) | ton texte dans la police | **installer la police** (dossier de polices de l'utilisateur) |
 | **Titres** (.mogrt) | — | poser à la tête de lecture, utiliser dans l'onglet Textes |
 | **Presets** (.prfpset, exports RR FX…) | — | ajouter à Mes effets (exports RR FX), marche à suivre pour les autres |

@@ -5,7 +5,7 @@
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const A = root.RRFXAssets, { Store, Host, Media, Pv, Share } = app;
-    const { h, hotText, actionGroup, picker, row, section, fitCanvas, css } = app.UI;
+    const { h, hotText, picker, row, section, fitCanvas, css } = app.UI;
 
     const INDEX_FILE = 'ressources-index.json';
     const PAGE = 60;
@@ -361,27 +361,20 @@
       });
     }
 
-    async function lumetriName() {
-      if (R.lumetri) return R.lumetri;
-      const r = await Host.call('listEffects', { filter: 'lumetri' });
-      R.lumetri = (r.ok && r.names.find(n => /lumetri/i.test(n) && !/preset|préréglage/i.test(n))) || null;
-      return R.lumetri;
-    }
-
-    // Calque de réglage avec Lumetri sur le clip visé ; le chemin de la LUT est copié.
+    // Calque de réglage avec Lumetri sur le clip visé, la LUT chargée en LUT d'entrée.
     function lumetriLayer(e) {
       return app.runTask('Calque Lumetri · ' + e.name, async () => {
         const r = await Host.call('resolve', { placement: 'full', sides: ['post'], frames: 1, target: 'adjustment' });
         if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error };
-        const found = await lumetriName();
-        const fx = [{ type: 'lumetri', names: (found ? [found] : []).concat(A.LUMETRI_NAMES), props: [] }];
+        const fx = await app.services.lumetriFx(e.path);
         const name = 'RR FX · LUT ' + e.name;
         const res = await Host.call('apply', { target: 'adjustment', name, targets: r.targets.map(t => Object.assign({}, t, { name, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
         if (!res.ok) return { kind: 'error', title: 'Calque non posé', detail: res.error };
         if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'LUT · ' + e.name, entries: res.created });
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
+        if (res.lutSet) return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title: 'Calque Lumetri posé', detail: 'LUT « ' + e.fileName + ' » chargée dans Lumetri (Correction de base > LUT d\'entrée).' };
         const copied = e.path ? await copy(e.path) : false;
-        return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title: 'Calque Lumetri posé', detail: 'Lumetri > Créatif > Look > Parcourir… et choisis « ' + e.fileName + ' »' + (copied ? ' (chemin copié : colle-le dans la fenêtre).' : '.') + ' Les scripts ne peuvent pas choisir la LUT à ta place.' };
+        return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title: 'Calque Lumetri posé', detail: 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + e.fileName + ' »' + (copied ? ' (chemin copié : colle-le dans la fenêtre).' : '.') };
       });
     }
 
@@ -621,7 +614,7 @@
           frame.addEventListener('pointerleave', up);
           pv.appendChild(h('div', { class: 'note' }, 'Maintiens le clic sur l\'image pour voir l\'avant. « 📷 Ma vraie image » (onglet Effets) montre la LUT sur ta séquence.'));
         } else pv.appendChild(h('div', { class: 'note' }, 'Aperçu disponible pour les LUT .cube.'));
-        actions.push(btn('Calque de réglage Lumetri', () => lumetriLayer(e), '', 'Calque de réglage avec Lumetri sur le clip visé ; le chemin de la LUT est copié'), btn('Installer dans Lumetri', () => installLut(e), '', 'Copie la LUT dans le dossier Adobe : elle apparaît dans Lumetri > Créatif > Look après redémarrage'));
+        actions.push(btn('Calque de réglage Lumetri', () => lumetriLayer(e), '', 'Calque de réglage Lumetri sur le clip visé, la LUT chargée dedans'), btn('Installer dans Lumetri', () => installLut(e), '', 'Copie la LUT dans le dossier Adobe : elle apparaît dans Lumetri > Créatif > Look après redémarrage'));
       } else if (e.type === 'font') {
         const sample = h('input', { class: 'textfield', value: app.settings().titles && app.settings().titles.text ? app.settings().titles.text.split('\n')[0].slice(0, 40) : 'Le son de la nuit 2026' });
         const box = h('div', { class: 'res-font' });

@@ -7,7 +7,7 @@
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Host, Pv } = app;
-    const { h, actionGroup, picker, row, fitCanvas, css } = app.UI;
+    const { h, actionGroup, row, fitCanvas, css } = app.UI;
 
     const PW = 480, PH = 270; // taille de calcul de l'aperçu
     const DEFAULTS = { open: { log: true, looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: 'Mon look', target: 'clip' };
@@ -406,13 +406,19 @@
 
     // ---------------------------------------------------------------- looks
 
+    // Vignettes des looks, gardées par jeu d'images (l'onglet se redessine à chaque look choisi).
+    const thumbs = new WeakMap();
     function lookThumb(params, W, H) {
-      const c = h('canvas', { width: W, height: H });
-      const g = c.getContext('2d');
-      g.drawImage(Pv.shots().A, 0, 0, W, H);
+      const shots = Pv.shots(), key = W + 'x' + H + JSON.stringify(params);
+      let cache = thumbs.get(shots);
+      if (!cache) thumbs.set(shots, cache = new Map());
+      const c = h('canvas', { width: W, height: H }), g = c.getContext('2d'), hit = cache.get(key);
+      if (hit) { g.putImageData(hit, 0, 0); return c; }
+      g.drawImage(shots.A, 0, 0, W, H);
       const d = g.getImageData(0, 0, W, H);
       A.applyLut(d.data, D.buildLut(params, 9));
       g.putImageData(d, 0, 0);
+      cache.set(key, d);
       return c;
     }
     const userLooks = () => app.S.lib.items.filter(i => i.type === 'look');
@@ -441,38 +447,26 @@
 
     // ---------------------------------------------------------------- sorties
 
-    const slug = s => String(s || 'look').normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 40) || 'look';
-    function hashOf(text) { let x = 5381; for (let i = 0; i < text.length; i += 7) x = ((x << 5) + x + text.charCodeAt(i)) >>> 0; return x.toString(36).slice(0, 6); }
-
-    async function lumetriName() {
-      const r = await Host.call('listEffects', { filter: 'lumetri' });
-      return (r.ok && r.names.find(n => /lumetri/i.test(n) && !/preset|préréglage/i.test(n))) || null;
-    }
+    const slug = s => A.fileSlug(s, 'look', 40).replace(/[ .]+/g, '-');
 
     function applyInPremiere() {
       const s = st(), name = s.name || 'Mon look';
       return app.runTask('Look · ' + name, async () => {
         app.status.phase('Fabrication de la LUT');
         const cube = D.toCube(D.buildLut(P(), 33), name);
-        let file = null, installed = null;
+        let file = null;
         if (Store.fs) {
           const dir = Store.path.join(Store.dir, 'Looks');
           Store.fs.mkdirSync(dir, { recursive: true });
-          file = Store.path.join(dir, 'RRFX ' + slug(name) + ' ' + hashOf(cube) + '.cube');
-          Store.fs.writeFileSync(file, cube, 'utf8');
-          try {
-            const sys = Store.systemDirs();
-            Store.fs.mkdirSync(sys.luts, { recursive: true });
-            installed = Store.path.join(sys.luts, Store.path.basename(file));
-            Store.fs.copyFileSync(file, installed);
-          } catch (e) { app.log('LUT non installée dans le dossier Adobe : ' + app.errorMessage(e), 'warn'); }
+          // Nommé d'après son contenu : les calques déjà posés gardent leur LUT.
+          file = Store.path.join(dir, 'RRFX ' + slug(name) + ' ' + A.hashText(cube) + '.cube');
+          if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
         }
         app.status.phase('Calque de réglage');
         const placement = s.target === 'sequence' ? 'sequence' : 'full';
         const r = await Host.call('resolve', { placement, sides: ['post'], frames: 1, target: 'adjustment' });
         if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error + (s.target === 'clip' ? ' (ou choisis « Toute la séquence »)' : '') };
-        const found = await lumetriName();
-        const label = 'RR FX · Look ' + name, fx = [{ type: 'lumetri', names: (found ? [found] : []).concat(A.LUMETRI_NAMES), props: [], lut: file || undefined }];
+        const label = 'RR FX · Look ' + name, fx = await app.services.lumetriFx(file);
         const res = await Host.call('apply', { target: 'adjustment', name: label, targets: r.targets.map(t => Object.assign({}, t, { name: label, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
         if (!res.ok) return { kind: 'error', title: 'Calque non posé', detail: res.error };
         if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'Look · ' + name, entries: res.created });
@@ -480,6 +474,14 @@
         if (file) app.log('LUT du look : ' + file, 'ok');
         const title = 'Look posé · ' + app.plural(res.created.length, 'calque Lumetri', 'calques Lumetri');
         if (file && res.lutSet) return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title, detail: 'LUT « ' + Store.path.basename(file) + ' » chargée dans Lumetri (LUT d\'entrée).' };
+        // LUT non chargée par script : on l'installe aussi dans les Looks de Lumetri.
+        if (file) {
+          try {
+            const sys = Store.systemDirs();
+            Store.fs.mkdirSync(sys.luts, { recursive: true });
+            Store.fs.copyFileSync(file, Store.path.join(sys.luts, Store.path.basename(file)));
+          } catch (e) { app.log('LUT non installée dans le dossier Adobe : ' + app.errorMessage(e), 'warn'); }
+        }
         const copied = file && navigator.clipboard ? await navigator.clipboard.writeText(file).then(() => true, () => false) : false;
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',

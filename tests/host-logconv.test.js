@@ -62,7 +62,7 @@ test('B-roll on V2: the layer goes above the highest rush; titles below are repo
   env2.seq.videoTracks[2].add(new Item(env2.seq, env2.media, 0, 40 * env2.F, 0));
   const r2 = convert(env2);
   assert.ok(r2.ok, r2.error);
-  assert.match(r2.warnings.join(' '), /1 titre\(s\) ou calque\(s\) sous/);
+  assert.match(r2.warnings.join(' '), /1 look\(s\), titre\(s\) ou overlay\(s\) sous/);
   const layer2 = env2.seq.videoTracks[3].items[0];
   assert.deepStrictEqual([layer2._s / env2.F, layer2._e / env2.F], [0, 260], 'the title is not a rush: the layer stops at the last rush');
 });
@@ -116,4 +116,52 @@ test('looks: the generated LUT is loaded as input LUT on the look layer too', ()
   assert.ok(res.ok, res.error);
   assert.strictEqual(res.lutSet, 1);
   assert.strictEqual(lumetri(env.seq.videoTracks[1].items[0]).properties[3].getValue(), '/Users/robin/Documents/RRFX/Looks/RRFX Nuit.cube/');
+});
+
+test('RR FX copies of the shot (ramps…) are rushes: the conversion goes above them', () => {
+  const env = setup();
+  const { seq, F, media, Item } = env;
+  seq.videoTracks[1].add(new Item(seq, media, 80 * F, 100 * F, 30 * F, 'RR FX · Rampe'));
+  const r = convert(env);
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(seq.videoTracks.length, 3, 'no track inserted under the ramp copy');
+  assert.strictEqual(seq.videoTracks[2].items[0].name, NAME);
+});
+
+test('overlays from the RR FX bins stay above the conversion and are not converted', () => {
+  const env = setup();
+  const { seq, F, Item, root, projItem } = env;
+  const ovBin = root.createBin('RR FX Overlays'), leak = projItem('Leak chaud', 1, 100 * F);
+  ovBin.children.push(leak);
+  const ov = seq.videoTracks[1].add(new Item(seq, leak, 50 * F, 80 * F, 0, 'RR FX · Leak chaud'));
+  const r = convert(env);
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(seq.videoTracks[1].items[0].name, NAME, 'conversion right above V1');
+  assert.strictEqual(seq.videoTracks[2].items[0], ov, 'overlay pushed above');
+  assert.ok(!/sous le calque/.test(r.warnings.join(' ')));
+});
+
+test('converting a few shots cuts the whole-timeline conversion around them instead of removing it', () => {
+  const env = setup();
+  const { seq, F } = env;
+  assert.ok(convert(env).ok);
+  const clip2 = seq.videoTracks[0].items[1];
+  clip2.selected = true;
+  seq.getSelection = () => [clip2];
+  const r = convert(env, { scope: 'selection', name: 'RR FX · Conversion Apple iPhone Apple Log' });
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(r.replaced, 1);
+  const layers = seq.videoTracks.flatMap(t => t.items).filter(i => /Conversion/.test(i.name)).map(i => [i.name.replace('RR FX · Conversion ', ''), i._s / F, i._e / F]).sort((x, y) => x[1] - y[1]);
+  assert.deepStrictEqual(layers, [['Sony A7 III S-Log3', 0, 100], ['Apple iPhone Apple Log', 100, 260]]);
+});
+
+test('multicam: hidden angles of the selection are skipped, the layer only covers the visible ones', () => {
+  const env = setup();
+  const { seq, F, media, Item } = env;
+  const a = seq.videoTracks[1].add(new Item(seq, media, 0, 100 * F, 0)), b = seq.videoTracks[1].add(new Item(seq, media, 100 * F, 260 * F, 100 * F));
+  b.disabled = true;
+  seq.getSelection = () => [a, b];
+  const r = convert(env, { scope: 'selection' });
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual(seq.videoTracks[2].items.map(i => [i._s / F, i._e / F]), [[0, 100]]);
 });
