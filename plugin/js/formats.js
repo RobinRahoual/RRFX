@@ -20,7 +20,10 @@
 
     const st = () => {
       const s = app.settings();
-      s.formats = Object.assign({ id: '9x16', mode: 'reframe', safe: true }, s.formats);
+      // Complète sans remplacer l'objet : l'interface garde une référence dessus.
+      if (!s.formats || typeof s.formats !== 'object') s.formats = {};
+      const d = { id: '9x16', mode: 'reframe', safe: true };
+      Object.keys(d).forEach(k => { if (!(k in s.formats)) s.formats[k] = d[k]; });
       return s.formats;
     };
     const fmt = () => FORMATS.find(f => f.id === st().id) || FORMATS[0];
@@ -97,6 +100,7 @@
       });
     }
 
+    app.actions.formatCopy = makeCopy;
     app.tabs.formats = {
       render,
       cta: () => ({ label: 'Créer la copie ' + fmt().label + ' · ' + fmt().sub.split(' · ')[0], run: makeCopy, enabled: true }),

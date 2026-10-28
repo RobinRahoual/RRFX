@@ -577,6 +577,7 @@
       requestAnimationFrame(() => update(true));
     }
 
+    app.actions.applyLook = applyInPremiere;
     app.tabs.color = {
       render,
       cta: () => ({ label: 'Appliquer le look · ' + (st().name || 'Mon look'), run: applyInPremiere, enabled: true }),

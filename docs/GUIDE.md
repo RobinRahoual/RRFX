@@ -14,8 +14,8 @@ Tout ce que fait chaque onglet, en détail. Pour découvrir le plugin en deux mi
 3. Dans Premiere : *Fenêtre > Extensions > RR FX*.
 
 Le script copie le panneau dans le dossier des extensions Adobe et autorise les extensions non signées
-(`PlayerDebugMode`). Compatible Premiere Pro 2021 à 2026, Windows et macOS. Pour mettre à jour : relance le script
-de la nouvelle version (tes effets perso sont gardés). Pour désinstaller : supprime le dossier `RRFX` de
+(`PlayerDebugMode`). Compatible Premiere Pro 2021 à 2026, Windows et macOS. Pour mettre à jour : **Installer la mise à jour**
+dans le bandeau du panneau (ou relance le script de la nouvelle version) ; tes effets perso sont gardés. Pour désinstaller : supprime le dossier `RRFX` de
 `%APPDATA%\Adobe\CEP\extensions` (Windows) ou `~/Library/Application Support/Adobe/CEP/extensions` (Mac).
 
 **Il faut un calque de réglage dans le projet** (une fois par projet) : *Fichier > Nouveau > Calque de réglage*.
@@ -23,10 +23,26 @@ RR FX le retrouve tout seul.
 
 ## Le panneau
 
-En haut du panneau, toujours visibles : le crédit, **▴ Réduire**, les onglets (sur deux lignes si le panneau est
+À la première ouverture, un **accueil** montre par où commencer (il revient avec *Ctrl+K > Afficher l'accueil*).
+En haut du panneau, toujours visibles : le crédit, **🔍 la recherche rapide**, **▴ Réduire**, les onglets (sur deux lignes si le panneau est
 étroit : aucun n'est caché), le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
 sur le titre d'une section la replie (gardé d'une session à l'autre), et chaque onglet retrouve sa position quand
 on y revient.
+
+### Onglet Express : ton clip en un clic
+
+1. **Avant de lancer** : RR FX vérifie la séquence ouverte, le calque de réglage, la musique, les rushs
+   sélectionnés dans le panneau *Projet* (pour le montage), tes caméras (pour la conversion) et tes paroles. Ce qui
+   manque est expliqué ; une étape impossible est simplement passée.
+2. **Style** : *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Vlog voyage*, *Cinématique*,
+   *Rétro VHS*, ou **Mon style** (ton enchaînement d'effets et ton look en cours). Chaque style règle la détection des
+   temps forts, le rythme des plans, les effets enchaînés, le look, les sons et l'animation des paroles.
+3. **Étapes** (à cocher) : temps forts → montage auto → conversion LOG (caméra reconnue sur chaque plan) → expo
+   et balance auto → look → effets enchaînés (+ sons sur les coupes) → paroles → copie 9:16.
+
+**Lancer le clip express** (bouton du haut, touche **E**) enchaîne tout, avec le compte rendu de chaque étape.
+Chaque étape est une opération à part : **↶ Annuler** en retire une à la fois. Les réglages de tes autres onglets
+sont rendus tels quels à la fin.
 
 ### Onglet Effets
 
@@ -42,6 +58,7 @@ on y revient.
 | **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · **Temps forts de la musique** (détectés directement, sans poser de marqueurs) · Tête de lecture · Début / fin des clips · Clips entiers |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), **un effet au hasard** (même catégorie ou favoris), ou un **enchaînement** : 2 à 4 effets choisis (Maj + clic sur les cartes) qui se succèdent sur chaque temps fort, dans l'ordre ou au hasard |
 | **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`RR FX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
+| **Son sur les coupes** | Sons fournis par RR FX (whooshs, impacts, hit, riser, glitch), fabriqués par le plugin (rien à télécharger, aucun droit à gérer) et calés pour que leur moment fort tombe pile sur la coupe ; *Whooshs variés + impacts* met un impact sur les temps forts. Piste audio libre, ta musique n'est pas touchée |
 | **Intensité qui suit le volume** | En option : l'intensité de chaque coupe est modulée par le volume de la musique à cet instant (doux sur un couplet, fort sur un drop) ; *Influence* règle l'écart |
 | **Durée / Intensité** | Images de chaque côté · force de toute l'animation (0–200 %) |
 | **Courbe** | Courbe d'animation éditable ; la moitié POST est le miroir de la PRE |
@@ -293,9 +310,14 @@ Pendant l'application, le bloc d'état montre que ça tourne (icône animée, te
 après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dans le journal) ou **✕ rouge**, avec
 **Voir le détail**. Au repos, la ligne d'état résume la séquence : cadence, clips sélectionnés, marqueurs.
 
+### Recherche rapide
+
+**Ctrl+K** (⌘K sur Mac), **/** ou 🔍 : tape quelques lettres pour trouver une action (clip express, temps forts,
+conversion…), un onglet, un effet, un overlay, un look ou un style ; ↑ ↓ et Entrée pour lancer, Échap pour fermer.
+
 ### Sans cliquer : menu et raccourcis
 
-Le menu du panneau (☰ en haut à droite du panneau) propose : appliquer l'effet, appliquer la rampe, capturer,
+Le menu du panneau (☰ en haut à droite du panneau) propose : clip express, recherche rapide, appliquer l'effet, appliquer la rampe, capturer,
 poser les temps forts, synchroniser, convertir le LOG en Rec.709, annuler, tout effacer, mode réduit.
 
 Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
@@ -309,6 +331,7 @@ Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 | **B** | Poser les marqueurs des temps forts |
 | **S** | Synchroniser la sélection sur la musique |
 | **L** | Convertir le LOG en Rec.709 (caméra enregistrée) |
+| **E** | Lancer le clip express |
 | **Échap** | Arrêter l'opération en cours |
 
 Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche puis appuie sur la nouvelle
@@ -319,7 +342,17 @@ Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche
 - Au-delà de 8 secondes (beaucoup de coupes, rampes), le bilan clignote et un petit son est joué (désactivable).
 - **▴ Réduire** ne garde que le crédit, le bouton principal et l'état. **▾ Réglages** réaffiche tout.
 - Au démarrage, RR FX vérifie sur GitHub (au plus toutes les 6 heures) si une nouvelle version est publiée et propose
-  **Télécharger**, **Nouveautés** ou **Plus tard**. Nécessite que le dépôt GitHub soit public.
+  **Installer la mise à jour**, **Nouveautés** ou **Plus tard**. L'installation télécharge le pack, le vérifie en
+  entier (ZIP intact, panneau complet, bon numéro de version), garde la version en place dans
+  `Documents/RRFX/Sauvegarde du panneau`, puis remplace les fichiers ; si une écriture échoue, tout est remis comme
+  avant. Il reste à redémarrer Premiere.
+
+### Test de compatibilité
+
+*Réglages > Test de compatibilité > Tester mon Premiere* : RR FX copie ta séquence, y essaie chaque fonction de
+Premiere dont il se sert (calque de réglage, Lumetri et sa LUT d'entrée, insertion de piste, découpe, désactivation
+d'un plan, marqueurs, export d'image, taille du cadre, recadrage automatique, modèles de texte), puis supprime la
+copie. Chaque ligne dit à quoi elle sert ; **Copier le rapport** donne un texte à envoyer en cas de souci.
 
 ## Langue de Premiere et mises à jour de Premiere
 

@@ -239,6 +239,8 @@
       preview(cv);
     }
 
+    app.actions.titles = place;
+    app.services.lyrics = () => String(st().text || '').trim();
     app.tabs.titles = { render, cta: () => ({ label: 'Poser les textes', run: place, enabled: true }), leave: () => { if (player) { player.stop(); player = null; } } };
   });
 })(typeof self !== 'undefined' ? self : this);

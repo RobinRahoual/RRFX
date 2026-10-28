@@ -1,7 +1,7 @@
 /* RR FX : panneau : onglets, bloc d'état, application des effets et des rampes. */
 (function () {
   'use strict';
-  const Core = window.RRFXCore, Lib = window.RRFXLibrary, Pv = window.RRFXPreview;
+  const Core = window.RRFXCore, Lib = window.RRFXLibrary, Pv = window.RRFXPreview, Sons = window.RRFXSons;
   const Store = window.RRFXStorage, Host = window.RRFXHost, Keys = window.RRFXShortcuts, Updates = window.RRFXUpdates;
   const Audio = window.RRFXAudio, Media = window.RRFXMedia, Share = window.RRFXShare, Packs = window.RRFXPacks, Community = window.RRFXCommunity;
   const { h, hotText, actionGroup, picker, checkbox, row, section, CurveEditor, RampEditor, Player } = window.RRFXUI;
@@ -36,8 +36,8 @@
   ];
   const DEFAULT_SETTINGS = {
     target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', registry: {},
-    tab: 'effects', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
-    volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false, chain: { keys: [], order: 'cycle' },
+    tab: 'express', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
+    volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false, chain: { keys: [], order: 'cycle' }, sfx: 'none',
     ramp: { points: Core.RAMP_PRESETS.intoCut.points, frames: 12, placement: 'pre', segments: 10, anchor: 'auto', interp: 'keep', preset: 'intoCut' }
   };
 
@@ -211,7 +211,7 @@
       status.finish('error', 'Échec', errorMessage(e));
       log(errorMessage(e), 'error');
       if (Date.now() - started > LONG_TASK_MS) signalEnd();
-      return { kind: 'error' };
+      return { kind: 'error', title: 'Échec', detail: errorMessage(e) };
     } finally {
       setBusy(false);
       refreshContext();
@@ -898,7 +898,8 @@
       multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); renderInspector(); renderCTA(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
       multi && st.vary === 'chain' ? chainRow() : null,
       row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
-      volRows
+      volRows,
+      row('Son sur les coupes', picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: 'Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)' })
     ]));
 
     // Paramètres
@@ -1039,6 +1040,21 @@
     ];
   }
 
+  // Sons fournis : fabriqués une fois dans Documents/RRFX/Sons.
+  const SFX_CHOICES = [{ v: 'none', label: 'Aucun' }, { v: 'mix', label: 'Whooshs variés + impacts sur les temps forts' }, { v: 'whoosh', label: 'Whoosh' }, { v: 'impact', label: 'Hit court' }]
+    .concat(Sons.SOUNDS.filter(x => !['whoosh', 'hit'].includes(x.id)).map(x => ({ v: x.id, label: x.name })));
+  function ensureSound(id) {
+    const snd = Sons.byId(id);
+    if (!Store.fs) return 'RRFX ' + snd.name + '.wav';
+    const dir = Store.path.join(Store.dir, 'Sons'), file = Store.path.join(dir, 'RRFX ' + snd.name + '.wav');
+    if (!Store.fs.existsSync(file)) {
+      Store.fs.mkdirSync(dir, { recursive: true });
+      const w = Sons.wav(Sons.render(id));
+      Store.fs.writeFileSync(file, Buffer.from(w.buffer, w.byteOffset, w.byteLength));
+    }
+    return file;
+  }
+
   function buildPlan(e, targets, vary, rate, factors) {
     let pool = null;
     if (vary === 'favorites') {
@@ -1135,10 +1151,23 @@
         warnings.push.apply(warnings, res.warnings || []);
       }
       status.progress(plan.length, plan.length, '');
+      // Sons sur les transitions (whooshs, impacts fournis), calés sur chaque coupe.
+      let sounds = 0;
+      if (st.sfx && st.sfx !== 'none' && done && !S.cancel) {
+        status.phase('Sons sur les transitions');
+        const cuts = Array.from(new Set(plan.map(x => (x.target.side === 'pre' ? x.target.end : x.target.start)))).sort((a, b) => a - b);
+        const strong = factors ? cuts.map((c, i) => ((factors.get(c) || 1) > 1.15 ? i : -1)).filter(i => i >= 0) : cuts.map((c, i) => (i % 4 === 3 ? i : -1)).filter(i => i >= 0);
+        for (const part of Sons.plan(cuts.map(c => c / 254016000000), st.sfx, strong)) {
+          try {
+            const snd = Sons.byId(part.id), res = await Host.call('placeAsset', { kind: 'audio', path: ensureSound(part.id), name: snd.name, times: part.times });
+            if (res.ok) { created.push.apply(created, res.created); sounds += res.created.length; warnings.push.apply(warnings, res.warnings || []); } else warnings.push('Sons : ' + res.error);
+          } catch (err) { warnings.push('Sons : ' + errorMessage(err)); }
+        }
+      }
       if (created.length) pushHistory({ date: Date.now(), label: multi ? e.name + ' × ' + done : e.name, entries: created });
       Array.from(new Set(warnings)).forEach(w => log(w, 'warn'));
 
-      const what = plural(done, 'zone');
+      const what = plural(done, 'zone') + (sounds ? ' + ' + plural(sounds, 'son') : '');
       if (!done) return { kind: 'error', title: 'Rien n\'a été appliqué', detail: firstError };
       log(e.name + ' : ' + what + (failed ? ', ' + plural(failed, 'échec') : ''), failed ? 'warn' : 'ok');
       if (S.cancel) return { kind: 'warn', title: 'Arrêté · ' + what + ' posée(s)', detail: 'Le reste n\'a pas été appliqué.' };
@@ -1766,6 +1795,7 @@
     // Mises à jour
     const check = h('button', { class: 'action' }, 'Vérifier maintenant');
     check.addEventListener('click', () => checkUpdates(true));
+    if (app.diagnostic) view.appendChild(app.diagnostic.section());
     view.appendChild(section('Mises à jour', [
       h('div', { class: 'note' }, 'Version installée : ' + Host.VERSION + (S.ctx && S.ctx.app ? ' · Premiere ' + S.ctx.app : '')),
       checkbox('Vérifier les mises à jour au démarrage', st.checkUpdates, v => { st.checkUpdates = v; persist(); }),
@@ -1819,7 +1849,8 @@
     capture: () => capture(),
     beats: () => app.actions.beats && app.actions.beats(),
     sync: () => app.actions.sync && app.actions.sync(),
-    convert: () => app.actions.convert && app.actions.convert()
+    convert: () => app.actions.convert && app.actions.convert(),
+    express: () => app.actions.express && app.actions.express()
   };
 
   function renderShortcuts() {
@@ -1879,6 +1910,9 @@
 
   function setMenu() {
     Host.setMenu([
+      { id: 'express', label: 'Lancer le clip express' },
+      { id: 'palette', label: 'Recherche rapide (Ctrl+K)' },
+      { separator: true },
       { id: 'apply', label: 'Appliquer l\'effet choisi' },
       { id: 'ramp', label: 'Appliquer la rampe' },
       { id: 'capture', label: 'Capturer la sélection' },
@@ -1896,6 +1930,7 @@
       if (id === 'instagram') return Host.openURL(INSTAGRAM_URL);
       if (id === 'clear') return clearAll({ scope: 'sequence', markers: true });
       if (id === 'autoFix') return app.actions.autoFix && app.actions.autoFix();
+      if (id === 'palette') return app.services.palette && app.services.palette();
       if (SHORTCUT_ACTIONS[id]) SHORTCUT_ACTIONS[id]();
     });
   }
@@ -1957,8 +1992,31 @@
   function showUpdate(update) {
     S.update = update;
     if (!update) { show($('update-banner'), false); return; }
-    $('update-text').textContent = '⬆ RR FX ' + update.version + ' est disponible (tu as la ' + Host.VERSION + '). Télécharge le pack, puis lance le script d\'installation.';
+    const auto = canSelfUpdate();
+    $('update-text').textContent = '⬆ RR FX ' + update.version + ' est disponible (tu as la ' + Host.VERSION + ').' + (auto ? ' Installe-la en un clic, puis redémarre Premiere.' : ' Télécharge le pack, puis lance le script d\'installation.');
+    $('update-download').textContent = auto ? 'Installer la mise à jour' : 'Télécharger';
     show($('update-banner'), true);
+  }
+
+  // Mise à jour en un clic : pack téléchargé, vérifié, version en place sauvegardée.
+  const canSelfUpdate = () => !!(Store.nodeRequire && Store.fs && window.RRFXInstaller && Installer.extensionDir(location.href));
+  const Installer = window.RRFXInstaller;
+  function installUpdate() {
+    const up = S.update;
+    if (!up) return;
+    if (!canSelfUpdate()) return Host.openURL(up.downloadUrl);
+    return runTask('Mise à jour ' + up.version, async () => {
+      status.phase('Téléchargement');
+      const bytes = await Installer.download(Store.nodeRequire('https'), up.downloadUrl, p => status.progress(Math.round(p * 100), 100, 'Téléchargement'));
+      status.phase('Vérification du pack');
+      const files = Installer.filesOf(bytes, Store.zip && Store.zip.inflate, up.version);
+      status.phase('Installation');
+      const dir = Installer.extensionDir(location.href), backup = Store.path.join(Store.dir, 'Sauvegarde du panneau');
+      const n = Installer.install(Store.fs, Store.path, dir, files, backup);
+      log('Mise à jour ' + up.version + ' installée (' + n + ' fichiers) dans ' + dir + '. Ancienne version gardée dans ' + backup, 'ok');
+      show($('update-banner'), false);
+      return { kind: 'ok', title: 'RR FX ' + up.version + ' installé', detail: 'Redémarre Premiere pour l\'utiliser. Ta bibliothèque et tes réglages sont gardés.' };
+    });
   }
 
   async function checkUpdates(force) {
@@ -1997,7 +2055,7 @@
       const box = $('log');
       if (box) box.scrollIntoView();
     });
-    $('update-download').addEventListener('click', () => S.update && Host.openURL(S.update.downloadUrl));
+    $('update-download').addEventListener('click', () => S.update && installUpdate());
     $('update-page').addEventListener('click', () => S.update && Host.openURL(S.update.pageUrl));
     $('update-later').addEventListener('click', () => { if (S.update) Updates.dismissUpdate(storage, S.update.version); showUpdate(null); });
     document.querySelectorAll('.tab').forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
@@ -2013,7 +2071,7 @@
     S, Core, Lib, Pv, Store, Host, Audio, Media, Share,
     UI: window.RRFXUI, settings, persist, log, status, runTask, modal, promptName, confirmDialog,
     plural, clone, errorMessage, pushHistory, renderCTA, switchTab, fps, registry, uid,
-    tabs: {}, actions: {}, services: {}
+    tabs: {}, actions: {}, services: {}, whenReady: []
   };
   window.RRFXApp = app;
   // Pour les autres onglets (Ressources…) : ajouter un overlay ou des effets à la bibliothèque.
@@ -2023,9 +2081,15 @@
   window.RRFXUI.folded.get = title => !!(S.lib && settings().folded && settings().folded[title]);
   window.RRFXUI.folded.set = (title, v) => { const f = settings().folded || (settings().folded = {}); if (v) f[title] = true; else delete f[title]; persist(); };
   app.services.addOverlays = list => addOverlayList(list);
-  app.services.entries = () => entries();
   app.services.grabFrames = () => grabRealFrames();
   app.services.grabClean = grabClean;
+  app.services.defaultParams = e => defaultParams(e);
+  app.services.entryByKey = k => entryByKey(k);
+  app.services.entries = () => entries();
+  // Ouvre un effet dans l'onglet Effets (recherche rapide).
+  app.services.openEffect = key => { const e = entryByKey(key); if (!e) return; S.cat = 'all'; S.cur = e; S.params = defaultParams(e); switchTab('effects'); };
+  app.services.ensureSound = ensureSound;
+  app.actions.applyEffect = () => applyEffect();
   // Lumetri Color sous son nom local (cherché une fois) ; lut : .cube chargée en LUT d'entrée.
   let lumetriLocal;
   app.services.lumetriFx = async lut => {
@@ -2092,6 +2156,7 @@
     if (S.tab === 'settings') renderSettingsView();
     setInterval(() => { if (!document.hidden) refreshContext(); }, 2000);
     if (settings().checkUpdates && !S.demo) checkUpdates(false).catch(() => {});
+    (app.whenReady || []).forEach(fn => { try { fn(); } catch (e) { log(errorMessage(e), 'warn'); } });
   }
 
   window.addEventListener('error', e => log('Erreur du panneau : ' + e.message, 'error'));

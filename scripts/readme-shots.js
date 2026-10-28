@@ -32,7 +32,10 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   page.on('pageerror', e => errors.push(e.message));
   await page.route('https://api.github.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/issues\?/.test(r.request().url()) ? JSON.stringify(demo.ISSUES) : '{}' }));
   await page.route('https://github.com/**', r => r.fulfill({ status: 200, body: 'GitHub' }));
+  // L'accueil de la première ouverture a son propre test.
+  await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
+  await page.click('.tab[data-tab=effects]');
   await page.waitForSelector('#grid .card');
   await page.waitForTimeout(400);
 
@@ -142,6 +145,27 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await mark('.section|Animation', 'an');
   await shot('textes', '[data-shot=an]', 900);
 
+  // Express : le style choisi, les vérifications, puis le compte rendu du clip.
+  await page.evaluate(() => { const t = window.RRFXApp.settings().titles; t.mogrt = t.mogrt || 'demo'; });
+  await tab('express');
+  await page.waitForSelector('.xp-check');
+  await page.waitForTimeout(600);
+  await page.click('.xp-style:has-text("Rap énergique")');
+  await close();
+  await shot('express', null, 700);
+  await mark('.section|2. Style', 'st');
+  await shot('express-styles', '[data-shot=st]', 500);
+  await page.click('#cta');
+  await page.waitForFunction(() => /prêt|revoir/.test(document.getElementById('status-title').textContent), null, { timeout: 60000 });
+  await mark('.section|Dernier clip express', 'rp');
+  await shot('express-resultat', '[data-shot=rp]', 600);
+
+  // Recherche rapide.
+  await page.keyboard.press('Control+k');
+  await page.fill('.pal-input', 'zoom');
+  await shot('recherche', null, 400);
+  await page.keyboard.press('Escape');
+
   // Formats.
   await tab('formats');
   await shot('formats', null, 700);
@@ -170,6 +194,16 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.waitForSelector('.comm-item');
   await close();
   await shot('communaute', null, 900);
+
+  // Test de compatibilité (Réglages) et accueil.
+  await tab('settings');
+  await page.evaluate(() => window.RRFXApp.diagnostic.run());
+  await page.waitForSelector('#status.ok:has-text("Tout fonctionne")', { timeout: 8000 });
+  await mark('.section|Test de compatibilité', 'tc');
+  await shot('test-compatibilite', '[data-shot=tc]', 500);
+  await page.evaluate(() => window.RRFXApp.services.welcome());
+  await page.waitForSelector('.modal:has-text("Bienvenue")');
+  await shot('accueil', null, 500);
 
   await browser.close();
   fs.rmSync(tmp, { recursive: true, force: true });

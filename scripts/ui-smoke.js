@@ -73,8 +73,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   // Les pages GitHub ouvertes par le panneau (formulaire de publication) restent hors ligne.
   await page.context().route('https://github.com/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>GitHub</p>' }));
+  // L'accueil de la première ouverture a son propre test.
+  await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
   await page.waitForTimeout(800);
+  await page.click('.tab[data-tab=effects]');
+  await page.waitForTimeout(300);
   await snap('1-effets');
 
   await step('effet + paramètre', async () => {
@@ -330,6 +334,43 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('#cta');
     await page.waitForSelector('#status.ok:has-text("texte")', { timeout: 8000 });
     await snap('8-textes');
+  });
+  await step('clip express', async () => {
+    await page.click('.tab[data-tab=express]');
+    await page.waitForSelector('.xp-check');
+    await page.waitForTimeout(600);
+    await page.click('.xp-style:has-text("Chill")');
+    await page.waitForTimeout(200);
+    if (!/Chill/.test(await page.textContent('#cta'))) throw new Error('style non choisi');
+    await page.click('#cta');
+    await page.waitForFunction(() => /prêt|revoir/.test(document.getElementById('status-title').textContent), null, { timeout: 60000 });
+    const t = await page.textContent('#status-title');
+    if (!/Ton clip est prêt · Chill/.test(t)) throw new Error('express : ' + t + ' / ' + await page.textContent('#status-detail'));
+    const kept = await page.evaluate(() => window.RRFXApp.settings().vary);
+    if (kept === 'chain') throw new Error('réglages de l\'onglet Effets non rendus');
+  });
+  await step('recherche rapide', async () => {
+    await page.keyboard.press('Control+k');
+    await page.waitForSelector('.pal-input');
+    await page.fill('.pal-input', 'zoom rot');
+    await page.waitForSelector('.pal-item.on:has-text("Zoom rotation")');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.tab.on[data-tab=effects]');
+    if (!/Zoom rotation/.test(await page.textContent('#cta'))) throw new Error('effet non ouvert : ' + await page.textContent('#cta'));
+    await page.keyboard.press('Control+k');
+    await page.fill('.pal-input', 'look nuit');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('.tab.on[data-tab=color]');
+    await page.keyboard.press('Control+k');
+    await page.keyboard.press('Escape');
+    if (await page.isVisible('.pal-input')) throw new Error('Échap ne ferme pas');
+  });
+  await step('accueil et test de compatibilité', async () => {
+    await page.evaluate(() => window.RRFXApp.services.welcome());
+    await page.waitForSelector('.modal:has-text("Bienvenue dans RR FX")');
+    await page.click('.modal .button-secondary:has-text("Tester mon Premiere")');
+    await page.waitForSelector('#status.ok:has-text("Tout fonctionne")', { timeout: 8000 });
+    await page.waitForSelector('.section:has-text("Test de compatibilité") .xp-check.ok');
   });
   await step('partage', async () => {
     await page.click('.tab[data-tab=mine]');

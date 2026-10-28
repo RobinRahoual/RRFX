@@ -571,5 +571,6 @@
     app.tabs.music = { render, cta: () => ({ label: 'Poser les marqueurs des temps forts', run: placeMarkers, enabled: true }), redraw: drawWave };
     app.actions.beats = placeMarkers;
     app.actions.sync = sync;
+    app.actions.autoEdit = autoEdit;
   });
 })(typeof self !== 'undefined' ? self : this);

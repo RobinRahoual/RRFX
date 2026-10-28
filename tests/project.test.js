@@ -63,3 +63,14 @@ test('the Windows installer keeps CRLF line endings and no parentheses in messag
   assert.ok(!/[^\r]\n/.test(bat), 'CRLF');
   bat.split('\r\n').filter(l => /^\s*echo /i.test(l)).forEach(l => assert.ok(!/[()]/.test(l.replace(/\^[()]/g, '')), l));
 });
+
+// Un réglage remplacé à chaque lecture (s.x = Object.assign({…}, s.x)) perd les choix faits
+// dans l'interface, qui garde une référence vers l'ancien objet : on le complète sur place.
+test('panel settings are filled in place, never replaced on read', () => {
+  const dir = path.join(root, 'plugin', 'js');
+  fs.readdirSync(dir).filter(f => f.endsWith('.js')).forEach(f => {
+    const src = fs.readFileSync(path.join(dir, f), 'utf8');
+    const bad = src.match(/(\b\w+\.\w+)\s*=\s*Object\.assign\(\{[^;]*\},\s*\1\s*\)/);
+    assert.ok(!bad, f + ' : ' + (bad && bad[0]));
+  });
+});

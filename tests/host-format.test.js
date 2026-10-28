@@ -41,3 +41,16 @@ test('fill mode (or no Auto Reframe): rushes scaled up to cover the frame, centr
   assert.match(r2.warnings.join(' '), /Effet introuvable/);
   assert.ok(Math.abs(motionScale(env2.ctx.app.project.activeSequence.videoTracks[0].items[0]) - 177.777) < 0.01);
 });
+
+test('compatibility self-test: every check runs on a throwaway copy, which is then deleted', () => {
+  const env = setup();
+  const before = env.ctx.app.project.sequences.length;
+  const r = env.call('selfTest', { lutPath: '/tmp/test.cube', folder: '/tmp', prefix: 'rrfx-test-', fxNames: ['Lumetri Color'] });
+  assert.ok(r.ok, r.error);
+  const by = Object.fromEntries(r.results.map(x => [x.id, x]));
+  ['clone', 'adj', 'place', 'lumetri', 'lut', 'insert', 'razor', 'disable', 'markers', 'frame', 'settings', 'reframe', 'mogrt', 'cleanup'].forEach(id => assert.ok(by[id] && by[id].ok, id + ' : ' + JSON.stringify(by[id])));
+  assert.strictEqual(env.ctx.app.project.activeSequence, env.seq, 'original sequence back');
+  assert.strictEqual(env.ctx.app.project.sequences.length, before, 'test copy deleted');
+  assert.deepStrictEqual([env.seq.frameSizeHorizontal, env.seq.videoTracks.length], [1920, 3], 'original untouched');
+  assert.match(r.frame, /rrfx-test-frame$/);
+});

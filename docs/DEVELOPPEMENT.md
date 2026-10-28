@@ -49,6 +49,12 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/formats.js          onglet Formats : copie 9:16, 4:5, 1:1, recadrage automatique, zones sûres
   js/stylepack.js        packs de style .rrfxpack : ZIP sans dépendance, manifeste (testé)
   js/mespacks.js         créer et importer un pack de style (Mes effets, Ressources)
+  js/express.js          onglet Express : vérifications, styles, étapes enchaînées, compte rendu
+  js/recipes.js          styles de clip (recettes) et étapes du clip express (testé)
+  js/sons.js             sons fournis (whooshs, impacts, riser, glitch) fabriqués par le plugin, WAV (testé)
+  js/diagnostic.js       test de compatibilité Premiere (Réglages)
+  js/installer.js        mise à jour en un clic : téléchargement, vérification, sauvegarde, retour arrière (testé)
+  js/accueil.js          accueil de la première ouverture, recherche rapide (Ctrl+K)
   js/assets.js           ressources : indexation des dossiers liés, classement, filtres, LUT .cube (testé)
   js/ressources.js       onglet Ressources : vignettes, aperçus, actions
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)

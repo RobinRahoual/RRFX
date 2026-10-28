@@ -16,8 +16,10 @@
       const s = app.settings();
       if (!s.correction || typeof s.correction !== 'object') s.correction = {};
       const c = s.correction;
-      c.fix = Object.assign({ exposure: true, wb: true, levels: true, strength: 70, scope: 'selection' }, c.fix);
-      c.match = Object.assign({ strength: 70, ref: null, refName: '', refThumb: '' }, c.match);
+      // Complète sans remplacer les objets : l'interface garde des références dessus.
+      const fill = (k, d) => { if (!c[k] || typeof c[k] !== 'object') c[k] = {}; Object.keys(d).forEach(x => { if (!(x in c[k])) c[k][x] = d[x]; }); };
+      fill('fix', { exposure: true, wb: true, levels: true, strength: 70, scope: 'selection' });
+      fill('match', { strength: 70, ref: null, refName: '', refThumb: '' });
       return c;
     };
 

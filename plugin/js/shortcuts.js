@@ -13,10 +13,11 @@
     capture: 'Capturer la sélection',
     beats: 'Poser les temps forts',
     sync: 'Synchroniser la sélection',
-    convert: 'Convertir le LOG en Rec.709'
+    convert: 'Convertir le LOG en Rec.709',
+    express: 'Lancer le clip express'
   };
 
-  const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L' };
+  const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L', express: 'E' };
 
   /* Touche utilisable comme raccourci (lettre ou chiffre, sans Ctrl/Cmd/Alt), sinon null. */
   function normalizeKey(event) {

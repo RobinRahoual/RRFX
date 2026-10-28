@@ -165,6 +165,7 @@ function makeEnv(fps) {
     name: 'Seq 01', timebase: String(F), frameSizeHorizontal: 1920, frameSizeVertical: 1080,
     _ph: 0, videoTracks: null,
     getPlayerPosition() { return T(this._ph); },
+    setPlayerPosition(t) { this._ph = Number(t); },
     getSelection() { const out = []; this.videoTracks.concat(this.audioTracks).forEach(t => t.items.forEach(i => { if (i.selected) out.push(i); })); return out; },
     getSettings() { return { videoFrameRate: T(F), videoDisplayFormat: 101, videoFrameWidth: this.frameSizeHorizontal, videoFrameHeight: this.frameSizeVertical }; },
     setSettings(st) { this.frameSizeHorizontal = st.videoFrameWidth; this.frameSizeVertical = st.videoFrameHeight; },
@@ -212,6 +213,7 @@ function makeEnv(fps) {
   const sequences = coll([seq]);
   Object.defineProperty(sequences, 'numSequences', { get: () => sequences.length });
   project.sequences = sequences;
+  project.deleteSequence = sq => { const i = sequences.indexOf(sq); if (i < 0) return false; sequences.splice(i, 1); return true; };
   project.openSequence = id => { const f = sequences.find(x => x.sequenceID === id); if (f) project.activeSequence = f; return !!f; };
 
   // ---------------- QE

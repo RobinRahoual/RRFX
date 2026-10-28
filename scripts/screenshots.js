@@ -34,7 +34,10 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   page.on('pageerror', e => errors.push(e.message));
   await page.route('https://api.github.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/issues\?/.test(r.request().url()) ? JSON.stringify(ISSUES) : '{}' }));
   await page.route('https://github.com/**', r => r.fulfill({ status: 200, body: 'GitHub' }));
+  // L'accueil de la première ouverture a son propre test.
+  await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
+  await page.click('.tab[data-tab=effects]');
   await page.waitForSelector('#grid .card');
   await page.waitForTimeout(400);
 
@@ -58,6 +61,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.setViewportSize({ width: WIDTH, height: 900 });
     console.log(file);
   }
+
+  // 0. Express
+  await page.click('.tab[data-tab=express]');
+  await page.waitForSelector('.xp-check');
+  await page.waitForTimeout(600);
+  await close();
+  await shot('express', 600);
+  await page.click('.tab[data-tab=effects]');
 
   // 1. Effets
   await page.click('#grid .card:has-text("Zoom rotation")');

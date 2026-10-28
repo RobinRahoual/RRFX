@@ -252,7 +252,7 @@
 
   root.RRFXStorage = {
     load, save, exportJSON, exportText, saveBinary, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
-    reveal, execFile, systemDirs, readJSON, writeJSON, isWin,
+    reveal, execFile, systemDirs, readJSON, writeJSON, isWin, nodeRequire,
     fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
   };
 })(typeof self !== 'undefined' ? self : this);
