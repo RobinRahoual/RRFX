@@ -288,8 +288,10 @@
   function toDCTL(params, title) {
     const p = normalize(params), S = sliderList();
     const L = [];
-    L.push('// ' + String(title || 'RR FX').replace(/[\r\n]/g, ' ') + ' : look créé avec RR FX (@robin.rahoual) - onglet Couleur.');
-    L.push('// Curseurs façon Lightroom. Entrée et sortie : Rec.709 (gamma 2.4).');
+    // Tout en ASCII : le DCTL est compilé pour la carte graphique par Resolve.
+    const ascii = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
+    L.push('// ' + ascii(title || 'RR FX') + ' : look cree avec RR FX (@robin.rahoual) - onglet Couleur.');
+    L.push('// Curseurs facon Lightroom. Entree et sortie : Rec.709 (gamma 2.4).');
     L.push('// Texture, Clarte, Correction du voile, vignettage et grain ne sont pas inclus.');
     L.push('');
     S.forEach(s => L.push('DEFINE_UI_PARAMS(' + s[0] + ', ' + s[1] + ', DCTLUI_SLIDER_FLOAT, ' + f(getKey(p, s[2])) + ', ' + f(s[3]) + ', ' + f(s[4]) + ', ' + f(s[5]) + ')'));

@@ -126,10 +126,10 @@ test('DCTL: compiles as C and gives the same colors as the panel (random setting
   try {
     const cases = [D.defaults(), randomParams(), randomParams(), randomParams()].concat(D.LOOKS.map(l => D.normalize(l.p)));
     cases.forEach((p, k) => {
-      const dctl = D.toDCTL(p, 'Test ' + k);
+      const dctl = D.toDCTL(p, 'Été « test » ' + k);
       assert.match(dctl, /DEFINE_UI_PARAMS\(temp, Temperature, DCTLUI_SLIDER_FLOAT, /);
       assert.ok(D.sliderList().length <= 64, 'sliders');
-      assert.ok(/^[\x00-\x7f]*$/.test(dctl.split('\n').filter(l => /^DEFINE_UI_PARAMS/.test(l)).join('')), 'ASCII labels');
+      assert.ok(/^[\x00-\x7f]*$/.test(dctl), 'whole DCTL in ASCII');
       const src = path.join(dir, 'look' + k + '.c'), bin = path.join(dir, 'look' + k);
       fs.writeFileSync(src, '#include "' + path.join(__dirname, 'dctl', 'shim.h') + '"\n' + dctl + '\n#include "' + path.join(__dirname, 'dctl', 'main.c') + '"\n');
       execFileSync(cc, ['-std=c99', '-O1', '-Wall', '-Werror', '-Wno-unused-parameter', '-Wno-unused-variable', '-Wno-unused-function', '-o', bin, src, '-lm']);
