@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>CutFX</title>
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="theme-dark">
+  <div class="panel" id="panel">
+    <div class="header">
+      <!-- Crédit toujours visible, même quand le panneau est tout petit. -->
+      <div class="brand">
+        <button class="action quiet" id="instagram" title="Ouvrir le profil Instagram de @robin.rahoual">
+          <span class="ig-icon"><svg viewBox="0 0 24 24" width="14" height="14">
+            <rect x="2.5" y="2.5" width="19" height="19" rx="5.5" ry="5.5" fill="none" stroke="currentColor" stroke-width="2"></rect>
+            <circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="2"></circle>
+            <circle cx="17.6" cy="6.4" r="1.3" fill="currentColor"></circle>
+          </svg></span>
+          @robin.rahoual sur Instagram
+        </button>
+        <button class="action quiet" id="toggle-compact">▴ Réduire</button>
+      </div>
+      <nav class="tabs" id="tabs">
+        <button class="tab" data-tab="effects">Effets</button>
+        <button class="tab" data-tab="ramp">Speed ramp</button>
+        <button class="tab" data-tab="mine">Mes effets</button>
+        <button class="tab" data-tab="settings">Réglages</button>
+      </nav>
+      <button class="cta" id="cta">Appliquer</button>
+      <div id="status" class="status idle">
+        <div class="status-top">
+          <span id="status-icon" class="status-icon"></span>
+          <span id="status-title" class="status-title">Prêt</span>
+          <button class="action quiet" id="undo" disabled>↶ Annuler</button>
+          <button class="action quiet hidden" id="cancel">Arrêter</button>
+          <button class="action quiet hidden" id="status-close" title="Fermer">✕</button>
+        </div>
+        <div class="progress hidden" id="progress"><div class="progress-fill" id="progress-fill"></div></div>
+        <div class="status-detail muted" id="status-detail">Ouvre une séquence dans Premiere.</div>
+        <button class="action quiet hidden" id="status-log">Voir le détail</button>
+      </div>
+      <div id="update-banner" class="status update hidden">
+        <div class="status-detail" id="update-text"></div>
+        <div class="row-buttons">
+          <button class="action" id="update-download">Télécharger</button>
+          <button class="action quiet" id="update-page">Nouveautés</button>
+          <button class="action quiet" id="update-later">Plus tard</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Barre de défilement toujours affichée : on voit qu'il y a des réglages en dessous. -->
+    <div class="scroll" id="scroll">
+      <section class="view" id="view-effects"></section>
+      <section class="view" id="view-ramp"></section>
+      <section class="view" id="view-mine"></section>
+      <section class="view" id="view-settings"></section>
+    </div>
+  </div>
+  <div id="modal-root"></div>
+
+  <script src="js/core.js"></script>
+  <script src="js/library.js"></script>
+  <script src="js/preview.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/shortcuts.js"></script>
+  <script src="js/updates.js"></script>
+  <script src="js/mock.js"></script>
+  <script src="js/host.js"></script>
+  <script src="js/widgets.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>
