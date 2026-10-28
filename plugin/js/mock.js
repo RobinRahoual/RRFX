@@ -8,7 +8,8 @@
     'Déformation de la vague', 'Distorsion de l’objectif', 'Écho', 'Lumetri Color', 'Flou de l’appareil photo'];
 
   function windows(a) {
-    const cuts = a.placement === 'markers' ? [100, 150, 200, 250] : a.placement === 'cuts' ? [100, 175] : [300];
+    const whole = a.scope === 'sequence';
+    const cuts = a.placement === 'markers' ? [100, 150, 200, 250] : a.placement === 'cuts' ? (whole ? [100, 175, 250] : [100, 175]) : whole ? [0, 100, 175, 250] : [300];
     const sides = a.placement === 'clipStart' ? ['post'] : a.placement === 'clipEnd' ? ['pre'] : a.placement === 'full' ? [a.sides[0]] : a.sides;
     const targets = [];
     cuts.forEach(c => sides.forEach(side => {
@@ -77,7 +78,9 @@
     importAssets: a => ({ ok: true, imported: a.paths.length, failed: [] }),
     rushList: a => ({ ok: true, fps: FPS, clips: [['C0001.MP4', 0, 120], ['IMG_4512.MOV', 120, 200], ['C0002.MP4', 200, 300], ['DJI_0042.MP4', 300, 380]].filter((c, i) => a.scope !== 'selection' || i < 2).map(([name, s, e]) => ({ track: 0, start: s * F, end: e * F, name, path: '', copy: false })) }),
     placeGrades: async a => { await wait(150); const created = []; a.groups.forEach(g => g.spans.forEach(sp => created.push({ kind: 'adj', track: 1, start: sp.a, name: g.name }))); return { ok: true, created, layers: created.length, replaced: 0, lutSet: created.length, warnings: [] }; },
-    formatCopy: async a => { await wait(300); return { ok: true, name: 'Clip démo (' + a.label + ')', reframed: a.mode === 'fill' ? 0 : 6, filled: a.mode === 'fill' ? 6 : 0, width: a.width, height: a.height, warnings: [] }; },
+    formatCopy: async a => { await wait(300); return { ok: true, name: 'Clip démo (' + a.label + ')', reframed: a.mode === 'reframe' ? 6 : 0, filled: a.mode === 'fill' ? 6 : 0, blurred: a.mode === 'blur' ? 6 : 0, width: a.width, height: a.height, warnings: [] }; },
+    speechInfo: () => ({ ok: true, fps: FPS, clips: [{ kind: 'video', track: 0, name: 'Interview_A.mp4', path: '', start: 0, end: 18, inPoint: 0, speed: 1 }], tracks: { video: [0], audio: [0] } }),
+    cutSilences: async a => { await wait(400); const sec = a.ranges.reduce((s, r) => s + r.b - r.a, 0); return { ok: true, removed: a.ranges.length * 2, ranges: a.ranges.length, seconds: sec, moved: a.ranges.length * 2, name: a.copy ? 'Clip démo (sans silences)' : 'Clip démo', copy: !!a.copy, warnings: [] }; },
     selfTest: async () => { await wait(600); return { ok: true, app: 'démo', version: root.RRFXHost ? root.RRFXHost.VERSION : '', frame: '', results: [['clone', 'Copier une séquence'], ['adj', 'Calque de réglage dans le projet'], ['lumetri', 'Ajouter Lumetri Color (QE)'], ['lut', 'Charger une LUT dans Lumetri (LUT d\'entrée)'], ['insert', 'Insérer une piste au milieu (QE)'], ['frame', 'Exporter une image de la timeline'], ['reframe', 'Effet Recadrage automatique disponible'], ['cleanup', 'Supprimer la séquence de test']].map(([id, label]) => ({ id, label, ok: true, detail: 'mode démo' })) }; },
     setPlayhead: a => ({ ok: true, t: a.t }),
     logConvert: async a => { await wait(200); return { ok: true, created: [{ kind: 'adj', track: 1, start: 0, name: a.name }], layers: 1, replaced: 0, lutSet: a.lutPath ? 1 : 0, warnings: [] }; },

@@ -8,7 +8,7 @@ import sys, os, glob
 from PIL import Image, ImageDraw
 
 folder = sys.argv[1] if len(sys.argv) > 1 else 'docs/captures'
-BANNER = ['01-express.png', '02-effets.png', '07-couleur-conversion.png', '12-formats.png']
+BANNER = ['01-express.png', '02-effets.png', '12-parole.png', '13-formats.png']
 R = 22
 
 

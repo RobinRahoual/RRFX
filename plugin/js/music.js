@@ -183,6 +183,7 @@
     // ---------------------------------------------------------------- services pour les autres onglets
 
     app.services.beatTimes = beatTimes;
+    app.services.readAudio = readAudio;
     app.services.volumeFactors = async (times, influence) => {
       await ensureMusic(false);
       return times.map(t => Audio.intensityFactor(Audio.loudnessAt(M.loud, seqToFile(M.info, t) - M.t0), influence / 100));

@@ -21,13 +21,23 @@
       s.welcomed = MAJOR;
       app.persist();
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
+      // Ce que l'on monte surtout : filtre les styles Express et les effets (modifiable ensuite).
+      const doms = h('div', { class: 'chips domains wl-domains' });
+      const pick = id => { s.domain = id; app.persist(); doms.querySelectorAll('.action').forEach(b => b.classList.toggle('selected', b.dataset.id === id)); };
+      [{ id: 'all', label: 'Un peu de tout' }].concat(app.Lib.DOMAINS).forEach(d => {
+        const b = h('button', { class: 'action' + ((s.domain || 'all') === d.id ? ' selected' : ''), 'data-id': d.id }, (d.icon ? d.icon + ' ' : '') + d.label);
+        b.addEventListener('click', () => pick(d.id));
+        doms.appendChild(b);
+      });
       const body = h('div', { class: 'wl' },
-        h('div', { class: 'wl-lead' }, 'Le plugin gratuit pour monter tes clips musicaux plus vite. Par où commencer :'),
-        card('⚡', 'Express : ton clip en un clic', 'Choisis un style, RR FX pose les temps forts, monte tes rushs sur le rythme, étalonne, enchaîne les effets avec leurs sons et pose les paroles.'),
-        card('🎨', 'Couleur : ta caméra une fois pour toutes', 'Ta LUT LOG → Rec.709 enregistrée pour tous tes projets, expo auto, raccord entre caméras, looks façon Lightroom.'),
+        h('div', { class: 'wl-lead' }, 'Le plugin gratuit pour monter plus vite : clips, Reels et TikTok, vidéos d\'entreprise, événements, YouTube.'),
+        h('div', { class: 'wl-ask' }, 'Tu montes surtout :'), doms,
+        card('⚡', 'Express : ton montage en un clic', 'Choisis un style (Reels, interview, aftermovie, YouTube, clip…) : RR FX enchaîne coupe des silences, montage sur le rythme, couleur, transitions, sons, textes et format.'),
+        card('🎙', 'Parole : vidéos qui parlent', 'Silences coupés, zoom un plan sur deux, sous-titres .srt animés, bandeau nom et fonction.'),
+        card('✨', 'Effets et transitions', 'Plus de 30 transitions et mouvements (push, zoom lent, Ken Burns, punch-in…) sur une coupe, toutes les coupes ou les temps forts.'),
+        card('🎨', 'Couleur et formats', 'LOG → Rec.709, expo auto, raccord entre caméras, looks ; copies 9:16, 4:5, 1:1 recadrées ou sur fond flou.'),
         card('🔍', 'Tout au clavier', 'Ctrl+K (ou /) cherche une action, un effet, un look ou un style.'),
-        card('🧪', 'Vérifie ton Premiere', 'Réglages > Test de compatibilité : un clic pour savoir que tout marche chez toi.'),
-        h('div', { class: 'note' }, 'Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage.'));
+        h('div', { class: 'note' }, 'Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage. Réglages > Test de compatibilité vérifie ton Premiere en un clic.'));
       app.modal('Bienvenue dans RR FX ' + MAJOR + '.0', body, [
         { label: 'Tester mon Premiere', value: 'test' },
         { label: 'C\'est parti', value: 'go', primary: true }
@@ -41,12 +51,12 @@
     // ---------------------------------------------------------------- recherche rapide
 
     const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    const TABS = [['express', '⚡ Express'], ['effects', 'Effets'], ['ramp', 'Rampe'], ['color', 'Couleur'], ['music', 'Musique'], ['titles', 'Textes'], ['formats', 'Formats'], ['assets', 'Ressources'], ['mine', 'Mes effets'], ['settings', 'Réglages']];
+    const TABS = [['express', '⚡ Express'], ['effects', 'Effets'], ['ramp', 'Rampe'], ['color', 'Couleur'], ['music', 'Musique'], ['titles', 'Textes'], ['speech', 'Parole'], ['formats', 'Formats'], ['assets', 'Ressources'], ['mine', 'Mes effets'], ['settings', 'Réglages']];
 
     function commands() {
       const A = app.actions, out = [];
       const act = (label, kind, run, hint) => out.push({ label, kind, run, hint: hint || '' });
-      act('Lancer le clip express', 'Action', () => A.express && A.express(), 'Express');
+      act('Lancer le montage express', 'Action', () => A.express && A.express(), 'Express');
       act('Appliquer l\'effet choisi', 'Action', () => A.applyEffect && A.applyEffect(), 'A');
       act('Poser les marqueurs des temps forts', 'Action', () => A.beats && A.beats(), 'B');
       act('Monter les rushs sélectionnés sur le rythme', 'Action', () => A.autoEdit && A.autoEdit());
@@ -55,6 +65,10 @@
       act('Expo et balance des blancs auto', 'Action', () => A.autoFix && A.autoFix());
       act('Appliquer le look en cours', 'Action', () => A.applyLook && A.applyLook());
       act('Poser les paroles', 'Action', () => A.titles && A.titles());
+      act('Couper les silences', 'Action', () => A.cutSilences && A.cutSilences());
+      act('Zoom un plan sur deux (jump cuts)', 'Action', () => A.punchIn && A.punchIn());
+      act('Poser les sous-titres (.srt)', 'Action', () => A.captions && A.captions());
+      act('Poser un bandeau nom et fonction', 'Action', () => A.lowerThird && A.lowerThird());
       act('Créer la copie 9:16', 'Action', () => A.formatCopy && A.formatCopy());
       act('Tester mon Premiere (compatibilité)', 'Action', () => { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); });
       act('Afficher l\'accueil', 'Aide', () => welcome(true));

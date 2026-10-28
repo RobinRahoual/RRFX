@@ -143,6 +143,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.fill('textarea.lyrics', 'On roule la nuit\nLes phares dans les yeux\nRien ne nous arrête\nJusqu\'au matin');
   await shot('textes', 900);
 
+  // Parole : silences analysés.
+  await page.click('.tab[data-tab=speech]');
+  await page.click('button:has-text("Analyser")');
+  await page.waitForSelector('#status.ok:has-text("silences trouvés")', { timeout: 10000 });
+  await shot('parole', 600);
+
   // Formats : copie 9:16 avec les zones sûres.
   await page.click('.tab[data-tab=formats]');
   await shot('formats', 700);

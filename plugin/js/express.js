@@ -1,26 +1,28 @@
-/* RR FX : onglet Express. Ton clip en un clic : choisis un style, RR FX enchaîne tout ce que
-   le plugin sait faire (temps forts, montage sur le rythme, conversion LOG, expo, look, effets
-   enchaînés, sons sur les coupes, paroles, copie 9:16). Chaque étape reste une opération
-   séparée : ↶ Annuler en retire une à la fois, et tes réglages des autres onglets sont rendus
-   tels quels à la fin. */
+/* RR FX : onglet Express. Ton montage en un clic, quel que soit le domaine (clip musical,
+   Reels / TikTok, entreprise, événementiel, YouTube) : choisis un style, RR FX enchaîne ce que
+   le plugin sait faire (silences coupés, temps forts, montage sur le rythme, conversion LOG,
+   expo, look, zooms sur les jump cuts, effets enchaînés, sons, paroles, sous-titres, bandeau,
+   copie au format réseau). Chaque étape reste une opération séparée : ↶ Annuler en retire une à
+   la fois, et tes réglages des autres onglets sont rendus tels quels à la fin. */
 (function (root) {
   'use strict';
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const R = root.RRFXRecipes, D = root.RRFXDevelop, A = root.RRFXAssets, { Host, Pv } = app;
     const { h, section, checkbox } = app.UI;
-    const DEFAULT_STEPS = { beats: true, montage: true, convert: true, fix: false, look: true, effects: true, sfx: true, titles: true, format: false };
-
     const st = () => {
       // Complète sans remplacer l'objet (l'interface garde une référence dessus).
       const s = app.settings();
       if (!s.express || typeof s.express !== 'object') s.express = {};
       if (!s.express.recipe) s.express.recipe = 'rap';
-      if (!s.express.steps || typeof s.express.steps !== 'object') s.express.steps = {};
-      Object.keys(DEFAULT_STEPS).forEach(k => { if (!(k in s.express.steps)) s.express.steps[k] = DEFAULT_STEPS[k]; });
+      if (!s.express.picks || typeof s.express.picks !== 'object') s.express.picks = {};
       return s.express;
     };
     const recipe = () => (st().recipe === 'mine' ? R.fromSettings(app.settings()) : R.byId(st().recipe) || R.RECIPES[0]);
+    // Étapes cochées pour une recette : ton choix s'il y en a un, sinon celui de la recette.
+    const picks = r => { const x = st(); if (!x.picks[r.id] || typeof x.picks[r.id] !== 'object') x.picks[r.id] = {}; return x.picks[r.id]; };
+    const wants = (r, step) => { const p = picks(r); return step.id in p ? !!p[step.id] : step.on; };
+    const domain = () => app.settings().domain || 'all';
     const lookParams = r => (r.look ? (D.LOOKS.find(l => l.name === r.look) || {}).p : r.lookParams) || null;
     const nameOf = key => { const e = app.services.entryByKey(key); return e ? e.name : key.slice(2); };
 
@@ -39,14 +41,22 @@
       out.rushes = pr.ok ? pr.rushes.length : 0;
       out.cams = ((s.logconv && s.logconv.cams) || []).length;
       out.lyrics = app.services.lyrics ? app.services.lyrics().split(/\n+/).filter(Boolean).length : 0;
-      out.mogrt = !!(s.titles && s.titles.mogrt);
+      out.mogrt = !!(app.services.mogrt && app.services.mogrt());
+      out.speech = out.sequence && app.services.speechClips ? await app.services.speechClips() : 0;
+      out.captions = app.services.hasCaptions ? app.services.hasCaptions() : 0;
+      out.lower = app.services.hasLowerThird ? app.services.hasLowerThird() : false;
       check = out;
       return out;
     }
 
     // Étape possible ? → '' si oui, sinon la raison.
-    function blocker(id, c) {
+    function blocker(id, c, r) {
       if (!c) return '';
+      if (R.needsMusic(id, r || recipe()) && !c.music) return 'Pose ta musique sur une piste audio';
+      if (id === 'silences' && !c.speech) return 'Sélectionne dans la timeline les plans où l\'on parle';
+      if (id === 'captions' && !c.captions) return 'Importe ton .srt (onglet Parole)';
+      if (id === 'lower' && !c.lower) return 'Écris le nom et la fonction (onglet Parole)';
+      if ((id === 'captions' || id === 'lower') && !c.mogrt) return 'Choisis un modèle de texte (onglet Textes)';
       if (id === 'montage' && !c.rushes) return 'Sélectionne tes rushs dans le panneau Projet';
       if (id === 'convert' && !c.cams) return 'Ajoute ta caméra (onglet Couleur)';
       if (id === 'titles' && !c.lyrics) return 'Colle tes paroles (onglet Textes)';
@@ -59,9 +69,13 @@
     const EVERY = [1, 2, 4, 8];
     const nearest = v => EVERY.reduce((a, b) => (Math.abs(b - v) < Math.abs(a - v) ? b : a));
 
-    async function runStep(id, r, c) {
-      const s = app.settings(), steps = st().steps;
+    async function runStep(id, r, c, on) {
+      const s = app.settings();
       switch (id) {
+        case 'silences':
+          return app.actions.cutSilences({ mode: 'copy' });
+        case 'punch':
+          return app.actions.punchIn();
         case 'beats':
           Object.assign(s.beats, { mode: r.beats.mode, every: r.beats.every, zone: 'music', replace: true });
           return app.actions.beats();
@@ -85,7 +99,7 @@
         case 'effects': {
           const first = app.services.entryByKey(r.chain[0]);
           if (!first) return { kind: 'error', title: 'Style sans effet', detail: 'Compose ton enchaînement dans l\'onglet Effets (Maj + clic).' };
-          Object.assign(s, { placement: 'markers', side: 'both', vary: 'chain', sfx: steps.sfx ? r.sfx : 'none' });
+          Object.assign(s, { placement: r.place === 'allcuts' ? 'allcuts' : 'markers', side: 'both', vary: 'chain', sfx: on.sfx ? r.sfx : 'none', alternate: false });
           s.chain = { keys: r.chain.slice(), order: r.order };
           app.S.cur = first;
           app.S.params = Object.assign(app.services.defaultParams(first), { frames: r.frames, intensity: r.intensity });
@@ -94,41 +108,52 @@
         case 'titles':
           Object.assign(s.titles, { timing: 'markers', from: 'start', anim: r.title });
           return app.actions.titles();
+        case 'captions':
+          Object.assign(s.speech, { words: (r.captions && r.captions.words) || 0, capAnim: r.title, capFrom: 'start' });
+          return app.actions.captions({ remap: !!on.silences });
+        case 'lower':
+          await Host.call('setPlayhead', { t: 1 }).catch(() => null);
+          Object.assign(s.speech, { lowerAnim: 'slide-up' });
+          return app.actions.lowerThird();
         case 'format':
-          Object.assign(s.formats, { id: '9x16', mode: 'reframe' });
+          Object.assign(s.formats, { id: (r.format && r.format.id) || '9x16', mode: (r.format && r.format.mode) || 'reframe' });
           return app.actions.formatCopy();
       }
       return null;
     }
 
     // Réglages des autres onglets que l'Express change le temps d'une étape.
-    const KEEP = ['placement', 'side', 'vary', 'chain', 'sfx', 'beats', 'autoEdit', 'titles', 'color', 'logconv', 'correction', 'formats'];
+    const KEEP = ['placement', 'side', 'vary', 'alternate', 'chain', 'sfx', 'beats', 'autoEdit', 'titles', 'color', 'logconv', 'correction', 'formats', 'speech'];
+    const OBJECTS = ['beats', 'autoEdit', 'titles', 'color', 'logconv', 'correction', 'formats', 'speech'];
 
     let report = [];
     async function launch() {
       if (app.S.busy) return;
       const c = await verify();
-      if (!c.sequence) return app.status.finish('error', 'Ouvre une séquence', 'Le clip express travaille sur la séquence active de Premiere.');
+      if (!c.sequence) return app.status.finish('error', 'Ouvre une séquence', 'Le montage express travaille sur la séquence active de Premiere.');
       if (!c.adj) return app.status.finish('error', 'Il manque un calque de réglage', 'Une fois par projet : Fichier > Nouveau > Calque de réglage. RR FX le retrouve tout seul.');
-      if (!c.music) return app.status.finish('error', 'Pas de musique dans la séquence', 'Pose ta musique sur une piste audio : tout se cale dessus.');
-      const r = recipe(), want = st().steps;
-      const steps = R.STEPS.filter(x => x.id !== 'sfx' && want[x.id] && !blocker(x.id, c));
-      if (!steps.length) return app.status.finish('warn', 'Aucune étape', 'Coche au moins une étape.');
+      const r = recipe(), all = R.stepsOf(r), on = {};
+      all.forEach(x => { on[x.id] = wants(r, x) && !blocker(x.id, c, r); });
+      const steps = all.filter(x => x.id !== 'sfx' && on[x.id]);
+      if (!steps.length) {
+        const why = all.filter(x => wants(r, x) && blocker(x.id, c, r)).map(x => blocker(x.id, c, r));
+        return app.status.finish('warn', 'Aucune étape possible', why.length ? Array.from(new Set(why)).join(' · ') + '.' : 'Coche au moins une étape.');
+      }
       const s = app.settings(), saved = {}, cur = app.S.cur, params = app.S.params;
       KEEP.forEach(k => { if (k in s) saved[k] = JSON.parse(JSON.stringify(s[k])); });
-      ['beats', 'autoEdit', 'titles', 'color', 'logconv', 'correction', 'formats'].forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
+      OBJECTS.forEach(k => { if (!s[k] || typeof s[k] !== 'object') s[k] = {}; });
       if (!s.correction.fix) s.correction.fix = {};
       report = [];
       const t0 = Date.now();
-      app.log('Clip express · ' + r.name + ' : ' + steps.map(x => x.label).join(' → '), 'info');
+      app.log('Montage express · ' + r.name + ' : ' + steps.map(x => x.label).join(' → '), 'info');
       try {
         for (const step of steps) {
-          const res = await runStep(step.id, r, c);
+          const res = await runStep(step.id, r, c, on);
           report.push({ id: step.id, label: step.label, kind: res ? res.kind : 'error', title: res ? res.title : 'Panneau occupé', detail: res ? res.detail || '' : '' });
           render();
           if (app.S.cancel) { report.push({ id: 'stop', label: 'Arrêté', kind: 'warn', title: 'Les étapes suivantes n\'ont pas été faites' }); break; }
-          // Sans temps forts ni montage, la suite n'a pas de sens.
-          if ((!res || res.kind === 'error') && (step.id === 'beats' || step.id === 'montage')) break;
+          // Sans temps forts, montage ou coupe des silences, la suite n'a pas de sens.
+          if ((!res || res.kind === 'error') && (step.id === 'beats' || step.id === 'montage' || step.id === 'silences')) break;
         }
       } finally {
         Object.keys(saved).forEach(k => {
@@ -141,7 +166,7 @@
       const ok = report.filter(x => x.kind === 'ok').length, bad = report.filter(x => x.kind === 'error').length;
       const secs = Math.round((Date.now() - t0) / 1000);
       app.switchTab('express');
-      app.status.finish(bad ? 'warn' : 'ok', bad ? 'Clip express : ' + app.plural(bad, 'étape à revoir', 'étapes à revoir') : 'Ton clip est prêt · ' + r.name,
+      app.status.finish(bad ? 'warn' : 'ok', bad ? 'Montage express : ' + app.plural(bad, 'étape à revoir', 'étapes à revoir') : 'Ton montage est prêt · ' + r.name,
         app.plural(ok, 'étape réussie', 'étapes réussies') + ' en ' + (secs >= 60 ? Math.floor(secs / 60) + ' min ' + (secs % 60) + ' s' : secs + ' s') + '. ↶ Annuler retire une étape à la fois.');
     }
 
@@ -159,49 +184,83 @@
       return c;
     }
 
+    const HERO = {
+      all: ['Ton montage en un clic', 'Clip, Reels, entreprise, événement, YouTube : choisis un style, RR FX enchaîne silences, montage, couleur, effets, sons, textes et format.'],
+      clip: ['Ton clip en un clic', 'Temps forts, montage sur le rythme, conversion et étalonnage, effets enchaînés avec leurs sons, paroles animées.'],
+      social: ['Ton Reel en un clic', 'Coupes sur le son, transitions qui claquent, sous-titres mot par mot et version 9:16 prête à poster.'],
+      corporate: ['Ta vidéo d\'entreprise en un clic', 'Image propre, transitions sobres sur chaque coupe, bandeau nom et fonction, sous-titres, version réseaux sur fond flou.'],
+      event: ['Ton aftermovie en un clic', 'Soirée, mariage, séminaire, festival : montage sur la musique, étalonnage, flashs et leaks, version verticale.'],
+      youtube: ['Ta vidéo YouTube en un clic', 'Silences coupés, zoom un plan sur deux sur les jump cuts, transitions et whooshs, sous-titres.']
+    };
+
     let view = null;
     function render(v) {
       if (v) view = v;
       if (!view || !view.isConnected || app.S.tab !== 'express') return;
-      const x = st(), r = recipe(), c = check;
+      const x = st(), r = recipe(), c = check, dom = domain();
       view.innerHTML = '';
-      view.appendChild(h('div', { class: 'xp-hero' },
-        h('div', { class: 'xp-hero-title' }, 'Ton clip en un clic'),
-        h('div', { class: 'xp-hero-text' }, 'Choisis un style : RR FX pose les temps forts, monte tes rushs sur le rythme, convertit et étalonne, enchaîne les effets avec leurs sons et pose les paroles.')));
+      const hero = HERO[dom] || HERO.all;
+      view.appendChild(h('div', { class: 'xp-hero' }, h('div', { class: 'xp-hero-title' }, hero[0]), h('div', { class: 'xp-hero-text' }, hero[1])));
 
-      // 1. Vérifications
-      const items = c ? [
-        [c.sequence, 'Séquence ouverte', 'Ouvre ta séquence dans Premiere'],
-        [c.adj, 'Calque de réglage dans le projet', 'Fichier > Nouveau > Calque de réglage (une fois par projet)'],
-        [!!c.music, c.music ? 'Musique : ' + c.music : 'Musique dans la séquence', 'Pose ta musique sur une piste audio'],
-        [c.rushes > 0, c.rushes ? app.plural(c.rushes, 'rush sélectionné', 'rushs sélectionnés') + ' dans Projet' : 'Rushs sélectionnés dans le panneau Projet', 'Pour le montage auto (sinon, il est passé)', true],
-        [c.cams > 0, c.cams ? app.plural(c.cams, 'caméra enregistrée', 'caméras enregistrées') : 'Caméra enregistrée', 'Pour la conversion LOG (onglet Couleur)', true],
-        [c.lyrics > 0 && c.mogrt, c.lyrics ? app.plural(c.lyrics, 'ligne de paroles', 'lignes de paroles') : 'Paroles', 'Pour les paroles animées (onglet Textes)', true]
-      ] : [];
-      const refresh = h('button', { class: 'action quiet', title: 'Revérifier' }, '↻ Vérifier');
-      refresh.addEventListener('click', async () => { refresh.disabled = true; await verify(); render(); });
-      view.appendChild(section('1. Avant de lancer', c ? items.map(([ok, label, hint, optional]) => h('div', { class: 'xp-check' + (ok ? ' ok' : optional ? ' opt' : ' ko') },
-        h('span', { class: 'xp-dot' }, ok ? '✓' : optional ? '–' : '✕'), h('div', null, h('div', null, label), ok ? null : h('div', { class: 'note' }, hint))))
-        : h('div', { class: 'note' }, 'Vérification…'), refresh));
+      // Domaine : filtre les styles (le même que dans l'onglet Effets).
+      const chips = h('div', { class: 'chips domains' }, h('span', { class: 'chips-label' }, 'Pour'),
+        [{ id: 'all', icon: '', label: 'Tout' }].concat(app.Lib.DOMAINS).map(d => {
+          const b = h('button', { class: 'action' + (dom === d.id ? ' selected' : ''), title: d.label }, (d.icon ? d.icon + ' ' : '') + d.label);
+          b.addEventListener('click', () => {
+            app.settings().domain = d.id;
+            const list = R.forDomain(d.id);
+            if (x.recipe !== 'mine' && list.length && !list.some(q => q.id === x.recipe)) x.recipe = list[0].id;
+            app.persist(); render(); app.renderCTA();
+          });
+          return b;
+        }));
+      view.appendChild(chips);
 
-      // 2. Style
-      const cards = h('div', { class: 'xp-styles' }, R.RECIPES.concat([R.fromSettings(app.settings())]).map(rc => {
+      // 1. Style
+      // Le style choisi reste visible même hors du domaine (choisi par la recherche rapide).
+      const shown = R.forDomain(dom);
+      if (r.id !== 'mine' && !shown.some(q => q.id === r.id)) shown.unshift(r);
+      const cards = h('div', { class: 'xp-styles' }, shown.concat([R.fromSettings(app.settings())]).map(rc => {
         const card = h('button', { class: 'xp-style' + (rc.id === x.recipe ? ' on' : ''), title: rc.desc }, lookThumb(rc), h('b', null, rc.name), h('span', { class: 'xp-sub' }, rc.chain.slice(0, 4).map(nameOf).join(' · ') || 'Aucun effet'));
         card.addEventListener('click', () => { x.recipe = rc.id; app.persist(); render(); app.renderCTA(); });
         return card;
       }));
-      view.appendChild(section('2. Style', [cards, h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : ''))]));
+      view.appendChild(section('1. Style', [cards, h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : ''))]));
 
-      // 3. Étapes
-      const list = R.STEPS.map(step => {
-        const why = blocker(step.id, c), sub = step.id === 'sfx';
-        const box = checkbox(step.label, x.steps[step.id] && !why, v => { x.steps[step.id] = v; app.persist(); });
-        return h('div', { class: 'xp-step' + (why ? ' off' : '') + (sub ? ' sub' : '') }, box, h('div', { class: 'note' }, why || step.desc + (step.id === 'sfx' && r.sfx === 'none' ? ' (aucun dans ce style)' : '')));
+      // 2. Vérifications, selon les étapes de ce style
+      const all = R.stepsOf(r), has = id => all.some(q => q.id === id && wants(r, q));
+      const music = all.some(q => wants(r, q) && R.needsMusic(q.id, r));
+      const items = c ? [
+        [c.sequence, 'Séquence ouverte', 'Ouvre ta séquence dans Premiere'],
+        [c.adj, 'Calque de réglage dans le projet', 'Fichier > Nouveau > Calque de réglage (une fois par projet)'],
+        music ? [!!c.music, c.music ? 'Musique : ' + c.music : 'Musique dans la séquence', 'Pose ta musique sur une piste audio'] : null,
+        has('silences') ? [c.speech > 0, c.speech ? app.plural(c.speech, 'plan parlé sélectionné', 'plans parlés sélectionnés') : 'Plans où l\'on parle sélectionnés', 'Sélectionne-les dans la timeline (sinon la coupe des silences est passée)', true] : null,
+        has('montage') ? [c.rushes > 0, c.rushes ? app.plural(c.rushes, 'rush sélectionné', 'rushs sélectionnés') + ' dans Projet' : 'Rushs sélectionnés dans le panneau Projet', 'Pour le montage auto (sinon, il est passé)', true] : null,
+        has('convert') ? [c.cams > 0, c.cams ? app.plural(c.cams, 'caméra enregistrée', 'caméras enregistrées') : 'Caméra enregistrée', 'Pour la conversion LOG (onglet Couleur)', true] : null,
+        has('titles') ? [c.lyrics > 0 && c.mogrt, c.lyrics ? app.plural(c.lyrics, 'ligne de paroles', 'lignes de paroles') : 'Paroles', 'Pour les paroles animées (onglet Textes)', true] : null,
+        has('captions') ? [c.captions > 0 && c.mogrt, c.captions ? app.plural(c.captions, 'sous-titre', 'sous-titres') : 'Sous-titres (.srt)', 'Importe ton .srt dans l\'onglet Parole', true] : null,
+        has('lower') ? [c.lower && c.mogrt, c.lower ? 'Bandeau prêt' : 'Bandeau nom et fonction', 'Écris le nom dans l\'onglet Parole', true] : null
+      ].filter(Boolean) : [];
+      const refresh = h('button', { class: 'action quiet', title: 'Revérifier' }, '↻ Vérifier');
+      refresh.addEventListener('click', async () => { refresh.disabled = true; await verify(); render(); });
+      view.appendChild(section('2. Avant de lancer', c ? items.map(([ok, label, hint, optional]) => h('div', { class: 'xp-check' + (ok ? ' ok' : optional ? ' opt' : ' ko') },
+        h('span', { class: 'xp-dot' }, ok ? '✓' : optional ? '–' : '✕'), h('div', null, h('div', null, label), ok ? null : h('div', { class: 'note' }, hint))))
+        : h('div', { class: 'note' }, 'Vérification…'), refresh));
+
+      // 3. Étapes de ce style
+      const list = all.map(step => {
+        const why = blocker(step.id, c, r), sub = step.id === 'sfx';
+        let desc = step.desc;
+        if (step.id === 'effects') desc += r.place === 'allcuts' ? ' sur toutes les coupes de la séquence' : ' sur les temps forts';
+        if (step.id === 'format' && r.format) desc = 'Copie ' + r.format.id.replace('x', ':') + (r.format.mode === 'blur' ? ' sur fond flou' : ' recadrée automatiquement');
+        if (step.id === 'sfx' && r.sfx === 'none') desc += ' (aucun dans ce style)';
+        const box = checkbox(step.label, wants(r, step) && !why, val => { picks(r)[step.id] = val; app.persist(); });
+        return h('div', { class: 'xp-step' + (why ? ' off' : '') + (sub ? ' sub' : '') }, box, h('div', { class: 'note' }, why || desc));
       });
       view.appendChild(section('3. Étapes', list));
 
       if (report.length) {
-        view.appendChild(section('Dernier clip express', report.map(it => h('div', { class: 'xp-check ' + (it.kind === 'ok' ? 'ok' : it.kind === 'error' ? 'ko' : 'opt') },
+        view.appendChild(section('Dernier montage express', report.map(it => h('div', { class: 'xp-check ' + (it.kind === 'ok' ? 'ok' : it.kind === 'error' ? 'ko' : 'opt') },
           h('span', { class: 'xp-dot' }, it.kind === 'ok' ? '✓' : it.kind === 'error' ? '✕' : '!'),
           h('div', null, h('div', null, it.label + ' · ' + (it.title || '')), it.detail ? h('div', { class: 'note' }, it.detail) : null)))));
       }
@@ -210,7 +269,7 @@
 
     app.tabs.express = {
       render,
-      cta: () => ({ label: 'Lancer le clip express · ' + recipe().name, run: launch, enabled: true }),
+      cta: () => ({ label: 'Lancer · ' + recipe().name, run: launch, enabled: true }),
       leave: () => {}
     };
     app.actions.express = launch;

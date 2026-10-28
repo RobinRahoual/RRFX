@@ -14,7 +14,7 @@
     beats: 'Poser les temps forts',
     sync: 'Synchroniser la sélection',
     convert: 'Convertir le LOG en Rec.709',
-    express: 'Lancer le clip express'
+    express: 'Lancer le montage express'
   };
 
   const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L', express: 'E' };

@@ -1,10 +1,10 @@
-<p align="center"><img src="docs/captures/banniere.png" alt="RR FX dans Premiere Pro : Express, effets, couleur et formats" width="100%"></p>
+<p align="center"><img src="docs/captures/banniere.png" alt="RR FX dans Premiere Pro : Express, effets, parole et formats" width="100%"></p>
 
 <h1 align="center">RR FX</h1>
 
-<p align="center"><b>Le plugin gratuit qui monte ton clip musical avec toi dans Premiere Pro.</b><br>
-Choisis un style, clique : temps forts, montage sur le rythme, conversion LOG, look, effets et sons, paroles, version 9:16.<br>
-Et chaque outil reste dispo séparément, en un clic.</p>
+<p align="center"><b>Le plugin gratuit qui accélère ton montage dans Premiere Pro, quel que soit ton domaine.</b><br>
+Reels et TikTok, vidéos d'entreprise, événements, YouTube, clips musicaux : choisis un style, clique.<br>
+Silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, version 9:16. Chaque outil reste dispo séparément.</p>
 
 <p align="center">
   <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger&style=for-the-badge&color=2680eb" alt="Télécharger RR FX"></a>
@@ -18,15 +18,27 @@ Et chaque outil reste dispo séparément, en un clic.</p>
 
 ---
 
+## Pour qui ?
+
+| | Ce que RR FX fait pour toi |
+| --- | --- |
+| 📱 **Réseaux sociaux** | Reels, TikTok, Shorts : coupes sur le son, zooms traversants et pushs, sous-titres mot par mot, copie 9:16 recadrée sur le sujet. |
+| 💼 **Entreprise** | Vidéos corporate, interviews, témoignages : image propre, fondus doux sur chaque coupe, bandeau nom et fonction, version verticale sur fond flou. |
+| 🎉 **Événementiel** | Aftermovies, mariages, séminaires, festivals : montage sur la musique, étalonnage, flashs, light leaks, Ken Burns sur les photos. |
+| ▶ **YouTube** | Face cam, vlogs, tutos, podcasts filmés : silences coupés en un clic, zoom un plan sur deux sur les jump cuts, whooshs sur les coupes. |
+| 🎵 **Clips musicaux** | Temps forts de la musique, montage sur le rythme, effets enchaînés sur les kicks, paroles animées. |
+
+---
+
 ## Pourquoi RR FX ?
 
-- **⚡ Ton clip en un clic.** Le mode Express enchaîne tout le montage d'un clip musical, du premier temps fort à la
-  version Reels.
+- **⚡ Ton montage en un clic.** Le mode Express enchaîne tout : de la coupe des silences ou du premier temps fort
+  jusqu'à la version Reels.
 - **🎯 Précis.** Chaque effet est posé sur ta coupe, tes marqueurs ou chaque temps fort de la musique, avec son son.
 - **🛡️ Ton montage ne bouge pas.** Les effets se posent sur des calques au-dessus de tes plans. Tes clips, ton son
   et tes coupes ne sont jamais modifiés, et **↶ Annuler** retire tout.
-- **🧰 Tout au même endroit.** Effets, rampes, couleur, musique, textes, formats et tes propres ressources : un seul
-  panneau dans Premiere.
+- **🧰 Tout au même endroit.** Transitions, mouvements, rampes, couleur, musique, parole, textes, formats et tes
+  propres ressources : un seul panneau dans Premiere.
 - **🧪 Fiable.** Un test de compatibilité vérifie ton Premiere en un clic, et les mises à jour s'installent toutes
   seules.
 - **🎁 Gratuit.** Pas d'abonnement, pas de compte.
@@ -39,33 +51,38 @@ Et chaque outil reste dispo séparément, en un clic.</p>
 <tr>
 <td width="56%">
 
-### ⚡ Express : ton clip en un clic
+### ⚡ Express : ton montage en un clic
 
-Sélectionne tes rushs, choisis un style, clique. RR FX fait tout le reste, **dans l'ordre** :
+Dis ce que tu montes (réseaux, entreprise, événement, YouTube, clip), choisis un style, clique. RR FX enchaîne
+**dans l'ordre** les étapes de ce style :
 
-1. pose un marqueur sur chaque temps fort de ta musique ;
+1. coupe les silences (sur une copie de ta séquence) ou pose les temps forts de ta musique ;
 2. monte tes rushs sur le rythme ;
-3. convertit ton LOG en Rec.709 (la bonne LUT pour chaque caméra) ;
-4. pose le look, les effets enchaînés **et leurs sons** ;
-5. anime tes paroles, et crée la version 9:16 si tu veux.
+3. convertit ton LOG en Rec.709, corrige l'expo, pose le look ;
+4. zoome un plan sur deux sur les jump cuts, pose les transitions **et leurs sons** sur chaque coupe ;
+5. pose les sous-titres, le bandeau nom et fonction ou les paroles, puis la version 9:16.
 
-Tout reste modifiable, et **↶ Annuler** retire une étape à la fois.
+Pas de musique pour une interview ? Pas de souci : seules les étapes utiles sont proposées. Tout reste
+modifiable, et **↶ Annuler** retire une étape à la fois.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/express.png" alt="Onglet Express" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/express-reseaux.png" alt="Onglet Express, style Reels" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/express-resultat.png" alt="Compte rendu du clip express" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/express-entreprise.png" alt="Styles pour la vidéo d'entreprise" width="300"></td>
 <td width="56%">
 
-### 🎬 7 styles prêts à l'emploi
+### 🎬 14 styles prêts à l'emploi
 
-**Rap énergique**, **Drill sombre**, **Pop lumineux**, **Chill / lofi**, **Vlog voyage**, **Cinématique**,
-**Rétro VHS**… ou **ton style** à toi.
+- 📱 **Reels dynamique**, **Face cam / UGC**
+- 💼 **Entreprise épuré**, **Interview / témoignage**
+- 🎉 **Aftermovie**, **Mariage / cérémonie**
+- ▶ **YouTube face cam**, **Vlog voyage**
+- 🎵 **Rap énergique**, **Drill sombre**, **Pop lumineux**, **Chill / lofi**, **Cinématique**, **Rétro VHS**
+- … ou **ton style** à toi.
 
-- Chaque style règle tout : les temps forts à suivre, le rythme des plans, les effets, le look, les sons et
-  l'animation des paroles.
-- Un compte rendu clair à la fin : ce qui a été fait, étape par étape.
+Chaque style règle tout : les étapes, le rythme des plans, les transitions, le look, les sons et l'animation des
+textes. Un compte rendu clair à la fin : ce qui a été fait, étape par étape.
 
 </td>
 </tr>
@@ -74,15 +91,49 @@ Tout reste modifiable, et **↶ Annuler** retire une étape à la fois.
 
 ### ⚡ Transitions et effets en un clic
 
-Flashs, flickers, zooms, shakes, flous, glitchs, motion blur : **20 effets de clip musical** prêts à l'emploi.
+**32 effets** prêts à l'emploi, classés par usage :
 
-- Survole une vignette pour la voir bouger, règle la durée et l'intensité.
-- Pose-le sur **la coupe**, **toutes tes coupes**, **tes marqueurs** ou **chaque temps fort** de la musique.
+- **Transitions modernes** : push, zoom lent, zoom traversant, pop, fondus au blanc et au noir, fondu flou.
+- **Mouvements** sur tout le plan : Ken Burns (photos d'événement), zoom lent, respiration, caméra à l'épaule,
+  punch-in.
+- **Effets de clip** : flashs, flickers, zooms, shakes, glitchs, motion blur.
+
+Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toutes les coupes de la séquence**,
+**tes marqueurs**, **chaque temps fort** ou **tous les plans**.
 - **Les sons avec** : whooshs et impacts fournis, calés pile sur chaque coupe.
 - Tout reste modifiable ensuite dans *Options d'effet*, comme si tu l'avais fait à la main.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/effets.png" alt="Onglet Effets" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/effets-entreprise.png" alt="Effets filtrés pour la vidéo d'entreprise" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/parole.png" alt="Couper les silences" width="300"></td>
+<td width="56%">
+
+### 🎙️ Couper les silences en un clic
+
+Pour YouTube, les vlogs, les interviews et les podcasts filmés. Sélectionne tes plans, clique **Analyser** :
+RR FX écoute le son et te montre les blancs en rouge, avant de toucher à quoi que ce soit.
+
+- **Couper** : les blancs sont retirés, l'image et le son recollés et toujours synchro.
+- Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque silence.
+- Sensibilité, silence minimum et marge autour des mots réglables.
+- Puis **Zoom un plan sur deux** : chaque jump cut devient un changement de cadre.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 💬 Sous-titres et bandeaux
+
+- **Sous-titres** : importe un `.srt` (Premiere le crée avec sa transcription) et RR FX pose chaque phrase en texte
+  animé. **Mot par mot** pour le style TikTok, ou 3 mots, ou la phrase entière. Recalés tout seuls après la coupe
+  des silences.
+- **Bandeau nom et fonction** pour tes interviews et témoignages, en bas à gauche, animé.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/parole-sous-titres.png" alt="Sous-titres et bandeau" width="300"></td>
 </tr>
 <tr>
 <td width="44%"><img src="docs/captures/outils/enchainement.png" alt="Enchaînement d'effets" width="300"></td>
@@ -195,9 +246,10 @@ RR FX écoute ta musique et trouve **les kicks, les caisses claires ou la grille
 <td width="44%"><img src="docs/captures/outils/textes.png" alt="Paroles animées" width="300"></td>
 <td width="56%">
 
-### 🔤 Paroles et titres animés
+### 🔤 Titres et paroles animés
 
-Colle tes paroles : **une ligne par temps fort**, animée (Pop, Zoom, Glissement, Impact…).
+Colle tes textes ou tes paroles : **une ligne par temps fort**, par marqueur ou à durée fixe, animée (Pop, Zoom,
+Glissement, Impact…).
 
 - Avec ta police et ton style : exporte un titre de Premiere en modèle, RR FX s'en sert.
 
@@ -206,16 +258,18 @@ Colle tes paroles : **une ligne par temps fort**, animée (Pop, Zoom, Glissement
 <tr>
 <td width="56%">
 
-### 📱 Prêt pour Reels et TikTok
+### 📱 Prêt pour Reels, TikTok et LinkedIn
 
 Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic.
 
 - Le **recadrage automatique** de Premiere suit ton sujet dans chaque plan.
+- Ou **sur fond flou** : le plan entier au centre, sur lui-même agrandi et flouté. Le classique des interviews et
+  des vidéos d'entreprise.
 - L'aperçu montre la **zone sûre**, ce que cachent les boutons de l'app.
 - Ta séquence d'origine ne bouge pas.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/formats.png" alt="Formats 9:16, 4:5, 1:1" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/formats-fond-flou.png" alt="Formats 9:16 sur fond flou" width="300"></td>
 </tr>
 <tr>
 <td width="44%"><img src="docs/captures/outils/ressources.png" alt="Tes ressources" width="300"></td>
@@ -262,7 +316,7 @@ Publie les tiens en deux clics.
 **Ctrl+K** (ou **/**) : tape deux lettres, appuie sur Entrée.
 
 - Une action, un onglet, un effet, un overlay, un look ou un style : tout se trouve au même endroit.
-- Et des raccourcis d'une touche pour le reste : **E** clip express, **A** appliquer, **B** temps forts, **L**
+- Et des raccourcis d'une touche pour le reste : **E** montage express, **A** appliquer, **B** temps forts, **L**
   conversion LOG…
 
 </td>
@@ -334,6 +388,22 @@ le nom des effets). Pour en être sûr : *Réglages > Test de compatibilité*, u
 Non. Les effets se posent sur des calques au-dessus de tes plans (nommés `RR FX · …`). Seules les speed ramps et le
 motion blur travaillent sur une copie du passage, posée au-dessus. **↶ Annuler** retire la dernière opération et
 *Tout effacer* retire tout ce que RR FX a posé.
+</details>
+
+<details>
+<summary><b>Et la coupe des silences, je peux revenir en arrière ?</b></summary>
+
+Oui. Par défaut, elle se fait sur une **copie** de ta séquence (« … (sans silences) ») : l'originale reste
+intacte. Tu peux aussi couper directement dans la séquence (Ctrl+Z dans Premiere pour revenir) ou seulement poser
+un marqueur sur chaque silence. Fais-la avant d'ajouter musique, plans de coupe et titres : seules les pistes des
+plans choisis sont recollées.
+</details>
+
+<details>
+<summary><b>Il faut une musique ?</b></summary>
+
+Seulement pour ce qui suit le rythme (temps forts, montage auto, paroles). Les styles Interview, Entreprise, Face
+cam et YouTube marchent sans musique : leurs transitions se posent sur toutes les coupes de la séquence.
 </details>
 
 <details>

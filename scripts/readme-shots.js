@@ -63,6 +63,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
   await close();
   await shot('effets');
+  // Les effets pour la vidéo d'entreprise : transitions douces et mouvements.
+  await page.click('.chips.domains .action:has-text("Entreprise")');
+  await page.click('#grid .card:has-text("Ken Burns")');
+  await close();
+  await shot('effets-entreprise', null, 700);
+  await page.click('.chips.domains .action:has-text("Tout")');
+  await page.click('#grid .card:has-text("Zoom rotation")');
+  await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
 
   // Enchaînement sur les temps forts.
   await page.selectOption('.section:has-text("Placement") .row:has-text("Entre les coupes") select', 'chain');
@@ -153,12 +161,35 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.click('.xp-style:has-text("Rap énergique")');
   await close();
   await shot('express', null, 700);
-  await mark('.section|2. Style', 'st');
+  await mark('.section|1. Style', 'st');
   await shot('express-styles', '[data-shot=st]', 500);
   await page.click('#cta');
   await page.waitForFunction(() => /prêt|revoir/.test(document.getElementById('status-title').textContent), null, { timeout: 60000 });
-  await mark('.section|Dernier clip express', 'rp');
+  await mark('.section|Dernier montage express', 'rp');
   await shot('express-resultat', '[data-shot=rp]', 600);
+  // Les styles d'un autre domaine : vidéo d'entreprise.
+  await page.click('.chips.domains .action:has-text("Entreprise")');
+  await page.click('.xp-style:has-text("Interview")');
+  await close();
+  await shot('express-entreprise', null, 700);
+  await page.click('.chips.domains .action:has-text("Réseaux")');
+  await page.click('.xp-style:has-text("Reels dynamique")');
+  await close();
+  await shot('express-reseaux', null, 700);
+  await page.click('.chips.domains .action:has-text("Tout")');
+
+  // Parole : silences analysés, sous-titres.
+  await tab('speech');
+  await page.click('button:has-text("Analyser")');
+  await page.waitForSelector('#status.ok:has-text("silences trouvés")', { timeout: 10000 });
+  await shot('parole', null, 500);
+  await page.fill('.section:has-text("Sous-titres") textarea', '1\n00:00:01,000 --> 00:00:03,200\nBienvenue dans notre nouvel atelier\n\n2\n00:00:03,400 --> 00:00:06,000\nOn vous montre tout en deux minutes');
+  await page.click('.section:has-text("Sous-titres") .action:has-text("Mot par mot")');
+  await page.fill('.section:has-text("Bandeau") input >> nth=0', 'Camille Martin');
+  await page.fill('.section:has-text("Bandeau") input >> nth=1', 'Directrice marketing');
+  await close();
+  await mark('.section|Sous-titres', 'sub');
+  await shot('parole-sous-titres', '[data-shot=sub]', 500);
 
   // Recherche rapide.
   await page.keyboard.press('Control+k');
@@ -169,6 +200,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   // Formats.
   await tab('formats');
   await shot('formats', null, 700);
+  await page.click('.section:has-text("Cadrage") .action:has-text("Fond flou")');
+  await shot('formats-fond-flou', null, 700);
+  await page.click('.section:has-text("Cadrage") .action:has-text("Recadrage auto")');
 
   // Ressources.
   await tab('assets');

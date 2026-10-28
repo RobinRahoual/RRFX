@@ -1,6 +1,7 @@
-/* RR FX : styles de clip. Une recette = tout ce qu'il faut pour un style de clip musical :
-   temps forts à suivre, rythme des plans, effets enchaînés, look, sons sur les transitions,
-   animation des paroles. Le mode Express les applique en un clic. Sans DOM, testé sous Node. */
+/* RR FX : styles de montage. Une recette = tout ce qu'il faut pour un style : clip musical,
+   Reels / TikTok, vidéo d'entreprise, interview, aftermovie, mariage, YouTube… Temps forts à
+   suivre, rythme des plans, effets enchaînés, look, sons sur les transitions, textes, et les
+   étapes à enchaîner. Le mode Express les applique en un clic. Sans DOM, testé sous Node. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.RRFXRecipes = factory();
@@ -9,42 +10,99 @@
 
   /* chain : clés des effets (b: effet intégré, p: overlay fourni), dans l'ordre d'enchaînement.
      beats : détection des temps forts ; cut : un plan tous les N temps ; sfx : son des
-     transitions (voir sons.js) ; title : animation des paroles. */
+     transitions (voir sons.js) ; title : animation des textes ; uses : domaines (library.js) ;
+     place : où vont les effets (markers : temps forts de la musique ; allcuts : toutes les
+     coupes de la séquence) ; steps : étapes proposées (true : cochée par défaut) ;
+     captions.words : mots par sous-titre (0 : phrase entière) ; format : copie au format réseau. */
+  const CLIP_STEPS = { beats: true, montage: true, convert: true, fix: false, look: true, effects: true, sfx: true, titles: true, format: false };
   const RECIPES = [
     {
-      id: 'rap', name: 'Rap énergique', desc: 'Zooms, flashs et basses qui tapent, un plan tous les 2 temps.',
+      id: 'rap', uses: ['clip'], place: 'markers', steps: CLIP_STEPS, name: 'Rap énergique', desc: 'Zooms, flashs et basses qui tapent, un plan tous les 2 temps.',
       chain: ['b:zoom-spin', 'b:flash-white', 'b:shake-bass', 'b:glitch'], order: 'cycle', frames: 6, intensity: 110,
       look: 'Punchy', beats: { mode: 'kicks', every: 2 }, cut: { every: 2, order: 'random', pick: 'random' }, sfx: 'mix', title: 'impact'
     },
     {
-      id: 'drill', name: 'Drill sombre', desc: 'Secousses, stroboscope et glitch sur un étalonnage nuit.',
+      id: 'drill', uses: ['clip'], place: 'markers', steps: CLIP_STEPS, name: 'Drill sombre', desc: 'Secousses, stroboscope et glitch sur un étalonnage nuit.',
       chain: ['b:shake-impact', 'b:strobe', 'b:glitch', 'b:flash-black'], order: 'random', frames: 5, intensity: 120,
       look: 'Nuit bleue', beats: { mode: 'kicks', every: 2 }, cut: { every: 1, order: 'random', pick: 'random' }, sfx: 'impact', title: 'impact'
     },
     {
-      id: 'pop', name: 'Pop lumineux', desc: 'Glow, zooms doux et light leaks roses, très lumineux.',
+      id: 'pop', uses: ['clip', 'social'], place: 'markers', steps: CLIP_STEPS, name: 'Pop lumineux', desc: 'Glow, zooms doux et light leaks roses, très lumineux.',
       chain: ['b:flash-glow', 'b:zoom-in', 'b:slide', 'p:leak-pink'], order: 'cycle', frames: 8, intensity: 90,
       look: 'Clip musical', beats: { mode: 'hits', every: 2 }, cut: { every: 2, order: 'sequence', pick: 'random' }, sfx: 'whoosh', title: 'pop'
     },
     {
-      id: 'chill', name: 'Chill / lofi', desc: 'Flous, dézooms lents et lumière chaude, un plan tous les 4 temps.',
+      id: 'chill', uses: ['clip', 'social'], place: 'markers', steps: CLIP_STEPS, name: 'Chill / lofi', desc: 'Flous, dézooms lents et lumière chaude, un plan tous les 4 temps.',
       chain: ['b:defocus', 'b:zoom-out', 'p:leak-warm'], order: 'cycle', frames: 12, intensity: 70,
       look: 'Film chaud', beats: { mode: 'tempo', every: 4 }, cut: { every: 4, order: 'sequence', pick: 'middle' }, sfx: 'none', title: 'fade'
     },
     {
-      id: 'voyage', name: 'Vlog voyage', desc: 'Whip pans, flares de soleil, couleurs d\'été.',
+      id: 'voyage', uses: ['youtube', 'social', 'clip'], place: 'markers', steps: CLIP_STEPS, name: 'Vlog voyage', desc: 'Whip pans, flares de soleil, couleurs d\'été.',
       chain: ['b:whip-pan', 'b:zoom-in', 'p:flare-warm'], order: 'cycle', frames: 8, intensity: 90,
       look: 'Été vintage', beats: { mode: 'tempo', every: 2 }, cut: { every: 2, order: 'sequence', pick: 'random' }, sfx: 'whoosh', title: 'slide-up'
     },
     {
-      id: 'cine', name: 'Cinématique', desc: 'Fondus au noir, défocus et motion blur, rythme posé.',
+      id: 'cine', uses: ['clip', 'event', 'corporate'], place: 'markers', steps: CLIP_STEPS, name: 'Cinématique', desc: 'Fondus au noir, défocus et motion blur, rythme posé.',
       chain: ['b:flash-black', 'b:defocus', 'b:echo-blur'], order: 'cycle', frames: 14, intensity: 80,
       look: 'Ciné désaturé', beats: { mode: 'tempo', every: 4 }, cut: { every: 4, order: 'sequence', pick: 'middle' }, sfx: 'whoosh-grave', title: 'blur'
     },
     {
-      id: 'retro', name: 'Rétro VHS', desc: 'VHS, glitch et vagues, couleurs délavées.',
+      id: 'retro', uses: ['clip', 'social'], place: 'markers', steps: CLIP_STEPS, name: 'Rétro VHS', desc: 'VHS, glitch et vagues, couleurs délavées.',
       chain: ['p:vhs', 'b:glitch', 'b:wave', 'b:flicker'], order: 'random', frames: 8, intensity: 100,
       look: 'Pastel', beats: { mode: 'snares', every: 2 }, cut: { every: 2, order: 'random', pick: 'random' }, sfx: 'glitch', title: 'impact'
+    },
+    // Réseaux sociaux
+    {
+      id: 'reels', uses: ['social', 'event'], place: 'markers', name: 'Reels dynamique', desc: 'Coupes sur le son, zooms traversants et pushs, sous-titres mot par mot, version 9:16.',
+      steps: { beats: true, montage: true, convert: true, look: true, effects: true, sfx: true, captions: false, format: true },
+      chain: ['b:zoom-through', 'b:push', 'b:pop-in', 'b:flash-glow'], order: 'cycle', frames: 6, intensity: 100,
+      look: 'Punchy', beats: { mode: 'hits', every: 2 }, cut: { every: 2, order: 'sequence', pick: 'random' }, sfx: 'swoosh', title: 'pop',
+      captions: { words: 1 }, format: { id: '9x16', mode: 'reframe' }
+    },
+    {
+      id: 'facecam', uses: ['social', 'youtube', 'corporate'], place: 'allcuts', name: 'Face cam / UGC', desc: 'Silences coupés, zoom un plan sur deux, transitions courtes, sous-titres 3 mots, 9:16.',
+      steps: { silences: true, fix: true, look: true, punch: true, effects: true, sfx: true, captions: true, format: true },
+      chain: ['b:zoom-smooth', 'b:push'], order: 'cycle', frames: 5, intensity: 90,
+      look: 'Punchy', beats: { mode: 'tempo', every: 2 }, cut: { every: 2, order: 'sequence', pick: 'random' }, sfx: 'swoosh', title: 'pop',
+      captions: { words: 3 }, format: { id: '9x16', mode: 'reframe' }
+    },
+    // Entreprise
+    {
+      id: 'corporate', uses: ['corporate'], place: 'allcuts', name: 'Entreprise épuré', desc: 'Fondus flous, pushs et zooms doux sur chaque coupe, image propre, bandeau nom et fonction.',
+      steps: { convert: true, fix: true, effects: true, sfx: false, lower: true, captions: false, format: false },
+      chain: ['b:blur-dissolve', 'b:push', 'b:zoom-smooth'], order: 'cycle', frames: 12, intensity: 70,
+      look: null, beats: { mode: 'tempo', every: 4 }, cut: { every: 4, order: 'sequence', pick: 'middle' }, sfx: 'whoosh', title: 'slide-up',
+      captions: { words: 0 }, format: { id: '4x5', mode: 'blur' }
+    },
+    {
+      id: 'interview', uses: ['corporate', 'youtube', 'event'], place: 'allcuts', name: 'Interview / témoignage', desc: 'Blancs retirés, zoom un plan sur deux, fondus doux, bandeau et sous-titres, version verticale sur fond flou.',
+      steps: { silences: true, fix: true, punch: true, effects: true, lower: true, captions: true, format: false },
+      chain: ['b:blur-dissolve'], order: 'cycle', frames: 8, intensity: 70,
+      look: null, beats: { mode: 'tempo', every: 4 }, cut: { every: 4, order: 'sequence', pick: 'middle' }, sfx: 'none', title: 'fade',
+      captions: { words: 0 }, format: { id: '9x16', mode: 'blur' }
+    },
+    // Événementiel
+    {
+      id: 'aftermovie', uses: ['event', 'social'], place: 'markers', name: 'Aftermovie', desc: 'Soirée, festival, séminaire : montage sur la musique, flashs, zooms traversants, leaks dorés.',
+      steps: { beats: true, montage: true, convert: true, fix: true, look: true, effects: true, sfx: true, format: false },
+      chain: ['b:flash-white', 'b:zoom-through', 'p:leak-gold', 'b:whip-pan', 'p:flare-warm'], order: 'cycle', frames: 7, intensity: 100,
+      look: 'Été vintage', beats: { mode: 'hits', every: 2 }, cut: { every: 2, order: 'random', pick: 'random' }, sfx: 'whoosh', title: 'impact',
+      format: { id: '9x16', mode: 'reframe' }
+    },
+    {
+      id: 'mariage', uses: ['event'], place: 'markers', name: 'Mariage / cérémonie', desc: 'Fondus blancs, fondus flous et bokeh, lumière chaude, un plan tous les 4 temps.',
+      steps: { beats: true, montage: true, convert: true, fix: true, look: true, effects: true, sfx: false, format: false },
+      chain: ['b:fade-white', 'b:blur-dissolve', 'p:bokeh-warm'], order: 'cycle', frames: 16, intensity: 70,
+      look: 'Film chaud', beats: { mode: 'tempo', every: 4 }, cut: { every: 4, order: 'sequence', pick: 'middle' }, sfx: 'none', title: 'fade',
+      format: { id: '9x16', mode: 'reframe' }
+    },
+    // YouTube
+    {
+      id: 'youtube', uses: ['youtube'], place: 'allcuts', name: 'YouTube face cam', desc: 'Silences coupés, zoom un plan sur deux, whip pans et whooshs sur les coupes, couleurs punchy.',
+      steps: { silences: true, fix: true, look: true, punch: true, effects: true, sfx: true, captions: false, lower: false },
+      chain: ['b:zoom-smooth', 'b:whip-pan', 'b:push'], order: 'cycle', frames: 6, intensity: 90,
+      look: 'Punchy', beats: { mode: 'tempo', every: 2 }, cut: { every: 2, order: 'sequence', pick: 'random' }, sfx: 'whoosh', title: 'pop',
+      captions: { words: 0 }, format: { id: '9x16', mode: 'reframe' }
     }
   ];
   const byId = id => RECIPES.find(r => r.id === id) || null;
@@ -58,22 +116,34 @@
       look: null, lookParams: s.color && s.color.params ? s.color.params : null, lookName: (s.color && s.color.name) || 'Mon look',
       beats: { mode: (s.beats && s.beats.mode) || 'kicks', every: (s.beats && s.beats.every) || 1 },
       cut: { every: (s.autoEdit && s.autoEdit.every) || 2, order: (s.autoEdit && s.autoEdit.order) || 'sequence', pick: (s.autoEdit && s.autoEdit.pick) || 'random' },
-      sfx: s.sfx || 'none', title: (s.titles && s.titles.anim) || 'pop'
+      sfx: s.sfx || 'none', title: (s.titles && s.titles.anim) || 'pop',
+      uses: [], place: 'markers', steps: CLIP_STEPS, captions: { words: (s.speech && s.speech.words) || 0 }, format: { id: (s.formats && s.formats.id) || '9x16', mode: (s.formats && s.formats.mode) || 'reframe' }
     };
   }
 
-  // Les étapes du clip express, dans l'ordre où elles doivent tourner.
+  // Les étapes du montage express, dans l'ordre où elles doivent tourner. music : il faut une
+  // musique dans la séquence (pour les effets : seulement s'ils suivent les temps forts).
   const STEPS = [
+    { id: 'silences', label: 'Couper les silences', desc: 'Les blancs retirés, sur une copie de ta séquence' },
     { id: 'beats', label: 'Temps forts', desc: 'Un marqueur sur chaque temps fort de la musique' },
     { id: 'montage', label: 'Montage auto', desc: 'Tes rushs posés sur le rythme' },
     { id: 'convert', label: 'Conversion LOG', desc: 'Rec.709 avec la LUT de chaque caméra' },
     { id: 'fix', label: 'Expo et balance auto', desc: 'Chaque plan corrigé' },
     { id: 'look', label: 'Look', desc: 'L\'étalonnage du style sur toute la séquence' },
-    { id: 'effects', label: 'Effets', desc: 'Les effets du style, enchaînés sur les temps forts' },
+    { id: 'punch', label: 'Zoom un plan sur deux', desc: 'Punch-in sur les jump cuts' },
+    { id: 'effects', label: 'Effets', desc: 'Les effets du style, enchaînés' },
     { id: 'sfx', label: 'Sons', desc: 'Whooshs et impacts calés sur les transitions' },
     { id: 'titles', label: 'Paroles', desc: 'Les paroles de l\'onglet Textes, une par temps fort' },
-    { id: 'format', label: 'Copie 9:16', desc: 'Une version Reels / TikTok recadrée' }
+    { id: 'captions', label: 'Sous-titres', desc: 'Le .srt de l\'onglet Parole, recalé après la coupe des silences' },
+    { id: 'lower', label: 'Bandeau nom et fonction', desc: 'Celui de l\'onglet Parole, au début' },
+    { id: 'format', label: 'Copie format réseau', desc: 'Une version verticale ou carrée' }
   ];
+  const MUSIC = { beats: true, montage: true, titles: true };
+  const needsMusic = (id, r) => !!MUSIC[id] || (id === 'effects' && r.place === 'markers');
+  // Étapes proposées par une recette, dans l'ordre d'exécution, avec leur état par défaut.
+  const stepsOf = r => STEPS.filter(x => x.id in (r.steps || CLIP_STEPS)).map(x => Object.assign({}, x, { on: !!(r.steps || CLIP_STEPS)[x.id] }));
+  // Styles d'un domaine : ceux faits pour lui d'abord (domaine principal), puis ceux qui s'y prêtent.
+  const forDomain = d => (!d || d === 'all' ? RECIPES.slice() : RECIPES.filter(r => r.uses.indexOf(d) >= 0).sort((p, q) => (p.uses.indexOf(d) - q.uses.indexOf(d)) || (p.uses.length - q.uses.length)));
 
-  return { RECIPES, byId, fromSettings, STEPS };
+  return { RECIPES, byId, fromSettings, STEPS, CLIP_STEPS, needsMusic, stepsOf, forDomain };
 });

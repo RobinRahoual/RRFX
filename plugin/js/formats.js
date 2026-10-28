@@ -1,6 +1,7 @@
 /* RR FX : onglet Formats. Une copie de la séquence au format des réseaux (9:16 Reels, TikTok,
    Shorts ; 4:5 Instagram ; 1:1 ; 16:9 YouTube) en un clic : les rushs sont recadrés par l'effet
-   Recadrage automatique de Premiere (qui suit le sujet), ou agrandis et centrés. La séquence
+   Recadrage automatique de Premiere (qui suit le sujet), agrandis et centrés, ou posés entiers
+   sur un fond flou (le même plan agrandi et flouté, idéal pour interviews et vidéos d'entreprise). La séquence
    d'origine n'est jamais touchée. L'aperçu montre les zones cachées par l'interface des apps. */
 (function (root) {
   'use strict';
@@ -37,7 +38,13 @@
       g.beginPath(); g.rect(x0, 0, fw, fh); g.clip();
       g.fillStyle = '#000'; g.fillRect(x0, 0, fw, fh);
       const k = Math.max(fw / img.width, fh / img.height);
-      g.drawImage(img, x0 + (fw - img.width * k) / 2, (fh - img.height * k) / 2, img.width * k, img.height * k);
+      if (st().mode === 'blur') {
+        g.filter = 'blur(' + Math.max(4, Math.round(fw / 24)) + 'px) brightness(0.85)';
+        g.drawImage(img, x0 + (fw - img.width * k) / 2, (fh - img.height * k) / 2, img.width * k, img.height * k);
+        g.filter = 'none';
+        const kf = Math.min(fw / img.width, fh / img.height);
+        g.drawImage(img, x0 + (fw - img.width * kf) / 2, (fh - img.height * kf) / 2, img.width * kf, img.height * kf);
+      } else g.drawImage(img, x0 + (fw - img.width * k) / 2, (fh - img.height * k) / 2, img.width * k, img.height * k);
       if (st().safe && f.safe.some(Boolean)) {
         const [t, r, b, l] = f.safe;
         g.fillStyle = 'rgba(0,0,0,0.45)';
@@ -68,10 +75,11 @@
       const cv = h('canvas', { class: 'fmt-preview' });
       view.appendChild(section('Format', [cards, h('div', { class: 'fmt-stage' }, cv), h('div', { class: 'note' }, f.w + ' × ' + f.h + (f.safe.some(Boolean) ? ' · le cadre pointillé évite les boutons et légendes de l\'app.' : ''))]));
       view.appendChild(section('Cadrage', [
-        row('Rushs', actionGroup([{ v: 'reframe', label: 'Recadrage auto', title: 'Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan' }, { v: 'fill', label: 'Remplir, centré' }], s.mode, v => { s.mode = v; app.persist(); render(); })),
+        row('Rushs', actionGroup([{ v: 'reframe', label: 'Recadrage auto', title: 'Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan' }, { v: 'fill', label: 'Remplir, centré' }, { v: 'blur', label: 'Fond flou', title: 'Le plan entier, net, sur le même plan agrandi et flouté' }], s.mode, v => { s.mode = v; app.persist(); render(); })),
         row('Aperçu', actionGroup([{ v: true, label: 'Zones sûres' }, { v: false, label: 'Image seule' }], s.safe, v => { s.safe = v; app.persist(); drawPreview(cv); })),
         h('div', { class: 'note' }, s.mode === 'reframe'
           ? 'Premiere analyse chaque plan en arrière-plan (barre de progression dans le panneau Effets) : le sujet reste dans le cadre. Réglable ensuite dans Options d\'effet > Recadrage automatique.'
+          : s.mode === 'blur' ? 'Rien n\'est coupé : chaque plan est posé entier au centre, sur une copie de lui-même agrandie et floutée (effet Flou gaussien). Le classique des interviews, conférences et vidéos d\'entreprise en vertical.'
           : 'Chaque rush est agrandi pour remplir le cadre et centré. Recadre ensuite avec Trajectoire > Position si besoin.'),
         h('div', { class: 'note' }, 'RR FX crée une copie de ta séquence et l\'ouvre : l\'originale ne bouge pas. Les titres et calques gardent leur place : vérifie-les dans le nouveau cadre.')
       ]));
@@ -87,15 +95,21 @@
           const r = await Host.call('listEffects', { filter: 'reframe|recadr|reencuadr|reinquadr|reenquadr' });
           if (r.ok && r.names.length) names = r.names.concat(REFRAME);
         }
-        const res = await Host.call('formatCopy', { width: f.w, height: f.h, label: f.label, mode: s.mode, reframe: s.mode === 'reframe' ? names : [] });
+        let blur = ['Gaussian Blur', 'Flou gaussien'];
+        if (s.mode === 'blur') {
+          const r = await Host.call('listEffects', { filter: 'gaussian|gaussien|gau.' });
+          if (r.ok && r.names.length) blur = r.names.concat(blur);
+        }
+        const res = await Host.call('formatCopy', { width: f.w, height: f.h, label: f.label, mode: s.mode, reframe: s.mode === 'reframe' ? names : [], blur, blurAmount: 60 });
         if (!res.ok) return { kind: 'error', title: 'Copie impossible', detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
         const how = res.reframed ? app.plural(res.reframed, 'plan recadré', 'plans recadrés') + ' automatiquement' : '';
         const fill = res.filled ? app.plural(res.filled, 'plan agrandi', 'plans agrandis') + ' et centré' + (res.filled > 1 ? 's' : '') : '';
+        const blurred = res.blurred ? app.plural(res.blurred, 'plan posé', 'plans posés') + ' sur fond flou' : '';
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
           title: '« ' + res.name + ' » créée (' + f.label + ')',
-          detail: [how, fill].filter(Boolean).join(', ') + '. ' + (res.reframed ? 'Premiere analyse les plans en arrière-plan. ' : '') + 'Vérifie les titres dans le nouveau cadre.'
+          detail: [how, fill, blurred].filter(Boolean).join(', ') + '. ' + (res.reframed ? 'Premiere analyse les plans en arrière-plan. ' : '') + 'Vérifie les titres dans le nouveau cadre.'
         };
       });
     }

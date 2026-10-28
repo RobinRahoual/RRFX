@@ -726,21 +726,22 @@ var RRFX = (function () {
             }
             if (!targets.length) return fail('Aucun marqueur dans les clips s\u00e9lectionn\u00e9s.', { warnings: warnings });
         } else if (o.placement === 'cuts') {
-            list = selectedVideo(s);
+            // o.scope 'sequence' : toutes les coupes du montage, sans selection.
+            list = o.scope === 'sequence' ? allVideo(s) : selectedVideo(s);
             for (i = 1; i < list.length; i++) {
                 if (list[i].track !== list[i - 1].track) continue;
                 if (Math.abs(tk(list[i].item.start) - tk(list[i - 1].item.end)) <= f) {
                     atCut(tk(list[i].item.start), list[i].track, list[i - 1].item, list[i].item);
                 }
             }
-            if (!targets.length) return fail('S\u00e9lectionnez au moins deux clips qui se suivent sur la m\u00eame piste.');
+            if (!targets.length) return fail(o.scope === 'sequence' ? 'Aucune coupe entre deux plans dans la s\u00e9quence.' : 'S\u00e9lectionnez au moins deux clips qui se suivent sur la m\u00eame piste.');
         } else {
-            list = selectedVideo(s);
-            if (!list.length) {
+            list = o.scope === 'sequence' ? allVideo(s) : selectedVideo(s);
+            if (!list.length && o.scope !== 'sequence') {
                 ref = refClip(s);
                 if (ref) list = [ref];
             }
-            if (!list.length) return fail('S\u00e9lectionnez un clip dans la timeline.');
+            if (!list.length) return fail(o.scope === 'sequence' ? 'Aucun plan dans la s\u00e9quence.' : 'S\u00e9lectionnez un clip dans la timeline.');
             for (i = 0; i < list.length; i++) {
                 c = list[i].item;
                 if (o.placement === 'clipStart') add('post', tk(c.start), Math.min(tk(c.start) + N * f, tk(c.end)), c, list[i].track, list[i].track);
@@ -1519,6 +1520,10 @@ var RRFX = (function () {
         try { it.name = label; } catch (e) {}
         textSet = setMgtText(findItemAt(s, ti, a), o.text);
         if (!textSet) warnings.push('Texte non remplac\u00e9 : ce mod\u00e8le n\'a pas de champ texte modifiable');
+        // o.pos [x, y] (0 a 1) : position du texte dans l'image (bandeau en bas a gauche...).
+        if (o.pos) {
+            try { comp = componentByMatch(findItemAt(s, ti, a), 'AE.ADBE Motion'); comp.properties[0].setValue(o.pos, true); } catch (e4) { warnings.push('Position du texte non r\u00e9gl\u00e9e'); }
+        }
         for (j = 0; j < (o.fx || []).length; j++) {
             try {
                 comp = addEffect(s, ti, a, o.fx[j], warnings);
@@ -1810,9 +1815,17 @@ var RRFX = (function () {
     // Shorts). Chaque rush recoit l'effet Recadrage automatique de Premiere (o.reframe : noms de
     // l'effet), qui suit le sujet ; sinon (o.mode 'fill' ou effet absent) il est agrandi pour
     // remplir le cadre, centre. Les calques de reglage et les titres ne bougent pas.
+    // Echelle de Trajectoire multipliee par k (si elle n'est pas animee).
+    function scaleBy(item, k) {
+        var sc = componentByMatch(item, 'AE.ADBE Motion').properties[1];
+        if (sc.isTimeVarying && sc.isTimeVarying()) return false;
+        sc.setValue(Number(sc.getValue()) * k, true);
+        return true;
+    }
+
     function formatCopy(o) {
         var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, before, k, i, j, list, it, comp, sc, over, kind;
-        var reframed = 0, filled = 0, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
+        var reframed = 0, filled = 0, blurred = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
         before = P.sequences.numSequences;
         s.clone();
@@ -1830,7 +1843,8 @@ var RRFX = (function () {
         s = activeSeq();
         k = Math.max(W / oldW, H / oldH);
         over = overlayIds();
-        for (i = 0; i < s.videoTracks.numTracks; i++) {
+        // De haut en bas : le fond flou ajoute des pistes au-dessus de celle qu'il traite.
+        for (i = s.videoTracks.numTracks - 1; i >= 0; i--) {
             list = clipsOf(s, i);
             for (j = 0; j < list.length; j++) {
                 it = list[j];
@@ -1838,6 +1852,21 @@ var RRFX = (function () {
                 if (kind !== 'rush' && kind !== 'over') continue;
                 if (isGraphic(it)) continue;
                 comp = null;
+                // Fond flou : le plan entier net au-dessus, le meme plan agrandi et flou dessous.
+                if (kind === 'rush' && o.mode === 'blur') {
+                    try {
+                        top = placeCopy(s, it, i, tk(it.start), tk(it.end), it.name, {}, blurred ? [] : warnings);
+                        scaleBy(top.item, Math.min(W / oldW, H / oldH));
+                        scaleBy(findItemAt(s, i, tk(it.start)), k);
+                        comp = addEffect(s, i, tk(it.start), { names: o.blur && o.blur.length ? o.blur : ['Gaussian Blur', 'Flou gaussien'] }, blurred ? [] : warnings);
+                        if (comp) {
+                            try { comp.properties[0].setValue(o.blurAmount || 60, true); } catch (e4) {}
+                            try { comp.properties[2].setValue(true, true); } catch (e5) {}
+                        }
+                        blurred++;
+                    } catch (e6) { warnings.push(it.name + ' : ' + e6.toString()); }
+                    continue;
+                }
                 if (kind === 'rush' && o.mode !== 'fill' && o.reframe && o.reframe.length) {
                     comp = addEffect(s, i, tk(it.start), { names: o.reframe }, reframed || filled ? [] : warnings);
                     if (comp) { reframed++; continue; }
@@ -1850,7 +1879,151 @@ var RRFX = (function () {
                 } catch (e3) {}
             }
         }
-        return ok({ name: s.name, reframed: reframed, filled: filled, width: W, height: H, warnings: warnings });
+        return ok({ name: s.name, reframed: reframed, filled: filled, blurred: blurred, width: W, height: H, warnings: warnings });
+    }
+
+    // ------------------------------------------------------------ public: parole (silences)
+
+    // Plans du montage (hors calques, titres et habillages), avec leur piste.
+    function allVideo(s) {
+        var out = [], over = overlayIds(), i, j, list;
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) if (!isLayer(list[j]) && convKind(list[j], over) === 'rush') out.push({ item: list[j], track: i });
+        }
+        return out;
+    }
+
+    function audioItems(s, ti) {
+        var out = [], tr = s.audioTracks[ti], i;
+        if (!tr) return out;
+        for (i = 0; i < tr.clips.numItems; i++) out.push(tr.clips[i]);
+        out.sort(function (a, b) { return tk(a.start) - tk(b.start); });
+        return out;
+    }
+
+    function clipInfo(c, kind, track) {
+        var sp = 1;
+        try { sp = c.getSpeed(); } catch (e) {}
+        return { kind: kind, track: track, name: c.name, path: c.projectItem ? mediaPathOf(c.projectItem) : '', start: secs(tk(c.start)), end: secs(tk(c.end)), inPoint: secs(tk(c.inPoint)), speed: sp || 1 };
+    }
+
+    // Ce qui parle : les plans selectionnes (video et son lie, ou son seul), leurs pistes et limites.
+    function speechTargets(s) {
+        var f = tpf(s), sel = s.getSelection(), vids = selectedVideo(s), audio = audioClipsOf(s), out = { clips: [], v: [], a: [], lo: Infinity, hi: -Infinity };
+        var linked = {}, seenV = {}, seenA = {}, i, k, c, a, b;
+        function addA(ti) { if (!seenA[ti]) { seenA[ti] = true; out.a.push(ti); } }
+        for (i = 0; i < vids.length; i++) {
+            c = vids[i].item;
+            if (isLayer(c) || isGraphic(c)) continue;
+            a = tk(c.start); b = tk(c.end);
+            if (!seenV[vids[i].track]) { seenV[vids[i].track] = true; out.v.push(vids[i].track); }
+            for (k = 0; k < audio.length; k++) {
+                if (Math.abs(tk(audio[k].item.start) - a) < f / 2 && Math.abs(tk(audio[k].item.end) - b) < f / 2) { linked[audio[k].item.nodeId] = true; addA(audio[k].track); }
+            }
+            out.clips.push(clipInfo(c, 'video', vids[i].track));
+            out.lo = Math.min(out.lo, a); out.hi = Math.max(out.hi, b);
+        }
+        // Son seul (micro, podcast) : selectionne sans image liee.
+        for (i = 0; sel && i < sel.length; i++) {
+            if (sel[i].mediaType !== 'Audio' || linked[sel[i].nodeId]) continue;
+            for (k = 0; k < audio.length; k++) {
+                if (audio[k].item.nodeId !== sel[i].nodeId) continue;
+                c = audio[k].item;
+                addA(audio[k].track);
+                out.clips.push(clipInfo(c, 'audio', audio[k].track));
+                out.lo = Math.min(out.lo, tk(c.start)); out.hi = Math.max(out.hi, tk(c.end));
+            }
+        }
+        return out;
+    }
+
+    function speechInfo(o) {
+        var s = activeSeq(), t = speechTargets(s);
+        return ok({ fps: TICKS / tpf(s), clips: t.clips, tracks: { video: t.v, audio: t.a } });
+    }
+
+    // Retire les silences (o.ranges, secondes de sequence) des plans selectionnes : coupe a la
+    // lame sur leurs pistes (image et son), supprime les morceaux muets et recolle la suite.
+    // o.copy : sur une copie de la sequence (l'original reste intact).
+    function cutSilences(o) {
+        var s = activeSeq(), P = app.project, t = speechTargets(s), f = tpf(s), ranges = [], merged = [], warnings = [], plan = [];
+        var i, j, k, a, b, r, x, list, it, removed = 0, moved = 0, refused = 0, total = 0, before, ns, others = [];
+        if (!t.clips.length) return fail('S\u00e9lectionne dans la timeline les plans o\u00f9 l\'on parle.');
+        for (i = 0; i < (o.ranges || []).length; i++) {
+            a = Math.max(snap(o.ranges[i].a * TICKS, f), t.lo);
+            b = Math.min(snap(o.ranges[i].b * TICKS, f), t.hi);
+            if (b - a >= f) ranges.push({ a: a, b: b });
+        }
+        ranges.sort(function (p, q) { return p.a - q.a; });
+        for (i = 0; i < ranges.length; i++) {
+            r = merged[merged.length - 1];
+            if (r && ranges[i].a <= r.b) r.b = Math.max(r.b, ranges[i].b); else merged.push(ranges[i]);
+        }
+        ranges = merged;
+        if (!ranges.length) return ok({ removed: 0, ranges: 0, seconds: 0, moved: 0, name: s.name, copy: false, warnings: [] });
+        if (o.copy) {
+            if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script : d\u00e9coche \u00ab Sur une copie \u00bb.');
+            before = P.sequences.numSequences;
+            s.clone();
+            if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
+            ns = P.sequences[P.sequences.numSequences - 1];
+            try { ns.name = s.name + ' (sans silences)'; } catch (e0) {}
+            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e1) {}
+            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+            s = activeSeq();
+        }
+        var qs = qeSeq();
+        // 1. Coupes aux bords de chaque silence, sur chaque piste concernee.
+        for (i = 0; i < ranges.length; i++) {
+            total += ranges[i].b - ranges[i].a;
+            for (k = 0; k < 2; k++) {
+                x = timecodeOf(s, k ? ranges[i].b : ranges[i].a);
+                for (j = 0; j < t.v.length; j++) qs.getVideoTrackAt(t.v[j]).razor(x);
+                for (j = 0; j < t.a.length; j++) qs.getAudioTrackAt(t.a[j]).razor(x);
+            }
+        }
+        function inGap(p, q) {
+            for (var m = 0; m < ranges.length; m++) if (p >= ranges[m].a - f / 2 && q <= ranges[m].b + f / 2) return true;
+            return false;
+        }
+        function gapBefore(p) {
+            var sum = 0, m;
+            for (m = 0; m < ranges.length; m++) if (ranges[m].b <= p + f / 2) sum += ranges[m].b - ranges[m].a;
+            return sum;
+        }
+        // 2. Morceaux muets retires, puis 3. la suite recollee (de gauche a droite, piste par piste).
+        function collect(items) {
+            for (var m = 0; m < items.length; m++) {
+                it = items[m];
+                a = tk(it.start);
+                if (inGap(a, tk(it.end))) { try { it.remove(false, false); removed++; } catch (e3) { refused++; } continue; }
+                b = gapBefore(a);
+                if (b > 0) plan.push({ it: it, target: a - b });
+            }
+        }
+        for (j = 0; j < t.v.length; j++) collect(clipsOf(s, t.v[j]));
+        for (j = 0; j < t.a.length; j++) collect(audioItems(s, t.a[j]));
+        for (i = 0; i < plan.length; i++) {
+            // Le son lie a pu suivre son image : on ne le decale que s'il n'est pas deja en place.
+            x = tk(plan[i].it.start);
+            if (Math.abs(x - plan[i].target) <= 1) { moved++; continue; }
+            if (shift(plan[i].it, plan[i].target - x)) moved++; else refused++;
+        }
+        if (refused) warnings.push(refused + ' morceau(x) que Premiere a refus\u00e9 de d\u00e9placer : v\u00e9rifie la fin de la s\u00e9quence');
+        // Les autres pistes ne bougent pas : on le signale si elles ont du contenu apres la 1re coupe.
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            if (inList(t.v, i)) continue;
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) if (tk(list[j].end) > ranges[0].a) { others.push('V' + (i + 1)); break; }
+        }
+        for (i = 0; i < s.audioTracks.numTracks; i++) {
+            if (inList(t.a, i)) continue;
+            list = audioItems(s, i);
+            for (j = 0; j < list.length; j++) if (tk(list[j].end) > ranges[0].a) { others.push('A' + (i + 1)); break; }
+        }
+        if (others.length) warnings.push('Pistes non d\u00e9cal\u00e9es : ' + others.join(', ') + '. Coupe les silences avant d\'ajouter musique, plans de coupe et titres.');
+        return ok({ removed: removed, ranges: ranges.length, seconds: total / TICKS, moved: moved, name: s.name, copy: !!o.copy, warnings: warnings });
     }
 
     // ------------------------------------------------------------ public: test de compatibilite
@@ -2200,6 +2373,8 @@ var RRFX = (function () {
         framesEnd: guard(framesEnd),
         formatCopy: guard(formatCopy),
         setPlayhead: guard(setPlayhead),
-        selfTest: guard(selfTest)
+        selfTest: guard(selfTest),
+        speechInfo: guard(speechInfo),
+        cutSilences: guard(cutSilences)
     };
 })();

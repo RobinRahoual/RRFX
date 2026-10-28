@@ -55,7 +55,10 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
   const snap = async name => { if (shots) await page.screenshot({ path: path.join(shots, name + '.png') }); };
   const step = async (label, fn) => {
-    try { await fn(); } catch (e) { errors.push(label + ' : ' + e.message.split('\n')[0]); }
+    try { await fn(); } catch (e) {
+      errors.push(label + ' : ' + e.message.split('\n')[0]);
+      if (process.env.RRFX_DEBUG) console.log('[' + label + ']', e.message.slice(0, 900), await page.evaluate(() => document.getElementById('modal-root').innerHTML.slice(0, 600)));
+    }
   };
 
   // Bibliothèque en ligne : GitHub remplacé par deux presets publiés.
@@ -345,9 +348,38 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('#cta');
     await page.waitForFunction(() => /prêt|revoir/.test(document.getElementById('status-title').textContent), null, { timeout: 60000 });
     const t = await page.textContent('#status-title');
-    if (!/Ton clip est prêt · Chill/.test(t)) throw new Error('express : ' + t + ' / ' + await page.textContent('#status-detail'));
+    if (!/Ton montage est prêt · Chill/.test(t)) throw new Error('express : ' + t + ' / ' + await page.textContent('#status-detail'));
     const kept = await page.evaluate(() => window.RRFXApp.settings().vary);
     if (kept === 'chain') throw new Error('réglages de l\'onglet Effets non rendus');
+  });
+  await step('montage express YouTube (sans musique)', async () => {
+    await page.click('.chips.domains .action:has-text("YouTube")');
+    await page.click('.xp-style:has-text("YouTube face cam")');
+    await page.waitForSelector('.xp-step:has-text("Couper les silences")');
+    if (!/YouTube face cam/.test(await page.textContent('#cta'))) throw new Error('style non choisi');
+    await page.click('#cta');
+    await page.waitForFunction(() => /YouTube face cam|revoir|possible/.test(document.getElementById('status-title').textContent), null, { timeout: 90000 });
+    const t = await page.textContent('#status-title'), rep = await page.textContent('.section:has-text("Dernier montage express")');
+    if (!/Ton montage est prêt/.test(t)) throw new Error('express : ' + t + ' / ' + rep);
+    if (!/Couper les silences · \d+ silences coupés/.test(rep) || !/Zoom un plan sur deux/.test(rep)) throw new Error('rapport : ' + rep);
+    await page.click('.chips.domains .action:has-text("Tout")');
+  });
+  await step('parole : silences, sous-titres, bandeau', async () => {
+    await page.click('.tab[data-tab=speech]');
+    await page.click('button:has-text("Analyser")');
+    await page.waitForSelector('#status.ok:has-text("silences trouvés")', { timeout: 10000 });
+    if (await page.locator('.sp-gap').count() < 3) throw new Error('silences non affichés');
+    await snap('parole');
+    await page.click('.section:has-text("Couper les silences") button.selected:has-text("Couper les silences")');
+    await page.waitForSelector('#status:has-text("silences coupés")', { timeout: 10000 });
+    await page.fill('.section:has-text("Sous-titres") textarea', '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2\n00:00:04,000 --> 00:00:05,000\nMerci');
+    await page.click('.section:has-text("Sous-titres") .action:has-text("Mot par mot")');
+    if (!/2 sous-titres lus → 6 textes/.test(await page.textContent('.section:has-text("Sous-titres")'))) throw new Error('sous-titres non lus');
+    await page.click('button:has-text("Poser les sous-titres")');
+    await page.waitForSelector('#status:has-text("sous-titres posés")', { timeout: 10000 });
+    await page.fill('.section:has-text("Bandeau") input >> nth=0', 'Camille Martin');
+    await page.click('button:has-text("Poser le bandeau")');
+    await page.waitForSelector('#status.ok:has-text("Bandeau posé")', { timeout: 10000 });
   });
   await step('recherche rapide', async () => {
     await page.keyboard.press('Control+k');
@@ -368,6 +400,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await step('accueil et test de compatibilité', async () => {
     await page.evaluate(() => window.RRFXApp.services.welcome());
     await page.waitForSelector('.modal:has-text("Bienvenue dans RR FX")');
+    await page.click('.modal .wl-domains .action:has-text("Entreprise")');
+    if (await page.evaluate(() => window.RRFXApp.settings().domain) !== 'corporate') throw new Error('domaine non retenu');
     await page.click('.modal .button-secondary:has-text("Tester mon Premiere")');
     await page.waitForSelector('#status.ok:has-text("Tout fonctionne")', { timeout: 8000 });
     await page.waitForSelector('.section:has-text("Test de compatibilité") .xp-check.ok');

@@ -29,20 +29,35 @@ En haut du panneau, toujours visibles : le crédit, **🔍 la recherche rapide**
 sur le titre d'une section la replie (gardé d'une session à l'autre), et chaque onglet retrouve sa position quand
 on y revient.
 
-### Onglet Express : ton clip en un clic
+### Onglet Express : ton montage en un clic
 
-1. **Avant de lancer** : RR FX vérifie la séquence ouverte, le calque de réglage, la musique, les rushs
-   sélectionnés dans le panneau *Projet* (pour le montage), tes caméras (pour la conversion) et tes paroles. Ce qui
+En haut, **Pour** : *Clip musical*, *Réseaux sociaux*, *Entreprise*, *Événementiel*, *YouTube* ou *Tout*. Le choix
+filtre les styles (et les effets de l'onglet Effets) ; il est aussi proposé à l'accueil.
+
+1. **Style** :
+
+   | Domaine | Styles |
+   | --- | --- |
+   | 📱 Réseaux sociaux | *Reels dynamique* (coupes sur le son, zooms traversants, sous-titres mot par mot, 9:16), *Face cam / UGC* (silences, punch-in, sous-titres 3 mots, 9:16) |
+   | 💼 Entreprise | *Entreprise épuré* (fondus flous, pushs et zooms doux sur chaque coupe, bandeau), *Interview / témoignage* (silences, punch-in, fondus, bandeau, sous-titres, 9:16 sur fond flou) |
+   | 🎉 Événementiel | *Aftermovie* (montage sur la musique, flashs, leaks dorés), *Mariage / cérémonie* (fondus blancs, bokeh, lumière chaude) |
+   | ▶ YouTube | *YouTube face cam* (silences, punch-in, whip pans et whooshs), *Vlog voyage* |
+   | 🎵 Clip musical | *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Cinématique*, *Rétro VHS* |
+
+   Ou **Mon style** : ton enchaînement d'effets et ton look en cours.
+2. **Avant de lancer** : RR FX vérifie ce dont ce style a besoin : séquence ouverte, calque de réglage, musique
+   (seulement pour les étapes qui suivent le rythme), plans où l'on parle sélectionnés (coupe des silences), rushs
+   sélectionnés dans le panneau *Projet* (montage), caméras (conversion), paroles, sous-titres ou bandeau. Ce qui
    manque est expliqué ; une étape impossible est simplement passée.
-2. **Style** : *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Vlog voyage*, *Cinématique*,
-   *Rétro VHS*, ou **Mon style** (ton enchaînement d'effets et ton look en cours). Chaque style règle la détection des
-   temps forts, le rythme des plans, les effets enchaînés, le look, les sons et l'animation des paroles.
-3. **Étapes** (à cocher) : temps forts → montage auto → conversion LOG (caméra reconnue sur chaque plan) → expo
-   et balance auto → look → effets enchaînés (+ sons sur les coupes) → paroles → copie 9:16.
+3. **Étapes** (à cocher, gardées par style) : couper les silences → temps forts → montage auto → conversion LOG →
+   expo et balance auto → look → zoom un plan sur deux → effets enchaînés (sur les temps forts, ou sur toutes les
+   coupes de la séquence pour les styles sans musique) + sons → paroles → sous-titres → bandeau → copie au format
+   réseau (recadrée, ou sur fond flou).
 
-**Lancer le clip express** (bouton du haut, touche **E**) enchaîne tout, avec le compte rendu de chaque étape.
-Chaque étape est une opération à part : **↶ Annuler** en retire une à la fois. Les réglages de tes autres onglets
-sont rendus tels quels à la fin.
+**Lancer** (bouton du haut, touche **E**) enchaîne tout, avec le compte rendu de chaque étape. La coupe des
+silences se fait sur une copie de ta séquence : la suite du montage express continue sur cette copie, et les
+sous-titres sont recalés sur la coupe. Chaque étape est une opération à part : **↶ Annuler** en retire une à la
+fois. Les réglages de tes autres onglets sont rendus tels quels à la fin.
 
 ### Onglet Effets
 
@@ -55,7 +70,9 @@ sont rendus tels quels à la fin.
 | Réglage | Rôle |
 | --- | --- |
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
-| **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · **Temps forts de la musique** (détectés directement, sans poser de marqueurs) · Tête de lecture · Début / fin des clips · Clips entiers |
+| **Pour** | Filtre les effets par usage : clip musical, réseaux sociaux, entreprise, événementiel, YouTube |
+| **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Toutes les coupes de la séquence** (sans rien sélectionner) · **Marqueurs de la séquence** · **Temps forts de la musique** (détectés directement, sans poser de marqueurs) · Tête de lecture · Début / fin des clips · Clips entiers · **Tous les plans de la séquence** |
+| **Plans** | Positions « clips entiers » : tous, ou **un sur deux** (punch-in sur les jump cuts : alterne cadre large et serré) |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), **un effet au hasard** (même catégorie ou favoris), ou un **enchaînement** : 2 à 4 effets choisis (Maj + clic sur les cartes) qui se succèdent sur chaque temps fort, dans l'ordre ou au hasard |
 | **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`RR FX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
 | **Son sur les coupes** | Sons fournis par RR FX (whooshs, impacts, hit, riser, glitch), fabriqués par le plugin (rien à télécharger, aucun droit à gérer) et calés pour que leur moment fort tombe pile sur la coupe ; *Whooshs variés + impacts* met un impact sur les temps forts. Piste audio libre, ta musique n'est pas touchée |
@@ -67,9 +84,12 @@ Toutes les animations sont écrites en images clés dans les effets natifs de Pr
 Flou directionnel, Luminosité et contraste, Décalage, Déformation de la vague, Distorsion de l'objectif, Écho) :
 tout reste modifiable ensuite dans *Options d'effet*.
 
-**Les 20 effets** : Flash blanc, Glow flash, Dip noir, Double flash · Flicker, Stroboscope · Défocus, Flou
-directionnel · Zoom in, Zoom out, Zoom rebond, Zoom rotation (flou de mouvement réel) · Shake, Impact, Bass drop ·
-Slide, Whip pan · Onde, Bulge, Glitch · Motion blur (vraie fusion d'images, sur une copie du plan).
+**Les 32 effets** : Flash blanc, Glow flash, Dip noir, Double flash, Fondu au blanc, Fondu au noir · Flicker,
+Stroboscope · Défocus, Flou directionnel, Fondu flou · Zoom in, Zoom out, Zoom rebond, Zoom rotation (flou de
+mouvement réel), Zoom lent, Zoom traversant, Pop · Shake, Impact, Bass drop · Slide, Whip pan, Push · Onde, Bulge,
+Glitch · **Mouvements** sur tout le plan : Punch-in, Ken Burns (photos et plans fixes d'événement), Respiration,
+Caméra à l'épaule · Motion blur (vraie fusion d'images, sur une copie du plan). Choisir un mouvement passe la
+position sur *Clips entiers*.
 
 ### Overlays
 
@@ -228,11 +248,36 @@ réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèl
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
 *Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/RRFX/Titres`).
 
+### Onglet Parole
+
+Pour tout ce qui parle : YouTube, vlogs, interviews, podcasts filmés, témoignages, conférences.
+
+- **Couper les silences** : sélectionne dans la timeline les plans où l'on parle (image et son liés, ou le son seul
+  d'un micro). **Analyser** écoute le son (WAV, MOV/MP4) et montre les blancs en rouge sur une barre, sans rien
+  toucher. **Couper les silences** retire les blancs sur les pistes des plans choisis (image et son, toujours
+  synchro) et recolle la suite. *Sensibilité* (douce, normale, forte), *Silence minimum* (les pauses plus courtes
+  restent) et *Marge gardée* autour des mots se règlent. *Résultat* : **sur une copie** de la séquence
+  (« … (sans silences) », par défaut), dans la séquence (Ctrl+Z dans Premiere pour revenir), ou **marquer
+  seulement** (un marqueur au début de chaque silence). Avec deux caméras, RR FX ne coupe que là où personne ne
+  parle. À faire avant d'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées (RR FX
+  les nomme).
+- **Zoom un plan sur deux** : un punch-in sur un plan sur deux de la séquence ; la coupe devient un changement de
+  cadre.
+- **Sous-titres** : importe ou colle un `.srt` / `.vtt` (Premiere : *Texte > Transcription*, puis *Sous-titres >
+  Exporter en fichier SRT*). Chaque sous-titre devient un texte animé (modèle de l'onglet Textes), en phrase
+  entière, 3 mots ou **mot par mot** (style TikTok, temps partagé selon la longueur des mots). *Départ du
+  .srt* : début de la séquence, tête de lecture ou début des clips sélectionnés. Après une coupe des silences,
+  les sous-titres faits avant la coupe sont recalés (ce qui tombait dans un silence disparaît).
+- **Bandeau nom et fonction** : nom et fonction sur deux lignes, posés à la tête de lecture (durée, place : bas
+  gauche, bas centre, haut gauche ; animation).
+
 ### Onglet Formats
 
 Une **copie de la séquence** au format des réseaux, en un clic : **9:16** (Reels, TikTok, Shorts), **4:5**
 (Instagram), **1:1** ou **16:9**. Les rushs reçoivent l'effet **Recadrage automatique** de Premiere, qui suit le
-sujet (analyse en arrière-plan), ou sont agrandis et centrés (*Remplir, centré*). L'aperçu montre la **zone sûre**
+sujet (analyse en arrière-plan), sont agrandis et centrés (*Remplir, centré*), ou posés **sur fond flou** (le plan
+entier, net, au centre ; dessous, le même plan agrandi avec un Flou gaussien : interviews, conférences, vidéos
+d'entreprise). L'aperçu montre la **zone sûre**
 (ce que cachent les boutons et la légende de l'app). La séquence d'origine n'est pas modifiée ; les titres et calques
 gardent leur place, à vérifier dans le nouveau cadre.
 
@@ -312,12 +357,12 @@ après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dan
 
 ### Recherche rapide
 
-**Ctrl+K** (⌘K sur Mac), **/** ou 🔍 : tape quelques lettres pour trouver une action (clip express, temps forts,
+**Ctrl+K** (⌘K sur Mac), **/** ou 🔍 : tape quelques lettres pour trouver une action (montage express, couper les silences, temps forts,
 conversion…), un onglet, un effet, un overlay, un look ou un style ; ↑ ↓ et Entrée pour lancer, Échap pour fermer.
 
 ### Sans cliquer : menu et raccourcis
 
-Le menu du panneau (☰ en haut à droite du panneau) propose : clip express, recherche rapide, appliquer l'effet, appliquer la rampe, capturer,
+Le menu du panneau (☰ en haut à droite du panneau) propose : montage express, recherche rapide, appliquer l'effet, appliquer la rampe, capturer,
 poser les temps forts, synchroniser, convertir le LOG en Rec.709, annuler, tout effacer, mode réduit.
 
 Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
@@ -331,7 +376,7 @@ Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 | **B** | Poser les marqueurs des temps forts |
 | **S** | Synchroniser la sélection sur la musique |
 | **L** | Convertir le LOG en Rec.709 (caméra enregistrée) |
-| **E** | Lancer le clip express |
+| **E** | Lancer le montage express |
 | **Échap** | Arrêter l'opération en cours |
 
 Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche puis appuie sur la nouvelle
@@ -387,7 +432,10 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
   Premiere 23.4) et l'insertion d'une piste vidéo au milieu par QE (`addTracks`) : si Premiere refuse, le calque est
   posé quand même et le chemin de la LUT est copié ;
 - le décodage du son **AAC** des MOV/MP4 dans le panneau : s'il échoue, exporte le son en WAV, ou utilise
-  *Clip > Synchroniser* de Premiere.
+  *Clip > Synchroniser* de Premiere ;
+- la coupe des silences : la lame QE (`razor`) sur les pistes audio, `remove` puis `move` des morceaux suivants
+  (le son lié qui suit son image est vérifié avant d'être décalé) ;
+- la position d'un texte `.mogrt` par la *Trajectoire* du clip graphique (bandeau, sous-titres).
 
 ### Ancien nom (CutFX)
 

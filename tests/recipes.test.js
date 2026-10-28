@@ -12,19 +12,32 @@ const S = require('../plugin/js/sons.js');
 test('every clip style uses effects, overlays, looks, animations and sounds that exist', () => {
   assert.ok(R.RECIPES.length >= 6);
   R.RECIPES.forEach(r => {
-    assert.ok(r.chain.length >= 2, r.id);
+    assert.ok(r.chain.length >= 1, r.id);
     r.chain.forEach(k => {
       if (k.startsWith('b:')) assert.ok(Lib.byId[k.slice(2)], r.id + ' ' + k);
       else if (k.startsWith('p:')) assert.ok(Packs.byId[k.slice(2)], r.id + ' ' + k);
       else assert.fail(r.id + ' clé inconnue ' + k);
     });
-    assert.ok(D.LOOKS.some(l => l.name === r.look), r.id + ' look ' + r.look);
+    assert.ok(r.look === null || D.LOOKS.some(l => l.name === r.look), r.id + ' look ' + r.look);
+    assert.ok(r.uses.length && r.uses.every(u => Lib.DOMAINS.some(d => d.id === u)), r.id + ' domaines');
+    assert.ok(['markers', 'allcuts'].includes(r.place), r.id + ' place');
+    Object.keys(r.steps).forEach(k => assert.ok(R.STEPS.some(x => x.id === k), r.id + ' étape ' + k));
+    if (r.format) assert.ok(['9x16', '4x5', '1x1', '16x9'].includes(r.format.id) && ['reframe', 'fill', 'blur'].includes(r.format.mode), r.id + ' format');
+    if (r.steps.captions !== undefined) assert.ok(r.captions && [0, 1, 2, 3, 4, 5].includes(r.captions.words), r.id + ' sous-titres');
     assert.ok(Lib.titleById[r.title], r.id + ' titre ' + r.title);
     assert.ok(['kicks', 'hits', 'snares', 'tempo'].includes(r.beats.mode), r.id);
     assert.ok([1, 2, 4, 8].includes(r.cut.every) && ['sequence', 'random'].includes(r.cut.order) && ['start', 'middle', 'random', 'continue'].includes(r.cut.pick), r.id);
     assert.ok(r.sfx === 'none' || ['whoosh', 'impact', 'mix'].includes(r.sfx) || S.byId(r.sfx), r.id + ' son ' + r.sfx);
   });
   assert.strictEqual(new Set(R.RECIPES.map(r => r.id)).size, R.RECIPES.length);
+  // Chaque domaine a au moins deux styles ; les styles « parole » marchent sans musique.
+  Lib.DOMAINS.forEach(d => assert.ok(R.forDomain(d.id).length >= 2, d.id));
+  ['facecam', 'corporate', 'interview', 'youtube'].forEach(id => {
+    const r = R.byId(id);
+    assert.ok(R.stepsOf(r).every(x => !R.needsMusic(x.id, r)), id + ' sans musique');
+  });
+  assert.ok(R.needsMusic('effects', R.byId('rap')) && !R.needsMusic('effects', R.byId('youtube')));
+  assert.deepStrictEqual(R.stepsOf(R.byId('interview')).map(x => x.id), ['silences', 'fix', 'punch', 'effects', 'lower', 'captions', 'format'].sort((a, b) => R.STEPS.findIndex(x => x.id === a) - R.STEPS.findIndex(x => x.id === b)));
   const mine = R.fromSettings({ chain: { keys: ['b:zoom-in'], order: 'random' }, color: { params: { exposure: 1 }, name: 'Nuit' }, beats: { mode: 'hits', every: 2 } });
   assert.deepStrictEqual([mine.chain, mine.order, mine.lookName, mine.beats.mode], [['b:zoom-in'], 'random', 'Nuit', 'hits']);
 });

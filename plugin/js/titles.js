@@ -81,6 +81,34 @@
       return items;
     }
 
+    /* Pose des textes minutés : items [{ start, end, text }] (s). opts : anim (id), pos [x, y]
+       (0 à 1), label (historique). → { created, track, warnings, error } */
+    async function placeItems(items, opts) {
+      const t = st(), o = opts || {}, fps = app.fps(), created = [], warnings = [];
+      const a = (o.anim && Lib.titleById[o.anim]) || anim();
+      const params = Object.assign(Core.paramDefaults(a), st().params[a.id] || {});
+      let track = null;
+      for (let i = 0; i < items.length; i++) {
+        if (app.S.cancel) break;
+        const it = items[i];
+        app.status.progress(i, items.length, it.text);
+        const frames = Math.max(1, Math.round((it.end - it.start) * fps));
+        const fx = Core.titleSpec(a, params, frames, t.inF, t.outF, fps, app.registry());
+        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null });
+        if (!r.ok) {
+          if (!created.length) return { created, track, warnings, error: r.error };
+          warnings.push(it.text + ' : ' + r.error);
+          continue;
+        }
+        track = r.track;
+        created.push.apply(created, r.created);
+        warnings.push.apply(warnings, r.warnings);
+      }
+      if (created.length) app.pushHistory({ date: Date.now(), label: (o.label || 'Textes') + ' × ' + created.length, entries: created });
+      Array.from(new Set(warnings)).forEach(w => app.log(w, 'warn'));
+      return { created, track, warnings, anim: a };
+    }
+
     function place() {
       const t = st();
       return app.runTask('Textes', async () => {
@@ -89,27 +117,9 @@
         const items = await timeline();
         if (!items.length) return { kind: 'warn', title: 'Aucun texte posé', detail: 'Pas de temps disponible.' };
         app.status.phase('Pose des textes');
-        const fps = app.fps(), created = [], warnings = [];
-        let track = null;
-        for (let i = 0; i < items.length; i++) {
-          if (app.S.cancel) break;
-          const it = items[i];
-          app.status.progress(i, items.length, it.text);
-          const frames = Math.max(1, Math.round((it.end - it.start) * fps));
-          const fx = Core.titleSpec(anim(), animParams(), frames, t.inF, t.outF, fps, app.registry());
-          const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx, track, spanEnd: items[items.length - 1].end, minTrack: 1 });
-          if (!r.ok) {
-            if (!created.length) return { kind: 'error', title: 'Textes non posés', detail: r.error };
-            warnings.push(it.text + ' : ' + r.error);
-            continue;
-          }
-          track = r.track;
-          created.push.apply(created, r.created);
-          warnings.push.apply(warnings, r.warnings);
-        }
-        if (created.length) app.pushHistory({ date: Date.now(), label: 'Textes × ' + created.length, entries: created });
-        Array.from(new Set(warnings)).forEach(w => app.log(w, 'warn'));
-        return { kind: warnings.length ? 'warn' : 'ok', title: app.plural(created.length, 'texte posé', 'textes posés') + (track !== null ? ' sur V' + (track + 1) : ''), detail: 'Animation « ' + anim().name + ' » · modifiables dans Options d\'effet et Objets graphiques essentiels.' };
+        const r = await placeItems(items, {});
+        if (r.error) return { kind: 'error', title: 'Textes non posés', detail: r.error };
+        return { kind: r.warnings.length ? 'warn' : 'ok', title: app.plural(r.created.length, 'texte posé', 'textes posés') + (r.track !== null ? ' sur V' + (r.track + 1) : ''), detail: 'Animation « ' + r.anim.name + ' » · modifiables dans Options d\'effet et Objets graphiques essentiels.' };
       }, true);
     }
 
@@ -241,6 +251,9 @@
 
     app.actions.titles = place;
     app.services.lyrics = () => String(st().text || '').trim();
+    app.services.placeTexts = placeItems;
+    app.services.mogrt = () => st().mogrt || (found || (found = scanMogrts()))[0] && found[0].path || '';
+    app.services.mogrtName = () => { const m = app.services.mogrt(); return m ? (Store.path ? Store.path.basename(m, Store.path.extname(m)) : m) : ''; };
     app.tabs.titles = { render, cta: () => ({ label: 'Poser les textes', run: place, enabled: true }), leave: () => { if (player) { player.stop(); player = null; } } };
   });
 })(typeof self !== 'undefined' ? self : this);

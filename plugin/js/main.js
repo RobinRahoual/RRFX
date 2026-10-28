@@ -14,13 +14,19 @@
   const PLACEMENTS = [
     { v: 'cut', label: 'Coupe la plus proche' },
     { v: 'cuts', label: 'Toutes les coupes de la sélection' },
+    { v: 'allcuts', label: 'Toutes les coupes de la séquence' },
     { v: 'markers', label: 'Marqueurs de la séquence' },
     { v: 'beats', label: 'Temps forts de la musique (sans marqueurs)' },
     { v: 'playhead', label: 'Tête de lecture' },
     { v: 'clipStart', label: 'Début des clips sélectionnés' },
     { v: 'clipEnd', label: 'Fin des clips sélectionnés' },
-    { v: 'full', label: 'Clips sélectionnés entiers' }
+    { v: 'full', label: 'Clips sélectionnés entiers' },
+    { v: 'allclips', label: 'Tous les plans de la séquence' }
   ];
+  // Positions à plusieurs coupes, positions « plan entier », et ce que Premiere reçoit.
+  const isMulti = pl => pl === 'cuts' || pl === 'allcuts' || pl === 'markers' || pl === 'beats';
+  const isFull = pl => pl === 'full' || pl === 'allclips';
+  const hostPlacement = pl => ({ beats: 'markers', allcuts: 'cuts', allclips: 'full' }[pl] || pl);
   const VARIATIONS = [
     { v: 'same', label: 'Identique partout' },
     { v: 'seed', label: 'Variation aléatoire' },
@@ -377,7 +383,7 @@
     const pl = settings().placement, side = settings().side;
     if (pl === 'clipStart') return ['post'];
     if (pl === 'clipEnd') return ['pre'];
-    if (pl === 'full') return [side === 'pre' ? 'pre' : 'post'];
+    if (isFull(pl)) return [side === 'pre' ? 'pre' : 'post'];
     return side === 'both' ? ['pre', 'post'] : [side];
   }
 
@@ -800,9 +806,9 @@
   function selectEntry(e, keepParams) {
     S.cur = e;
     if (!keepParams) S.params = defaultParams(e);
-    if (e.kind === 'captured' && e.item.data.origin && settings().placement !== 'full' && settings().side !== 'both') settings().side = e.item.data.origin;
+    if (e.kind === 'captured' && e.item.data.origin && !isFull(settings().placement) && settings().side !== 'both') settings().side = e.item.data.origin;
     // Les mouvements (Ken Burns, zoom lent, punch-in…) se posent sur tout le plan.
-    if (e.def && e.def.cat === 'motion' && settings().placement !== 'full') {
+    if (e.def && e.def.cat === 'motion' && !isFull(settings().placement)) {
       settings().placement = 'full';
       persist();
       status.finish('ok', e.name + ' : sur les clips entiers', 'Ce mouvement dure tout le plan. Sélectionne tes clips, puis applique.');
@@ -909,11 +915,11 @@
       sideCtl = h('span', { class: 'muted' }, pl === 'clipStart' ? 'POST, depuis le début' : 'PRE, jusqu\'à la fin');
     } else {
       const opts = [{ v: 'pre', label: 'PRE', cls: 'pre' }, { v: 'post', label: 'POST', cls: 'post' }];
-      if (pl !== 'full') opts.push({ v: 'both', label: 'PRE + POST' });
-      sideCtl = actionGroup(opts, pl === 'full' ? (st.side === 'pre' ? 'pre' : 'post') : st.side, v => { st.side = v; persist(); paramChanged(true); });
+      if (!isFull(pl)) opts.push({ v: 'both', label: 'PRE + POST' });
+      sideCtl = actionGroup(opts, isFull(pl) ? (st.side === 'pre' ? 'pre' : 'post') : st.side, v => { st.side = v; persist(); paramChanged(true); });
     }
     const forced = def && def.target;
-    const multi = pl === 'cuts' || pl === 'markers' || pl === 'beats';
+    const multi = isMulti(pl);
     const where = e.kind === 'overlay' ? 'Overlay posé au-dessus du clip'
       : forced ? 'CLIP FX : copie du plan au-dessus du clip' : 'Calque de réglage au-dessus du clip';
     const volRows = [];
@@ -926,7 +932,7 @@
       row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); renderCTA(); })),
       multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); renderInspector(); renderCTA(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
       multi && st.vary === 'chain' ? chainRow() : null,
-      pl === 'full' ? row('Plans', actionGroup([{ v: false, label: 'Tous' }, { v: true, label: 'Un sur deux' }], !!st.alternate, v => { st.alternate = v; persist(); }), { title: 'Un sur deux : alterne cadrage large et serré, pour masquer les jump cuts' }) : null,
+      isFull(pl) ? row('Plans', actionGroup([{ v: false, label: 'Tous' }, { v: true, label: 'Un sur deux' }], !!st.alternate, v => { st.alternate = v; persist(); }), { title: 'Un sur deux : alterne cadrage large et serré, pour masquer les jump cuts' }) : null,
       row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
       volRows,
       row('Son sur les coupes', picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: 'Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)' })
@@ -1039,7 +1045,7 @@
   }
   const chainOn = () => {
     const st = settings();
-    return (st.placement === 'cuts' || st.placement === 'markers' || st.placement === 'beats') && st.vary === 'chain' && chainEntries().length > 0;
+    return isMulti(st.placement) && st.vary === 'chain' && chainEntries().length > 0;
   };
   function toggleChain(e) {
     const c = settings().chain, i = c.keys.indexOf(e.key);
@@ -1049,7 +1055,7 @@
     renderGrid();
     renderInspector();
     renderCTA();
-    const pl = settings().placement, multi = pl === 'cuts' || pl === 'markers' || pl === 'beats';
+    const multi = isMulti(settings().placement);
     status.finish('ok', i >= 0 ? e.name + ' retiré de l\'enchaînement' : e.name + ' ajouté à l\'enchaînement', plural(c.keys.length, 'effet') + ' : ' + chainEntries().map(x => x.name).join(' → ') + (multi ? '' : '. Choisis la position Temps forts, Marqueurs ou Toutes les coupes pour l\'appliquer.'));
   }
 
@@ -1123,7 +1129,7 @@
     const st = settings(), chained = chainOn();
     const e = chained ? Object.assign({}, chainEntries()[0], { name: 'Enchaînement' }) : S.cur;
     if (!e) return null;
-    const multi = st.placement === 'cuts' || st.placement === 'markers' || st.placement === 'beats';
+    const multi = isMulti(st.placement);
     return runTask('Application · ' + e.name, async () => {
       status.phase('Analyse de la timeline');
       // Temps forts : détectés dans la musique, sans passer par des marqueurs.
@@ -1134,7 +1140,7 @@
         times = await app.services.beatTimes();
         if (!times.length) return { kind: 'warn', title: 'Aucun temps fort', detail: 'Règle la détection dans l\'onglet Musique (sensibilité, type).' };
       }
-      const r = await Host.call('resolve', { placement: st.placement === 'beats' ? 'markers' : st.placement, times, sides: activeSides(), frames: S.params.frames, target: targetFor(e) });
+      const r = await Host.call('resolve', { placement: hostPlacement(st.placement), scope: st.placement === 'allcuts' || st.placement === 'allclips' ? 'sequence' : '', times, sides: activeSides(), frames: S.params.frames, target: targetFor(e) });
       if (!r.ok) {
         (r.warnings || []).forEach(w => log(w, 'warn'));
         return { kind: 'error', title: 'Rien n\'a été appliqué', detail: r.error };
@@ -1153,7 +1159,7 @@
         }
       }
       // « Un plan sur deux » (punch-in sur les jump cuts) : un clip visé sur deux, dans l'ordre.
-      if (st.placement === 'full' && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
+      if (isFull(st.placement) && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
       if (!r.targets.length) return { kind: 'warn', title: 'Un seul plan', detail: '« Un plan sur deux » : sélectionne au moins deux clips.' };
       const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
       if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };
@@ -1943,7 +1949,7 @@
 
   function setMenu() {
     Host.setMenu([
-      { id: 'express', label: 'Lancer le clip express' },
+      { id: 'express', label: 'Lancer le montage express' },
       { id: 'palette', label: 'Recherche rapide (Ctrl+K)' },
       { separator: true },
       { id: 'apply', label: 'Appliquer l\'effet choisi' },
@@ -1953,6 +1959,7 @@
       { id: 'sync', label: 'Synchroniser la sélection sur la musique' },
       { id: 'convert', label: 'Convertir le LOG en Rec.709 (caméra enregistrée)' },
       { id: 'autoFix', label: 'Expo et balance des blancs auto' },
+      { id: 'silences', label: 'Couper les silences (plans sélectionnés)' },
       { id: 'undo', label: 'Annuler la dernière opération RR FX' },
       { id: 'clear', label: 'Tout effacer (séquence)…' },
       { separator: true },
@@ -1963,6 +1970,7 @@
       if (id === 'instagram') return Host.openURL(INSTAGRAM_URL);
       if (id === 'clear') return clearAll({ scope: 'sequence', markers: true });
       if (id === 'autoFix') return app.actions.autoFix && app.actions.autoFix();
+      if (id === 'silences') return app.actions.cutSilences && app.actions.cutSilences();
       if (id === 'palette') return app.services.palette && app.services.palette();
       if (SHORTCUT_ACTIONS[id]) SHORTCUT_ACTIONS[id]();
     });
