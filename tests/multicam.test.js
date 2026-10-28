@@ -28,11 +28,11 @@ test('multicam: one camera on at a time, cycling on the beats, nothing deleted',
   assert.deepStrictEqual([10, 30, 60, 80, 110, 150].map(t => activeAt(env, t)), [[0], [1], [0], [1], [1], [0]]);
   const total = env.seq.videoTracks[0].items.length + env.seq.videoTracks[1].items.length;
   assert.ok(total >= 9, 'cut on every beat, nothing removed');
-  assert.ok(env.seq.videoTracks[1].items.some(x => / · CutFX off$/.test(x.name)));
+  assert.ok(env.seq.videoTracks[1].items.some(x => / · RR FX off$/.test(x.name)));
   // Annuler : tout est réactivé et renommé comme avant.
   const u = env.call('undo', { entries: [r.entry] });
   assert.ok(u.ok && u.removed === 1);
-  assert.ok(env.seq.videoTracks.every(tr => tr.items.every(x => !x.disabled && !/CutFX off/.test(x.name))));
+  assert.ok(env.seq.videoTracks.every(tr => tr.items.every(x => !x.disabled && !/RRFX off/.test(x.name))));
 });
 
 test('multicam: random order never repeats a camera, falls back to the camera that has footage', () => {
@@ -48,7 +48,7 @@ test('multicam: random order never repeats a camera, falls back to the camera th
   // Relancer remet tout d'abord en route (pas de plans éteints en double).
   const again = env.call('multicamSwitch', { times: [2, 4], order: 'cycle' });
   assert.ok(again.ok);
-  assert.ok(env.seq.videoTracks.every(tr => tr.items.every(x => !/CutFX off · CutFX off/.test(x.name))));
+  assert.ok(env.seq.videoTracks.every(tr => tr.items.every(x => !/RRFX off · RR FX off/.test(x.name))));
 });
 
 test('multicam: needs two cameras; clear all re-enables', () => {
@@ -64,7 +64,7 @@ test('multicam: needs two cameras; clear all re-enables', () => {
 
 test('sync of rushes: the reference camera brings its sound on a free audio track, undo removes it', () => {
   const env = setup();
-  const r = env.call('placeRushes', { items: [{ nodeId: env.media.nodeId, name: 'A001.mov', seqStart: 2, seqEnd: 6, srcIn: 1, audio: true }], minTrack: 0, label: 'CutFX · Synchro' });
+  const r = env.call('placeRushes', { items: [{ nodeId: env.media.nodeId, name: 'A001.mov', seqStart: 2, seqEnd: 6, srcIn: 1, audio: true }], minTrack: 0, label: 'RR FX · Synchro' });
   assert.ok(r.ok, r.error);
   const aud = r.created.find(e => e.kind === 'aud');
   assert.ok(aud, JSON.stringify(r));

@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 /*
- * Fabrique le pack d'installation dist/CutFX-<version>-installation.zip :
+ * Fabrique le pack d'installation dist/RRFX-<version>-installation.zip :
  *
- *   CutFX-<version>/
- *     CutFX/                         le panneau (dossier plugin/, sans .debug)
- *     Installer CutFX (Windows).bat
- *     Installer CutFX (Mac).command  (exécutable)
+ *   RRFX-<version>/
+ *     RRFX/                         le panneau (dossier plugin/, sans .debug)
+ *     Installer RR FX (Windows).bat
+ *     Installer RR FX (Mac).command  (exécutable)
  *     LISEZMOI.txt
  *
  *   node scripts/package.js
@@ -19,7 +19,7 @@ const zlib = require('zlib');
 
 const root = path.join(__dirname, '..');
 const version = JSON.parse(fs.readFileSync(path.join(root, 'package.json'), 'utf8')).version;
-const top = 'CutFX-' + version;
+const top = 'RRFX-' + version;
 
 const CRC_TABLE = Array.from({ length: 256 }, (_, n) => {
   let c = n;
@@ -51,7 +51,7 @@ function dosDateTime(date) {
   };
 }
 
-const files = listFiles(path.join(root, 'plugin'), top + '/CutFX')
+const files = listFiles(path.join(root, 'plugin'), top + '/RRFX')
   .concat(fs.readdirSync(path.join(root, 'install')).sort().map(name => ({ full: path.join(root, 'install', name), rel: top + '/' + name })));
 
 const locals = [];

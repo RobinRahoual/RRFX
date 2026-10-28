@@ -39,7 +39,7 @@ function makePng(file, w, hgt) {
   for (let y = 0; y < hgt; y++) for (let x = 0; x < w; x++) { const o = y * (w * 3 + 1) + 1 + x * 3; raw[o] = 255; raw[o + 1] = 150 + (x % 100); raw[o + 2] = 40; }
   fs.writeFileSync(file, Buffer.concat([Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]), chunk('IHDR', ihdr), chunk('IDAT', zlib.deflateSync(raw)), chunk('IEND', Buffer.alloc(0))]));
 }
-const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'cutfx-ui-'));
+const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'rrfx-ui-'));
 const wav = path.join(tmp, 'musique.wav'), png = path.join(tmp, 'light-leak.png');
 makeWav(wav, 10);
 makePng(png, 64, 36);
@@ -59,18 +59,20 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   };
 
   // Bibliothèque en ligne : GitHub remplacé par deux presets publiés.
-  const zipCode = items => 'CUTFX0:' + Buffer.from(JSON.stringify({ cutfx: 1, items })).toString('base64url');
+  const zipCode = items => 'RRFX0:' + Buffer.from(JSON.stringify({ rrfx: 1, items })).toString('base64url');
   const issues = [
-    { number: 12, title: '[Preset] Zoom drop', state: 'open', html_url: 'https://github.com/RobinRahoual/CutFX/issues/12', created_at: '2026-10-01T10:00:00Z', user: { login: 'monteuse' }, reactions: { '+1': 7 },
-      body: '### Nom\n\nZoom drop\n\n### Description\n\nPour les drops en 120 BPM\n\n### Code CutFX\n\n' + zipCode([{ type: 'preset', name: 'Zoom drop', cat: 'zooms', data: { base: 'zoom-in', params: { frames: 6 } } }]) },
-    { number: 13, title: '[Preset] Rampe douce', state: 'open', html_url: 'https://github.com/RobinRahoual/CutFX/issues/13', created_at: '2026-10-05T10:00:00Z', user: { login: 'robin' }, reactions: { '+1': 2 },
-      body: '### Nom\n\nRampe douce\n\n### Description\n\n_No response_\n\n### Code CutFX\n\n' + zipCode([{ type: 'ramp', name: 'Rampe douce', data: { points: [[0, 1], [1, 0.3]], frames: 12, segments: 8 } }]) }
+    { number: 12, title: '[Preset] Zoom drop', state: 'open', html_url: 'https://github.com/RobinRahoual/RRFX/issues/12', created_at: '2026-10-01T10:00:00Z', user: { login: 'monteuse' }, reactions: { '+1': 7 },
+      body: '### Nom\n\nZoom drop\n\n### Description\n\nPour les drops en 120 BPM\n\n### Code RR FX\n\n' + zipCode([{ type: 'preset', name: 'Zoom drop', cat: 'zooms', data: { base: 'zoom-in', params: { frames: 6 } } }]) },
+    { number: 13, title: '[Preset] Rampe douce', state: 'open', html_url: 'https://github.com/RobinRahoual/RRFX/issues/13', created_at: '2026-10-05T10:00:00Z', user: { login: 'robin' }, reactions: { '+1': 2 },
+      body: '### Nom\n\nRampe douce\n\n### Description\n\n_No response_\n\n### Code RR FX\n\n' + zipCode([{ type: 'ramp', name: 'Rampe douce', data: { points: [[0, 1], [1, 0.3]], frames: 12, segments: 8 } }]) }
   ];
   await page.route('https://api.github.com/**', route => {
     const u = route.request().url();
     if (/\/issues\?/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(issues) });
     return route.fulfill({ status: 404, body: '{}' });
   });
+  // Les pages GitHub ouvertes par le panneau (formulaire de publication) restent hors ligne.
+  await page.context().route('https://github.com/**', route => route.fulfill({ status: 200, contentType: 'text/html', body: '<p>GitHub</p>' }));
   await page.goto(url);
   await page.waitForTimeout(800);
   await snap('1-effets');
@@ -151,7 +153,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.chips .action:has-text("Overlays")');
     await page.hover('.card:has-text("Bokeh chaud")');
     await page.click('.card:has-text("VHS")');
-    await page.waitForSelector('.note:has-text("fourni avec CutFX")', { timeout: 2000 });
+    await page.waitForSelector('.note:has-text("fourni avec RR FX")', { timeout: 2000 });
     await page.click('#cta');
     await page.waitForSelector('#status.ok:has-text("VHS appliqué")', { timeout: 8000 });
   });
@@ -162,7 +164,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.section:has-text("Placement") label:has-text("suit le volume")');
     await page.click('#cta');
     await page.waitForSelector('#status.ok, #status.warn', { timeout: 8000 });
-    const log = await page.evaluate(() => window.CutFXApp.S.logLines.map(l => l.message).join('\n'));
+    const log = await page.evaluate(() => window.RRFXApp.S.logLines.map(l => l.message).join('\n'));
     if (!/Intensité selon le volume/.test(log)) throw new Error('le volume n\'a pas été lu');
   });
   await step('textes', async () => {
@@ -176,7 +178,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.tab[data-tab=mine]');
     await page.click('.list-item .action[title^="Partager"] >> nth=0');
     const code = await page.inputValue('.modal textarea');
-    if (!/^CUTFX[01]:/.test(code)) throw new Error('code de partage invalide');
+    if (!/^RRFX[01]:/.test(code)) throw new Error('code de partage invalide');
     await page.click('.modal .cta');
     const before = await page.locator('.list-item').count();
     await page.click('.action:has-text("Coller un code")');
@@ -206,7 +208,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
       })()
     ]);
     const u = new URL(popup.url());
-    if (u.searchParams.get('template') !== 'preset.yml' || !/^CUTFX[01]:/.test(u.searchParams.get('code') || '')) throw new Error('formulaire mal rempli : ' + popup.url());
+    if (u.searchParams.get('template') !== 'preset.yml' || !/^RRFX[01]:/.test(u.searchParams.get('code') || '')) throw new Error('formulaire mal rempli : ' + popup.url());
     await popup.close();
     await page.waitForSelector('#status.ok:has-text("Formulaire ouvert")', { timeout: 3000 });
   });

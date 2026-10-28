@@ -1,8 +1,8 @@
-/* CutFX — analyse audio (sans DOM, testée sous Node) : temps forts, tempo, volume,
+/* RR FX — analyse audio (sans DOM, testée sous Node) : temps forts, tempo, volume,
    et calage de deux enregistrements (synchronisation son caméra / musique). */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXAudio = factory();
+  else root.RRFXAudio = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 

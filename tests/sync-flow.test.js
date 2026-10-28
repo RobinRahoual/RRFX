@@ -42,7 +42,7 @@ function writeWav(file, x) {
   fs.writeFileSync(file, Buffer.concat([h, data]));
 }
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cutfx-sync-'));
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rrfx-sync-'));
 const show = performance(70);
 const cam1 = path.join(dir, 'CAM1.wav'), cam2 = path.join(dir, 'CAM2.wav');
 writeWav(cam1, camera(show, 0, 70, 6000, 5));
@@ -50,7 +50,7 @@ writeWav(cam2, camera(show, 17.3, 30, 3000, 9)); // lancée 17,3 s après la cam
 
 // Le panneau minimal autour de music.js, branché sur la timeline simulée.
 function loadPanel(env) {
-  const root = { CutFXFeatures: [] };
+  const root = { RRFXFeatures: [] };
   vm.runInNewContext(fs.readFileSync(path.join(__dirname, '..', 'plugin', 'js', 'music.js'), 'utf8'), { self: root, console });
   const settings = {}, logs = [], history = [];
   const app = {
@@ -61,7 +61,7 @@ function loadPanel(env) {
     plural: (n, one, many) => n + ' ' + (n > 1 ? many || one + 's' : one), errorMessage: e => e.message || String(e),
     pushHistory: op => history.push(op), switchTab() {}, fps: () => 25, tabs: {}, actions: {}, services: {}
   };
-  root.CutFXFeatures.forEach(f => f(app));
+  root.RRFXFeatures.forEach(f => f(app));
   return { app, settings, logs, history };
 }
 

@@ -1,10 +1,10 @@
-/* CutFX — panneau : onglets, bloc d'état, application des effets et des rampes. */
+/* RR FX — panneau : onglets, bloc d'état, application des effets et des rampes. */
 (function () {
   'use strict';
-  const Core = window.CutFXCore, Lib = window.CutFXLibrary, Pv = window.CutFXPreview;
-  const Store = window.CutFXStorage, Host = window.CutFXHost, Keys = window.CutFXShortcuts, Updates = window.CutFXUpdates;
-  const Audio = window.CutFXAudio, Media = window.CutFXMedia, Share = window.CutFXShare, Packs = window.CutFXPacks, Community = window.CutFXCommunity;
-  const { h, hotText, actionGroup, picker, checkbox, row, section, CurveEditor, RampEditor, Player } = window.CutFXUI;
+  const Core = window.RRFXCore, Lib = window.RRFXLibrary, Pv = window.RRFXPreview;
+  const Store = window.RRFXStorage, Host = window.RRFXHost, Keys = window.RRFXShortcuts, Updates = window.RRFXUpdates;
+  const Audio = window.RRFXAudio, Media = window.RRFXMedia, Share = window.RRFXShare, Packs = window.RRFXPacks, Community = window.RRFXCommunity;
+  const { h, hotText, actionGroup, picker, checkbox, row, section, CurveEditor, RampEditor, Player } = window.RRFXUI;
 
   const INSTAGRAM_URL = 'https://www.instagram.com/robin.rahoual/';
   const LONG_TASK_MS = 8000; // au-delà, signal de fin
@@ -339,7 +339,7 @@
       }
     });
     (settings().overlays || []).forEach(o => out.push({ key: 'o:' + o.id, kind: 'overlay', name: o.name, cat: 'overlay', def: null, overlay: o }));
-    // Packs fournis : dessinés par CutFX, fabriqués en images à la première utilisation.
+    // Packs fournis : dessinés par RR FX, fabriqués en images à la première utilisation.
     Packs.ALL.forEach(d => out.push({ key: 'p:' + d.id, kind: 'overlay', name: d.name, cat: 'overlay', def: null, overlay: { id: 'pack:' + d.id, name: d.name, kind: 'sequence', pack: d.id, start: 'random' } }));
     return out;
   }
@@ -538,9 +538,9 @@
     return runTask('Aperçu réel', async () => {
       const dir = Store.cacheDir();
       if (!dir) return { kind: 'warn', title: 'Disponible dans Premiere', detail: 'L\'aperçu sur ta séquence exporte deux images de la timeline : il faut le panneau dans Premiere.' };
-      Store.listFiles(dir, /^cutfx-frame-/, 50, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
+      Store.listFiles(dir, /^rrfx-frame-/, 50, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
       status.phase('Export de deux images autour de la coupe');
-      const r = await Host.call('grabFrames', { folder: dir.replace(/\\/g, '/'), prefix: 'cutfx-frame-' + uid() + '-' });
+      const r = await Host.call('grabFrames', { folder: dir.replace(/\\/g, '/'), prefix: 'rrfx-frame-' + uid() + '-' });
       if (!r.ok) return { kind: 'error', title: 'Aperçu réel impossible', detail: r.error };
       // Premiere écrit les fichiers après coup : on attend qu'ils existent (avec ou sans .png).
       const found = [];
@@ -754,7 +754,7 @@
     if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
     if (e.kind === 'overlay') {
       ins.appendChild(h('div', { class: 'note' }, e.overlay.pack
-        ? 'Pack « ' + Packs.byId[e.overlay.pack].packName + ' », fourni avec CutFX. À la première utilisation, il est fabriqué à la taille de ta séquence (quelques secondes), puis réutilisé.'
+        ? 'Pack « ' + Packs.byId[e.overlay.pack].packName + ' », fourni avec RR FX. À la première utilisation, il est fabriqué à la taille de ta séquence (quelques secondes), puis réutilisé.'
         : e.overlay.path || e.overlay.name));
     }
 
@@ -950,7 +950,7 @@
       return {
         entry, mode: targetFor(entry), label: entry.name + ' ' + t.side.toUpperCase(),
         overlay: entry.kind === 'overlay' ? { path: entry.overlay.path, name: entry.overlay.name, kind: entry.overlay.kind, pack: entry.overlay.pack, start: params.start, seed: runSeed + k } : undefined,
-        target: Object.assign({}, t, { name: 'CutFX · ' + entry.name, fx: Core.toWire(compileFor(entry, params, t.side, t.frames, rate)) })
+        target: Object.assign({}, t, { name: 'RR FX · ' + entry.name, fx: Core.toWire(compileFor(entry, params, t.side, t.frames, rate)) })
       };
     });
   }
@@ -1018,7 +1018,7 @@
       if (S.cancel) return { kind: 'warn', title: 'Arrêté · ' + what + ' posée(s)', detail: 'Le reste n\'a pas été appliqué.' };
       if (failed) return { kind: 'warn', title: e.name + ' · ' + what + ', ' + plural(failed, 'échec'), detail: firstError };
       if (warnings.length) return { kind: 'warn', title: e.name + ' appliqué · ' + what, detail: plural(new Set(warnings).size, 'remarque') + ' dans le journal.' };
-      const on = { copy: 'Sur une copie du plan (CLIP FX) au-dessus du clip.', overlay: 'Overlays posés au-dessus du clip.', adjustment: 'Sur des calques de réglage « CutFX · … ».' };
+      const on = { copy: 'Sur une copie du plan (CLIP FX) au-dessus du clip.', overlay: 'Overlays posés au-dessus du clip.', adjustment: 'Sur des calques de réglage « RR FX · … ».' };
       return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: on[targetFor(e)] || on.adjustment };
     }, true);
   }
@@ -1050,7 +1050,7 @@
   async function undoLast() {
     const last = S.lib.history[S.lib.history.length - 1];
     if (!last || S.busy) return;
-    if (!(await confirmDialog('Annuler la dernière opération ?', describeOp(last) + ' : les calques et effets posés par CutFX seront retirés. Ce que tu as modifié depuis n\'est pas touché.', 'Annuler l\'opération', 'confirmUndo'))) return;
+    if (!(await confirmDialog('Annuler la dernière opération ?', describeOp(last) + ' : les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.', 'Annuler l\'opération', 'confirmUndo'))) return;
     await runTask('Annulation', async () => {
       status.phase('Retrait des effets');
       const r = await Host.call('undo', { entries: last.entries });
@@ -1069,11 +1069,11 @@
   async function clearAll(o) {
     if (S.busy) return;
     const where = o.scope === 'selection' ? 'dans la zone sélectionnée' : 'dans toute la séquence';
-    const yes = await modal('Tout effacer ' + where + ' ?', h('p', null, 'Les calques, copies, overlays et textes « CutFX · … »' + (o.markers ? ' et les marqueurs CutFX' : '') + ' seront retirés. Tes clips restent intacts. Ctrl+Z / Cmd+Z dans Premiere pour revenir en arrière.'), [
+    const yes = await modal('Tout effacer ' + where + ' ?', h('p', null, 'Les calques, copies, overlays et textes « RR FX · … »' + (o.markers ? ' et les marqueurs RR FX' : '') + ' seront retirés. Tes clips restent intacts. Ctrl+Z / Cmd+Z dans Premiere pour revenir en arrière.'), [
       { label: 'Garder', value: false }, { label: 'Tout effacer', primary: true, value: true }]);
     if (!yes) return;
     await runTask('Nettoyage', async () => {
-      status.phase('Retrait des éléments CutFX');
+      status.phase('Retrait des éléments RR FX');
       const r = await Host.call('clearAll', { scope: o.scope, markers: o.markers, multicam: true });
       if (!r.ok) return { kind: 'error', title: 'Nettoyage impossible', detail: r.error };
       if (o.scope === 'sequence') { S.lib.history = []; persist(); renderUndo(); }
@@ -1242,12 +1242,12 @@
     const imp = h('button', { class: 'action' }, 'Importer…');
     imp.addEventListener('click', importItems);
     const exp = h('button', { class: 'action' }, 'Tout exporter…');
-    exp.addEventListener('click', () => exportItems(S.lib.items, 'CutFX-bibliotheque.json'));
+    exp.addEventListener('click', () => exportItems(S.lib.items, 'RRFX-bibliotheque.json'));
     const shareAll = h('button', { class: 'action' }, 'Tout partager');
     shareAll.addEventListener('click', () => shareItems(S.lib.items, 'Ma bibliothèque'));
     const paste = h('button', { class: 'action' }, 'Coller un code…');
     paste.addEventListener('click', pasteCode);
-    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, 'Partager donne un code « CUTFX1:… » à envoyer en message : la personne le colle dans « Coller un code… ». Fichier : ' + Store.location)]));
+    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, 'Partager donne un code « RRFX1:… » à envoyer en message : la personne le colle dans « Coller un code… ». Fichier : ' + Store.location)]));
     renderMineList();
   }
 
@@ -1291,7 +1291,7 @@
         h('div', { class: 'li-actions' },
           btn('Ouvrir', 'Ouvrir', () => openItem(item)),
           btn('✎', 'Renommer', async () => { const n = await promptName('Renommer', item.name); if (n) { item.name = n; persist(); renderMineList(); } }),
-          btn('⤓', 'Exporter', () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.cutfx.json')),
+          btn('⤓', 'Exporter', () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.rrfx.json')),
           btn('⇪', 'Partager (code à copier-coller)', () => shareItems([item], item.name)),
           btn('🌐', 'Publier dans la bibliothèque en ligne', () => publishItems([item], item.name)),
           btn('✕', 'Supprimer', () => deleteItem(item), 'danger')));
@@ -1334,7 +1334,7 @@
   function exportItems(items, name) {
     if (!items.length) { status.finish('warn', 'Rien à exporter', 'La bibliothèque est vide.'); return; }
     try {
-      const out = Store.exportJSON({ cutfx: 1, exported: new Date().toISOString(), items }, name);
+      const out = Store.exportJSON({ rrfx: 1, exported: new Date().toISOString(), items }, name);
       if (out) { status.finish('ok', plural(items.length, 'élément exporté', 'éléments exportés'), out); log('Exporté : ' + out, 'ok'); }
     } catch (e) {
       status.finish('error', 'Export impossible', errorMessage(e));
@@ -1363,7 +1363,7 @@
     if (!packs.length) return;
     const n = addItems([].concat.apply([], packs.map(pack => (pack && Array.isArray(pack.items) ? pack.items : []))));
     if (n) status.finish('ok', plural(n, 'élément importé', 'éléments importés'), 'Dans « Mes effets ».');
-    else status.finish('warn', 'Rien d\'importé', 'Aucun effet CutFX valide dans ce fichier.');
+    else status.finish('warn', 'Rien d\'importé', 'Aucun effet RR FX valide dans ce fichier.');
   }
 
   function copyText(text, field) {
@@ -1378,7 +1378,7 @@
     if (!items.length) { status.finish('warn', 'Rien à partager', 'La bibliothèque est vide.'); return; }
     const code = Share.encode(items, Store.zip);
     const field = h('textarea', { class: 'code share-code', readonly: true, rows: 4, spellcheck: 'false' }, code);
-    const msg = h('div', { class: 'note' }, plural(items.length, 'élément', 'éléments') + ' · ' + code.length + ' caractères. Envoie ce code : il se colle dans CutFX > Mes effets > « Coller un code… ».');
+    const msg = h('div', { class: 'note' }, plural(items.length, 'élément', 'éléments') + ' · ' + code.length + ' caractères. Envoie ce code : il se colle dans RR FX > Mes effets > « Coller un code… ».');
     const copy = h('button', { class: 'action' }, 'Copier');
     copy.addEventListener('click', () => copyText(code, field).then(ok => { copy.textContent = ok ? 'Copié ✓' : 'Sélectionne et copie (Ctrl/Cmd+C)'; field.select(); }));
     modal('Partager · ' + label, h('div', null, field, msg, h('div', { class: 'row-buttons' }, copy)), [{ label: 'Fermer', primary: true, value: true }]);
@@ -1387,9 +1387,9 @@
   }
 
   async function pasteCode() {
-    const field = h('textarea', { class: 'code share-code', rows: 4, spellcheck: 'false', placeholder: 'CUTFX1:…' });
+    const field = h('textarea', { class: 'code share-code', rows: 4, spellcheck: 'false', placeholder: 'RRFX1:…' });
     setTimeout(() => field.focus(), 0);
-    const code = await modal('Coller un code CutFX', h('div', null, field, h('div', { class: 'note' }, 'Colle ici un code reçu (il commence par « CUTFX1: »).')), [
+    const code = await modal('Coller un code RR FX', h('div', null, field, h('div', { class: 'note' }, 'Colle ici un code reçu (il commence par « RRFX1: »).')), [
       { label: 'Annuler', value: null }, { label: 'Ajouter', primary: true, value: () => field.value }]);
     if (!code) return;
     let items;
@@ -1429,7 +1429,7 @@
     const refresh = h('button', { class: 'action quiet', title: 'Relire la bibliothèque sur GitHub' }, '↻');
     refresh.addEventListener('click', () => loadCommunity(true));
     view.appendChild(section('Bibliothèque en ligne', [
-      h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de CutFX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
+      h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de RR FX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
       h('div', { class: 'search' }, search, refresh),
       row('Trier', actionGroup([{ v: 'popular', label: 'Les plus aimés' }, { v: 'recent', label: 'Les plus récents' }], C.sort, v => { C.sort = v; renderCommunityList(); })),
       row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }], C.type, v => { C.type = v; renderCommunityList(); })),
@@ -1475,7 +1475,7 @@
         if (mine.length) return openItem(mine[0]);
         const n = addItems(e.items.map(it => Object.assign({}, it, { from: { number: e.number, author: e.author } })));
         if (n) status.finish('ok', 'Ajouté : ' + e.name, 'Par @' + e.author + (n > 1 ? ' · ' + plural(n, 'effet') : '') + ' · dans « Mes effets ».');
-        else status.finish('warn', 'Rien d\'ajouté', 'Cet effet n\'est pas compatible avec ta version de CutFX.');
+        else status.finish('warn', 'Rien d\'ajouté', 'Cet effet n\'est pas compatible avec ta version de RR FX.');
         renderCommunityList();
       });
       const like = h('button', { class: 'action quiet', title: 'Ouvrir sa page pour l\'aimer (réaction 👍) ou commenter' }, '❤ ' + e.likes);
@@ -1508,7 +1508,7 @@
     log('Publication ouverte dans le navigateur : ' + name.value.trim(), 'info');
     status.finish('ok', 'Formulaire ouvert dans ton navigateur', p.withCode
       ? 'Clique sur « Submit new issue » : ton effet apparaîtra dans la bibliothèque en ligne.'
-      : 'Le code était trop long pour l\'adresse : il est copié, colle-le dans « Code CutFX », puis « Submit new issue ».');
+      : 'Le code était trop long pour l\'adresse : il est copié, colle-le dans « Code RR FX », puis « Submit new issue ».');
   }
 
   async function publishPicker() {
@@ -1547,7 +1547,7 @@
       status.finish('ok', 'Calque de réglage défini', r.name);
     });
     view.appendChild(section('Calques', [
-      h('div', { class: 'note' }, 'Comme 2WIN, CutFX pose les effets sur des calques de réglage « CutFX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « CutFX ») : tes pistes audio ne sont jamais touchées.'),
+      h('div', { class: 'note' }, 'Comme 2WIN, RR FX pose les effets sur des calques de réglage « RR FX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « RR FX ») : tes pistes audio ne sont jamais touchées.'),
       h('div', { class: 'field' }, checkbox('Recopier le cadrage et l\'étalonnage du clip sur les copies CLIP FX', st.copyLook, v => { st.copyLook = v; persist(); })),
       h('div', { class: 'note' }, 'Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.'),
       h('div', { class: 'note' }, 'Calque de réglage utilisé : ' + (st.adjName || 'recherche automatique dans le projet') + '. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.'),
@@ -1559,9 +1559,9 @@
     const wipe = h('button', { class: 'action danger' }, 'Tout effacer');
     wipe.addEventListener('click', () => clearAll(clean));
     view.appendChild(section('Nettoyage', [
-      h('div', { class: 'note' }, 'Retire tout ce que CutFX a posé : calques de réglage, copies CLIP FX, overlays, textes et sons « CutFX · … », et réactive les caméras éteintes par le montage multicam. Tes clips ne sont pas supprimés.'),
+      h('div', { class: 'note' }, 'Retire tout ce que RR FX a posé : calques de réglage, copies CLIP FX, overlays, textes et sons « RR FX · … », et réactive les caméras éteintes par le montage multicam. Tes clips ne sont pas supprimés.'),
       row('Zone', actionGroup([{ v: 'sequence', label: 'Toute la séquence' }, { v: 'selection', label: 'Zone sélectionnée' }], clean.scope, v => { clean.scope = v; })),
-      h('div', { class: 'field' }, checkbox('Retirer aussi les marqueurs CutFX (temps forts)', clean.markers, v => { clean.markers = v; })),
+      h('div', { class: 'field' }, checkbox('Retirer aussi les marqueurs RR FX (temps forts)', clean.markers, v => { clean.markers = v; })),
       h('div', { class: 'row-buttons' }, wipe)
     ]));
 
@@ -1585,7 +1585,7 @@
       b.addEventListener('click', () => { S.capturing = S.capturing === action ? null : action; renderShortcuts(); });
       sc.appendChild(h('div', { class: 'shortcut-row' }, h('span', null, Keys.ACTIONS[action]), b));
     });
-    view.appendChild(section('Raccourcis clavier', [h('div', { class: 'note' }, 'Actifs quand le panneau CutFX est sélectionné (clique dedans, puis appuie sur la touche). Échap arrête une opération en cours. Clique sur une touche pour la changer.'), sc]));
+    view.appendChild(section('Raccourcis clavier', [h('div', { class: 'note' }, 'Actifs quand le panneau RR FX est sélectionné (clique dedans, puis appuie sur la touche). Échap arrête une opération en cours. Clique sur une touche pour la changer.'), sc]));
     renderShortcuts();
 
     // Signal de fin
@@ -1723,7 +1723,7 @@
       { id: 'capture', label: 'Capturer la sélection' },
       { id: 'beats', label: 'Poser les marqueurs des temps forts' },
       { id: 'sync', label: 'Synchroniser la sélection sur la musique' },
-      { id: 'undo', label: 'Annuler la dernière opération CutFX' },
+      { id: 'undo', label: 'Annuler la dernière opération RR FX' },
       { id: 'clear', label: 'Tout effacer (séquence)…' },
       { separator: true },
       { id: 'compact', label: 'Mode réduit', checked: settings().compact },
@@ -1776,7 +1776,7 @@
   function showUpdate(update) {
     S.update = update;
     if (!update) { show($('update-banner'), false); return; }
-    $('update-text').textContent = '⬆ CutFX ' + update.version + ' est disponible (tu as la ' + Host.VERSION + '). Télécharge le pack, puis lance le script d\'installation.';
+    $('update-text').textContent = '⬆ RR FX ' + update.version + ' est disponible (tu as la ' + Host.VERSION + '). Télécharge le pack, puis lance le script d\'installation.';
     show($('update-banner'), true);
   }
 
@@ -1785,8 +1785,8 @@
     showUpdate(update);
     if (force) {
       if (update) log('Nouvelle version disponible : ' + update.version, 'ok');
-      else log('CutFX ' + Host.VERSION + ' est à jour (ou GitHub est injoignable).', 'info');
-      status.finish(update ? 'ok' : 'idle', update ? 'Mise à jour disponible' : 'Prêt', update ? 'CutFX ' + update.version : '');
+      else log('RR FX ' + Host.VERSION + ' est à jour (ou GitHub est injoignable).', 'info');
+      status.finish(update ? 'ok' : 'idle', update ? 'Mise à jour disponible' : 'Prêt', update ? 'RR FX ' + update.version : '');
     }
   }
 
@@ -1829,13 +1829,13 @@
 
   const app = {
     S, Core, Lib, Pv, Store, Host, Audio, Media, Share,
-    UI: window.CutFXUI, settings, persist, log, status, runTask, modal, promptName, confirmDialog,
+    UI: window.RRFXUI, settings, persist, log, status, runTask, modal, promptName, confirmDialog,
     plural, clone, errorMessage, pushHistory, renderCTA, switchTab, fps, registry, uid,
     tabs: {}, actions: {}, services: {}
   };
-  window.CutFXApp = app;
+  window.RRFXApp = app;
   function loadFeatures() {
-    (window.CutFXFeatures || []).forEach(feature => {
+    (window.RRFXFeatures || []).forEach(feature => {
       try { feature(app); } catch (e) { log('Module du panneau indisponible : ' + errorMessage(e), 'error'); }
     });
   }
@@ -1868,9 +1868,9 @@
 
     const init = await Host.init();
     S.demo = init.demo;
-    log('CutFX ' + Host.VERSION + ' · plugin par @robin.rahoual sur Instagram' + (S.demo ? ' · mode démo' : ''), 'info');
+    log('RR FX ' + Host.VERSION + ' · plugin par @robin.rahoual sur Instagram' + (S.demo ? ' · mode démo' : ''), 'info');
     if (!init.demo && !init.loaded) {
-      status.finish('error', 'Script Premiere non chargé', 'Redémarre Premiere. Si ça persiste, réinstalle CutFX.');
+      status.finish('error', 'Script Premiere non chargé', 'Redémarre Premiere. Si ça persiste, réinstalle RR FX.');
       log('Version du script chargé : « ' + (init.version || 'aucune') + ' », attendue ' + Host.VERSION, 'error');
     }
     const c = await Host.call('compat', {});

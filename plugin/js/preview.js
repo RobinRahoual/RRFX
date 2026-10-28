@@ -1,8 +1,8 @@
-/* CutFX — in-panel preview. Approximates the Premiere effects on two synthetic
+/* RR FX — in-panel preview. Approximates the Premiere effects on two synthetic
    shots so parameters can be judged before anything touches the timeline. */
 (function (root) {
   'use strict';
-  const Core = root.CutFXCore;
+  const Core = root.RRFXCore;
   const W = 320, H = 180;
 
   function makeCanvas(w, h) {
@@ -265,5 +265,5 @@
     g.restore();
   }
 
-  root.CutFXPreview = { W, H, stateAt, render, buildTimeline, renderTimelineFrame, drawRampScene, shots, setShots, resetShots, isReal, cover };
+  root.RRFXPreview = { W, H, stateAt, render, buildTimeline, renderTimelineFrame, drawRampScene, shots, setShots, resetShots, isReal, cover };
 })(typeof self !== 'undefined' ? self : this);

@@ -20,7 +20,7 @@ function applyEffect(env, id, opts) {
   const r = env.call('resolve', Object.assign({ placement: 'cut', sides: ['pre', 'post'], frames: 8, target: 'adjustment' }, opts));
   assert.ok(r.ok, r.error);
   const targets = r.targets.map(t => Object.assign({}, t, { fx: Core.compileEffect(def, (opts && opts.params) || {}, t.side, t.frames, r.fps) }));
-  return { r, res: env.call('apply', { target: (opts && opts.target) || 'adjustment', name: 'CutFX · ' + def.name, targets, refreshAdj: true }) };
+  return { r, res: env.call('apply', { target: (opts && opts.target) || 'adjustment', name: 'RR FX · ' + def.name, targets, refreshAdj: true }) };
 }
 
 test('getContext', () => {
@@ -46,7 +46,7 @@ test('apply zoom-in on adjustment layers above V1', () => {
   assert.deepStrictEqual(res.warnings, []);
   const v2 = env.seq.videoTracks[1].items.sort((a, b) => a._s - b._s);
   assert.strictEqual(v2.length, 2);
-  assert.deepStrictEqual(v2.map(i => [i.name, i._s / env.F, i._e / env.F]), [['CutFX · Zoom in PRE', 92, 100], ['CutFX · Zoom in POST', 100, 108]]);
+  assert.deepStrictEqual(v2.map(i => [i.name, i._s / env.F, i._e / env.F]), [['RR FX · Zoom in PRE', 92, 100], ['RR FX · Zoom in POST', 100, 108]]);
   const tr = v2[0].components[2];
   assert.strictEqual(tr.matchName, 'AE.ADBE Geometry2');
   const scale = tr.properties[3];
@@ -162,7 +162,7 @@ test('capture roundtrip', () => {
   const spec = Core.compileCaptured(cap, 'pre', 10, { stretch: true, mirror: true });
   assert.strictEqual(spec[0].props.find(p => p.index === 3).values[9], 140);
   const r = env.call('resolve', { placement: 'cut', sides: ['pre'], frames: 10, target: 'adjustment' });
-  const res = env.call('apply', { target: 'adjustment', name: 'CutFX · cap', targets: r.targets.map(t => Object.assign({}, t, { fx: spec })) });
+  const res = env.call('apply', { target: 'adjustment', name: 'RR FX · cap', targets: r.targets.map(t => Object.assign({}, t, { fx: spec })) });
   assert.ok(res.ok, res.error);
   assert.deepStrictEqual(res.warnings, []);
 });
@@ -178,7 +178,7 @@ function rampCheck(env, placement, anchor, points, segments, extra) {
 const snapshot = it => JSON.stringify([it._s, it._e, it._in, it._out, it._speed, it.components.length]);
 
 function rampLayer(env, track) {
-  return env.seq.videoTracks[track].items.filter(i => i.name === 'CutFX · Rampe').sort((a, b) => a._s - b._s);
+  return env.seq.videoTracks[track].items.filter(i => i.name === 'RR FX · Rampe').sort((a, b) => a._s - b._s);
 }
 
 test('speed ramp before the cut: on a copy layer, original untouched, cut and frame kept', () => {
@@ -259,7 +259,7 @@ test('ramp: a busy track above gets a new track inserted right above the clip', 
   assert.ok(res.ok, res.error);
   assert.strictEqual(res.track, 1, 'right above V1');
   assert.strictEqual(rampLayer(env, 1).length, 6);
-  assert.strictEqual(env.seq.videoTracks[2].items[0].name, 'CutFX · Zoom in PRE', 'the adjustment layer stays above the ramp');
+  assert.strictEqual(env.seq.videoTracks[2].items[0].name, 'RR FX · Zoom in PRE', 'the adjustment layer stays above the ramp');
   assert.ok(res.warnings.some(w => /insérée/.test(w)));
 });
 
@@ -292,15 +292,15 @@ test('ramp works when Premiere wants speeds in percent', () => {
   rampLayer(env, 1).forEach((it, k) => assert.ok(Math.abs(it._speed - pieces[k].speed / 100) < 1e-9));
 });
 
-test('the video-only subclip is created once and reused, in a CutFX bin', () => {
+test('the video-only subclip is created once and reused, in a RR FX bin', () => {
   const env = setup();
   rampCheck(env, 'pre', null, Core.RAMP_PRESETS.intoCut.points, 3);
   env.call('undo', { entries: rampCheck(setup(), 'pre', null, Core.RAMP_PRESETS.intoCut.points, 3).res.created });
   env.seq._ph = 60 * env.F;
   rampCheck(env, 'playhead', 'start', Core.RAMP_PRESETS.slowHit.points, 3);
   assert.strictEqual(env.subclipCalls(), 1);
-  const cutfx = env.root.children.find(c => c.name === 'CutFX');
-  assert.ok(cutfx && cutfx.children.some(c => c.name === 'CutFX · A001.mov · vidéo'));
+  const rrfx = env.root.children.find(c => c.name === 'RR FX');
+  assert.ok(rrfx && rrfx.children.some(c => c.name === 'RR FX · A001.mov · vidéo'));
 });
 
 test('effects on a copy of the shot: Motion blur (Echo) never touches the clip', () => {
@@ -310,7 +310,7 @@ test('effects on a copy of the shot: Motion blur (Echo) never touches the clip',
   assert.ok(res.ok, res.error);
   assert.strictEqual(snapshot(env.B), before);
   const copy = env.seq.videoTracks[1].items[0];
-  assert.strictEqual(copy.name, 'CutFX · Motion blur POST');
+  assert.strictEqual(copy.name, 'RR FX · Motion blur POST');
   assert.ok(Math.abs(copy._s - 100 * env.F) < 1 && Math.abs(copy._e - 108 * env.F) < 1);
   assert.strictEqual(copy._in, env.B._in, 'same source frames as the clip');
   assert.strictEqual(copy.components[copy.components.length - 1].matchName, 'AE.ADBE Echo');
@@ -426,10 +426,10 @@ test('compat reports what this Premiere offers', () => {
 test('per-target names label each adjustment layer', () => {
   const env = setup();
   const r = env.call('resolve', { placement: 'cut', sides: ['pre', 'post'], frames: 4, target: 'adjustment' });
-  const targets = r.targets.map((t, i) => Object.assign({}, t, { name: i ? 'CutFX · Glitch' : 'CutFX · Shake', fx: Core.compileEffect(Lib.byId[i ? 'glitch' : 'shake'], {}, t.side, t.frames, r.fps) }));
-  const res = env.call('apply', { target: 'adjustment', name: 'CutFX', targets });
+  const targets = r.targets.map((t, i) => Object.assign({}, t, { name: i ? 'RR FX · Glitch' : 'RR FX · Shake', fx: Core.compileEffect(Lib.byId[i ? 'glitch' : 'shake'], {}, t.side, t.frames, r.fps) }));
+  const res = env.call('apply', { target: 'adjustment', name: 'RR FX', targets });
   assert.ok(res.ok, res.error);
-  assert.deepStrictEqual(env.seq.videoTracks[1].items.map(i => i.name).sort(), ['CutFX · Glitch POST', 'CutFX · Shake PRE']);
+  assert.deepStrictEqual(env.seq.videoTracks[1].items.map(i => i.name).sort(), ['RR FX · Glitch POST', 'RR FX · Shake PRE']);
 });
 
 test('overwriteClip that wants seconds: the stray layer is removed, the real one is placed', () => {
@@ -439,7 +439,7 @@ test('overwriteClip that wants seconds: the stray layer is removed, the real one
   const { res } = applyEffect(env, 'zoom-in', { sides: ['pre'] });
   assert.ok(res.ok, res.error);
   const v2 = env.seq.videoTracks[1].items;
-  assert.deepStrictEqual(v2.map(i => [i.name, i._s / env.F]), [['CutFX · Zoom in PRE', 192]]);
+  assert.deepStrictEqual(v2.map(i => [i.name, i._s / env.F]), [['RR FX · Zoom in PRE', 192]]);
 });
 
 test('adjustment layer deleted from the project: clear error, nothing half-done', () => {
@@ -460,7 +460,7 @@ test('an effect that fails midway keeps what was placed (undo still finds it)', 
   const r = env.call('resolve', { placement: 'cut', sides: ['pre'], frames: 4, target: 'adjustment' });
   const fx = Core.compileEffect(def, {}, 'pre', 4, r.fps);
   fx.push({ type: 'x', names: ['Transform'], matchName: 'AE.ADBE Geometry2', props: [{ key: 'scale', index: 3, keys: 'not-a-list' }] });
-  const res = env.call('apply', { target: 'adjustment', name: 'CutFX · test', targets: r.targets.map(t => Object.assign({}, t, { fx })) });
+  const res = env.call('apply', { target: 'adjustment', name: 'RR FX · test', targets: r.targets.map(t => Object.assign({}, t, { fx })) });
   assert.ok(res.ok, res.error);
   assert.strictEqual(res.created.length, 1);
   assert.ok(res.warnings.length >= 1);
@@ -472,7 +472,7 @@ test('wire format (thinned keys) lands on the right frames', () => {
   const env = setup();
   const r = env.call('resolve', { placement: 'cut', sides: ['pre'], frames: 20, target: 'adjustment' });
   const spec = Core.compileEffect(Lib.byId.flicker, {}, 'pre', 20, r.fps);
-  const res = env.call('apply', { target: 'adjustment', name: 'CutFX · Flicker', targets: r.targets.map(t => Object.assign({}, t, { fx: Core.toWire(spec) })) });
+  const res = env.call('apply', { target: 'adjustment', name: 'RR FX · Flicker', targets: r.targets.map(t => Object.assign({}, t, { fx: Core.toWire(spec) })) });
   assert.ok(res.ok, res.error);
   const p = env.seq.videoTracks[1].items[0].components[2].properties[8];
   const full = spec[0].props.find(x => x.key === 'opacity').values;

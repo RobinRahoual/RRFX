@@ -1,4 +1,4 @@
-# Publie une Release GitHub avec le pack CutFX-<version>-installation.zip
+# Publie une Release GitHub avec le pack RRFX-<version>-installation.zip
 # à chaque tag « v… » (ex. v1.1.0). Le pack n'est publié que si les tests passent.
 
 name: Release
@@ -31,9 +31,9 @@ jobs:
         run: |
           npm run -s package
           VERSION=$(node -p "require('./package.json').version")
-          unzip -l "dist/CutFX-$VERSION-installation.zip"
+          unzip -l "dist/RRFX-$VERSION-installation.zip"
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          echo "file=dist/CutFX-$VERSION-installation.zip" >> "$GITHUB_OUTPUT"
+          echo "file=dist/RRFX-$VERSION-installation.zip" >> "$GITHUB_OUTPUT"
 
       - name: Vérifier que le tag correspond à la version
         if: startsWith(github.ref, 'refs/tags/')
@@ -51,13 +51,13 @@ jobs:
         run: |
           TAG="v$VERSION"
           NOTES=$(cat <<'EOF'
-          ## Installer CutFX
+          ## Installer RR FX
 
-          1. Télécharge **CutFX-VERSION-installation.zip** ci-dessous (section *Assets*) et décompresse-le.
+          1. Télécharge **RRFX-VERSION-installation.zip** ci-dessous (section *Assets*) et décompresse-le.
           2. Ferme Premiere Pro, puis :
-             - Windows : double-clique sur *Installer CutFX (Windows).bat* (si Windows affiche « Windows a protégé votre ordinateur » : *Informations complémentaires* > *Exécuter quand même*) ;
-             - Mac : clic droit sur *Installer CutFX (Mac).command* > *Ouvrir*.
-          3. Dans Premiere Pro : *Fenêtre > Extensions > CutFX*.
+             - Windows : double-clique sur *Installer RR FX (Windows).bat* (si Windows affiche « Windows a protégé votre ordinateur » : *Informations complémentaires* > *Exécuter quand même*) ;
+             - Mac : clic droit sur *Installer RR FX (Mac).command* > *Ouvrir*.
+          3. Dans Premiere Pro : *Fenêtre > Extensions > RR FX*.
 
           Pour mettre à jour : relance le script de la nouvelle version, tes effets perso sont gardés.
 
@@ -68,5 +68,5 @@ jobs:
           if gh release view "$TAG" >/dev/null 2>&1; then
             gh release upload "$TAG" "$FILE" --clobber
           else
-            gh release create "$TAG" "$FILE" --title "CutFX $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create "$TAG" "$FILE" --title "RR FX $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
           fi

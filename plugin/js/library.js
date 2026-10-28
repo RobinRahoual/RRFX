@@ -1,9 +1,9 @@
-/* CutFX — built-in effect library.
+/* RR FX — built-in effect library.
    Each recipe returns the Premiere effects to add and, per property, either a
    constant or a function of the frame index i. See core.makeCtx for `c`. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXLibrary = factory();
+  else root.RRFXLibrary = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 

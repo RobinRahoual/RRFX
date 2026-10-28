@@ -1,13 +1,13 @@
-name: Partager un effet CutFX
-description: Publier un preset, un effet capturé ou une rampe dans la bibliothèque en ligne de CutFX.
+name: Partager un effet RR FX
+description: Publier un preset, un effet capturé ou une rampe dans la bibliothèque en ligne de RR FX.
 title: "[Preset] "
 labels: ["preset"]
 body:
   - type: markdown
     attributes:
       value: |
-        Ce formulaire est rempli par CutFX (Mes effets > Communauté > Publier). Clique sur **Submit new issue** :
-        ton effet apparaît dans la bibliothèque en ligne de tous les utilisateurs de CutFX.
+        Ce formulaire est rempli par RR FX (Mes effets > Communauté > Publier). Clique sur **Submit new issue** :
+        ton effet apparaît dans la bibliothèque en ligne de tous les utilisateurs de RR FX.
         Pour aimer un effet, ajoute la réaction 👍 sur sa page.
   - type: input
     id: nom
@@ -24,7 +24,7 @@ body:
   - type: textarea
     id: code
     attributes:
-      label: Code CutFX
-      description: Le code qui commence par CUTFX1 (CutFX le met tout seul, ou colle-le ici s'il était trop long).
+      label: Code RR FX
+      description: Le code qui commence par RRFX1 (RR FX le met tout seul, ou colle-le ici s'il était trop long).
     validations:
       required: true

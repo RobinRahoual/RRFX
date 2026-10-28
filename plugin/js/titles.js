@@ -1,9 +1,9 @@
-/* CutFX — onglet Textes : titres et paroles animés, posés sur les marqueurs ou les
+/* RR FX — onglet Textes : titres et paroles animés, posés sur les marqueurs ou les
    temps forts, à partir d'un modèle de texte Premiere (.mogrt). */
 (function (root) {
   'use strict';
 
-  (root.CutFXFeatures = root.CutFXFeatures || []).push(function (app) {
+  (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Core, Lib, Store, Host, Pv } = app;
     const { h, hotText, actionGroup, picker, row, section, Player } = app.UI;
 

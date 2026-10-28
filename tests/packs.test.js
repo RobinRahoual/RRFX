@@ -76,8 +76,8 @@ test('host: pack overlay imported as numbered stills at the sequence frame rate,
   seq._ph = 97 * F;
   const r = env.call('resolve', { placement: 'cut', sides: ['pre', 'post'], frames: 10, target: 'adjustment' });
   const targets = r.targets.map(t => Object.assign({}, t, { fx: Core.toWire(Core.compileOverlay({ intensity: 80 }, t.side, t.frames, 8)) }));
-  const overlay = { path: '/Docs/CutFX/Overlays/vhs-1920x1080-50/vhs_000.jpg', name: 'VHS', kind: 'sequence', fps: 25, start: 'random', seed: 3 };
-  const res = env.call('apply', { target: 'overlay', name: 'CutFX · VHS', overlay, targets });
+  const overlay = { path: '/Docs/RRFX/Overlays/vhs-1920x1080-50/vhs_000.jpg', name: 'VHS', kind: 'sequence', fps: 25, start: 'random', seed: 3 };
+  const res = env.call('apply', { target: 'overlay', name: 'RR FX · VHS', overlay, targets });
   assert.ok(res.ok, res.error);
   assert.deepStrictEqual(env.imports.map(i => i.stills), [true], 'imported once, as numbered stills');
   const items = seq.videoTracks[1].items.sort((a, b) => a._s - b._s);

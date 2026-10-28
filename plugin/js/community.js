@@ -1,6 +1,6 @@
-/* CutFX — bibliothèque partagée en ligne. Pas de serveur à faire tourner : chaque preset
-   publié est une « issue » du dépôt GitHub de CutFX, créée avec le formulaire
-   « Partager un effet » (.github/ISSUE_TEMPLATE/preset.yml) qui y range le code CUTFX1.
+/* RR FX — bibliothèque partagée en ligne. Pas de serveur à faire tourner : chaque preset
+   publié est une « issue » du dépôt GitHub de RR FX, créée avec le formulaire
+   « Partager un effet » (.github/ISSUE_TEMPLATE/preset.yml) qui y range le code RRFX1.
    - lire : l'API publique de GitHub (sans compte), mise en cache 10 minutes ;
    - publier : le panneau ouvre le formulaire pré-rempli dans le navigateur, il reste à
      cliquer sur « Submit » (compte GitHub gratuit) ;
@@ -8,16 +8,16 @@
    - modérer : fermer l'issue la retire de la bibliothèque. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXCommunity = factory();
+  else root.RRFXCommunity = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const REPO = 'RobinRahoual/CutFX';
+  const REPO = 'RobinRahoual/RRFX';
   const LABEL = 'preset';
   const TEMPLATE = 'preset.yml';
   const API = 'https://api.github.com/repos/' + REPO + '/issues';
   const CACHE_MS = 10 * 60 * 1000;
-  const KEY_CACHE = 'cutfx.community.cache';
+  const KEY_CACHE = 'rrfx.community.cache';
   const MAX_URL = 7000; // au-delà, le navigateur ou GitHub peut couper l'adresse
 
   const TYPES = { preset: 'Preset', captured: 'Capturé', ramp: 'Rampe' };
@@ -37,12 +37,12 @@
   // Une issue → une entrée de la bibliothèque, ou null si elle ne contient pas de code valide.
   function parseIssue(issue, decode) {
     if (!issue || issue.pull_request || issue.state === 'closed') return null;
-    const code = /CUTFX[01]:[A-Za-z0-9_\-]+/.exec(String(issue.body || '').replace(/\s+/g, ''));
+    const code = /RRFX[01]:[A-Za-z0-9_\-]+/.exec(String(issue.body || '').replace(/\s+/g, ''));
     if (!code) return null;
     let items;
     try { items = decode(code[0]); } catch (e) { return null; }
     if (!items || !items.length) return null;
-    const title = String(issue.title || '').replace(/^\s*\[(preset|effet|cutfx)\]\s*/i, '').trim();
+    const title = String(issue.title || '').replace(/^\s*\[(preset|effet|rrfx)\]\s*/i, '').trim();
     const reactions = issue.reactions || {};
     return {
       number: issue.number,

@@ -17,7 +17,7 @@ test('one version everywhere', () => {
   const version = JSON.parse(read('package.json')).version;
   const manifest = read('plugin/CSXS/manifest.xml');
   assert.ok(manifest.includes('ExtensionBundleVersion="' + version + '"'), 'manifest bundle');
-  assert.ok(manifest.includes('<Extension Id="com.cutfx.panel" Version="' + version + '"'), 'manifest extension');
+  assert.ok(manifest.includes('<Extension Id="com.robinrahoual.rrfx.panel" Version="' + version + '"'), 'manifest extension');
   assert.ok(read('plugin/jsx/host.jsx').includes("var VERSION = '" + version + "';"), 'host.jsx');
   assert.ok(read('plugin/js/host.js').includes("const VERSION = '" + version + "';"), 'host.js');
 });
@@ -51,11 +51,11 @@ test('host.jsx is plain ES3 and runs', () => {
   });
   const ctx = vm.createContext({});
   vm.runInContext(src, ctx);
-  assert.strictEqual(typeof ctx.CutFX.apply, 'function');
+  assert.strictEqual(typeof ctx.RRFX.apply, 'function');
 });
 
 test('the Windows installer keeps CRLF line endings and no parentheses in messages', () => {
-  const bat = fs.readFileSync(path.join(root, 'install', 'Installer CutFX (Windows).bat'), 'latin1');
+  const bat = fs.readFileSync(path.join(root, 'install', 'Installer RR FX (Windows).bat'), 'latin1');
   assert.ok(!/[^\r]\n/.test(bat), 'CRLF');
   bat.split('\r\n').filter(l => /^\s*echo /i.test(l)).forEach(l => assert.ok(!/[()]/.test(l.replace(/\^[()]/g, '')), l));
 });

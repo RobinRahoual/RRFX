@@ -1,18 +1,18 @@
 @echo off
 setlocal
-title Installation de CutFX
+title Installation de RR FX
 
-rem Installe le panneau CutFX pour Premiere Pro : copie le dossier CutFX dans les
+rem Installe le panneau RR FX pour Premiere Pro : copie le dossier RRFX dans les
 rem extensions Adobe et autorise les extensions non signees.
 rem Pas de parentheses dans les messages : elles cassent les blocs des fichiers .bat.
 
-set "SRC=%~dp0CutFX"
-set "DEST=%APPDATA%\Adobe\CEP\extensions\CutFX"
-set "LOG=%~dp0installation-cutfx.log"
+set "SRC=%~dp0RRFX"
+set "DEST=%APPDATA%\Adobe\CEP\extensions\RRFX"
+set "LOG=%~dp0installation-rrfx.log"
 
 if not exist "%SRC%\CSXS\manifest.xml" goto no_src
 
-echo Installation de CutFX dans :
+echo Installation de RR FX dans :
 echo   "%DEST%"
 echo.
 
@@ -23,7 +23,7 @@ robocopy "%SRC%" "%DEST%" /E /NFL /NDL /NJH /NJS /NP > "%LOG%" 2>&1
 if %ERRORLEVEL% GEQ 8 goto failed
 if not exist "%DEST%\CSXS\manifest.xml" goto failed
 
-echo Termine. Redemarre Premiere Pro, puis : Fenetre ^> Extensions ^> CutFX
+echo Termine. Redemarre Premiere Pro, puis : Fenetre ^> Extensions ^> RR FX
 goto end
 
 :failed
@@ -34,7 +34,7 @@ echo Si ca persiste, fais une capture de cette fenetre et envoie-la a @robin.rah
 goto end
 
 :no_src
-echo Le dossier CutFX est introuvable a cote de ce script.
+echo Le dossier RRFX est introuvable a cote de ce script.
 echo Decompresse tout le pack avant de lancer l'installation.
 goto end
 

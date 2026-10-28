@@ -8,7 +8,7 @@ const Share = require('../plugin/js/share.js');
 const zip = { deflate: b => new Uint8Array(zlib.deflateRawSync(Buffer.from(b))), inflate: b => new Uint8Array(zlib.inflateRawSync(Buffer.from(b))) };
 const decode = code => Share.decode(code, zip);
 const preset = name => ({ type: 'preset', name, cat: 'zooms', data: { base: 'zoom-in', params: { frames: 8, intensity: 120 } } });
-const body = (name, desc, code) => '### Nom\n\n' + name + '\n\n### Description\n\n' + (desc || '_No response_') + '\n\n### Code CutFX\n\n' + code + '\n';
+const body = (name, desc, code) => '### Nom\n\n' + name + '\n\n### Description\n\n' + (desc || '_No response_') + '\n\n### Code RR FX\n\n' + code + '\n';
 const issue = (n, name, opts) => Object.assign({
   number: n, title: '[Preset] ' + name, state: 'open', html_url: 'https://github.com/x/issues/' + n,
   created_at: new Date(2026, 0, n).toISOString(), user: { login: 'user' + n }, reactions: { '+1': 0 },
@@ -26,7 +26,7 @@ test('community: issues become presets, invalid or closed ones are skipped', () 
   assert.deepStrictEqual(e.types, ['preset']);
   assert.strictEqual(e.items[0].data.base, 'zoom-in');
   assert.strictEqual(C.parseIssue(issue(5, 'x', { body: 'pas de code' }), decode), null);
-  assert.strictEqual(C.parseIssue(issue(6, 'x', { body: body('x', '', 'CUTFX1:abimé') }), decode), null);
+  assert.strictEqual(C.parseIssue(issue(6, 'x', { body: body('x', '', 'RRFX1:abimé') }), decode), null);
   assert.strictEqual(C.parseIssue(issue(7, 'x', { state: 'closed' }), decode), null);
   assert.strictEqual(C.parseIssue(issue(8, 'x', { pull_request: {} }), decode), null);
   // Code coupé sur plusieurs lignes par un copier-coller : retrouvé quand même.
@@ -92,7 +92,7 @@ test('community: publish link pre-fills the form, long codes are pasted by hand'
   assert.strictEqual(u.searchParams.get('nom'), 'Mon zoom & co');
   assert.strictEqual(u.searchParams.get('title'), '[Preset] Mon zoom & co');
   assert.strictEqual(u.searchParams.get('code'), code);
-  const long = C.publishURL({ name: 'Gros', desc: '', code: 'CUTFX1:' + 'a'.repeat(9000) });
+  const long = C.publishURL({ name: 'Gros', desc: '', code: 'RRFX1:' + 'a'.repeat(9000) });
   assert.strictEqual(long.withCode, false);
   assert.ok(long.url.length < C.MAX_URL && !/code=/.test(long.url));
 });

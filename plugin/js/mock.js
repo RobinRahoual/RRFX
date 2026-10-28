@@ -1,4 +1,4 @@
-/* CutFX — faux Premiere utilisé quand le panneau tourne hors de Premiere (mode démo). */
+/* RR FX — faux Premiere utilisé quand le panneau tourne hors de Premiere (mode démo). */
 (function (root) {
   'use strict';
   const FPS = 25, TICKS = 254016000000, F = TICKS / FPS;
@@ -19,7 +19,7 @@
   }
 
   const handlers = {
-    compat: () => ({ ok: true, version: root.CutFXHost ? root.CutFXHost.VERSION : '?', app: 'démo', appPath: '', missing: [], optional: [] }),
+    compat: () => ({ ok: true, version: root.RRFXHost ? root.RRFXHost.VERSION : '?', app: 'démo', appPath: '', missing: [], optional: [] }),
     getContext: () => ({
       ok: true, hasSequence: true, version: 'démo', app: 'démo', name: 'Clip — démo', fps: FPS, frameW: 1920, frameH: 1080,
       playhead: 12.4, selection: 2, selectionNames: ['A001_C004.mov', 'A001_C007.mov'], markers: 4,
@@ -51,7 +51,7 @@
     rampApply: async a => {
       await wait(400);
       let at = a.regionStart;
-      const created = a.pieces.map(p => { const e = { kind: 'adj', track: 1, start: at, name: 'CutFX · Rampe' }; at += p.frames * F; return e; });
+      const created = a.pieces.map(p => { const e = { kind: 'adj', track: 1, start: at, name: 'RR FX · Rampe' }; at += p.frames * F; return e; });
       return { ok: true, pieces: a.pieces.length, sourceFrames: a.pieces.reduce((s, p) => s + p.frames * p.speed / 100, 0), track: 1, created, warnings: [] };
     },
     // 1.3 : musique, montage, textes, nettoyage (la musique de démo n'a pas de fichier : choisis-en un).
@@ -71,13 +71,13 @@
     syncInfo: () => ({ ok: true, music: null, musicError: 'Mode démo : pas de musique dans la séquence.', clips: [], rushes: [] }),
     moveClips: a => ({ ok: true, moved: a.moves.length, warnings: [] }),
     grabFrames: () => ({ ok: false, error: 'Mode démo : il faut Premiere pour exporter des images de la séquence.' }),
-    placeTitle: async a => { await wait(60); return { ok: true, created: [{ kind: 'adj', track: 2, start: a.start * TICKS, name: 'CutFX · Texte' }], track: 2, warnings: [] }; },
+    placeTitle: async a => { await wait(60); return { ok: true, created: [{ kind: 'adj', track: 2, start: a.start * TICKS, name: 'RR FX · Texte' }], track: 2, warnings: [] }; },
     readBlend: () => ({ ok: true, value: 8 }),
     multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
   };
   const markers = [];
 
-  root.CutFXMock = {
+  root.RRFXMock = {
     async call(fn, arg) {
       await wait(fn === 'getContext' ? 5 : 120);
       const h = handlers[fn];

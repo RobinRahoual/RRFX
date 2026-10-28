@@ -1,5 +1,5 @@
-/* CutFX — bibliothèque perso, réglages et historique sur disque
-   (Documents/CutFX/library.json), ou localStorage hors de Premiere (mode démo). */
+/* RR FX — bibliothèque perso, réglages et historique sur disque
+   (Documents/RRFX/library.json), ou localStorage hors de Premiere (mode démo). */
 (function (root) {
   'use strict';
 
@@ -16,9 +16,9 @@
     try { fs = nodeRequire('fs'); path = nodeRequire('path'); os = nodeRequire('os'); } catch (e) { fs = null; }
   }
 
-  const DIR = fs ? path.join(os.homedir(), 'Documents', 'CutFX') : null;
+  const DIR = fs ? path.join(os.homedir(), 'Documents', 'RRFX') : null;
   const FILE = DIR ? path.join(DIR, 'library.json') : null;
-  const LS_KEY = 'cutfx.library';
+  const LS_KEY = 'rrfx.library';
 
   const empty = () => ({ version: 1, favorites: [], items: [], history: [], settings: {} });
 
@@ -70,7 +70,7 @@
     const text = JSON.stringify(data, null, 1);
     const c = cepFs();
     if (fs && c && c.showSaveDialogEx) {
-      const r = c.showSaveDialogEx('Exporter des effets CutFX', DIR || '', ['json'], defaultName);
+      const r = c.showSaveDialogEx('Exporter des effets RR FX', DIR || '', ['json'], defaultName);
       if (!r || r.err || !r.data) return null;
       const target = /\.json$/i.test(r.data) ? r.data : r.data + '.json';
       fs.writeFileSync(target, text, 'utf8');
@@ -87,7 +87,7 @@
   function importJSON() {
     const c = cepFs();
     if (fs && c && c.showOpenDialogEx) {
-      const r = c.showOpenDialogEx(true, false, 'Importer des effets CutFX', DIR || '', ['json']);
+      const r = c.showOpenDialogEx(true, false, 'Importer des effets RR FX', DIR || '', ['json']);
       if (!r || r.err || !r.data || !r.data.length) return Promise.resolve([]);
       return Promise.resolve(r.data.map(p => JSON.parse(fs.readFileSync(p, 'utf8'))));
     }
@@ -157,7 +157,7 @@
     return out;
   }
 
-  root.CutFXStorage = {
+  root.RRFXStorage = {
     load, save, exportJSON, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
     fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
   };

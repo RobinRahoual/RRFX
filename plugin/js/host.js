@@ -1,5 +1,5 @@
-/* CutFX — pont vers Premiere (ExtendScript) et vers l'environnement CEP.
-   Hors de Premiere (simple navigateur), bascule sur CutFXMock : mode démo. */
+/* RR FX — pont vers Premiere (ExtendScript) et vers l'environnement CEP.
+   Hors de Premiere (simple navigateur), bascule sur RRFXMock : mode démo. */
 (function (root) {
   'use strict';
   const VERSION = '1.5.0';
@@ -25,18 +25,18 @@
     if (!cep) return { demo: true };
     // Après une mise à jour, l'ancien script peut rester chargé dans Premiere : on recharge
     // dès que sa version diffère de celle du panneau.
-    const loaded = await evalScript('typeof CutFX === "object" ? String(CutFX.version) : ""');
+    const loaded = await evalScript('typeof RRFX === "object" ? String(RRFX.version) : ""');
     if (loaded !== VERSION) {
       const file = systemPath('extension') + '/jsx/host.jsx';
       await evalScript('$.evalFile(' + JSON.stringify(file) + ')');
     }
-    const now = await evalScript('typeof CutFX === "object" ? String(CutFX.version) : ""');
+    const now = await evalScript('typeof RRFX === "object" ? String(RRFX.version) : ""');
     return { demo: false, loaded: now === VERSION, version: now };
   }
 
   async function call(fn, arg) {
-    if (!cep) return root.CutFXMock.call(fn, arg);
-    const r = await evalScript('CutFX.' + fn + '(' + literal(arg) + ')');
+    if (!cep) return root.RRFXMock.call(fn, arg);
+    const r = await evalScript('RRFX.' + fn + '(' + literal(arg) + ')');
     try {
       return JSON.parse(r);
     } catch (e) {
@@ -91,5 +91,5 @@
     try { cep.registerKeyEventsInterest(JSON.stringify(list)); } catch (e) { /* touches gardées par Premiere */ }
   }
 
-  root.CutFXHost = { VERSION, isMac, init, call, hostEnv, on, openURL, setMenu, registerKeys, demo: !cep };
+  root.RRFXHost = { VERSION, isMac, init, call, hostEnv, on, openURL, setMenu, registerKeys, demo: !cep };
 })(typeof self !== 'undefined' ? self : this);

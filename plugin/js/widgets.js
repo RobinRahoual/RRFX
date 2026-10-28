@@ -1,8 +1,8 @@
-/* CutFX — briques d'interface : composants façon Spectrum (comme Rotate), valeurs
+/* RR FX — briques d'interface : composants façon Spectrum (comme Rotate), valeurs
    « hot text » et éditeurs de courbes façon Options d'effet de Premiere. */
 (function (root) {
   'use strict';
-  const Core = root.CutFXCore;
+  const Core = root.RRFXCore;
 
   function h(tag, attrs, ...kids) {
     const el = document.createElement(tag);
@@ -427,5 +427,5 @@
     };
   }
 
-  root.CutFXUI = { withAlpha, h, hotText, actionGroup, picker, checkbox, radioGroup, row, section, fitCanvas, css, CurveEditor, RampEditor, Player };
+  root.RRFXUI = { withAlpha, h, hotText, actionGroup, picker, checkbox, radioGroup, row, section, fitCanvas, css, CurveEditor, RampEditor, Player };
 })(typeof self !== 'undefined' ? self : this);

@@ -1,4 +1,4 @@
-# CutFX — plugin Premiere Pro
+# RR FX — plugin Premiere Pro
 
 Plugin gratuit créé par **Robin Rahoual** — suis-moi sur Instagram : [@robin.rahoual](https://www.instagram.com/robin.rahoual/).
 
@@ -9,33 +9,33 @@ décalent jamais la coupe, la **détection des temps forts** de la musique, le *
 partageables par un simple code ou publiés dans la **bibliothèque en ligne** de la communauté.
 
 **Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
-(`CutFX · …`). Seules la speed ramp et le motion blur (« CLIP FX ») se posent sur une copie du plan, parce qu'un
+(`RR FX · …`). Seules la speed ramp et le motion blur (« CLIP FX ») se posent sur une copie du plan, parce qu'un
 calque de réglage ne peut ni ralentir ni mélanger les images (voir « Les copies du plan »). ↶ Annuler et
 *Tout effacer* retirent tout.
 
-**[⬇ Télécharger CutFX](https://github.com/RobinRahoual/CutFX/releases/latest)** — fichier `CutFX-<version>-installation.zip`.
+**[⬇ Télécharger RR FX](https://github.com/RobinRahoual/RRFX/releases/latest)** — fichier `RRFX-<version>-installation.zip`.
 
 ## Installation
 
-1. Télécharge `CutFX-<version>-installation.zip` depuis la
-   [dernière release](https://github.com/RobinRahoual/CutFX/releases/latest) (section *Assets*) et décompresse-le.
+1. Télécharge `RRFX-<version>-installation.zip` depuis la
+   [dernière release](https://github.com/RobinRahoual/RRFX/releases/latest) (section *Assets*) et décompresse-le.
 2. Ferme Premiere Pro, puis :
-   - **Windows** : double-clique sur `Installer CutFX (Windows).bat` (si Windows affiche « Windows a protégé
+   - **Windows** : double-clique sur `Installer RR FX (Windows).bat` (si Windows affiche « Windows a protégé
      votre ordinateur » : *Informations complémentaires* > *Exécuter quand même*) ;
-   - **Mac** : clic droit sur `Installer CutFX (Mac).command` > *Ouvrir*.
-3. Dans Premiere : *Fenêtre > Extensions > CutFX*.
+   - **Mac** : clic droit sur `Installer RR FX (Mac).command` > *Ouvrir*.
+3. Dans Premiere : *Fenêtre > Extensions > RR FX*.
 
 Le script copie le panneau dans le dossier des extensions Adobe et autorise les extensions non signées
 (`PlayerDebugMode`). Compatible Premiere Pro 2021 à 2026, Windows et macOS. Pour mettre à jour : relance le script
-de la nouvelle version (tes effets perso sont gardés). Pour désinstaller : supprime le dossier `CutFX` de
+de la nouvelle version (tes effets perso sont gardés). Pour désinstaller : supprime le dossier `RRFX` de
 `%APPDATA%\Adobe\CEP\extensions` (Windows) ou `~/Library/Application Support/Adobe/CEP/extensions` (Mac).
 
 **Il faut un calque de réglage dans le projet** (une fois par projet) : *Fichier > Nouveau > Calque de réglage*.
-CutFX le retrouve tout seul.
+RR FX le retrouve tout seul.
 
 ### Pourquoi pas un `.ccx` comme Rotate ?
 Rotate est un plugin UXP. L'API UXP de Premiere ne permet pas (encore) de découper un clip ni de changer sa vitesse :
-les speed ramps seraient impossibles. CutFX est donc une extension CEP (HTML + ExtendScript), avec la même interface.
+les speed ramps seraient impossibles. RR FX est donc une extension CEP (HTML + ExtendScript), avec la même interface.
 
 ## Utilisation
 
@@ -55,7 +55,7 @@ dépend de l'onglet) et le **bloc d'état**.
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
 | **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · Tête de lecture · Début / fin des clips · Clips entiers |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), ou **un effet au hasard** (même catégorie ou favoris) |
-| **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`CutFX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
+| **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`RR FX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
 | **Intensité qui suit le volume** | En option : l'intensité de chaque coupe est modulée par le volume de la musique à cet instant (doux sur un couplet, fort sur un drop) ; *Influence* règle l'écart |
 | **Durée / Intensité** | Images de chaque côté · force de toute l'animation (0–200 %) |
 | **Courbe** | Courbe d'animation éditable ; la moitié POST est le miroir de la PRE |
@@ -72,9 +72,9 @@ Slide, Whip pan · Onde, Bulge, Glitch · Motion blur (vraie fusion d'images, su
 
 **16 overlays fournis**, en 6 packs : *Light leaks* (chaud, rose, bleu, doré), *Flares* (anamorphique, soleil),
 *Bokeh* (chaud, froid), *Pellicule* (poussière, vieux film, brûlure, brûlure rouge), *VHS & glitch* (VHS, glitch
-RGB), *Lumière* (balayages). Rien à télécharger : CutFX les dessine lui-même. À la première utilisation, chaque
+RGB), *Lumière* (balayages). Rien à télécharger : RR FX les dessine lui-même. À la première utilisation, chaque
 overlay est fabriqué en images (2 s, à la taille et à la cadence de ta séquence, rangé dans
-`Documents/CutFX/Overlays`), puis réutilisé. Le survol d'une vignette l'anime ; avec *Entre les coupes : un effet au
+`Documents/RRFX/Overlays`), puis réutilisé. Le survol d'une vignette l'anime ; avec *Entre les coupes : un effet au
 hasard*, chaque coupe reçoit un overlay différent du pack.
 
 Tes propres overlays : *Ajouter des overlays* (vidéos MOV/MP4/WEBM ou images PNG/JPG) ou *Ajouter un dossier* (un
@@ -82,14 +82,14 @@ pack entier). Un overlay se pose comme un effet — sur la coupe, toutes les cou
 au-dessus du clip, avec un fondu d'opacité animé (durée, courbe, opacité), un point de départ au hasard dans la vidéo
 (différent à chaque coupe) et un **mode de fusion** (Écran par défaut). Si le mode posé n'est pas le bon dans ta
 version de Premiere : règle-le à la main sur un clip, sélectionne-le et clique sur **Apprendre**. Les fichiers sont
-importés dans le chutier « CutFX Overlays ».
+importés dans le chutier « RR FX Overlays ».
 
 ### Les copies du plan
 
-Pour les rampes et le Motion blur (« CLIP FX », comme chez 2WIN), CutFX pose **une copie du passage sur une piste juste
+Pour les rampes et le Motion blur (« CLIP FX », comme chez 2WIN), RR FX pose **une copie du passage sur une piste juste
 au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de réglage) et travaille dessus :
 
-- la copie vient d'un **sous-clip vidéo seule** du rush (`CutFX · <rush> · vidéo`, chutier « CutFX », créé une fois) :
+- la copie vient d'un **sous-clip vidéo seule** du rush (`RR FX · <rush> · vidéo`, chutier « RR FX », créé une fois) :
   rien n'est posé sur les pistes audio, ta musique ne peut pas être écrasée ;
 - le **cadrage et l'étalonnage** du clip (Trajectoire, Opacité, effets, images clés comprises) sont recopiés dessus.
   Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage (option désactivable
@@ -102,11 +102,11 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
   Préréglages : accélération vers la coupe, décélération après, ralenti sur le temps fort, pulse…
 - La rampe est posée sur **une copie du passage** juste au-dessus du clip (voir « Les copies du plan ») :
   **le clip d'origine, son son et la coupe ne bougent pas**. L'*ancre* choisit l'image qui reste en place.
-- CutFX vérifie qu'il y a assez de média avant de poser quoi que ce soit.
+- RR FX vérifie qu'il y a assez de média avant de poser quoi que ce soit.
 - **↶ Annuler** retire la rampe ; **＋ Enregistrer** la garde dans les préréglages.
 
 Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
-constante (« CutFX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
+constante (« RR FX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
 
 ### Onglet Musique
 
@@ -116,14 +116,14 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
 
 - **Temps forts** : détection *grosse caisse*, *tous les coups*, *caisse claire et charleston* ou *grille du tempo*,
   avec sensibilité, écart minimum et « garder un temps sur 1/2/4/8 ». Le bouton principal pose un **marqueur**
-  `CutFX · …` sur chacun (les anciens marqueurs CutFX de la zone sont remplacés). Les effets (Position *Marqueurs de
+  `RR FX · …` sur chacun (les anciens marqueurs RR FX de la zone sont remplacés). Les effets (Position *Marqueurs de
   la séquence*), les textes et le montage auto s'en servent.
 - **Montage auto sur le rythme** : sélectionne des rushs dans le panneau *Projet* ; ils sont posés l'un après l'autre,
   un plan tous les 1/2/4/8 temps, dans l'ordre ou au hasard, extrait au hasard / début / milieu / à la suite, sur une
   piste libre et **en vidéo seule** (ta musique n'est pas touchée). **Découper les clips sélectionnés** coupe à chaque
   marqueur.
 - **Synchroniser le son et l'image** (touche **S**), *Caler sur* :
-  - **la musique / le son externe** : pour un tournage en playback (ou un enregistreur posé dans la séquence), CutFX
+  - **la musique / le son externe** : pour un tournage en playback (ou un enregistreur posé dans la séquence), RR FX
     compare le son de la caméra à la musique (corrélation par bandes de fréquences) et **cale l'image en un clic** ;
   - **une des caméras** (multicam) : les caméras sont calées entre elles sur une caméra de référence (le plan le plus
     long, ou celui de la piste la plus basse), qui ne bouge pas. Les longs rushs sont lus par morceaux d'une minute
@@ -144,7 +144,7 @@ Titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mo
 (*marqueurs*, *temps forts détectés* ou *durée fixe*) et l'animation (Fondu, Pop, Zoom flou, Glissement, Flou, Impact,
 réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèle de texte** `.mogrt` : ceux de
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
-*Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/CutFX/Titres`).
+*Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/RRFX/Titres`).
 
 ### Onglet Mes effets
 
@@ -153,38 +153,38 @@ Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un t
   effets tiers compris — sélectionne-le dans la timeline et clique sur **Capturer la sélection**. Effets, valeurs et
   animations sont enregistrés ; tu le réappliques comme un effet intégré (durée réglable par étirement, miroir
   PRE/POST automatique).
-- **Partager** (⇪ sur un effet, ou *Tout partager*) : un **code** `CUTFX1:…` à envoyer en message ; la personne le
+- **Partager** (⇪ sur un effet, ou *Tout partager*) : un **code** `RRFX1:…` à envoyer en message ; la personne le
   colle dans **Coller un code…**. Aucun chemin de fichier ni info perso dans le code.
 - **Importer / exporter** en `.json` pour sauvegarder tes effets.
 
 ### Bibliothèque en ligne (🌐 Communauté)
 
 En haut de *Mes effets* : **Ma bibliothèque | 🌐 Communauté**. La communauté liste les effets publiés par tous les
-utilisateurs de CutFX : recherche (nom, auteur, description), tri *les plus aimés* / *les plus récents*, filtre par
+utilisateurs de RR FX : recherche (nom, auteur, description), tri *les plus aimés* / *les plus récents*, filtre par
 type, vignette animée. **Ajouter** range l'effet dans ta bibliothèque (il devient **Ouvrir**).
 
-- **Publier** : bouton du haut, ou 🌐 sur un de tes effets. CutFX ouvre dans ton navigateur le formulaire « Partager
-  un effet CutFX » déjà rempli (nom, description, code) : il reste à cliquer sur *Submit new issue* (compte GitHub
-  gratuit). Si le code est trop long pour l'adresse, il est copié : colle-le dans le champ *Code CutFX*.
+- **Publier** : bouton du haut, ou 🌐 sur un de tes effets. RR FX ouvre dans ton navigateur le formulaire « Partager
+  un effet RR FX » déjà rempli (nom, description, code) : il reste à cliquer sur *Submit new issue* (compte GitHub
+  gratuit). Si le code est trop long pour l'adresse, il est copié : colle-le dans le champ *Code RR FX*.
 - **Aimer** : ❤ ouvre la page de l'effet, ajoute la réaction 👍. Le tri « les plus aimés » s'en sert.
-- **Comment ça marche** : pas de serveur. Chaque effet publié est une *issue* du dépôt GitHub de CutFX, créée par le
+- **Comment ça marche** : pas de serveur. Chaque effet publié est une *issue* du dépôt GitHub de RR FX, créée par le
   formulaire `.github/ISSUE_TEMPLATE/preset.yml` (étiquette `preset`). Le panneau lit les issues ouvertes par l'API
   publique de GitHub (sans compte, mise en cache 10 minutes). Le code ne contient que des réglages d'effets, jamais de
   chemin de fichier.
 - **Modération** (propriétaire du dépôt) : fermer une issue la retire de la bibliothèque. Il faut que le dépôt soit
   **public** avec les *Issues* activées, et que le formulaire `preset.yml` soit sur la branche par défaut.
 
-Tout est enregistré dans `Documents/CutFX/library.json`.
+Tout est enregistré dans `Documents/RRFX/library.json`.
 
 ### Annuler la dernière opération
 
-Le bouton **↶ Annuler (n)** de la ligne d'état retire ce que CutFX a posé lors de la dernière opération : les calques
-de réglage, copies du plan et morceaux de rampe `CutFX · …`. Les 10 dernières opérations
+Le bouton **↶ Annuler (n)** de la ligne d'état retire ce que RR FX a posé lors de la dernière opération : les calques
+de réglage, copies du plan et morceaux de rampe `RR FX · …`. Les 10 dernières opérations
 sont mémorisées, même après avoir fermé Premiere. Un calque renommé ou un clip modifié entre-temps n'est pas touché.
 
-**Tout effacer** (*Réglages > Nettoyage*, ou le menu du panneau) retire d'un coup tout ce que CutFX a posé dans la
-séquence ou dans la zone sélectionnée — calques, copies, overlays, textes, sons `CutFX · …` — réactive les caméras
-éteintes par le montage multicam et, au choix, retire les marqueurs CutFX. Tes clips ne sont pas supprimés.
+**Tout effacer** (*Réglages > Nettoyage*, ou le menu du panneau) retire d'un coup tout ce que RR FX a posé dans la
+séquence ou dans la zone sélectionnée — calques, copies, overlays, textes, sons `RR FX · …` — réactive les caméras
+éteintes par le montage multicam et, au choix, retire les marqueurs RR FX. Tes clips ne sont pas supprimés.
 
 ### Suivi de l'opération
 
@@ -198,7 +198,7 @@ après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dan
 Le menu du panneau (☰ en haut à droite du panneau) propose : appliquer l'effet, appliquer la rampe, capturer,
 poser les temps forts, synchroniser, annuler, tout effacer, mode réduit.
 
-Quand le panneau CutFX est sélectionné (clique dedans), une touche suffit :
+Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 
 | Touche | Action |
 | --- | --- |
@@ -217,15 +217,15 @@ Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche
 
 - Au-delà de 8 secondes (beaucoup de coupes, rampes), le bilan clignote et un petit son est joué (désactivable).
 - **▴ Réduire** ne garde que le crédit, le bouton principal et l'état. **▾ Réglages** réaffiche tout.
-- Au démarrage, CutFX vérifie sur GitHub (au plus toutes les 6 heures) si une nouvelle version est publiée et propose
+- Au démarrage, RR FX vérifie sur GitHub (au plus toutes les 6 heures) si une nouvelle version est publiée et propose
   **Télécharger**, **Nouveautés** ou **Plus tard**. Nécessite que le dépôt GitHub soit public.
 
 ## Langue de Premiere et mises à jour de Premiere
 
-Premiere cherche les effets par leur nom affiché, qui dépend de la langue. Au démarrage, CutFX lit la liste des
+Premiere cherche les effets par leur nom affiché, qui dépend de la langue. Au démarrage, RR FX lit la liste des
 effets de ton Premiere et **détecte automatiquement le bon nom** (*Réglages > Effets Premiere utilisés* : ✓ ou ✕).
 Chaque paramètre animé est aussi **vérifié par son nom** : si une version de Premiere réordonne les paramètres d'un
-effet, CutFX retrouve le bon au lieu d'animer le mauvais. Au démarrage, il vérifie que les fonctions de Premiere dont
+effet, RR FX retrouve le bon au lieu d'animer le mauvais. Au démarrage, il vérifie que les fonctions de Premiere dont
 il a besoin existent toujours et affiche « Plugin à mettre à jour » dans le cas contraire.
 
 Si un effet reste introuvable : *Réglages > Avancé*, *Lister les effets vidéo*, puis ajoute son nom exact, par ex.
@@ -234,7 +234,7 @@ effet avec leur numéro.
 
 ### Fonctions de Premiere à confirmer
 
-Ces fonctions sont utilisées par CutFX 1.3 mais peu documentées par Adobe ; elles sont testées sur une timeline
+Ces fonctions sont utilisées par RR FX 1.3 mais peu documentées par Adobe ; elles sont testées sur une timeline
 simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le journal (*Voir le détail*) dit laquelle :
 
 - `exportFramePNG` (aperçu sur la vraie image) ;
@@ -243,7 +243,7 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - `createMarker` / `move` (marqueurs, synchro) ;
 - l'import d'une **séquence d'images** (`importFiles` « images numérotées ») et `setOverrideFrameRate` (overlays
   fournis) ;
-- `trackItem.disabled` (montage multicam) : si ta version ne le permet pas, CutFX le dit sans rien toucher ;
+- `trackItem.disabled` (montage multicam) : si ta version ne le permet pas, RR FX le dit sans rien toucher ;
 - l'ajout d'une piste audio par QE (son de la caméra de référence) ;
 - le décodage du son **AAC** des MOV/MP4 dans le panneau : s'il échoue, exporte le son en WAV, ou utilise
   *Clip > Synchroniser* de Premiere.
@@ -261,7 +261,7 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 ```bash
 npm test          # Node 18+ : cœur, modules, cohérence du projet, et le vrai script Premiere sur une timeline simulée
 npm run smoke     # interface en mode démo dans Chromium (nécessite Playwright)
-npm run package   # fabrique dist/CutFX-<version>-installation.zip
+npm run package   # fabrique dist/RRFX-<version>-installation.zip
 ```
 
 Ouvrir `plugin/index.html` dans un navigateur lance le panneau en **mode démo** (rien n'est modifié).
@@ -286,7 +286,7 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/titles.js           onglet Textes : titres et paroles animés (.mogrt)
   js/audio.js            analyse du son : filtres, attaques, tempo, volume, corrélation (sans DOM, testé)
   js/media.js            lecture du son des WAV / MOV / MP4 (PCM et AAC) par morceaux
-  js/share.js            codes de partage CUTFX1
+  js/share.js            codes de partage RRFX1
   js/packs.js            les 16 overlays fournis, dessinés image par image
   js/community.js        bibliothèque en ligne (issues GitHub : lecture, tri, lien de publication)
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)
@@ -299,7 +299,7 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)
 install/                 scripts d'installation + LISEZMOI
-.github/ISSUE_TEMPLATE/  formulaire « Partager un effet CutFX » (bibliothèque en ligne)
+.github/ISSUE_TEMPLATE/  formulaire « Partager un effet RR FX » (bibliothèque en ligne)
 scripts/                 fabrication du pack, test d'interface
 tests/                   tests Node (sim.js = timeline Premiere simulée)
 ```

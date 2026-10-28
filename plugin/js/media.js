@@ -1,4 +1,4 @@
-/* CutFX — lecture du son des fichiers (sans DOM, testée sous Node avec ffmpeg).
+/* RR FX — lecture du son des fichiers (sans DOM, testée sous Node avec ffmpeg).
    Lit seulement la partie utile : en-têtes, puis la fenêtre de temps demandée.
    - WAV / RF64 : PCM 8-32 bits et flottant ;
    - MOV / MP4 : son PCM (sowt, twos, in24, in32, fl32, fl64, lpcm, ipcm, fpcm, raw) décodé
@@ -6,7 +6,7 @@
    io : { size() -> Promise<number>, read(position, length) -> Promise<Uint8Array> } */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXMedia = factory();
+  else root.RRFXMedia = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 

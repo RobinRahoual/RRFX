@@ -1,21 +1,21 @@
-/* CutFX — vérification des mises à jour : au démarrage, le panneau regarde sur
+/* RR FX — vérification des mises à jour : au démarrage, le panneau regarde sur
    GitHub si une version plus récente a été publiée (au plus une fois toutes les
    6 heures). Une extension ne peut pas s'installer elle-même : on propose de
    télécharger le pack d'installation et d'ouvrir la page de la version. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXUpdates = factory();
+  else root.RRFXUpdates = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const REPO = 'RobinRahoual/CutFX';
+  const REPO = 'RobinRahoual/RRFX';
   const API_URL = 'https://api.github.com/repos/' + REPO + '/releases/latest';
   const RELEASES_URL = 'https://github.com/' + REPO + '/releases/latest';
   const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
 
-  const KEY_LAST_CHECK = 'cutfx.update.lastCheck';
-  const KEY_LATEST = 'cutfx.update.latest';
-  const KEY_DISMISSED = 'cutfx.update.dismissed';
+  const KEY_LAST_CHECK = 'rrfx.update.lastCheck';
+  const KEY_LATEST = 'rrfx.update.latest';
+  const KEY_DISMISSED = 'rrfx.update.dismissed';
 
   /* Compare deux versions « 1.2.3 » (un « v » devant est accepté). Renvoie -1, 0 ou 1. */
   function compareVersions(a, b) {

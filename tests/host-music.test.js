@@ -19,10 +19,10 @@ function setup() {
   return env;
 }
 
-test('markers: CutFX beats added, replaced, listed; user markers kept', () => {
+test('markers: RR FX beats added, replaced, listed; user markers kept', () => {
   const env = setup();
   env.seq._markers = [200 * env.F]; // marqueur de l'utilisateur à 8 s
-  let r = env.call('addMarkers', { times: [1, 1.5, 2.02, 2.02], name: 'CutFX · temps fort' });
+  let r = env.call('addMarkers', { times: [1, 1.5, 2.02, 2.02], name: 'RR FX · temps fort' });
   assert.ok(r.ok, r.error);
   assert.strictEqual(r.added, 3, 'duplicates merged');
   r = env.call('addMarkers', { times: [3, 4], replace: true, from: 0, to: 10 });
@@ -32,11 +32,11 @@ test('markers: CutFX beats added, replaced, listed; user markers kept', () => {
   assert.strictEqual(list[2].name, '');
 });
 
-test('clear all: every CutFX layer and marker goes, the edit stays', () => {
+test('clear all: every RR FX layer and marker goes, the edit stays', () => {
   const env = setup();
   const def = Lib.byId['zoom-in'];
   const res = env.call('resolve', { placement: 'cut', sides: ['pre', 'post'], frames: 8, target: 'adjustment' });
-  env.call('apply', { target: 'adjustment', name: 'CutFX · Zoom in', targets: res.targets.map(t => Object.assign({}, t, { fx: Core.compileEffect(def, {}, t.side, t.frames, 25) })), refreshAdj: true });
+  env.call('apply', { target: 'adjustment', name: 'RR FX · Zoom in', targets: res.targets.map(t => Object.assign({}, t, { fx: Core.compileEffect(def, {}, t.side, t.frames, 25) })), refreshAdj: true });
   env.call('addMarkers', { times: [1, 2] });
   env.seq._markers.push(9 * env.F);
   const r = env.call('clearAll', { scope: 'sequence', markers: true });
@@ -81,7 +81,7 @@ test('auto edit: project rushes placed on the beat, video only, undoable', () =>
   const placed = env.seq.videoTracks[1].items.sort((a, b) => a._s - b._s);
   // Temps arrondis à l'image (0,5 s = 12,5 images → 13) ; chaque rush repart de son point d'entrée.
   assert.deepStrictEqual(placed.map(x => [x._s / env.F, x._e / env.F, x._in / env.F]), [[0, 13, 50], [13, 25, 0], [25, 38, 50], [38, 50, 0]]);
-  assert.ok(placed.every(x => x.projectItem.videoOnly && x.name === 'CutFX · Montage'));
+  assert.ok(placed.every(x => x.projectItem.videoOnly && x.name === 'RR FX · Montage'));
   assert.strictEqual(env.seq.audioTracks[1].items.length, 1);
   assert.strictEqual(env.call('undo', { entries: r.created }).removed, 4);
 });
@@ -121,9 +121,9 @@ test('sync: clips moved with their sound, refused when the place is taken', () =
 
 test('real preview: frames just before and at the nearest cut are exported', () => {
   const env = setup();
-  const r = env.call('grabFrames', { folder: '/tmp/cutfx', prefix: 'pv' });
+  const r = env.call('grabFrames', { folder: '/tmp/rrfx', prefix: 'pv' });
   assert.ok(r.ok, r.error);
-  assert.deepStrictEqual(r.files, ['/tmp/cutfx/pv0', '/tmp/cutfx/pv1']);
+  assert.deepStrictEqual(r.files, ['/tmp/rrfx/pv0', '/tmp/rrfx/pv1']);
   assert.deepStrictEqual(env.frames.map(f => f[0] / env.F), [99, 100]);
   assert.strictEqual(r.cut, 4);
 });
@@ -136,7 +136,7 @@ test('titles: template placed, trimmed, text replaced, animated, undoable', () =
   assert.ok(r.ok, r.error);
   assert.deepStrictEqual(r.warnings, []);
   const t1 = env.seq.videoTracks[r.track].items[0];
-  assert.deepStrictEqual([t1.name, t1._s / env.F, t1._e / env.F], ['CutFX · Texte', 25, 50]);
+  assert.deepStrictEqual([t1.name, t1._s / env.F, t1._e / env.F], ['RR FX · Texte', 25, 50]);
   assert.strictEqual(JSON.parse(t1._mgt.properties[0].v).textEditValue, 'Je cours');
   assert.strictEqual(JSON.parse(t1._mgt.properties[0].v).fontSize, 40, 'style kept');
   const tr = t1.components.find(c => c.matchName === 'AE.ADBE Geometry2');
@@ -152,18 +152,18 @@ test('overlays: imported once, video only, on the cut, with fade and blend mode'
   const overlay = { path: '/fx/leak.mov', name: 'leak', kind: 'video', start: 'start' };
   const r = env.call('resolve', { placement: 'cut', sides: ['pre', 'post'], frames: 10, target: 'adjustment' });
   const targets = r.targets.map(t => Object.assign({}, t, { fx: Core.toWire(Core.compileOverlay({ intensity: 70 }, t.side, t.frames, 8)) }));
-  const res = env.call('apply', { target: 'overlay', name: 'CutFX · Overlay leak', overlay, targets });
+  const res = env.call('apply', { target: 'overlay', name: 'RR FX · Overlay leak', overlay, targets });
   assert.ok(res.ok, res.error);
   assert.deepStrictEqual(res.warnings, []);
   const items = env.seq.videoTracks[1].items.sort((a, b) => a._s - b._s);
-  assert.deepStrictEqual(items.map(i => [i.name, i._s / env.F, i._e / env.F]), [['CutFX · Overlay leak PRE', 90, 100], ['CutFX · Overlay leak POST', 100, 110]]);
+  assert.deepStrictEqual(items.map(i => [i.name, i._s / env.F, i._e / env.F]), [['RR FX · Overlay leak PRE', 90, 100], ['RR FX · Overlay leak POST', 100, 110]]);
   assert.ok(items[0].projectItem.videoOnly);
   const op = items[0].components[0];
   assert.strictEqual(op.properties[1].v, 8, 'blend mode');
   assert.strictEqual(op.properties[0].keys[op.properties[0].keys.length - 1].v, 70);
-  const bin = env.root.children.find(c => c.name === 'CutFX Overlays');
+  const bin = env.root.children.find(c => c.name === 'RR FX Overlays');
   assert.strictEqual(bin.children.length, 1);
-  env.call('apply', { target: 'overlay', name: 'CutFX · Overlay leak', overlay, targets: [Object.assign({}, targets[0], { start: 300 * env.F, end: 310 * env.F, side: 'pre' })] });
+  env.call('apply', { target: 'overlay', name: 'RR FX · Overlay leak', overlay, targets: [Object.assign({}, targets[0], { start: 300 * env.F, end: 310 * env.F, side: 'pre' })] });
   assert.strictEqual(bin.children.length, 1, 'imported once');
   assert.strictEqual(env.call('undo', { entries: res.created }).removed, 2);
 });
@@ -172,9 +172,9 @@ test('overlay shorter than the effect is shortened, images work too', () => {
   const env = setup();
   const r = env.call('resolve', { placement: 'cut', sides: ['post'], frames: 2000, target: 'adjustment' });
   const t = Object.assign({}, r.targets[0], { fx: Core.toWire(Core.compileOverlay({}, 'post', r.targets[0].frames, null)) });
-  const res = env.call('apply', { target: 'overlay', name: 'CutFX · Overlay x', overlay: { path: '/fx/short.mov', kind: 'video' }, targets: [t] });
+  const res = env.call('apply', { target: 'overlay', name: 'RR FX · Overlay x', overlay: { path: '/fx/short.mov', kind: 'video' }, targets: [t] });
   assert.ok(res.ok && /plus court/.test(res.warnings.join(' ')), JSON.stringify(res));
-  const img = env.call('apply', { target: 'overlay', name: 'CutFX · Overlay grain', overlay: { path: '/fx/grain.png', kind: 'image' }, targets: [Object.assign({}, r.targets[0], { frames: 10, end: r.targets[0].start + 10 * env.F, fx: [] })] });
+  const img = env.call('apply', { target: 'overlay', name: 'RR FX · Overlay grain', overlay: { path: '/fx/grain.png', kind: 'image' }, targets: [Object.assign({}, r.targets[0], { frames: 10, end: r.targets[0].start + 10 * env.F, fx: [] })] });
   assert.ok(img.ok, img.error);
 });
 

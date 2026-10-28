@@ -1,9 +1,9 @@
-/* CutFX — Premiere Pro side (ExtendScript, ES3).
+/* RR FX — Premiere Pro side (ExtendScript, ES3).
    Every public function takes a JSON string and returns a JSON string:
    { ok: true, ... } or { ok: false, error: "..." }.
    Times travel as ticks (numbers); 254016000000 ticks = 1 second. */
 
-var CutFX = (function () {
+var RRFX = (function () {
     var TICKS = 254016000000;
     var VERSION = '1.5.0';
     var adjCache = null;
@@ -147,9 +147,9 @@ var CutFX = (function () {
         return out;
     }
 
-    // Calques posés par CutFX et calques de réglage : ce ne sont pas des « plans ».
+    // Calques posés par RR FX et calques de réglage : ce ne sont pas des « plans ».
     function isLayer(it) {
-        if (/^CutFX \u00b7 /.test(it.name)) return true;
+        if (/^RR FX \u00b7 /.test(it.name)) return true;
         try { return !!(it.projectItem && isAdjustment(it.projectItem)); } catch (e) { return false; }
     }
 
@@ -389,17 +389,17 @@ var CutFX = (function () {
 
     // ------------------------------------------------------------ copies du plan (calques vidéo)
     // Les effets « sur le plan » et les rampes ne touchent jamais le clip d'origine :
-    // CutFX pose une copie du passage sur une piste juste au-dessus et travaille dessus.
+    // RR FX pose une copie du passage sur une piste juste au-dessus et travaille dessus.
     // La copie vient d'un sous-clip VIDÉO SEULE du rush : rien n'est posé sur les pistes
     // audio (la musique ne peut pas être écrasée).
 
-    function cutfxBin() {
+    function rrfxBin() {
         var root = app.project.rootItem, i, c;
         for (i = 0; i < root.children.numItems; i++) {
             c = root.children[i];
-            if (c.type === 2 && c.name === 'CutFX') return c;
+            if (c.type === 2 && c.name === 'RR FX') return c;
         }
-        return root.createBin('CutFX');
+        return root.createBin('RR FX');
     }
 
     // Fin du média (le point de sortie marqué par l'utilisateur est remis après lecture).
@@ -418,7 +418,7 @@ var CutFX = (function () {
     function videoSourceOf(master) {
         var name, sub, end, bin;
         if (!master) throw new Error('Ce clip n\'a pas de média source (séquence imbriquée ?)');
-        name = 'CutFX · ' + master.name + ' · vidéo';
+        name = 'RR FX · ' + master.name + ' · vidéo';
         sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
         if (sub) return sub;
         end = mediaEndOf(master);
@@ -426,14 +426,14 @@ var CutFX = (function () {
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 1, 0);
         if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
         if (!sub) throw new Error('Premiere n\'a pas créé le sous-clip vidéo de « ' + master.name + ' »');
-        bin = cutfxBin();
+        bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
         return sub;
     }
 
     // Sous-clip son seul d'un rush (pour poser le son de la caméra de référence).
     function audioSourceOf(master) {
-        var name = 'CutFX · ' + master.name + ' · son', sub, end, bin;
+        var name = 'RR FX · ' + master.name + ' · son', sub, end, bin;
         sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
         if (sub) return sub;
         end = mediaEndOf(master);
@@ -441,7 +441,7 @@ var CutFX = (function () {
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 0, 1);
         if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
         if (!sub) throw new Error('Premiere n\'a pas créé le sous-clip son de « ' + master.name + ' »');
-        bin = cutfxBin();
+        bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
         return sub;
     }
@@ -811,8 +811,8 @@ var CutFX = (function () {
         return ok({ created: created, props: n, warnings: warnings });
     }
 
-    // Removes what CutFX added, and only that: an adjustment layer must still
-    // carry its CutFX name, and a clip's effects are removed from the end only
+    // Removes what RR FX added, and only that: an adjustment layer must still
+    // carry its RR FX name, and a clip's effects are removed from the end only
     // while they are the ones that were added.
     function removeAddedEffects(it, added) {
         var k = it.components.numItems - 1, j, c, n = 0;
@@ -1069,17 +1069,17 @@ var CutFX = (function () {
         return list.length;
     }
 
-    // Pose des marqueurs aux temps donnés (secondes de séquence), nommés « CutFX · … ».
+    // Pose des marqueurs aux temps donnés (secondes de séquence), nommés « RR FX · … ».
     function addMarkers(o) {
         var s = activeSeq(), f = tpf(s), ms = s.markers, i, t, m, n = 0, removed = 0, seen = {};
         if (!ms || !ms.createMarker) return fail('Cette version de Premiere ne permet pas de poser des marqueurs par script.');
-        if (o.replace) removed = removeMarkers(s, 'CutFX', o.from != null ? o.from * TICKS - f : -Infinity, o.to != null ? o.to * TICKS + f : Infinity);
+        if (o.replace) removed = removeMarkers(s, 'RR FX', o.from != null ? o.from * TICKS - f : -Infinity, o.to != null ? o.to * TICKS + f : Infinity);
         for (i = 0; i < o.times.length; i++) {
             t = snap(o.times[i] * TICKS, f);
             if (seen[t]) continue;
             seen[t] = true;
             m = ms.createMarker(t / TICKS);
-            try { m.name = o.name || 'CutFX · temps fort'; } catch (e) {}
+            try { m.name = o.name || 'RR FX · temps fort'; } catch (e) {}
             try { if (m.setColorByIndex) m.setColorByIndex(o.color == null ? 3 : o.color); } catch (e2) {}
             n++;
         }
@@ -1095,7 +1095,7 @@ var CutFX = (function () {
             list = clipsOf(s, i);
             for (j = 0; j < list.length; j++) {
                 it = list[j];
-                if (!/^CutFX · /.test(it.name)) continue;
+                if (!/^RR FX · /.test(it.name)) continue;
                 if (range && !(tk(it.start) < range.b && range.a < tk(it.end))) continue;
                 it.remove(false, false);
                 removed++;
@@ -1106,14 +1106,14 @@ var CutFX = (function () {
             for (j = 0; j < s.audioTracks[i].clips.numItems; j++) list.push(s.audioTracks[i].clips[j]);
             for (j = 0; j < list.length; j++) {
                 it = list[j];
-                if (!/^CutFX · /.test(it.name)) continue;
+                if (!/^RR FX · /.test(it.name)) continue;
                 if (range && !(tk(it.start) < range.b && range.a < tk(it.end))) continue;
                 it.remove(false, false);
                 removed++;
             }
         }
-        if (o.markers) markers = removeMarkers(s, 'CutFX', range ? range.a : -Infinity, range ? range.b : Infinity);
-        // Montage multicam : les plans désactivés par CutFX sont réactivés.
+        if (o.markers) markers = removeMarkers(s, 'RR FX', range ? range.a : -Infinity, range ? range.b : Infinity);
+        // Montage multicam : les plans désactivés par RR FX sont réactivés.
         if (o.multicam) removed += multicamEnable(s, null, range ? range.a : -Infinity, range ? range.b : Infinity);
         return ok({ removed: removed, markers: markers });
     }
@@ -1199,7 +1199,7 @@ var CutFX = (function () {
     }
 
     function placeRushes(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, x, pi, sub, a, b, lo = Infinity, hi = -Infinity, ti, it, label = o.label || 'CutFX · Montage', cache = {};
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, x, pi, sub, a, b, lo = Infinity, hi = -Infinity, ti, it, label = o.label || 'RR FX · Montage', cache = {};
         for (i = 0; i < o.items.length; i++) {
             lo = Math.min(lo, snap(o.items[i].seqStart * TICKS, f));
             hi = Math.max(hi, snap(o.items[i].seqEnd * TICKS, f));
@@ -1335,9 +1335,9 @@ var CutFX = (function () {
         return it.disabled === v;
     }
 
-    // Réactive les plans désactivés par CutFX (nom d'origine suivi de « · CutFX off »).
+    // Réactive les plans désactivés par RR FX (nom d'origine suivi de « · RR FX off »).
     function multicamEnable(s, tracks, a, b) {
-        var n = 0, i, j, list, it, tag = ' · CutFX off';
+        var n = 0, i, j, list, it, tag = ' · RR FX off';
         for (i = 0; i < s.videoTracks.numTracks; i++) {
             if (tracks && !inList(tracks, i)) continue;
             list = clipsOf(s, i);
@@ -1361,7 +1361,7 @@ var CutFX = (function () {
 
     function multicamSwitch(o) {
         var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs = qeSeq(), cams = [], lo = Infinity, hi = -Infinity, i, j, k, c, t, bounds, list, it;
-        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' · CutFX off', a, b, offN = 0;
+        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' · RR FX off', a, b, offN = 0;
         for (i = 0; i < sel.length; i++) {
             c = sel[i].item;
             if (isLayer(c)) continue;
@@ -1457,7 +1457,7 @@ var CutFX = (function () {
 
     // Un texte : modèle .mogrt posé de start à end (s), texte remplacé, animation (fx) ajoutée.
     function placeTitle(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], a = snap(o.start * TICKS, f), b = snap(o.end * TICKS, f), ti = o.track, it, j, comp, label = 'CutFX · Texte', textSet;
+        var s = activeSeq(), f = tpf(s), warnings = [], a = snap(o.start * TICKS, f), b = snap(o.end * TICKS, f), ti = o.track, it, j, comp, label = 'RR FX · Texte', textSet;
         if (!s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un modèle de texte par script.');
         if (!(b > a)) return fail('Durée nulle');
         if (ti === null || ti === undefined) {
@@ -1485,7 +1485,7 @@ var CutFX = (function () {
     // ------------------------------------------------------------ overlays
 
     function placeOverlay(s, ov, t, n, warnings) {
-        var f = tpf(s), pi = itemForPath(ov.path, 'CutFX Overlays', ov.kind === 'sequence'), src, dur, len = t.end - t.start, inT = 0, ti, it, r;
+        var f = tpf(s), pi = itemForPath(ov.path, 'RR FX Overlays', ov.kind === 'sequence'), src, dur, len = t.end - t.start, inT = 0, ti, it, r;
         if (!pi) { warnings.push('Overlay introuvable : ' + ov.path); return null; }
         // Séquence d'images d'un pack : cadence de la séquence, pas de son à protéger.
         if (ov.kind === 'sequence' && ov.fps) { try { pi.setOverrideFrameRate(ov.fps); } catch (e0) {} }
@@ -1504,7 +1504,7 @@ var CutFX = (function () {
             it = placeOn(s, ti, src, t.start, inT, inT + len);
         }
         fixSpan(it, t.start, t.start + len);
-        try { it.name = (t.name || 'CutFX · Overlay') + ' ' + t.side.toUpperCase(); } catch (e) {}
+        try { it.name = (t.name || 'RR FX · Overlay') + ' ' + t.side.toUpperCase(); } catch (e) {}
         return { item: findItemAt(s, ti, t.start), track: ti };
     }
 
@@ -1573,10 +1573,10 @@ var CutFX = (function () {
     // La rampe est posée sur une copie du passage, en morceaux de vitesse constante
     // (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip
     // d'origine, son son et la coupe ne bougent pas ; chaque morceau s'appelle
-    // « CutFX · Rampe » et l'annulation du panneau les retire.
+    // « RR FX · Rampe » et l'annulation du panneau les retire.
     function rampApply(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], item, S, I, s0 = 1, R0 = o.regionStart, R1, K = o.pieces.length;
-        var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'CutFX · Rampe';
+        var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'RR FX · Rampe';
         item = findClip(s, o.track, o.clipStart, o.clipName);
         if (!item) return fail('Clip introuvable : il a bougé depuis l\'analyse. Réessaie.');
         S = tk(item.start); I = tk(item.inPoint);

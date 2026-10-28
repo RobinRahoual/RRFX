@@ -1,9 +1,9 @@
-/* CutFX — onglet Musique : temps forts, montage auto sur le rythme, synchronisation
+/* RR FX — onglet Musique : temps forts, montage auto sur le rythme, synchronisation
    son / image, et volume de la musique pour l'intensité des effets. */
 (function (root) {
   'use strict';
 
-  (root.CutFXFeatures = root.CutFXFeatures || []).push(function (app) {
+  (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Core, Audio, Media, Store, Host } = app;
     const { h, hotText, actionGroup, picker, checkbox, row, section, fitCanvas, css } = app.UI;
     const M = { info: null, manual: null, key: '', samples: null, sr: 0, duration: 0, an: null, loud: null, sync: null, beats: null, zone: null };
@@ -175,10 +175,10 @@
         if (M.info.manual) return { kind: 'warn', title: times.length + ' temps forts détectés', detail: 'Fichier choisi à la main : sa place dans la séquence est inconnue, aucun marqueur posé.' };
         app.status.phase('Pose des marqueurs');
         const b = st().beats;
-        const r = await Host.call('addMarkers', { times, name: 'CutFX · ' + MODES.find(m => m.v === b.mode).short, replace: b.replace, from: M.zone.from, to: M.zone.to });
+        const r = await Host.call('addMarkers', { times, name: 'RR FX · ' + MODES.find(m => m.v === b.mode).short, replace: b.replace, from: M.zone.from, to: M.zone.to });
         if (!r.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: r.error };
         app.log(r.added + ' marqueurs posés' + (r.removed ? ', ' + r.removed + ' anciens retirés' : '') + (M.beats.bpm ? ' · ~' + M.beats.bpm + ' BPM' : ''), 'ok');
-        return { kind: 'ok', title: app.plural(r.added, 'marqueur posé', 'marqueurs posés'), detail: (M.beats.bpm ? '~' + M.beats.bpm + ' BPM · ' : '') + 'nommés « CutFX · … » (Tout effacer les retire).' };
+        return { kind: 'ok', title: app.plural(r.added, 'marqueur posé', 'marqueurs posés'), detail: (M.beats.bpm ? '~' + M.beats.bpm + ' BPM · ' : '') + 'nommés « RR FX · … » (Tout effacer les retire).' };
       });
     }
 
@@ -205,7 +205,7 @@
         const plan = Core.planAutoEdit(times, pr.rushes.map(x => ({ id: x.nodeId, name: x.name, inT: x.inT, outT: x.outT })), { every: a.every, order: a.order, pick: a.pick, seed: Math.floor(Math.random() * 1000) + 1 });
         if (!plan.length) return { kind: 'warn', title: 'Rien à monter', detail: 'Pas assez de temps forts dans la zone.' };
         app.status.phase('Pose des plans');
-        const r = await Host.call('placeRushes', { items: plan.map(p => ({ nodeId: p.id, name: pr.rushes[p.rush].name, seqStart: p.seqStart, seqEnd: p.seqEnd, srcIn: p.srcIn })), minTrack: 0, label: 'CutFX · Montage' });
+        const r = await Host.call('placeRushes', { items: plan.map(p => ({ nodeId: p.id, name: pr.rushes[p.rush].name, seqStart: p.seqStart, seqEnd: p.seqEnd, srcIn: p.srcIn })), minTrack: 0, label: 'RR FX · Montage' });
         if (!r.ok) return { kind: 'error', title: 'Montage impossible', detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));
         if (r.created.length) app.pushHistory({ date: Date.now(), label: 'Montage auto × ' + r.created.length, entries: r.created });
@@ -344,7 +344,7 @@
           done += m.moved;
           warnings.push.apply(warnings, m.warnings);
         }
-        const label = byCamera ? 'CutFX · Multicam' : 'CutFX · Synchro';
+        const label = byCamera ? 'RR FX · Multicam' : 'RR FX · Synchro';
         for (const p of places) {
           const pr = await Host.call('placeRushes', { items: [p], minTrack: 0, label });
           if (!pr.ok) { warnings.push(p.name + ' : ' + pr.error); continue; }
@@ -490,7 +490,7 @@
           { v: 'playhead', label: 'Depuis la tête de lecture' },
           { v: 'selection', label: 'Clips sélectionnés' }
         ], b.zone, v => { b.zone = v; redetect(); })),
-        h('div', { class: 'field' }, checkbox('Remplacer les marqueurs CutFX de la zone', b.replace, v => { b.replace = v; app.persist(); })),
+        h('div', { class: 'field' }, checkbox('Remplacer les marqueurs RR FX de la zone', b.replace, v => { b.replace = v; app.persist(); })),
         h('div', { class: 'note' }, 'Le bouton du haut pose un marqueur sur chaque temps fort : les effets (Position « Marqueurs de la séquence »), les textes et le montage auto s\'en servent.')
       ]));
 
@@ -524,8 +524,8 @@
         row('Caler sur', actionGroup([{ v: 'music', label: 'La musique / le son externe' }, { v: 'camera', label: 'Une des caméras' }], sc.ref, v => { sc.ref = v; app.persist(); render(view); })),
         byCam ? row('Caméra de référence', picker([{ v: 'longest', label: 'Le plan le plus long' }, { v: 'lowest', label: 'La piste la plus basse (V1, V2…)' }], sc.camRef, v => { sc.camRef = v; app.persist(); })) : null,
         h('div', { class: 'note' }, byCam
-          ? 'Plusieurs caméras : CutFX compare leurs sons et les cale sur la caméra de référence, qui ne bouge pas. Clips sélectionnés dans la timeline (une piste par caméra) : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : la référence est posée à la tête de lecture avec son son, les autres caméras au-dessus, une par piste.'
-          : 'Pour un tournage en playback : CutFX compare le son de la caméra avec la musique (ou le son d\'un enregistreur externe posé dans la séquence) et cale l\'image dessus. Clips sélectionnés dans la timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste libre (vidéo seule).'),
+          ? 'Plusieurs caméras : RR FX compare leurs sons et les cale sur la caméra de référence, qui ne bouge pas. Clips sélectionnés dans la timeline (une piste par caméra) : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : la référence est posée à la tête de lecture avec son son, les autres caméras au-dessus, une par piste.'
+          : 'Pour un tournage en playback : RR FX compare le son de la caméra avec la musique (ou le son d\'un enregistreur externe posé dans la séquence) et cale l\'image dessus. Clips sélectionnés dans la timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste libre (vidéo seule).'),
         h('div', { class: 'row-buttons' }, syncBtn), resultsBox
       ]));
 

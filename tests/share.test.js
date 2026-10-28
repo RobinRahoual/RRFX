@@ -14,7 +14,7 @@ const items = [
 test('round trip, compressed and plain, without local ids or file paths', () => {
   [zip, null].forEach(z => {
     const code = Share.encode(items, z);
-    assert.ok(code.startsWith(z ? 'CUTFX1:' : 'CUTFX0:'));
+    assert.ok(code.startsWith(z ? 'RRFX1:' : 'RRFX0:'));
     const back = Share.decode('  Voici mon effet : ' + code + '\n', z);
     assert.strictEqual(back.length, 2, 'overlays (local files) are not shared');
     assert.strictEqual(back[0].name, 'Mon zoom ✨');
@@ -30,7 +30,7 @@ test('compression makes big captured effects shorter', () => {
 });
 
 test('clear errors for wrong or damaged codes', () => {
-  assert.throws(() => Share.decode('hello', zip), /pas un code CutFX/);
+  assert.throws(() => Share.decode('hello', zip), /pas un code RR FX/);
   const code = Share.encode(items, zip);
   assert.throws(() => Share.decode(code.slice(0, 20), zip));
   assert.throws(() => Share.decode(code, null), /Décompression/);

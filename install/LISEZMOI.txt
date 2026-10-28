@@ -1,13 +1,13 @@
-CUTFX - panneau Premiere Pro par @robin.rahoual (Instagram)
+RRFX - panneau Premiere Pro par @robin.rahoual (Instagram)
 
 INSTALLATION
 1. Ferme Premiere Pro.
-2. Windows : double-clique sur "Installer CutFX (Windows).bat"
+2. Windows : double-clique sur "Installer RR FX (Windows).bat"
    (si Windows affiche "Windows a protege votre ordinateur" :
     "Informations complementaires" puis "Executer quand meme").
-   Mac : clic droit sur "Installer CutFX (Mac).command" > Ouvrir.
-   Laisse le dossier CutFX dans le meme dossier que le script.
-3. Lance Premiere Pro, puis : Fenetre > Extensions > CutFX
+   Mac : clic droit sur "Installer RR FX (Mac).command" > Ouvrir.
+   Laisse le dossier RRFX dans le meme dossier que le script.
+3. Lance Premiere Pro, puis : Fenetre > Extensions > RR FX
 
 Il faut un calque de reglage dans le projet :
 Fichier > Nouveau > Calque de reglage (une fois par projet).
@@ -15,9 +15,9 @@ Fichier > Nouveau > Calque de reglage (une fois par projet).
 MISE A JOUR
 Relance simplement le script d'installation de la nouvelle version :
 il remplace l'ancienne. Tes effets perso sont gardes
-(Documents/CutFX/library.json).
+(Documents/RRFX/library.json).
 
 DESINSTALLATION
-Supprime le dossier CutFX de :
+Supprime le dossier RRFX de :
   Windows : %APPDATA%\Adobe\CEP\extensions
   Mac : ~/Library/Application Support/Adobe/CEP/extensions

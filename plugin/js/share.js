@@ -1,9 +1,9 @@
-/* CutFX — codes de partage : un ou plusieurs effets perso dans un texte à copier-coller
-   (message, commentaire, story…). « CUTFX1: » = JSON compressé (deflate) en base64url,
-   « CUTFX0: » = JSON non compressé (si la compression n'est pas disponible). */
+/* RR FX — codes de partage : un ou plusieurs effets perso dans un texte à copier-coller
+   (message, commentaire, story…). « RRFX1: » = JSON compressé (deflate) en base64url,
+   « RRFX0: » = JSON non compressé (si la compression n'est pas disponible). */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXShare = factory();
+  else root.RRFXShare = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
@@ -31,14 +31,14 @@
 
   // zip : { deflate(Uint8Array) -> Uint8Array, inflate(Uint8Array) -> Uint8Array } ou null.
   function encode(items, zip) {
-    const json = JSON.stringify({ cutfx: 1, items: clean(items) });
-    if (zip) return 'CUTFX1:' + toB64url(zip.deflate(utf8(json)));
-    return 'CUTFX0:' + toB64url(utf8(json));
+    const json = JSON.stringify({ rrfx: 1, items: clean(items) });
+    if (zip) return 'RRFX1:' + toB64url(zip.deflate(utf8(json)));
+    return 'RRFX0:' + toB64url(utf8(json));
   }
 
   function decode(code, zip) {
-    const m = /CUTFX([01]):([A-Za-z0-9_\-]+)/.exec(String(code || '').replace(/\s+/g, ''));
-    if (!m) throw new Error('Ce n\'est pas un code CutFX (il commence par « CUTFX1: »).');
+    const m = /RRFX([01]):([A-Za-z0-9_\-]+)/.exec(String(code || '').replace(/\s+/g, ''));
+    if (!m) throw new Error('Ce n\'est pas un code RR FX (il commence par « RRFX1: »).');
     let bytes = fromB64url(m[2]);
     if (m[1] === '1') {
       if (!zip) throw new Error('Décompression indisponible ici.');

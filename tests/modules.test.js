@@ -47,7 +47,7 @@ test('updates: compares versions', () => {
 test('updates: newer release found, installation pack preferred, cache and dismiss', async () => {
   const storage = memoryStorage();
   let calls = 0;
-  const fetch = async () => { calls++; return release('v1.2.0', [{ name: 'CutFX-1.2.0-installation.zip', browser_download_url: 'zip' }]); };
+  const fetch = async () => { calls++; return release('v1.2.0', [{ name: 'RRFX-1.2.0-installation.zip', browser_download_url: 'zip' }]); };
   const u = await Updates.checkForUpdate({ fetch, storage, currentVersion: '1.1.0', now: () => 1000 });
   assert.strictEqual(u.version, '1.2.0');
   assert.strictEqual(u.downloadUrl, 'zip');

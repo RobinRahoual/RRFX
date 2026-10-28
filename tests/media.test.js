@@ -13,7 +13,7 @@ let hasFfmpeg = true;
 try { execFileSync('ffmpeg', ['-version'], { stdio: 'ignore' }); } catch (e) { hasFfmpeg = false; }
 const opt = { skip: hasFfmpeg ? false : 'ffmpeg absent' };
 
-const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'cutfx-media-'));
+const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'rrfx-media-'));
 const SR = 48000;
 
 // Une musique stéréo de 20 s (canaux différents) écrite en WAV 16 bits.

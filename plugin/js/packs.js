@@ -1,10 +1,10 @@
-/* CutFX — packs d'overlays fournis avec le plugin. Rien à télécharger : chaque overlay est
+/* RR FX — packs d'overlays fournis avec le plugin. Rien à télécharger : chaque overlay est
    dessiné image par image (light leaks, flares, bokeh, poussière, brûlure de pellicule,
    VHS…) sur fond noir, pour un mode de fusion Écran / Ajout. Pour Premiere, la séquence
    d'images JPEG est fabriquée une fois, à la taille de la séquence, puis gardée sur disque. */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
-  else root.CutFXPacks = factory();
+  else root.RRFXPacks = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
