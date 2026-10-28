@@ -1713,7 +1713,8 @@
     undo: () => undoLast(),
     capture: () => capture(),
     beats: () => app.actions.beats && app.actions.beats(),
-    sync: () => app.actions.sync && app.actions.sync()
+    sync: () => app.actions.sync && app.actions.sync(),
+    convert: () => app.actions.convert && app.actions.convert()
   };
 
   function renderShortcuts() {
@@ -1778,6 +1779,7 @@
       { id: 'capture', label: 'Capturer la sélection' },
       { id: 'beats', label: 'Poser les marqueurs des temps forts' },
       { id: 'sync', label: 'Synchroniser la sélection sur la musique' },
+      { id: 'convert', label: 'Convertir le LOG en Rec.709 (caméra enregistrée)' },
       { id: 'undo', label: 'Annuler la dernière opération RR FX' },
       { id: 'clear', label: 'Tout effacer (séquence)…' },
       { separator: true },

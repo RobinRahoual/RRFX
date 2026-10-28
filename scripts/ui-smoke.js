@@ -226,6 +226,41 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.list-item:has-text("Nuit perso") .action:text-is("Ouvrir")');
     await page.waitForSelector('.tab.on[data-tab=color]', { timeout: 3000 });
   });
+  await step('conversion log', async () => {
+    await page.click('.tab[data-tab=color]');
+    // Caméra 1 : Sony A7 III, S-Log3, LUT du fabricant importée.
+    await page.click('.action:has-text("+ Ajouter une caméra")');
+    await page.selectOption('.conv-form .row:has-text("Marque") select', 'sony');
+    await page.fill('.conv-form .row:has-text("Modèle") input', 'A7 III');
+    if (!(await page.isDisabled('.conv-form .action:has-text("Enregistrer la caméra")'))) throw new Error('enregistrable sans LUT');
+    const cube = path.join(tmp, 'SLog3SGamut3Cine-to-709.cube');
+    fs.writeFileSync(cube, 'LUT_3D_SIZE 2\n0 0 0\n1 0 0\n0 1 0\n1 1 0\n0 0 1\n1 0 1\n0 1 1\n1 1 1\n');
+    const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.conv-form .action:has-text("Importer la LUT")')]);
+    await chooser.setFiles(cube);
+    await page.waitForSelector('.conv-form .note:has-text("SLog3SGamut3Cine-to-709.cube")', { timeout: 3000 });
+    await page.click('.conv-form .action:has-text("Enregistrer la caméra")');
+    await page.waitForSelector('.conv-cam.on:has-text("Sony A7 III S-Log3")', { timeout: 3000 });
+    // Caméra 2 : iPhone en Apple Log, LUT calculée, exposée à +1 IL.
+    await page.click('.action:has-text("+ Ajouter une caméra")');
+    await page.selectOption('.conv-form .row:has-text("Marque") select', 'apple');
+    await page.fill('.conv-form .row:has-text("Modèle") input', 'iPhone 16 Pro');
+    await page.click('.conv-form .action:text-is("Calculée")');
+    await page.selectOption('.conv-form .row:has-text("Exposé à") select', '1');
+    await page.click('.conv-form .action:has-text("Enregistrer la caméra")');
+    await page.waitForSelector('.conv-cam.on:has-text("Apple iPhone 16 Pro Apple Log")', { timeout: 3000 });
+    if ((await page.locator('.conv-cam').count()) !== 2) throw new Error('deux caméras attendues');
+    // Aperçu converti puis un clic.
+    await page.click('.lr-panel:has-text("Conversion LOG") label.checkbox');
+    await page.click('.conv-go');
+    await page.waitForSelector('#status.ok:has-text("Rec.709 · Apple iPhone 16 Pro Apple Log")', { timeout: 5000 });
+    // Raccourci L avec la caméra Sony.
+    await page.click('.conv-cam:has-text("Sony A7 III")');
+    await page.click('#status-close').catch(() => {});
+    await page.locator('body').press('l');
+    await page.waitForSelector('#status.ok:has-text("Rec.709 · Sony A7 III S-Log3")', { timeout: 5000 });
+    const saved = await page.evaluate(() => window.RRFXApp.settings().logconv);
+    if (saved.cams.length !== 2 || saved.cams[0].lutName !== 'SLog3SGamut3Cine-to-709.cube' || saved.cams[1].ev !== 1) throw new Error('caméras mal enregistrées : ' + JSON.stringify(saved));
+  });
   await step('intensité selon le volume', async () => {
     await page.click('.tab[data-tab=effects]');
     await page.click('.chips .action:text-is("Tout")');

@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.7.0';
+    var VERSION = '1.8.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -755,7 +755,7 @@ var RRFX = (function () {
     // ------------------------------------------------------------ public: apply
 
     function apply(o) {
-        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, j, t, adj = null, placed, track, start, comp, n = 0;
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, j, t, adj = null, placed, track, start, comp, n = 0, lutSet = 0;
         if (o.target === 'overlay' && !o.overlay) return fail('Overlay manquant');
         if (o.target === 'adjustment' || !o.target) {
             // Début d'un lot : on revérifie que le calque de réglage est toujours dans le projet.
@@ -811,12 +811,17 @@ var RRFX = (function () {
                     if (entry.added && !t.fx[j].intrinsic) entry.added.push(comp.matchName);
                     item = findItemAt(s, track, start);
                     n += setProps(s, item, comp, t.fx[j], t.start, f, warnings);
+                    // Look ou conversion : la LUT .cube va dans la « LUT d'entrée » de Lumetri.
+                    if (t.fx[j].lut) {
+                        var lutErr = setInputLut(comp, t.fx[j].lut);
+                        if (lutErr) warnings.push(lutErr); else lutSet++;
+                    }
                 } catch (err) {
                     warnings.push(t.fx[j].names[0] + ' : ' + err.toString());
                 }
             }
         }
-        return ok({ created: created, props: n, warnings: warnings });
+        return ok({ created: created, props: n, lutSet: lutSet, warnings: warnings });
     }
 
     // Removes what RR FX added, and only that: an adjustment layer must still
@@ -1525,6 +1530,121 @@ var RRFX = (function () {
         return ok({ created: [{ kind: 'adj', track: ti, start: a, name: label }], track: ti, warnings: warnings });
     }
 
+    // ------------------------------------------------------------ Lumetri : LUT d'entrée
+
+    // Premiere range la LUT d'entrée personnalisée dans le champ texte sans nom deux crans après
+    // « Correction de base », et ne l'utilise que si le menu « LUT d'entrée » (quatre crans après)
+    // vaut 1. Le chemin doit finir par un séparateur. Le second menu du même nom n'est pas touché.
+    var BASIC_NAME = /^(basic correction|correction de base|grundkorrektur|grundlegende korrektur|corrección básica|correzione di base|correção básica)$/i;
+    var INPUT_LUT = /^(input lut|lut d.entrée|eingabe-lut|lut de entrada|lut di input|lut di ingresso)$/i;
+
+    function inputLutSlot(comp) {
+        var P = comp.properties, n = P.numItems, i, basic = -1;
+        for (i = 0; i < n; i++) if (BASIC_NAME.test(String(P[i].displayName))) { basic = i; break; }
+        if (basic < 0) for (i = 4; i < n; i++) if (INPUT_LUT.test(String(P[i].displayName))) { basic = i - 4; break; }
+        if (basic < 0 || basic + 4 >= n) return -1;
+        return basic;
+    }
+
+    // Renvoie '' si la LUT est chargée, sinon la raison.
+    function setInputLut(comp, path) {
+        var b = inputLutSlot(comp), P, clean, stored, back;
+        if (b < 0) return 'LUT d\'entrée introuvable dans Lumetri : choisis-la à la main (Correction de base > LUT d\'entrée > Parcourir…)';
+        P = comp.properties;
+        clean = String(path).replace(/[\\\/]+$/, '');
+        stored = clean + (/\\/.test(clean) ? '\\' : '/');
+        try { P[b + 1].setValue(1, true); } catch (e0) {}
+        try {
+            P[b + 2].setValue(stored, true);
+            P[b + 4].setValue(1, true);
+            back = String(P[b + 2].getValue()).replace(/[\\\/]+$/, '');
+            if (back !== clean || Number(P[b + 4].getValue()) !== 1) return 'Premiere n\'a pas gardé la LUT d\'entrée : choisis-la à la main (Correction de base > LUT d\'entrée > Parcourir…)';
+        } catch (e1) {
+            return 'LUT d\'entrée refusée par Premiere (' + e1.toString() + ') : choisis-la à la main';
+        }
+        return '';
+    }
+
+    // ------------------------------------------------------------ public: conversion LOG → Rec.709
+
+    var CONV_NAME = /^RR FX · Conversion/;
+
+    function isGraphic(it) {
+        try { if (it.isMGT && it.isMGT()) return true; } catch (e) {}
+        try { return !!(it.getMGTComponent && it.getMGTComponent()); } catch (e2) { return false; }
+    }
+    function isRush(it) { return !isLayer(it) && !isGraphic(it); }
+
+    // Un calque de réglage Lumetri juste au-dessus des rushs (sous les looks, titres et overlays),
+    // de la longueur des rushs, avec la LUT de conversion en LUT d'entrée. o.scope : 'sequence'
+    // (un calque du premier au dernier rush) ou 'selection' (un calque par groupe de rushs choisis).
+    function logConvert(o) {
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], spans = [], merged = [], replaced = 0, lutSet = 0, below = 0;
+        var i, j, k, list, c, a, b, adj, top, ti, before, placed, comp, err, sel;
+        adjCache = null;
+        adj = findAdjustment(o.adjNodeId);
+        if (!adj) return fail('Aucun calque de réglage dans le projet. Crée-en un : Fichier > Nouveau > Calque de réglage.');
+        if (o.scope === 'selection') {
+            sel = selectedVideo(s);
+            for (i = 0; i < sel.length; i++) if (isRush(sel[i].item)) spans.push({ a: tk(sel[i].item.start), b: tk(sel[i].item.end), top: sel[i].track });
+            if (!spans.length) return fail('Sélectionne les rushs à convertir dans la timeline.');
+        } else {
+            a = Infinity; b = 0; top = 0;
+            for (i = 0; i < s.videoTracks.numTracks; i++) {
+                list = clipsOf(s, i);
+                for (j = 0; j < list.length; j++) {
+                    if (!isRush(list[j])) continue;
+                    a = Math.min(a, tk(list[j].start)); b = Math.max(b, tk(list[j].end)); top = Math.max(top, i);
+                }
+            }
+            if (!(b > 0)) return fail('Aucun rush dans la séquence.');
+            spans.push({ a: a, b: b, top: top });
+        }
+        spans.sort(function (x, y) { return x.a - y.a; });
+        for (i = 0; i < spans.length; i++) {
+            c = merged.length ? merged[merged.length - 1] : null;
+            if (c && spans[i].a <= c.b + f) { c.b = Math.max(c.b, spans[i].b); c.top = Math.max(c.top, spans[i].top); }
+            else merged.push({ a: spans[i].a, b: spans[i].b, top: spans[i].top });
+        }
+        // Une conversion déjà posée là est remplacée : deux conversions à la suite brûleraient l'image.
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                if (!CONV_NAME.test(list[j].name)) continue;
+                for (k = 0; k < merged.length; k++) {
+                    if (tk(list[j].start) < merged[k].b && merged[k].a < tk(list[j].end)) { list[j].remove(false, false); replaced++; break; }
+                }
+            }
+        }
+        for (k = 0; k < merged.length; k++) {
+            a = merged[k].a; b = merged[k].b; ti = merged[k].top + 1;
+            if (ti < s.videoTracks.numTracks && !trackClear(s, ti, a, b)) {
+                // Piste occupée (look, titre…) : on glisse une piste neuve juste au-dessus des rushs.
+                before = s.videoTracks.numTracks;
+                try { qeSeq().addTracks(1, ti, 0); } catch (e) {}
+                if (s.videoTracks.numTracks > before && trackClear(s, ti, a, b)) {
+                    warnings.push('Piste V' + (ti + 1) + ' ajoutée juste au-dessus des rushs');
+                    for (j = 0; j < created.length; j++) if (created[j].track >= ti) created[j].track++;
+                    for (j = k + 1; j < merged.length; j++) if (merged[j].top >= ti) merged[j].top++;
+                }
+            }
+            placed = placeAdjustment(s, adj, ti, a, b, o.name, warnings);
+            created.push({ kind: 'adj', track: placed.track, start: a, name: o.name });
+            comp = addEffect(s, placed.track, a, { names: o.fxNames && o.fxNames.length ? o.fxNames : ['Lumetri Color'] }, warnings);
+            if (comp && o.lutPath) {
+                err = setInputLut(comp, o.lutPath);
+                if (err) warnings.push(err); else lutSet++;
+            }
+            // Titres et calques sous la conversion : ils seraient convertis eux aussi.
+            for (i = 0; i < placed.track; i++) {
+                list = clipsOf(s, i);
+                for (j = 0; j < list.length; j++) if (!isRush(list[j]) && tk(list[j].start) < b && a < tk(list[j].end)) below++;
+            }
+        }
+        if (below) warnings.push(below + ' titre(s) ou calque(s) sous le calque de conversion : remonte-les au-dessus pour qu\'ils ne soient pas convertis.');
+        return ok({ created: created, layers: created.length, replaced: replaced, lutSet: lutSet, warnings: warnings });
+    }
+
     // ------------------------------------------------------------ public: ressources (dossiers liés)
 
     // Piste vidéo la plus haute qui a une image à l'instant t (-1 : aucune).
@@ -1778,6 +1898,7 @@ var RRFX = (function () {
         adjustmentInfo: guard(adjustmentInfo),
         adjustmentFromSelection: guard(adjustmentFromSelection),
         rampResolve: guard(rampResolve),
-        rampApply: guard(rampApply)
+        rampApply: guard(rampApply),
+        logConvert: guard(logConvert)
     };
 })();

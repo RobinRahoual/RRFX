@@ -387,3 +387,15 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .lr-look:hover { border-color: var(--field-border); }
 .lr-look canvas { display: block; width: 100%; aspect-ratio: 16 / 9; }
 .lr-look span { display: block; padding: 3px 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ---------- Conversion LOG → Rec.709 ---------- */
+.conv-cam { display: flex; align-items: center; gap: 8px; padding: 6px 6px; margin: 2px 0; border-radius: 4px; border: 1px solid transparent; cursor: pointer; }
+.conv-cam:hover { background: var(--btn-hover); }
+.conv-cam.on { border-color: var(--field-border); background: var(--bg-2); }
+.conv-dot { color: var(--text-muted); font-size: 12px; width: 12px; }
+.conv-cam.on .conv-dot { color: var(--accent); }
+.conv-txt { flex: 1; min-width: 0; }
+.conv-txt .note { margin: 1px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.conv-form { padding: 4px 0; }
+.cta.conv-go { margin: 8px 0 4px; }

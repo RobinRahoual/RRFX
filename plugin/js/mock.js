@@ -75,7 +75,8 @@
     readBlend: () => ({ ok: true, value: 8 }),
     placeAsset: async a => { await wait(80 * a.times.length); return { ok: true, created: a.times.map(t => ({ kind: a.kind === 'audio' ? 'aud' : 'adj', track: 2, start: t * TICKS, name: a.name })), warnings: [] }; },
     importAssets: a => ({ ok: true, imported: a.paths.length, failed: [] }),
-        multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
+    logConvert: async a => { await wait(200); return { ok: true, created: [{ kind: 'adj', track: 1, start: 0, name: a.name }], layers: 1, replaced: 0, lutSet: a.lutPath ? 1 : 0, warnings: [] }; },
+    multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
   };
   const markers = [];
 

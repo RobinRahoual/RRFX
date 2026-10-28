@@ -121,6 +121,26 @@ const ISSUES = [
   // Panneaux remis comme au départ pour la suite.
   for (const t of ['Courbe des tonalités', 'Mélangeur de couleurs', 'Étalonnage des couleurs', 'Calibrage', 'Looks', 'Réglages de base']) await page.click('.lr-head:has-text("' + t + '")');
 
+  // Conversion LOG → Rec.709 : deux caméras enregistrées, puis l'ajout d'une caméra.
+  await page.evaluate(() => {
+    window.RRFXApp.settings().logconv = { active: 'a', scope: 'sequence', cams: [
+      { id: 'a', brand: 'sony', model: 'A7 III', profile: 'slog3-sg3c', mode: 'lut', lut: '', lutName: 'SLog3SGamut3.CineToLC-709.cube', ev: 0, contrast: 'standard' },
+      { id: 'b', brand: 'apple', model: 'iPhone 16 Pro', profile: 'applelog', mode: 'calc', ev: 1, contrast: 'standard' }] };
+  });
+  await page.click('.tab[data-tab=ramp]');
+  await page.click('.tab[data-tab=color]');
+  await page.click('.lr-head:has-text("Looks")');
+  await page.click('.lr-head:has-text("Réglages de base")');
+  await shot('couleur-conversion', 900);
+  await page.click('.action:has-text("+ Ajouter une caméra")');
+  await page.selectOption('.conv-form .row:has-text("Marque") select', 'panasonic');
+  await page.fill('.conv-form .row:has-text("Modèle") input', 'GH5');
+  await page.click('.conv-form .action:text-is("Calculée")');
+  await shot('couleur-conversion-camera', 600);
+  await page.click('.conv-form .action:has-text("Annuler")');
+  await page.click('.lr-head:has-text("Looks")');
+  await page.click('.lr-head:has-text("Réglages de base")');
+
   // 4. Musique : analyse d'un morceau et temps forts posés
   await page.click('.tab[data-tab=music]');
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.action:has-text("Choisir un fichier")')]);

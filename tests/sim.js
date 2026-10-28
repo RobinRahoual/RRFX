@@ -29,7 +29,8 @@ function makeEnv(fps) {
     'Offset': ['AE.ADBE Offset', [[960, 540], 0]],
     'Wave Warp': ['AE.ADBE Wave Warp', [1, 10, 40, 90, 1, 0, 0, 0]],
     'Lens Distortion': ['AE.ADBE Lens Distortion', [0, 0, 0]],
-    'Echo': ['AE.ADBE Echo', [-0.033, 1, 1, 1, 1]]
+    'Echo': ['AE.ADBE Echo', [-0.033, 1, 1, 1, 1]],
+    'Lumetri Color': ['AE.ADBE Lumetri', [0, null, 0, '', 0, 0, 0, 100, 0]]
   };
 
   class Param {
@@ -65,7 +66,9 @@ function makeEnv(fps) {
     'AE.ADBE Offset': ['Shift Center To', 'Blend With Original'],
     'AE.ADBE Wave Warp': ['Wave Type', 'Wave Height', 'Wave Width', 'Direction', 'Wave Speed', 'Pinning', 'Phase', 'Antialiasing'],
     'AE.ADBE Lens Distortion': ['Curvature', 'Vertical Decentering', 'Horizontal Decentering'],
-    'AE.ADBE Echo': ['Echo Time (seconds)', 'Number Of Echoes', 'Starting Intensity', 'Decay', 'Echo Operator']
+    'AE.ADBE Echo': ['Echo Time (seconds)', 'Number Of Echoes', 'Starting Intensity', 'Decay', 'Echo Operator'],
+    // Lumetri : la LUT d'entrée personnalisée est le champ sans nom deux crans après « Basic Correction ».
+    'AE.ADBE Lumetri': ['High Dynamic Range', 'Basic Correction', ' ', ' ', ' ', 'Input LUT', 'Input LUT', 'Intensity', 'Temperature']
   };
   let removable = true;
   let secondsOnly = false;

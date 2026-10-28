@@ -10,7 +10,7 @@
     const { h, actionGroup, picker, row, fitCanvas, css } = app.UI;
 
     const PW = 480, PH = 270; // taille de calcul de l'aperçu
-    const DEFAULTS = { open: { looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: 'Mon look', target: 'clip' };
+    const DEFAULTS = { open: { log: true, looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: 'Mon look', target: 'clip' };
     const st = () => {
       const s = app.settings();
       if (!s.color || typeof s.color !== 'object') s.color = {};
@@ -29,8 +29,12 @@
       const shots = Pv.shots(), img = shots[st().shot === 'B' ? 'B' : 'A'];
       const c = document.createElement('canvas');
       c.width = PW; c.height = PH;
-      c.getContext('2d').drawImage(img, 0, 0, PW, PH);
-      return { canvas: c, data: c.getContext('2d').getImageData(0, 0, PW, PH) };
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0, PW, PH);
+      // Images en LOG : la conversion Rec.709 de la caméra passe avant le look (comme dans Premiere).
+      const conv = app.conversion && app.conversion.previewLut();
+      if (conv) { const d = g.getImageData(0, 0, PW, PH); A.applyLut(d.data, conv); g.putImageData(d, 0, 0); }
+      return { canvas: c, data: g.getImageData(0, 0, PW, PH) };
     }
 
     // Recalcule l'image « après » (LUT réduite pendant un glissement, fine à la fin).
@@ -468,18 +472,20 @@
         const r = await Host.call('resolve', { placement, sides: ['post'], frames: 1, target: 'adjustment' });
         if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error + (s.target === 'clip' ? ' (ou choisis « Toute la séquence »)' : '') };
         const found = await lumetriName();
-        const label = 'RR FX · Look ' + name, fx = [{ type: 'lumetri', names: (found ? [found] : []).concat(A.LUMETRI_NAMES), props: [] }];
+        const label = 'RR FX · Look ' + name, fx = [{ type: 'lumetri', names: (found ? [found] : []).concat(A.LUMETRI_NAMES), props: [], lut: file || undefined }];
         const res = await Host.call('apply', { target: 'adjustment', name: label, targets: r.targets.map(t => Object.assign({}, t, { name: label, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
         if (!res.ok) return { kind: 'error', title: 'Calque non posé', detail: res.error };
         if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'Look · ' + name, entries: res.created });
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
         if (file) app.log('LUT du look : ' + file, 'ok');
+        const title = 'Look posé · ' + app.plural(res.created.length, 'calque Lumetri', 'calques Lumetri');
+        if (file && res.lutSet) return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title, detail: 'LUT « ' + Store.path.basename(file) + ' » chargée dans Lumetri (LUT d\'entrée).' };
         const copied = file && navigator.clipboard ? await navigator.clipboard.writeText(file).then(() => true, () => false) : false;
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
-          title: 'Look posé · ' + app.plural(res.created.length, 'calque Lumetri', 'calques Lumetri'),
+          title,
           detail: file
-            ? 'Lumetri > Créatif > Look > Parcourir… et choisis « ' + Store.path.basename(file) + ' »' + (copied ? ' (chemin copié)' : '') + '. Après un redémarrage de Premiere, il est aussi dans la liste des Looks.'
+            ? 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + Store.path.basename(file) + ' »' + (copied ? ' (chemin copié)' : '') + '. Après un redémarrage de Premiere, il est aussi dans la liste des Looks.'
             : 'Mode démo : exporte la LUT (.cube) pour l\'essayer.'
         };
       });
@@ -557,6 +563,7 @@
           actionGroup([{ v: 'split', label: 'Avant | Après' }, { v: 'after', label: 'Après' }, { v: 'before', label: 'Avant' }], s.view, v => { s.view = v; app.persist(); drawPreview(); }),
           actionGroup([{ v: 'A', label: 'Plan 1' }, { v: 'B', label: 'Plan 2' }], s.shot, v => { s.shot = v; V.src = null; app.persist(); update(true); }),
           realBtn)));
+      if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       view.appendChild(looksPanel());
       view.appendChild(basicPanel());
       view.appendChild(curvePanel());

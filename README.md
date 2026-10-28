@@ -109,6 +109,31 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
 Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
 constante (« RR FX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
 
+### Conversion LOG → Rec.709 en un clic (onglet Couleur)
+
+Tu filmes en LOG ? Enregistre **une seule fois** ta caméra et sa LUT de conversion, elles servent ensuite à **tous
+tes projets** :
+
+1. *Couleur > Conversion LOG → Rec.709 > + Ajouter une caméra* : marque, modèle (ex. Sony **A7 III**), profil
+   (ex. **S-Log3 / S-Gamut3.Cine**) ;
+2. **LUT du fabricant** : *Importer la LUT .cube…* (le bouton *Trouver la LUT officielle* lance la recherche). RR FX
+   la garde dans `Documents/RRFX/Conversion` et la copie dans le dossier *LUTs/Technical* d'Adobe (elle apparaît
+   aussi dans la liste *LUT d'entrée* de Lumetri). Ou **Calculée** : sans fichier, RR FX calcule la conversion
+   d'après les courbes publiées par le fabricant, avec la compensation si tu exposes ton log plus haut (ex. +1,7 IL)
+   et un rendu Doux, Standard ou Contrasté ;
+3. **Convertir en Rec.709** (ou la touche **L**, ou le menu du panneau) : un **calque de réglage Lumetri** est posé
+   **juste au-dessus des rushs**, du premier au dernier rush de la timeline (ou au-dessus des **rushs choisis**),
+   avec la LUT chargée en *LUT d'entrée*. Si la piste du dessus est prise (look, titre…), une piste est insérée :
+   la conversion passe toujours **avant** les looks. Reconvertir **remplace** l'ancienne conversion (jamais deux à la
+   suite), et ↶ Annuler la retire.
+
+Plusieurs caméras (A7 III + iPhone en Apple Log…) : enregistre-les toutes, clique sur celle à utiliser, sélectionne
+ses rushs et choisis *Rushs choisis*. L'option *Aperçu en LOG* convertit tes vraies images (📷) avant le look dans
+l'aperçu. Profils : Sony S-Log3 / S-Log2, Panasonic V-Log (L), Canon C-Log / C-Log2 / C-Log3, Fujifilm F-Log /
+F-Log2, Nikon N-Log, DJI D-Log (et D-Log M avec la LUT DJI), Apple Log, Blackmagic Film Gen 5, GoPro GP-Log et
+Samsung Log (LUT du fabricant), ARRI LogC3 / LogC4. Premiere 25 qui convertit déjà le log tout seul (*Gestion des
+couleurs > Détection automatique du log*) : coupe cette option, sinon l'image est convertie deux fois.
+
 ### Onglet Couleur (façon Lightroom)
 
 La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom :
@@ -130,9 +155,9 @@ Curseurs comme dans Lightroom : glisser (Maj = fin), double-clic sur le nom = va
 saisie ; ↺ remet un panneau à zéro.
 
 **Appliquer le look** (bouton du haut) : RR FX fabrique une **LUT .cube** (33³), l'installe dans le dossier des LUT
-d'Adobe et pose un **calque de réglage Lumetri** sur le clip visé (ou la sélection, ou **toute la séquence**). Les
-scripts de Premiere ne peuvent pas choisir une LUT : le chemin est copié, il reste *Lumetri > Créatif > Look >
-Parcourir…* (après un redémarrage, le look est aussi dans la liste). **Exporter .cube…** sert aussi pour Resolve,
+d'Adobe et pose un **calque de réglage Lumetri** sur le clip visé (ou la sélection, ou **toute la séquence**), avec la
+LUT **déjà chargée** dans *Correction de base > LUT d'entrée*. Si une version de Premiere refuse, le chemin est copié
+et il reste *LUT d'entrée (ou Créatif > Look) > Parcourir…*. **Exporter .cube…** sert aussi pour Resolve,
 Final Cut, CapCut… **Exporter DCTL…** crée un vrai **DCTL pour DaVinci Resolve** avec les mêmes curseurs (60 curseurs,
 courbes intégrées) : Premiere ne lit pas les DCTL. Aperçu, LUT et DCTL font exactement le même calcul (vérifié par
 les tests : le DCTL y est compilé en C et comparé au panneau). **Enregistrer le look** le range dans Mes effets :
@@ -252,7 +277,7 @@ après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dan
 ### Sans cliquer : menu et raccourcis
 
 Le menu du panneau (☰ en haut à droite du panneau) propose : appliquer l'effet, appliquer la rampe, capturer,
-poser les temps forts, synchroniser, annuler, tout effacer, mode réduit.
+poser les temps forts, synchroniser, convertir le LOG en Rec.709, annuler, tout effacer, mode réduit.
 
 Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 
@@ -264,6 +289,7 @@ Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 | **C** | Capturer la sélection |
 | **B** | Poser les marqueurs des temps forts |
 | **S** | Synchroniser la sélection sur la musique |
+| **L** | Convertir le LOG en Rec.709 (caméra enregistrée) |
 | **Échap** | Arrêter l'opération en cours |
 
 Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche puis appuie sur la nouvelle
@@ -302,6 +328,9 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - `trackItem.disabled` (montage multicam) : si ta version ne le permet pas, RR FX le dit sans rien toucher ;
 - l'ajout d'une piste audio par QE (son de la caméra de référence, SFX des Ressources) ;
 - le dossier des LUT de l'utilisateur (`Adobe/Common/LUTs/Creative`) lu par Lumetri ;
+- la **LUT d'entrée de Lumetri** remplie par script (champ sans nom après *Correction de base*, connu depuis
+  Premiere 23.4) et l'insertion d'une piste vidéo au milieu par QE (`addTracks`) : si Premiere refuse, le calque est
+  posé quand même et le chemin de la LUT est copié ;
 - le décodage du son **AAC** des MOV/MP4 dans le panneau : s'il échoue, exporte le son en WAV, ou utilise
   *Clip > Synchroniser* de Premiere.
 
@@ -362,6 +391,8 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/community.js        bibliothèque en ligne (issues GitHub : lecture, tri, lien de publication)
   js/develop.js          moteur couleur façon Lightroom : réglages, LUT .cube, DCTL (testé, DCTL compilé en C)
   js/couleur.js          onglet Couleur : histogramme, avant/après, panneaux Lightroom, looks
+  js/logconv.js          conversion LOG → Rec.709 : courbes des fabricants, gamuts, LUT calculée (testé)
+  js/conversion.js       caméras enregistrées, LUT de conversion, calque au-dessus des rushs en un clic
   js/assets.js           ressources : indexation des dossiers liés, classement, filtres, LUT .cube (testé)
   js/ressources.js       onglet Ressources : vignettes, aperçus, actions
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)
