@@ -250,6 +250,24 @@
     return { rate, bands: [onsetFrom([low]), onsetFrom([mid]), onsetFrom([high])] };
   }
 
+  // Courbe d'un long enregistrement lu par morceaux : chaque morceau est lu avec `skip`
+  // secondes d'avance (le temps que les filtres se stabilisent), retirées ici, puis les
+  // morceaux sont mis bout à bout.
+  function syncCurvePart(samples, sr, skip) {
+    const c = syncCurve(samples, sr), k = Math.round((skip || 0) * c.rate);
+    return { rate: c.rate, bands: c.bands.map(b => b.subarray(Math.min(k, b.length))) };
+  }
+  function joinCurves(parts) {
+    const rate = parts.length ? parts[0].rate : 200;
+    const bands = [0, 1, 2].map(k => {
+      const n = parts.reduce((s, p) => s + p.bands[k].length, 0), out = new Float32Array(n);
+      let o = 0;
+      parts.forEach(p => { out.set(p.bands[k], o); o += p.bands[k].length; });
+      return out;
+    });
+    return { rate, bands };
+  }
+
   // Où l'extrait `a` (son caméra) se trouve dans `b` (musique). Renvoie le décalage en
   // secondes (temps dans b = temps dans a + offset), un score (0-1) et la netteté du pic.
   function findOffset(a, b) {
@@ -300,6 +318,6 @@
 
   return {
     biquad, filter, lowpass, highpass, envelopeDb, analyze, pickPeaks, estimateTempo, gridTimes, snapToPeaks,
-    detectBeats, loudnessCurve, loudnessAt, intensityFactor, fft, syncCurve, findOffset
+    detectBeats, loudnessCurve, loudnessAt, intensityFactor, fft, syncCurve, syncCurvePart, joinCurves, findOffset
   };
 });

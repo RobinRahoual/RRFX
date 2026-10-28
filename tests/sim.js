@@ -83,6 +83,7 @@ function makeEnv(fps) {
       this._out = inP + (end - start); this.name = name || pi.name; this.nodeId = nid(); this.mediaType = 'Video';
       this.components = coll([comp('AE.ADBE Opacity', 'Opacity', [100, 0]), comp('AE.ADBE Motion', 'Motion', [[0.5, 0.5], 100, 100, true, 0, [0.5, 0.5], 0])]);
       this.selected = false;
+      this.disabled = false;
     }
     get start() { return T(this._s); } set start(t) { const d = val(t) - this._s; this._s += d; this._in += d * this._speed; }
     get end() { return T(this._e); } set end(t) { const d = val(t) - this._e; this._e += d; this._out += d * this._speed; }
@@ -123,6 +124,8 @@ function makeEnv(fps) {
         subclipCalls++;
         const sub = projItem(n, 1, val(t1) - val(t0));
         sub.videoOnly = takeVideo && !takeAudio;
+        sub.audioOnly = !takeVideo && takeAudio;
+        sub.master = me;
         const parent = parents.get(me) || root;
         parent.children.push(sub); parents.set(sub, parent);
         return sub;
@@ -255,9 +258,10 @@ function makeEnv(fps) {
             };
           },
           // Insère n pistes vidéo à l'index donné (les pistes au-dessus remontent).
-          addTracks(n, idx) {
+          addTracks(n, idx, na) {
             for (let k = 0; k < n; k++) seq.videoTracks.splice(idx === undefined ? seq.videoTracks.length : idx, 0, new Track(seq, 0));
             seq.videoTracks.forEach((t, i) => { t.i = i; });
+            for (let k = 0; k < (na || 0); k++) seq.audioTracks.push(new Track(seq, seq.audioTracks.length));
           }
         };
       },
@@ -265,15 +269,23 @@ function makeEnv(fps) {
       getVideoEffectList() { return Object.keys(EFFECTS); }
     }
   };
-  project.importFiles = (paths, suppress, targetBin) => {
-    paths.forEach(p => { const it = projItem(p.split('/').pop(), 1, /\.(png|jpg)$/i.test(p) ? 125 * F : 60 * F); it.path = p; targetBin.children.push(it); parents.set(it, targetBin); });
+  const imports = [];
+  project.importFiles = (paths, suppress, targetBin, stills) => {
+    imports.push({ paths, stills: !!stills });
+    paths.forEach(p => {
+      // Séquence d'images : 50 images, cadence imposée ensuite par setOverrideFrameRate.
+      const it = projItem(p.split('/').pop(), 1, stills ? 50 * F : /\.(png|jpg)$/i.test(p) ? 125 * F : 60 * F);
+      it.path = p;
+      if (stills) it.setOverrideFrameRate = r => { it.fps = r; };
+      targetBin.children.push(it); parents.set(it, targetBin);
+    });
     return true;
   };
   const app = { project, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
 
   const ctx = vm.createContext({ app, qe, Time });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
-  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, song, projItem, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('CutFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, seq, F, media, media2, adj, Item, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('CutFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };

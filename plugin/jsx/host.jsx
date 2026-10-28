@@ -5,7 +5,7 @@
 
 var CutFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.3.0';
+    var VERSION = '1.4.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -431,6 +431,50 @@ var CutFX = (function () {
         return sub;
     }
 
+    // Sous-clip son seul d'un rush (pour poser le son de la caméra de référence).
+    function audioSourceOf(master) {
+        var name = 'CutFX · ' + master.name + ' · son', sub, end, bin;
+        sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (sub) return sub;
+        end = mediaEndOf(master);
+        if (!(end > 0)) throw new Error('Durée du média « ' + master.name + ' » illisible');
+        sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 0, 1);
+        if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (!sub) throw new Error('Premiere n\'a pas créé le sous-clip son de « ' + master.name + ' »');
+        bin = cutfxBin();
+        try { sub.moveBin(bin); } catch (e) {}
+        return sub;
+    }
+
+    function audioTrackClear(s, i, a, b) {
+        var tr = s.audioTracks[i], j, c;
+        try { if (tr.isLocked && tr.isLocked()) return false; } catch (e) {}
+        for (j = 0; j < tr.clips.numItems; j++) {
+            c = tr.clips[j];
+            if (tk(c.start) < b && a < tk(c.end)) return false;
+        }
+        return true;
+    }
+
+    // Première piste audio libre sur [a, b], ajoutée en dernier si besoin.
+    function pickAudioTrack(s, a, b, warnings) {
+        var i, before = s.audioTracks.numTracks;
+        for (i = 0; i < before; i++) if (audioTrackClear(s, i, a, b)) return i;
+        try { qeSeq().addTracks(0, 0, 1, 1, before); } catch (e) {}
+        if (s.audioTracks.numTracks > before) {
+            warnings.push('Piste audio A' + (before + 1) + ' ajoutée');
+            return before;
+        }
+        throw new Error('Aucune piste audio libre : ajoute une piste audio.');
+    }
+
+    function findAudioAt(s, ti, a) {
+        var tr = s.audioTracks[ti], j;
+        if (!tr) return null;
+        for (j = 0; j < tr.clips.numItems; j++) if (Math.abs(tk(tr.clips[j].start) - a) < 2) return tr.clips[j];
+        return null;
+    }
+
     // Piste juste au-dessus du clip (sous les calques de réglage), ajoutée si besoin.
     function layerTrack(s, srcTrack, a, b, warnings) {
         var idx = srcTrack + 1, before = s.videoTracks.numTracks;
@@ -788,6 +832,15 @@ var CutFX = (function () {
         // Newest first: effects stacked on the same clip come off in reverse order.
         for (i = o.entries.length - 1; i >= 0; i--) {
             e = o.entries[i];
+            if (e.kind === 'aud') {
+                it = findAudioAt(s, e.track, e.start);
+                if (it && it.name === e.name) { it.remove(false, false); removed++; } else skipped++;
+                continue;
+            }
+            if (e.kind === 'mc') {
+                removed += multicamEnable(s, e.tracks, e.a, e.b) ? 1 : 0;
+                continue;
+            }
             it = e.kind === 'adj' ? findNamed(s, e.track, e.start, e.name) : findItemAt(s, e.track, e.start);
             if (e.kind === 'adj') {
                 if (it && it.name === e.name) {
@@ -955,11 +1008,18 @@ var CutFX = (function () {
         return root.createBin(name);
     }
 
-    function itemForPath(path, binName) {
-        var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
+    // Élément du projet pour un fichier (importé si besoin). stills : séquence d'images
+    // numérotées, dont `path` est la première image.
+    function itemForPath(path, binName, stills) {
+        var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); }), name;
         if (found) return found;
-        app.project.importFiles([path], true, namedBin(binName), false);
-        return walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
+        app.project.importFiles([path], true, namedBin(binName), !!stills);
+        found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
+        if (!found && stills) {
+            name = String(path).replace(/^.*[\\\/]/, '');
+            found = walk(namedBin(binName), function (c) { return c.type === 1 && (c.name === name || c.name.substr(0, name.length - 7) === name.substr(0, name.length - 7)); });
+        }
+        return found;
     }
 
     function audioClipsOf(s) {
@@ -1041,7 +1101,20 @@ var CutFX = (function () {
                 removed++;
             }
         }
+        for (i = 0; i < s.audioTracks.numTracks; i++) {
+            list = [];
+            for (j = 0; j < s.audioTracks[i].clips.numItems; j++) list.push(s.audioTracks[i].clips[j]);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                if (!/^CutFX · /.test(it.name)) continue;
+                if (range && !(tk(it.start) < range.b && range.a < tk(it.end))) continue;
+                it.remove(false, false);
+                removed++;
+            }
+        }
         if (o.markers) markers = removeMarkers(s, 'CutFX', range ? range.a : -Infinity, range ? range.b : Infinity);
+        // Montage multicam : les plans désactivés par CutFX sont réactivés.
+        if (o.multicam) removed += multicamEnable(s, null, range ? range.a : -Infinity, range ? range.b : Infinity);
         return ok({ removed: removed, markers: markers });
     }
 
@@ -1105,6 +1178,26 @@ var CutFX = (function () {
     }
 
     // Pose des extraits de rushs (vidéo seule) : items [{ nodeId, seqStart, seqEnd, srcIn }] en secondes.
+    // Son d'un rush sur une piste audio libre (synchro multicam : son de la caméra de référence).
+    function placeRushAudio(s, master, a, b, inT, label, created, warnings) {
+        var src, ai, tr, it;
+        try {
+            src = audioSourceOf(master);
+            ai = pickAudioTrack(s, a, b, warnings);
+            tr = s.audioTracks[ai];
+            try { src.setInPoint(inT / TICKS, 4); src.setOutPoint((inT + b - a) / TICKS, 4); } catch (e) {}
+            tr.overwriteClip(src, mkTime(a));
+            try { src.clearInPoint(); src.clearOutPoint(); } catch (e2) {}
+            it = findAudioAt(s, ai, a);
+            if (!it) throw new Error('son non posé');
+            fixSpan(it, a, b);
+            try { it.name = label; } catch (e3) {}
+            created.push({ kind: 'aud', track: ai, start: a, name: label });
+        } catch (err) {
+            warnings.push(master.name + ' : son de référence non posé (' + err.toString() + ')');
+        }
+    }
+
     function placeRushes(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], i, x, pi, sub, a, b, lo = Infinity, hi = -Infinity, ti, it, label = o.label || 'CutFX · Montage', cache = {};
         for (i = 0; i < o.items.length; i++) {
@@ -1116,6 +1209,7 @@ var CutFX = (function () {
         for (i = 0; i < o.items.length; i++) {
             x = o.items[i];
             try {
+                pi = null;
                 if (!cache[x.nodeId]) {
                     pi = walk(app.project.rootItem, function (c) { return c.nodeId === x.nodeId; });
                     if (!pi) throw new Error('rush introuvable dans le projet');
@@ -1129,6 +1223,7 @@ var CutFX = (function () {
                 fixSpan(it, a, b);
                 try { it.name = label; } catch (e) {}
                 created.push({ kind: 'adj', track: ti, start: a, name: label });
+                if (x.audio) placeRushAudio(s, pi || walk(app.project.rootItem, function (c) { return c.nodeId === x.nodeId; }), a, b, x.srcIn * TICKS, label, created, warnings);
             } catch (err) {
                 warnings.push((x.name || 'Rush') + ' : ' + err.toString());
             }
@@ -1231,6 +1326,96 @@ var CutFX = (function () {
         return ok({ moved: moved, warnings: warnings });
     }
 
+    // ------------------------------------------------------------ public: montage multicam
+    // Les caméras synchronisées sont empilées (une piste par caméra). À chaque temps,
+    // une seule reste active : les autres plans sont désactivés (rien n'est supprimé).
+
+    function setDisabled(it, v) {
+        try { it.disabled = v; } catch (e) { return false; }
+        return it.disabled === v;
+    }
+
+    // Réactive les plans désactivés par CutFX (nom d'origine suivi de « · CutFX off »).
+    function multicamEnable(s, tracks, a, b) {
+        var n = 0, i, j, list, it, tag = ' · CutFX off';
+        for (i = 0; i < s.videoTracks.numTracks; i++) {
+            if (tracks && !inList(tracks, i)) continue;
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                if (!(tk(it.start) < b && a < tk(it.end))) continue;
+                if (String(it.name).substr(String(it.name).length - tag.length) !== tag) continue;
+                setDisabled(it, false);
+                try { it.name = String(it.name).substr(0, String(it.name).length - tag.length); } catch (e) {}
+                n++;
+            }
+        }
+        return n;
+    }
+
+    function inList(list, v) {
+        var i;
+        for (i = 0; i < list.length; i++) if (list[i] === v) return true;
+        return false;
+    }
+
+    function multicamSwitch(o) {
+        var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs = qeSeq(), cams = [], lo = Infinity, hi = -Infinity, i, j, k, c, t, bounds, list, it;
+        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' · CutFX off', a, b, offN = 0;
+        for (i = 0; i < sel.length; i++) {
+            c = sel[i].item;
+            if (isLayer(c)) continue;
+            if (!inList(cams, sel[i].track)) cams.push(sel[i].track);
+            lo = Math.min(lo, tk(c.start)); hi = Math.max(hi, tk(c.end));
+        }
+        cams.sort(function (x, y) { return x - y; });
+        if (cams.length < 2) return fail('Sélectionne les plans de deux caméras ou plus, synchronisées et empilées (une piste par caméra).');
+        bounds = [lo];
+        for (j = 0; j < o.times.length; j++) {
+            t = snap(o.times[j] * TICKS, f);
+            if (t > bounds[bounds.length - 1] + f / 2 && t < hi - f / 2) bounds.push(t);
+        }
+        bounds.push(hi);
+        if (bounds.length < 3) return fail('Aucun temps dans la zone sélectionnée.');
+        multicamEnable(s, cams, lo, hi);
+        // Coupe chaque caméra à chaque temps (le son n'est pas touché).
+        for (k = 0; k < cams.length; k++) {
+            for (j = 1; j < bounds.length - 1; j++) {
+                if (clipContaining(s, cams[k], bounds[j]) && !clipEndingAt(s, cams[k], bounds[j])) qs.getVideoTrackAt(cams[k]).razor(timecodeOf(s, bounds[j]));
+            }
+        }
+        for (j = 0; j < bounds.length - 1; j++) {
+            a = bounds[j]; b = bounds[j + 1]; mid = (a + b) / 2;
+            cover = [];
+            for (k = 0; k < cams.length; k++) if (clipContaining(s, cams[k], mid)) cover.push(cams[k]);
+            if (!cover.length) { seg.push(-1); continue; }
+            if (o.order === 'random') {
+                seed = (seed * 48271) % 2147483647;
+                pick = cover[seed % cover.length];
+                if (pick === prev && cover.length > 1) pick = cover[(seed + 1) % cover.length];
+            } else {
+                pick = cams[j % cams.length];
+                if (!inList(cover, pick)) pick = cover[j % cover.length];
+            }
+            if (pick !== prev) switches++;
+            prev = pick;
+            seg.push(pick);
+            for (k = 0; k < cams.length; k++) {
+                if (cams[k] === pick) continue;
+                list = clipsOf(s, cams[k]);
+                for (i = 0; i < list.length; i++) {
+                    it = list[i];
+                    if (tk(it.start) >= a - f / 2 && tk(it.end) <= b + f / 2) {
+                        if (!setDisabled(it, true)) return fail('Cette version de Premiere ne permet pas de désactiver un plan par script.');
+                        try { it.name = it.name + tag; } catch (e) {}
+                        offN++;
+                    }
+                }
+            }
+        }
+        return ok({ segments: bounds.length - 1, switches: switches, cams: cams.length, disabled: offN, plan: seg, entry: { kind: 'mc', tracks: cams, a: lo, b: hi } });
+    }
+
     // ------------------------------------------------------------ public: aperçu sur la vraie image
 
     function grabFrames(o) {
@@ -1300,8 +1485,10 @@ var CutFX = (function () {
     // ------------------------------------------------------------ overlays
 
     function placeOverlay(s, ov, t, n, warnings) {
-        var f = tpf(s), pi = itemForPath(ov.path, 'CutFX Overlays'), src, dur, len = t.end - t.start, inT = 0, ti, it, r;
+        var f = tpf(s), pi = itemForPath(ov.path, 'CutFX Overlays', ov.kind === 'sequence'), src, dur, len = t.end - t.start, inT = 0, ti, it, r;
         if (!pi) { warnings.push('Overlay introuvable : ' + ov.path); return null; }
+        // Séquence d'images d'un pack : cadence de la séquence, pas de son à protéger.
+        if (ov.kind === 'sequence' && ov.fps) { try { pi.setOverrideFrameRate(ov.fps); } catch (e0) {} }
         if (ov.kind === 'image') {
             src = pi;
             ti = pickTrack(s, t.track + 1, t.start, t.start + Math.max(len, 30 * TICKS), warnings);
@@ -1312,7 +1499,7 @@ var CutFX = (function () {
             r = Math.abs(Math.sin((n + 1) * 12.9898 + (ov.seed || 1) * 78.233) * 43758.5453) % 1;
             if (dur && ov.start === 'middle') inT = (dur - len) / 2;
             else if (dur && ov.start === 'random') inT = r * (dur - len);
-            src = videoSourceOf(pi);
+            src = ov.kind === 'sequence' ? pi : videoSourceOf(pi);
             ti = pickTrack(s, t.track + 1, t.start, t.start + len, warnings);
             it = placeOn(s, ti, src, t.start, inT, inT + len);
         }
@@ -1460,6 +1647,7 @@ var CutFX = (function () {
         projectRushes: guard(projectRushes),
         placeRushes: guard(placeRushes),
         cutAtTimes: guard(cutAtTimes),
+        multicamSwitch: guard(multicamSwitch),
         syncInfo: guard(syncInfo),
         moveClips: guard(moveClips),
         grabFrames: guard(grabFrames),

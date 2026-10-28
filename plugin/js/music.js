@@ -11,12 +11,13 @@
 
     const DEFAULTS = {
       beats: { mode: 'kicks', sensitivity: 50, minGap: 120, every: 1, zone: 'music', replace: true },
-      autoEdit: { source: 'markers', every: 2, order: 'sequence', pick: 'random' }
+      autoEdit: { source: 'markers', every: 2, order: 'sequence', pick: 'random' },
+      sync: { ref: 'music', camRef: 'longest' }
     };
     // Complète les réglages sans remplacer les objets (l'interface garde des références dessus).
     const st = () => {
       const s = app.settings();
-      ['beats', 'autoEdit'].forEach(k => {
+      ['beats', 'autoEdit', 'sync'].forEach(k => {
         if (!s[k] || typeof s[k] !== 'object') s[k] = {};
         Object.keys(DEFAULTS[k]).forEach(n => { if (!(n in s[k])) s[k][n] = DEFAULTS[k][n]; });
       });
@@ -225,47 +226,113 @@
 
     // ---------------------------------------------------------------- synchronisation
 
+    // Courbe de synchro d'un fichier entre t0 et t1 (s), lue par morceaux d'une minute :
+    // les longs rushs de caméra ne sont jamais chargés en entier.
+    async function curveOf(path, t0, t1) {
+      const parts = [];
+      let t = t0, dur = Infinity;
+      while (t < Math.min(t1, dur) - 0.05) {
+        if (app.S.cancel) break;
+        const to = Math.min(t1, t + 60), a = await readAudio(path, Math.max(0, t - 1), to);
+        dur = a.duration;
+        if (!a.samples.length) break;
+        const dec = decimate(a.samples, a.sampleRate);
+        parts.push(Audio.syncCurvePart(dec.x, dec.sr, Math.max(0, t - a.start)));
+        t = to;
+      }
+      return { curve: Audio.joinCurves(parts), start: t0 };
+    }
+
+    // Où se trouve le son du clip x dans la référence. Renvoie d (temps du fichier de x + d =
+    // temps du fichier de référence) et le score, ou { error }.
+    async function matchClip(x, onTimeline, ref) {
+      const w0 = onTimeline ? Math.max(0, x.inPoint - 10) : x.inT;
+      const w1 = onTimeline ? x.inPoint + Math.min(50, Math.max(20, x.end - x.start) + 10) : Math.min(x.outT, x.inT + 60);
+      let a;
+      try { a = await readAudio(x.path, w0, w1); } catch (e) { return { error: app.errorMessage(e) }; }
+      const dec = decimate(a.samples, a.sampleRate);
+      const res = Audio.findOffset(Audio.syncCurve(dec.x, dec.sr), ref.curve);
+      if (!res || res.score < 0.12 || res.clarity < 1.12) return { uncertain: true, score: res ? res.score : 0 };
+      return { d: res.offset + ref.start - a.start, score: res.score };
+    }
+
+    const CAM_WINDOW = 2400; // au plus 40 min de la caméra de référence
+
     function sync() {
       return app.runTask('Synchronisation', async () => {
+        const cfg = st().sync, byCamera = cfg.ref === 'camera';
         app.status.phase('Sélection');
         const r = await Host.call('syncInfo', {});
         if (!r.ok) return { kind: 'error', title: 'Synchronisation impossible', detail: r.error };
-        if (!r.music) return { kind: 'error', title: 'Pas de musique', detail: r.musicError };
-        if (!r.clips.length && !r.rushes.length) return { kind: 'error', title: 'Rien à synchroniser', detail: 'Sélectionne des clips dans la timeline, ou des rushs dans le panneau Projet.' };
-        app.status.phase('Lecture de la musique');
-        await ensureMusic(false);
-        const info = M.info;
-        if (!M.sync) M.sync = Audio.syncCurve(M.samples, M.sr);
-        const fileEnd = seqToFile(info, info.end), list = r.clips.length ? r.clips : r.rushes, moves = [], places = [], lines = [];
-        let uncertain = 0;
-        for (let i = 0; i < list.length; i++) {
-          if (app.S.cancel) break;
-          const x = list[i];
-          app.status.progress(i, list.length, x.name);
-          if (!x.path) { lines.push(x.name + ' : fichier introuvable'); continue; }
-          const w0 = r.clips.length ? Math.max(0, x.inPoint - 10) : x.inT;
-          const w1 = r.clips.length ? x.inPoint + Math.min(50, Math.max(20, x.end - x.start) + 10) : Math.min(x.outT, x.inT + 60);
-          let a;
-          try { a = await readAudio(x.path, w0, w1); } catch (e) { lines.push(x.name + ' : ' + app.errorMessage(e)); continue; }
-          const dec = decimate(a.samples, a.sampleRate);
-          const res = Audio.findOffset(Audio.syncCurve(dec.x, dec.sr), M.sync);
-          if (!res || res.score < 0.12 || res.clarity < 1.12) {
-            uncertain++;
-            lines.push(x.name + ' : son introuvable dans la musique (score ' + (res ? res.score.toFixed(2) : '—') + '), laissé tel quel');
-            continue;
+        const onTimeline = r.clips.length > 0, list = onTimeline ? r.clips : r.rushes;
+        if (!list.length) return { kind: 'error', title: 'Rien à synchroniser', detail: 'Sélectionne des clips dans la timeline, ou des rushs dans le panneau Projet.' };
+
+        let info, ref, refItem = null, fileEnd = Infinity;
+        const moves = [], places = [], lines = [];
+        if (!byCamera) {
+          if (!r.music) return { kind: 'error', title: 'Pas de musique', detail: r.musicError + ' (ou choisis « Caler sur : une des caméras »).' };
+          app.status.phase('Lecture de la musique');
+          await ensureMusic(false);
+          info = M.info;
+          if (!M.sync) M.sync = Audio.syncCurve(M.samples, M.sr);
+          ref = { curve: M.sync, start: 0 };
+          fileEnd = seqToFile(info, info.end);
+        } else {
+          if (list.length < 2) return { kind: 'error', title: 'Une seule caméra', detail: 'Sélectionne les plans de deux caméras ou plus (timeline ou panneau Projet).' };
+          const len = x => (onTimeline ? x.end - x.start : x.outT - x.inT);
+          refItem = list.slice().sort((p, q) => (cfg.camRef === 'lowest' && onTimeline ? p.track - q.track || p.start - q.start : len(q) - len(p)))[0];
+          if (!refItem.path) return { kind: 'error', title: 'Référence illisible', detail: 'Fichier de « ' + refItem.name + ' » introuvable.' };
+          if (onTimeline) {
+            info = { start: refItem.start, inPoint: refItem.inPoint, speed: refItem.speed || 1, end: refItem.end };
+          } else {
+            const m = await Host.call('markerList', {});
+            const ph = m.ok ? m.playhead : 0;
+            info = { start: ph, inPoint: refItem.inT, speed: 1, end: ph + len(refItem) };
+            places.push({ nodeId: refItem.nodeId, name: refItem.name, seqStart: ph, seqEnd: info.end, srcIn: refItem.inT, audio: true });
+            lines.push(refItem.name + ' : référence, posée à la tête de lecture avec son son');
           }
-          const d = res.offset - a.start; // temps caméra c ↔ temps musique c + d
-          if (r.clips.length) {
+          app.status.phase('Lecture de la caméra de référence « ' + refItem.name + ' »');
+          const r0 = onTimeline ? Math.max(0, refItem.inPoint - 300) : refItem.inT;
+          const r1 = Math.min(r0 + CAM_WINDOW, onTimeline ? refItem.outPoint + 300 : refItem.outT);
+          try { ref = await curveOf(refItem.path, r0, r1); } catch (e) { return { kind: 'error', title: 'Référence illisible', detail: refItem.name + ' : ' + app.errorMessage(e) }; }
+          if (app.S.cancel) return { kind: 'warn', title: 'Arrêté', detail: 'Rien n\'a été déplacé.' };
+          if (onTimeline) lines.push(refItem.name + ' : référence (ne bouge pas)');
+        }
+
+        const todo = list.filter(x => x !== refItem);
+        let uncertain = 0;
+        app.status.phase('Comparaison des sons');
+        for (let i = 0; i < todo.length; i++) {
+          if (app.S.cancel) break;
+          const x = todo[i];
+          app.status.progress(i, todo.length, x.name);
+          if (!x.path) { lines.push(x.name + ' : fichier introuvable'); continue; }
+          let d, score = 1;
+          if (byCamera && x.path === refItem.path) d = 0; // même fichier : déjà calé
+          else {
+            const m = await matchClip(x, onTimeline, ref);
+            if (m.error) { lines.push(x.name + ' : ' + m.error); continue; }
+            if (m.uncertain) {
+              uncertain++;
+              lines.push(x.name + ' : son introuvable dans la ' + (byCamera ? 'caméra de référence' : 'musique') + ' (score ' + m.score.toFixed(2) + '), laissé tel quel');
+              continue;
+            }
+            d = m.d; score = m.score;
+          }
+          if (onTimeline) {
             if (Math.abs((x.speed || 1) - 1) > 0.001) { lines.push(x.name + ' : vitesse modifiée, non pris en charge'); continue; }
             const delta = fileToSeq(info, x.inPoint + d) - x.start;
             moves.push({ track: x.track, start: x.start, name: x.name, delta });
-            lines.push(x.name + ' : ' + (delta >= 0 ? '+' : '') + delta.toFixed(3) + ' s (score ' + res.score.toFixed(2) + ')');
+            lines.push(x.name + ' : ' + (delta >= 0 ? '+' : '') + delta.toFixed(3) + ' s (score ' + score.toFixed(2) + ')');
           } else {
-            const cA = Math.max(x.inT, info.inPoint - d), cB = Math.min(x.outT, fileEnd - d);
-            if (cB - cA < 0.2) { lines.push(x.name + ' : ne recouvre pas la musique de la séquence'); continue; }
-            const seqStart = fileToSeq(info, cA + d);
+            // Musique : seule la partie qui recouvre la musique. Caméras : tout le rush.
+            let cA = byCamera ? x.inT : Math.max(x.inT, info.inPoint - d);
+            const cB = byCamera ? x.outT : Math.min(x.outT, fileEnd - d);
+            let seqStart = fileToSeq(info, cA + d);
+            if (seqStart < 0) { cA -= seqStart * (info.speed || 1); seqStart = 0; }
+            if (cB - cA < 0.2) { lines.push(x.name + ' : ne recouvre pas ' + (byCamera ? 'la référence' : 'la musique de la séquence')); continue; }
             places.push({ nodeId: x.nodeId, name: x.name, seqStart, seqEnd: seqStart + (cB - cA) / (info.speed || 1), srcIn: cA });
-            lines.push(x.name + ' : calé à ' + seqStart.toFixed(2) + ' s (score ' + res.score.toFixed(2) + ')');
+            lines.push(x.name + ' : calé à ' + seqStart.toFixed(2) + ' s (score ' + score.toFixed(2) + ')');
           }
         }
         app.status.phase('Placement');
@@ -277,19 +344,38 @@
           done += m.moved;
           warnings.push.apply(warnings, m.warnings);
         }
+        const label = byCamera ? 'CutFX · Multicam' : 'CutFX · Synchro';
         for (const p of places) {
-          const pr = await Host.call('placeRushes', { items: [p], minTrack: 0, label: 'CutFX · Synchro' });
+          const pr = await Host.call('placeRushes', { items: [p], minTrack: 0, label });
           if (!pr.ok) { warnings.push(p.name + ' : ' + pr.error); continue; }
-          if (pr.created.length) app.pushHistory({ date: Date.now(), label: 'Synchro · ' + p.name, entries: pr.created });
+          if (pr.created.length) app.pushHistory({ date: Date.now(), label: (byCamera ? 'Multicam · ' : 'Synchro · ') + p.name, entries: pr.created });
           warnings.push.apply(warnings, pr.warnings);
           done++;
         }
         lines.forEach(l => app.log('Synchro · ' + l, /introuvable|non pris|laissé|recouvre/.test(l) ? 'warn' : 'ok'));
         warnings.forEach(w => app.log(w, 'warn'));
         renderResults(lines);
-        if (!done) return { kind: 'error', title: 'Rien n\'a été synchronisé', detail: lines[0] || warnings[0] || '' };
-        return { kind: uncertain || warnings.length ? 'warn' : 'ok', title: app.plural(done, 'clip synchronisé', 'clips synchronisés'), detail: r.clips.length ? 'Déplacés avec leur son sur la musique.' : 'Posés calés sur la musique (vidéo seule), un rush par piste libre.' };
+        if (!done) return { kind: 'error', title: 'Rien n\'a été synchronisé', detail: lines.find(l => /introuvable|non pris|laissé|recouvre/.test(l)) || warnings[0] || '' };
+        const how = byCamera
+          ? (onTimeline ? 'Calés sur « ' + refItem.name + ' », déplacés avec leur son. Ensuite : « Alterner les caméras » ou Imbriquer > Activer le multicaméra.' : 'Une caméra par piste, calées sur « ' + refItem.name + ' » (posée avec son son).')
+          : (onTimeline ? 'Déplacés avec leur son sur la musique.' : 'Posés calés sur la musique (vidéo seule), un rush par piste libre.');
+        return { kind: uncertain || warnings.length ? 'warn' : 'ok', title: app.plural(done, 'clip synchronisé', 'clips synchronisés'), detail: how };
       }, true);
+    }
+
+    // Montage multicam : à chaque temps (marqueurs ou temps forts), une seule caméra reste active.
+    function multicam() {
+      return app.runTask('Montage multicam', async () => {
+        const a = st().autoEdit;
+        app.status.phase('Rythme');
+        const times = (await rhythmTimes()).filter((t, i) => i % Math.max(1, a.every) === 0);
+        app.status.phase('Alternance des caméras');
+        const r = await Host.call('multicamSwitch', { times, order: a.order === 'random' ? 'random' : 'cycle', seed: Math.floor(Math.random() * 100000) + 1 });
+        if (!r.ok) return { kind: 'error', title: 'Montage multicam impossible', detail: r.error };
+        app.pushHistory({ date: Date.now(), label: 'Multicam × ' + r.segments, entries: [r.entry] });
+        app.log('Multicam : ' + r.segments + ' plans, ' + r.cams + ' caméras, ' + r.disabled + ' passages désactivés', 'ok');
+        return { kind: 'ok', title: app.plural(r.segments, 'plan', 'plans') + ' · ' + r.cams + ' caméras', detail: 'Les autres caméras sont désactivées (pas supprimées). ↶ Annuler les réactive.' };
+      });
     }
 
     // ---------------------------------------------------------------- interface
@@ -412,6 +498,8 @@
       monter.addEventListener('click', autoEdit);
       const couper = h('button', { class: 'action' }, 'Découper les clips sélectionnés');
       couper.addEventListener('click', cutSelection);
+      const mcBtn = h('button', { class: 'action', title: 'Caméras synchronisées et empilées (une piste par caméra) : sélectionne-les, une seule reste active à chaque temps' }, 'Alterner les caméras (multicam)');
+      mcBtn.addEventListener('click', multicam);
       view.appendChild(section('Montage auto sur le rythme', [
         h('div', { class: 'note' }, 'Sélectionne des rushs dans le panneau Projet : ils sont posés l\'un après l\'autre, un plan par temps fort, sur une piste libre (vidéo seule). Les points d\'entrée/sortie de chaque rush délimitent la partie utilisable.'),
         row('Rythme', picker([{ v: 'markers', label: 'Marqueurs de la séquence' }, { v: 'beats', label: 'Temps forts détectés' }], a.source, v => { a.source = v; app.persist(); })),
@@ -424,14 +512,20 @@
           { v: 'continue', label: 'À la suite (le rush avance)' }
         ], a.pick, v => { a.pick = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, monter, couper),
-        h('div', { class: 'note' }, '« Découper » coupe les clips sélectionnés de la timeline (et leur son) à chaque marqueur.')
+        h('div', { class: 'row-buttons' }, mcBtn),
+        h('div', { class: 'note' }, '« Découper » coupe les clips sélectionnés de la timeline (et leur son) à chaque marqueur. « Alterner les caméras » : sélectionne tes caméras synchronisées, empilées une par piste ; à chaque temps une seule reste active, les autres sont désactivées (rien n\'est supprimé), dans l\'ordre des pistes ou au hasard.')
       ]));
 
       const syncBtn = h('button', { class: 'action' }, 'Synchroniser la sélection');
       syncBtn.addEventListener('click', sync);
       resultsBox = h('div', { class: 'log' });
+      const sc = s.sync, byCam = sc.ref === 'camera';
       view.appendChild(section('Synchroniser le son et l\'image', [
-        h('div', { class: 'note' }, 'Pour un tournage en playback : CutFX compare le son de la caméra avec la musique et cale l\'image dessus. Clips sélectionnés dans la timeline : ils sont déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : ils sont posés calés, chacun sur une piste libre (vidéo seule).'),
+        row('Caler sur', actionGroup([{ v: 'music', label: 'La musique / le son externe' }, { v: 'camera', label: 'Une des caméras' }], sc.ref, v => { sc.ref = v; app.persist(); render(view); })),
+        byCam ? row('Caméra de référence', picker([{ v: 'longest', label: 'Le plan le plus long' }, { v: 'lowest', label: 'La piste la plus basse (V1, V2…)' }], sc.camRef, v => { sc.camRef = v; app.persist(); })) : null,
+        h('div', { class: 'note' }, byCam
+          ? 'Plusieurs caméras : CutFX compare leurs sons et les cale sur la caméra de référence, qui ne bouge pas. Clips sélectionnés dans la timeline (une piste par caméra) : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : la référence est posée à la tête de lecture avec son son, les autres caméras au-dessus, une par piste.'
+          : 'Pour un tournage en playback : CutFX compare le son de la caméra avec la musique (ou le son d\'un enregistreur externe posé dans la séquence) et cale l\'image dessus. Clips sélectionnés dans la timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste libre (vidéo seule).'),
         h('div', { class: 'row-buttons' }, syncBtn), resultsBox
       ]));
 

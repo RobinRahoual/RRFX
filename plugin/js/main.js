@@ -3,7 +3,7 @@
   'use strict';
   const Core = window.CutFXCore, Lib = window.CutFXLibrary, Pv = window.CutFXPreview;
   const Store = window.CutFXStorage, Host = window.CutFXHost, Keys = window.CutFXShortcuts, Updates = window.CutFXUpdates;
-  const Audio = window.CutFXAudio, Media = window.CutFXMedia, Share = window.CutFXShare;
+  const Audio = window.CutFXAudio, Media = window.CutFXMedia, Share = window.CutFXShare, Packs = window.CutFXPacks;
   const { h, hotText, actionGroup, picker, checkbox, row, section, CurveEditor, RampEditor, Player } = window.CutFXUI;
 
   const INSTAGRAM_URL = 'https://www.instagram.com/robin.rahoual/';
@@ -338,6 +338,8 @@
       }
     });
     (settings().overlays || []).forEach(o => out.push({ key: 'o:' + o.id, kind: 'overlay', name: o.name, cat: 'overlay', def: null, overlay: o }));
+    // Packs fournis : dessinés par CutFX, fabriqués en images à la première utilisation.
+    Packs.ALL.forEach(d => out.push({ key: 'p:' + d.id, kind: 'overlay', name: d.name, cat: 'overlay', def: null, overlay: { id: 'pack:' + d.id, name: d.name, kind: 'sequence', pack: d.id, start: 'random' } }));
     return out;
   }
 
@@ -418,10 +420,59 @@
 
   function blendCss(v) { return (BLENDS.find(b => b.v === Number(v)) || BLENDS[0]).css; }
 
-  function drawOverlayOn(g, entry, alpha) {
+  // Image n d'un overlay de pack, dessinée à la taille voulue (canevas réutilisé).
+  const packCanvas = {};
+  function packFrame(id, w, h, n) {
+    const key = w + 'x' + h;
+    const c = packCanvas[key] || (packCanvas[key] = document.createElement('canvas'));
+    c.width = w; c.height = h;
+    const total = Packs.frameCount(fps()), i = ((Math.round(n) % total) + total) % total;
+    Packs.draw(c.getContext('2d'), w, h, i / (total - 1), i, Packs.byId[id]);
+    return c;
+  }
+
+  // Fabrique (une fois) la séquence d'images JPEG d'un overlay de pack, à la taille de la
+  // séquence. Renvoie { path: première image, fps } ou null si arrêté.
+  async function buildPack(def, rate) {
+    const size = Packs.frameSize(S.ctx && S.ctx.frameW, S.ctx && S.ctx.frameH), total = Packs.frameCount(rate);
+    if (!Store.fs) return { path: Packs.fileName(def, 0), fps: rate };
+    const dir = Store.path.join(Store.dir, 'Overlays', Packs.folderName(def, size.W, size.H, rate));
+    const first = Store.path.join(dir, Packs.fileName(def, 0)).replace(/\\/g, '/');
+    if (Store.fs.existsSync(Store.path.join(dir, 'ok.json'))) return { path: first, fps: rate };
+    Store.fs.mkdirSync(dir, { recursive: true });
+    status.phase('Fabrication de « ' + def.name + ' » (' + size.W + '×' + size.H + ', une seule fois)');
+    const c = document.createElement('canvas');
+    c.width = size.W; c.height = size.H;
+    const g = c.getContext('2d');
+    for (let i = 0; i < total; i++) {
+      if (S.cancel) return null;
+      status.progress(i, total, '');
+      Packs.draw(g, size.W, size.H, i / (total - 1), i, def);
+      const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.9));
+      if (!blob) throw new Error('Image de l\'overlay non fabriquée (mémoire ?)');
+      Store.fs.writeFileSync(Store.path.join(dir, Packs.fileName(def, i)), new Uint8Array(await blob.arrayBuffer()));
+    }
+    Store.fs.writeFileSync(Store.path.join(dir, 'ok.json'), JSON.stringify({ id: def.id, frames: total, fps: rate, W: size.W, H: size.H }));
+    log('Overlay « ' + def.name + ' » fabriqué : ' + dir, 'ok');
+    return { path: first, fps: rate };
+  }
+
+  function drawOverlayOn(g, entry, alpha, n) {
+    if (alpha <= 0.001) return;
+    const cw = g.canvas.width, ch = g.canvas.height;
+    if (entry.overlay.pack) {
+      const img = packFrame(entry.overlay.pack, cw, ch, n || 0);
+      g.save();
+      g.setTransform(1, 0, 0, 1, 0, 0);
+      g.globalAlpha = Math.min(1, alpha);
+      g.globalCompositeOperation = blendCss(settings().overlayBlend);
+      g.drawImage(img, 0, 0);
+      g.restore();
+      return;
+    }
     const m = overlayMedia(entry.overlay);
-    if (!m.ready || alpha <= 0.001) return;
-    const el = m.el, cw = g.canvas.width, ch = g.canvas.height;
+    if (!m.ready) return;
+    const el = m.el;
     const iw = el.videoWidth || el.naturalWidth || 16, ih = el.videoHeight || el.naturalHeight || 9, k = Math.max(cw / iw, ch / ih);
     g.save();
     g.setTransform(1, 0, 0, 1, 0, 0);
@@ -510,6 +561,12 @@
   }
 
   function drawThumb(canvas, entry) {
+    if (entry.kind === 'overlay' && entry.overlay.pack) {
+      const g = canvas.getContext('2d');
+      Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
+      drawOverlayOn(g, entry, 0.95, Math.round(fps() * 0.8));
+      return;
+    }
     if (entry.kind === 'overlay') {
       const g = canvas.getContext('2d');
       Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
@@ -533,6 +590,20 @@
   let thumbAnim = null;
   function animateThumb(canvas, entry) {
     stopThumb();
+    if (entry.kind === 'overlay' && entry.overlay.pack) {
+      // Survol d'un overlay de pack : il défile sur le plan de test.
+      const g = canvas.getContext('2d');
+      let n = 0, last = 0;
+      const loop = ts => {
+        thumbAnim = requestAnimationFrame(loop);
+        if (ts - last < 40) return;
+        last = ts;
+        Pv.render(g, Pv.shots().A, Pv.stateAt(null, 0), null);
+        drawOverlayOn(g, entry, 0.95, n++);
+      };
+      thumbAnim = requestAnimationFrame(loop);
+      return;
+    }
     if (entry.kind === 'overlay') return;
     let frames;
     try { frames = previewFrames(entry, defaultParams(entry), ['pre', 'post']); } catch (e) { return; }
@@ -618,7 +689,7 @@
     list.forEach(e => {
       const cv = h('canvas', { width: 160, height: 90 });
       const card = h('div', { class: 'card' + (S.cur && S.cur.key === e.key ? ' on' : ''), 'data-key': e.key, title: e.def ? e.def.desc : 'Effet capturé' },
-        h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, ({ captured: 'capturé', overlay: 'overlay' })[e.kind] || 'preset') : null),
+        h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'overlay' && e.overlay.pack ? Packs.byId[e.overlay.pack].packName : ({ captured: 'capturé', overlay: 'overlay' })[e.kind] || 'preset') : null),
         h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, e.name),
           e.def && e.def.target ? h('span', { class: 'tag' }, 'COPIE') : null,
           isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null));
@@ -680,7 +751,11 @@
       h('span', { class: 'badge' }, e.kind === 'captured' ? 'capturé' : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
       h('div', { class: 'effect-tools' }, star, save)));
     if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
-    if (e.kind === 'overlay') ins.appendChild(h('div', { class: 'note' }, e.overlay.path || e.overlay.name));
+    if (e.kind === 'overlay') {
+      ins.appendChild(h('div', { class: 'note' }, e.overlay.pack
+        ? 'Pack « ' + Packs.byId[e.overlay.pack].packName + ' », fourni avec CutFX. À la première utilisation, il est fabriqué à la taille de ta séquence (quelques secondes), puis réutilisé.'
+        : e.overlay.path || e.overlay.name));
+    }
 
     // Aperçu
     const cv = h('canvas', { class: 'pv-canvas', width: 640, height: 360 });
@@ -696,7 +771,7 @@
         Pv.renderTimelineFrame(g, pvFrames, n);
         if (S.cur && S.cur.kind === 'overlay') {
           const f = pvFrames[n], pr = f.spec && f.spec[0].props.find(x => x.key === 'opacity');
-          if (pr) drawOverlayOn(g, S.cur, (pr.values ? pr.values[Math.min(f.i, pr.values.length - 1)] : pr.static) / 100);
+          if (pr) drawOverlayOn(g, S.cur, (pr.values ? pr.values[Math.min(f.i, pr.values.length - 1)] : pr.static) / 100, n);
         }
         const head = $('pv-head');
         if (head) head.style.left = (n / Math.max(1, pvFrames.length - 1) * 100) + '%';
@@ -717,7 +792,7 @@
       strip.addEventListener('pointerup', up);
     });
     buildStrip(strip);
-    if (e.kind === 'overlay') overlayMedia(e.overlay, m => { if (m.el.play) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
+    if (e.kind === 'overlay' && !e.overlay.pack) overlayMedia(e.overlay, m => { if (m.el.play) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
     const real = h('button', { class: 'action quiet', title: Pv.isReal() ? 'Revenir aux plans de test' : 'Utiliser les images de ta séquence autour de la coupe la plus proche' }, Pv.isReal() ? 'Plans de test' : '📷 Ma vraie image');
     real.addEventListener('click', () => (Pv.isReal() ? useTestShots() : grabRealFrames()));
     ins.appendChild(h('div', { class: 'preview' },
@@ -770,7 +845,7 @@
         renderGrid();
         renderInspector();
       });
-      rows.push(h('div', { class: 'row-buttons' }, remove));
+      if (!e.overlay.pack) rows.push(h('div', { class: 'row-buttons' }, remove));
     } else if (e.kind === 'captured') {
       rows.push(h('div', { class: 'field' }, checkbox('Étirer l\'animation à la durée', p.stretch, v => { p.stretch = v; paramChanged(true); })));
       rows.push(h('div', null, checkbox('Miroir pour l\'autre côté de la coupe', p.mirror, v => { p.mirror = v; paramChanged(true); })));
@@ -873,7 +948,7 @@
       if (f && f !== 1 && params.intensity != null) params = Object.assign({}, params, { intensity: Core.clamp(Math.round(params.intensity * f), 0, 200) });
       return {
         entry, mode: targetFor(entry), label: entry.name + ' ' + t.side.toUpperCase(),
-        overlay: entry.kind === 'overlay' ? { path: entry.overlay.path, name: entry.overlay.name, kind: entry.overlay.kind, start: params.start, seed: runSeed + k } : undefined,
+        overlay: entry.kind === 'overlay' ? { path: entry.overlay.path, name: entry.overlay.name, kind: entry.overlay.kind, pack: entry.overlay.pack, start: params.start, seed: runSeed + k } : undefined,
         target: Object.assign({}, t, { name: 'CutFX · ' + entry.name, fx: Core.toWire(compileFor(entry, params, t.side, t.frames, rate)) })
       };
     });
@@ -906,6 +981,13 @@
       }
       const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
       if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };
+      // Overlays de pack : fabriqués une fois à la taille de la séquence.
+      const packs = Array.from(new Set(plan.filter(x => x.overlay && x.overlay.pack).map(x => x.overlay.pack)));
+      for (const id of packs) {
+        const made = await buildPack(Packs.byId[id], r.fps || fps());
+        if (!made) return { kind: 'warn', title: 'Arrêté', detail: 'Overlay « ' + Packs.byId[id].name + ' » pas fabriqué.' };
+        plan.forEach(x => { if (x.overlay && x.overlay.pack === id) Object.assign(x.overlay, { path: made.path, fps: made.fps }); });
+      }
 
       status.phase(plan.length > 1 ? 'Pose des effets' : 'Pose de l\'effet');
       const created = [], warnings = (r.warnings || []).slice();
@@ -991,7 +1073,7 @@
     if (!yes) return;
     await runTask('Nettoyage', async () => {
       status.phase('Retrait des éléments CutFX');
-      const r = await Host.call('clearAll', { scope: o.scope, markers: o.markers });
+      const r = await Host.call('clearAll', { scope: o.scope, markers: o.markers, multicam: true });
       if (!r.ok) return { kind: 'error', title: 'Nettoyage impossible', detail: r.error };
       if (o.scope === 'sequence') { S.lib.history = []; persist(); renderUndo(); }
       const parts = [plural(r.removed, 'élément retiré', 'éléments retirés')];
@@ -1350,7 +1432,7 @@
     const wipe = h('button', { class: 'action danger' }, 'Tout effacer');
     wipe.addEventListener('click', () => clearAll(clean));
     view.appendChild(section('Nettoyage', [
-      h('div', { class: 'note' }, 'Retire tout ce que CutFX a posé : calques de réglage, copies CLIP FX, overlays et textes « CutFX · … ». Tes clips ne sont pas touchés.'),
+      h('div', { class: 'note' }, 'Retire tout ce que CutFX a posé : calques de réglage, copies CLIP FX, overlays, textes et sons « CutFX · … », et réactive les caméras éteintes par le montage multicam. Tes clips ne sont pas supprimés.'),
       row('Zone', actionGroup([{ v: 'sequence', label: 'Toute la séquence' }, { v: 'selection', label: 'Zone sélectionnée' }], clean.scope, v => { clean.scope = v; })),
       h('div', { class: 'field' }, checkbox('Retirer aussi les marqueurs CutFX (temps forts)', clean.markers, v => { clean.markers = v; })),
       h('div', { class: 'row-buttons' }, wipe)

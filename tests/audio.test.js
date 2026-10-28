@@ -150,3 +150,20 @@ test('fft round-trip', () => {
   A.fft(re, im, true);
   re.forEach((v, i) => assert.ok(Math.abs(v - copy[i]) < 1e-9));
 });
+
+test('sync between two cameras, the reference read in chunks (long files)', () => {
+  const s = song({ seconds: 60 });
+  const ref = cameraTake(s, 0, 60); // caméra 1 : tout le morceau
+  const parts = [];
+  for (let t = 0; t < 60; t += 15) {
+    const from = Math.max(0, t - 1), a = Math.round(from * s.sr), b = Math.round(Math.min(60, t + 15) * s.sr);
+    parts.push(A.syncCurvePart(ref.subarray(a, b), s.sr, t - from));
+  }
+  const joined = A.joinCurves(parts), whole = A.syncCurve(ref, s.sr);
+  assert.ok(Math.abs(joined.bands[0].length - whole.bands[0].length) <= 4, joined.bands[0].length + ' vs ' + whole.bands[0].length);
+  // Caméra 2 : autre micro (plus sourd), lancée 23,4 s plus tard.
+  const cam2 = A.lowpass(cameraTake(s, 23.4, 12), s.sr, 2500);
+  const r = A.findOffset(A.syncCurve(cam2, s.sr), joined);
+  assert.ok(Math.abs(r.offset - 23.4) < 0.01, String(r.offset));
+  assert.ok(r.score > 0.3 && r.clarity > 1.12, r.score + ' / ' + r.clarity);
+});

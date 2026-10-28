@@ -72,7 +72,8 @@
     moveClips: a => ({ ok: true, moved: a.moves.length, warnings: [] }),
     grabFrames: () => ({ ok: false, error: 'Mode démo : il faut Premiere pour exporter des images de la séquence.' }),
     placeTitle: async a => { await wait(60); return { ok: true, created: [{ kind: 'adj', track: 2, start: a.start * TICKS, name: 'CutFX · Texte' }], track: 2, warnings: [] }; },
-    readBlend: () => ({ ok: true, value: 8 })
+    readBlend: () => ({ ok: true, value: 8 }),
+    multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
   };
   const markers = [];
 

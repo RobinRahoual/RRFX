@@ -127,6 +127,21 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("marqueurs posés")', { timeout: 5000 });
     await snap('7-musique');
   });
+  await step('multicam', async () => {
+    await page.click('.action:has-text("Une des caméras")');
+    await page.waitForSelector('.row-label:has-text("Caméra de référence")', { timeout: 2000 });
+    await page.click('.action:has-text("Alterner les caméras")');
+    await page.waitForSelector('#status.ok:has-text("caméras")', { timeout: 5000 });
+  });
+  await step('pack d\'overlays', async () => {
+    await page.click('.tab[data-tab=effects]');
+    await page.click('.chips .action:has-text("Overlays")');
+    await page.hover('.card:has-text("Bokeh chaud")');
+    await page.click('.card:has-text("VHS")');
+    await page.waitForSelector('.note:has-text("fourni avec CutFX")', { timeout: 2000 });
+    await page.click('#cta');
+    await page.waitForSelector('#status.ok:has-text("VHS appliqué")', { timeout: 8000 });
+  });
   await step('intensité selon le volume', async () => {
     await page.click('.tab[data-tab=effects]');
     await page.click('.chips .action:text-is("Tout")');

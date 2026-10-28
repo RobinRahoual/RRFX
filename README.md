@@ -3,9 +3,9 @@
 Plugin gratuit créé par **Robin Rahoual** — suis-moi sur Instagram : [@robin.rahoual](https://www.instagram.com/robin.rahoual/).
 
 Des **transitions et effets de clip musical posés en un clic autour des coupes** (flashs, flickers, flous, zooms,
-shakes, slides, glitchs, motion blur) et des **overlays** (light leaks, grain, flares…), des **speed ramps** qui ne
+shakes, slides, glitchs, motion blur) et des **overlays** (16 fournis : light leaks, flares, bokeh, pellicule, VHS…), des **speed ramps** qui ne
 décalent jamais la coupe, la **détection des temps forts** de la musique, le **montage automatique sur le rythme**, la
-**synchro son/image en un clic**, des **titres et paroles animés**, et **tes propres effets** capturés depuis Premiere,
+**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, et **tes propres effets** capturés depuis Premiere,
 partageables par un simple code.
 
 **Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
@@ -70,7 +70,14 @@ Slide, Whip pan · Onde, Bulge, Glitch · Motion blur (vraie fusion d'images, su
 
 ### Overlays
 
-Catégorie **Overlays** : *Ajouter des overlays* (vidéos MOV/MP4/WEBM ou images PNG/JPG) ou *Ajouter un dossier* (un
+**16 overlays fournis**, en 6 packs : *Light leaks* (chaud, rose, bleu, doré), *Flares* (anamorphique, soleil),
+*Bokeh* (chaud, froid), *Pellicule* (poussière, vieux film, brûlure, brûlure rouge), *VHS & glitch* (VHS, glitch
+RGB), *Lumière* (balayages). Rien à télécharger : CutFX les dessine lui-même. À la première utilisation, chaque
+overlay est fabriqué en images (2 s, à la taille et à la cadence de ta séquence, rangé dans
+`Documents/CutFX/Overlays`), puis réutilisé. Le survol d'une vignette l'anime ; avec *Entre les coupes : un effet au
+hasard*, chaque coupe reçoit un overlay différent du pack.
+
+Tes propres overlays : *Ajouter des overlays* (vidéos MOV/MP4/WEBM ou images PNG/JPG) ou *Ajouter un dossier* (un
 pack entier). Un overlay se pose comme un effet — sur la coupe, toutes les coupes, les marqueurs… — sur une piste
 au-dessus du clip, avec un fondu d'opacité animé (durée, courbe, opacité), un point de départ au hasard dans la vidéo
 (différent à chaque coupe) et un **mode de fusion** (Écran par défaut). Si le mode posé n'est pas le bon dans ta
@@ -115,10 +122,21 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
   un plan tous les 1/2/4/8 temps, dans l'ordre ou au hasard, extrait au hasard / début / milieu / à la suite, sur une
   piste libre et **en vidéo seule** (ta musique n'est pas touchée). **Découper les clips sélectionnés** coupe à chaque
   marqueur.
-- **Synchroniser le son et l'image** (touche **S**) : pour un tournage en playback, CutFX compare le son de la caméra
-  à la musique (corrélation par bandes de fréquences) et **cale l'image en un clic**. Clips sélectionnés dans la
-  timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste
-  libre. Chaque clip affiche son décalage et la fiabilité ; un résultat douteux n'est pas appliqué.
+- **Synchroniser le son et l'image** (touche **S**), *Caler sur* :
+  - **la musique / le son externe** : pour un tournage en playback (ou un enregistreur posé dans la séquence), CutFX
+    compare le son de la caméra à la musique (corrélation par bandes de fréquences) et **cale l'image en un clic** ;
+  - **une des caméras** (multicam) : les caméras sont calées entre elles sur une caméra de référence (le plan le plus
+    long, ou celui de la piste la plus basse), qui ne bouge pas. Les longs rushs sont lus par morceaux d'une minute
+    (jusqu'à 40 min de référence).
+
+  Clips sélectionnés dans la timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés
+  calés, une caméra par piste (en multicam, la référence est posée à la tête de lecture **avec son son**). Chaque clip
+  affiche son décalage et la fiabilité ; un résultat douteux n'est pas appliqué.
+- **Alterner les caméras (multicam)** : sélectionne tes caméras synchronisées, empilées une par piste. À chaque
+  marqueur ou temps fort (un tous les 1/2/4/8 temps), une seule caméra reste active, dans l'ordre des pistes ou au
+  hasard (jamais deux fois de suite la même) ; si une caméra n'a pas d'image à cet endroit, une autre prend le
+  relais. Les autres plans sont **désactivés, pas supprimés** : ↶ Annuler ou *Tout effacer* les réactive. Tu peux
+  aussi, après la synchro, utiliser *Imbriquer > Activer le multicaméra* de Premiere.
 
 ### Onglet Textes
 
@@ -148,8 +166,8 @@ de réglage, copies du plan et morceaux de rampe `CutFX · …`. Les 10 dernièr
 sont mémorisées, même après avoir fermé Premiere. Un calque renommé ou un clip modifié entre-temps n'est pas touché.
 
 **Tout effacer** (*Réglages > Nettoyage*, ou le menu du panneau) retire d'un coup tout ce que CutFX a posé dans la
-séquence ou dans la zone sélectionnée — calques, copies, overlays, textes `CutFX · …` — et, au choix, les marqueurs
-CutFX. Tes clips ne sont pas touchés.
+séquence ou dans la zone sélectionnée — calques, copies, overlays, textes, sons `CutFX · …` — réactive les caméras
+éteintes par le montage multicam et, au choix, retire les marqueurs CutFX. Tes clips ne sont pas supprimés.
 
 ### Suivi de l'opération
 
@@ -206,6 +224,10 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - `importMGT` et le remplacement du texte d'un `.mogrt` (onglet Textes) ;
 - le numéro du **mode de fusion** dans l'Opacité (overlays : bouton *Apprendre* en secours) ;
 - `createMarker` / `move` (marqueurs, synchro) ;
+- l'import d'une **séquence d'images** (`importFiles` « images numérotées ») et `setOverrideFrameRate` (overlays
+  fournis) ;
+- `trackItem.disabled` (montage multicam) : si ta version ne le permet pas, CutFX le dit sans rien toucher ;
+- l'ajout d'une piste audio par QE (son de la caméra de référence) ;
 - le décodage du son **AAC** des MOV/MP4 dans le panneau : s'il échoue, exporte le son en WAV, ou utilise
   *Clip > Synchroniser* de Premiere.
 
@@ -248,6 +270,7 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/audio.js            analyse du son : filtres, attaques, tempo, volume, corrélation (sans DOM, testé)
   js/media.js            lecture du son des WAV / MOV / MP4 (PCM et AAC) par morceaux
   js/share.js            codes de partage CUTFX1
+  js/packs.js            les 16 overlays fournis, dessinés image par image
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)
   js/library.js          les 20 recettes d'effets + les animations de texte
   js/preview.js          aperçus simulés
