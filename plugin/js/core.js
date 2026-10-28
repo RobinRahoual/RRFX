@@ -432,7 +432,10 @@
     opts = opts || {};
     const from = opts.from || 0, out = [];
     if (opts.fixed) {
-      chunks.forEach((text, i) => out.push({ text, start: from + i * opts.fixed, end: from + (i + 1) * opts.fixed - (opts.gap || 0) }));
+      chunks.forEach((text, i) => {
+        const start = from + i * opts.fixed, end = from + (i + 1) * opts.fixed - (opts.gap || 0);
+        if (end > start) out.push({ text, start, end });
+      });
       return out;
     }
     const t = (times || []).filter(x => x >= from - 1e-6).sort((a, b) => a - b);

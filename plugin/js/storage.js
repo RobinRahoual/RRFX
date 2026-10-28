@@ -32,8 +32,20 @@
     return out;
   }
 
+  // Ancien nom du plugin : la bibliothèque de CutFX est reprise une fois.
+  function migrate() {
+    try {
+      const old = path.join(os.homedir(), 'Documents', 'CutFX', 'library.json');
+      if (!fs.existsSync(FILE) && fs.existsSync(old)) {
+        fs.mkdirSync(DIR, { recursive: true });
+        fs.copyFileSync(old, FILE);
+      }
+    } catch (e) { /* rien à reprendre */ }
+  }
+
   function load() {
     if (fs) {
+      migrate();
       if (!fs.existsSync(FILE)) return empty();
       const text = fs.readFileSync(FILE, 'utf8');
       try {
@@ -105,7 +117,7 @@
     if (!fs) return false;
     fs.mkdirSync(DIR, { recursive: true });
     const cp = nodeRequire('child_process');
-    if (process.platform === 'win32') cp.exec('explorer "' + DIR + '"');
+    if ((root.process || process).platform === 'win32') cp.exec('explorer "' + DIR + '"');
     else cp.exec('open "' + DIR + '"');
     return true;
   }

@@ -86,3 +86,16 @@ test('host: pack overlay imported as numbered stills at the sequence frame rate,
   assert.ok(!items[0].projectItem.videoOnly, 'no video-only subclip needed');
   assert.ok(items.every(i => i._in >= 0 && i._out <= 50 * F), 'inside the 50 images');
 });
+
+test('host: an image sequence whose media path is not readable is still found after import', () => {
+  const env = makeEnv(25);
+  const { seq, F, media, Item } = env;
+  seq.videoTracks[0].add(new Item(seq, media, 0, 100 * F, 0));
+  seq._ph = 100 * F;
+  const imp = env.ctx.app.project.importFiles;
+  env.ctx.app.project.importFiles = (paths, sup, bin, stills) => { const r = imp(paths, sup, bin, stills); bin.children[bin.children.length - 1].path = ''; return r; };
+  const r = env.call('resolve', { placement: 'cut', sides: ['pre'], frames: 10, target: 'adjustment' });
+  const t = Object.assign({}, r.targets[0], { fx: Core.toWire(Core.compileOverlay({ intensity: 80 }, 'pre', 10, 8)) });
+  const res = env.call('apply', { target: 'overlay', name: 'RR FX · VHS', overlay: { path: '/x/vhs_000.jpg', kind: 'sequence', fps: 25 }, targets: [t] });
+  assert.ok(res.ok && res.created.length === 1, JSON.stringify(res));
+});

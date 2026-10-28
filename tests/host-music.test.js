@@ -194,3 +194,13 @@ test('music: the camera sound linked to the selected clip is never taken for the
   assert.strictEqual(m.name, 'song.wav');
   assert.strictEqual(env.call('syncInfo', {}).music.name, 'song.wav');
 });
+
+test('music: a sound placed by RR FX (reference camera) is never taken for the music', () => {
+  const env = setup();
+  env.music.remove();
+  const ref = new env.Item(env.seq, env.media2, 0, 3000 * env.F, 0, 'RR FX · Multicam');
+  ref.mediaType = 'Audio';
+  env.seq.audioTracks[1].add(ref);
+  const m = env.call('musicInfo', {});
+  assert.ok(!m.ok || m.name !== 'RR FX · Multicam', JSON.stringify(m));
+});

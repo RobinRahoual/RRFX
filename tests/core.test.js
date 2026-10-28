@@ -230,3 +230,9 @@ test('auto edit: one shot per N beats, in order or shuffled, never the same rush
   rnd.forEach(s => { const r = rushes.find(x => x.id === s.id); assert.ok(s.srcIn >= r.inT - 1e-9 && s.srcIn + (s.seqEnd - s.seqStart) <= r.outT + 1e-9); });
   assert.deepStrictEqual(Core.planAutoEdit([1], rushes, {}), []);
 });
+
+test('titles: fixed timing never makes empty or negative texts', () => {
+  const items = Core.titleTimeline(['a', 'b'], null, { fixed: 0.04, gap: 0.08 });
+  assert.deepStrictEqual(items, []);
+  assert.strictEqual(Core.titleTimeline(['a', 'b'], null, { fixed: 1, gap: 0.08 }).length, 2);
+});

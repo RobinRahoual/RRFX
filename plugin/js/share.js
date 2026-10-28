@@ -37,7 +37,8 @@
   }
 
   function decode(code, zip) {
-    const m = /RRFX([01]):([A-Za-z0-9_\-]+)/.exec(String(code || '').replace(/\s+/g, ''));
+    // CUTFX : codes créés avant le changement de nom.
+    const m = /(?:RRFX|CUTFX)([01]):([A-Za-z0-9_\-]+)/.exec(String(code || '').replace(/\s+/g, ''));
     if (!m) throw new Error('Ce n\'est pas un code RR FX (il commence par « RRFX1: »).');
     let bytes = fromB64url(m[2]);
     if (m[1] === '1') {

@@ -76,12 +76,18 @@
     || { getItem: k => (memory.has(k) ? memory.get(k) : null), setItem: (k, v) => memory.set(k, String(v)) };
 
   let saveTimer = 0;
+  function saveNow() {
+    clearTimeout(saveTimer);
+    saveTimer = 0;
+    try { if (S.lib) Store.save(S.lib); } catch (e) { log('Sauvegarde impossible : ' + errorMessage(e), 'error'); }
+  }
   function persist() {
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(() => {
-      try { Store.save(S.lib); } catch (e) { log('Sauvegarde impossible : ' + errorMessage(e), 'error'); }
-    }, 250);
+    saveTimer = setTimeout(saveNow, 250);
   }
+  // Panneau fermé ou rechargé avant l'enregistrement différé : on enregistre tout de suite.
+  window.addEventListener('pagehide', () => { if (saveTimer) saveNow(); });
+  window.addEventListener('beforeunload', () => { if (saveTimer) saveNow(); });
 
   // ---------------------------------------------------------------- journal
 
@@ -419,6 +425,11 @@
     return m;
   }
 
+  // Les vidéos d'overlays ne tournent que pendant qu'on regarde leur aperçu.
+  function pauseOverlayVideos(except) {
+    ovMedia.forEach((m, id) => { if (id !== except && m.el.pause && !m.el.paused) m.el.pause(); });
+  }
+
   function blendCss(v) { return (BLENDS.find(b => b.v === Number(v)) || BLENDS[0]).css; }
 
   // Image n d'un overlay de pack, dessinée à la taille voulue (canevas réutilisé).
@@ -692,7 +703,7 @@
       const card = h('div', { class: 'card' + (S.cur && S.cur.key === e.key ? ' on' : ''), 'data-key': e.key, title: e.def ? e.def.desc : 'Effet capturé' },
         h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'overlay' && e.overlay.pack ? Packs.byId[e.overlay.pack].packName : ({ captured: 'capturé', overlay: 'overlay' })[e.kind] || 'preset') : null),
         h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, e.name),
-          e.def && e.def.target ? h('span', { class: 'tag' }, 'COPIE') : null,
+          e.def && e.def.target ? h('span', { class: 'tag', title: 'Posé sur une copie du plan (un calque de réglage ne peut pas mélanger les images)' }, 'CLIP FX') : null,
           isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null));
       card.addEventListener('click', () => selectEntry(e));
       card.addEventListener('mouseenter', () => animateThumb(cv, e));
@@ -750,7 +761,7 @@
     ins.appendChild(h('div', { class: 'effect-head' },
       h('span', { class: 'effect-name' }, e.name),
       h('span', { class: 'badge' }, e.kind === 'captured' ? 'capturé' : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
-      h('div', { class: 'effect-tools' }, star, save)));
+      h('div', { class: 'effect-tools' }, star, e.kind === 'overlay' ? null : save)));
     if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
     if (e.kind === 'overlay') {
       ins.appendChild(h('div', { class: 'note' }, e.overlay.pack
@@ -793,7 +804,8 @@
       strip.addEventListener('pointerup', up);
     });
     buildStrip(strip);
-    if (e.kind === 'overlay' && !e.overlay.pack) overlayMedia(e.overlay, m => { if (m.el.play) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
+    pauseOverlayVideos(e.kind === 'overlay' ? e.overlay.id : null);
+    if (e.kind === 'overlay' && !e.overlay.pack) overlayMedia(e.overlay, m => { if (m.el.play && S.cur === e) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
     const real = h('button', { class: 'action quiet', title: Pv.isReal() ? 'Revenir aux plans de test' : 'Utiliser les images de ta séquence autour de la coupe la plus proche' }, Pv.isReal() ? 'Plans de test' : '📷 Ma vraie image');
     real.addEventListener('click', () => (Pv.isReal() ? useTestShots() : grabRealFrames()));
     ins.appendChild(h('div', { class: 'preview' },
@@ -892,7 +904,7 @@
 
   async function saveAsPreset() {
     const e = S.cur;
-    if (!e) return;
+    if (!e || e.kind === 'overlay') return;
     if (e.kind === 'captured') {
       const name = await promptName('Dupliquer l\'effet capturé', e.name + ' (copie)');
       if (!name) return;
@@ -1412,6 +1424,7 @@
     renderCommunityList();
     try {
       const r = await Community.load({ fetch: (u, o) => fetch(u, o), storage, decode: decodeCode, force });
+      if (force) commThumbs.clear();
       C.list = r.list;
       C.error = r.error || '';
       C.at = Date.now();
@@ -1442,8 +1455,13 @@
     else renderCommunityList();
   }
 
-  // Petite vignette d'un preset ou d'un effet capturé partagé.
-  function communityThumb(it) {
+  // Petite vignette d'un preset ou d'un effet capturé partagé (dessinée une fois par effet publié).
+  const commThumbs = new Map();
+  function communityThumb(e) {
+    if (!commThumbs.has(e.number)) commThumbs.set(e.number, drawCommunityThumb(e.items[0]));
+    return h('div', { class: 'comm-thumb' }, commThumbs.get(e.number));
+  }
+  function drawCommunityThumb(it) {
     const cv = h('canvas', { width: 160, height: 90 });
     let entry = null;
     if (it.type === 'preset' && Lib.byId[it.data.base]) entry = { kind: 'preset', name: it.name, def: Lib.byId[it.data.base], item: it };
@@ -1454,7 +1472,7 @@
       g.fillStyle = '#111'; g.fillRect(0, 0, 160, 90);
       g.fillStyle = '#9ab'; g.font = '28px sans-serif'; g.textAlign = 'center'; g.fillText('⤳', 80, 56);
     }
-    return h('div', { class: 'comm-thumb' }, cv);
+    return cv;
   }
 
   function renderCommunityList() {
@@ -1482,7 +1500,7 @@
       like.addEventListener('click', () => Host.openURL(e.url));
       const types = e.types.map(t => Community.TYPES[t] || t).join(', ') + (e.items.length > 1 ? ' × ' + e.items.length : '');
       box.appendChild(h('div', { class: 'comm-item' },
-        communityThumb(e.items[0]),
+        communityThumb(e),
         h('div', { class: 'li-text' },
           h('div', { class: 'li-name' }, e.name),
           h('div', { class: 'li-meta' }, types + ' · @' + e.author + ' · ' + date.toLocaleDateString('fr-FR')),
@@ -1755,6 +1773,7 @@
     settings().tab = tab;
     persist();
     stopThumb();
+    pauseOverlayVideos(null);
     if (S.player) { S.player.stop(); S.player = null; }
     if (S.rampPlayer) { S.rampPlayer.stop(); S.rampPlayer = null; }
     S.curveEd = null;

@@ -37,7 +37,7 @@
   // Une issue → une entrée de la bibliothèque, ou null si elle ne contient pas de code valide.
   function parseIssue(issue, decode) {
     if (!issue || issue.pull_request || issue.state === 'closed') return null;
-    const code = /RRFX[01]:[A-Za-z0-9_\-]+/.exec(String(issue.body || '').replace(/\s+/g, ''));
+    const code = /(?:RRFX|CUTFX)[01]:[A-Za-z0-9_\-]+/.exec(String(issue.body || '').replace(/\s+/g, ''));
     if (!code) return null;
     let items;
     try { items = decode(code[0]); } catch (e) { return null; }

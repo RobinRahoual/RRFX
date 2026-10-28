@@ -126,6 +126,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.add-card:has-text("Ajouter des overlays")')]);
     await chooser.setFiles(png);
     await page.waitForSelector('.badge:has-text("overlay")', { timeout: 3000 });
+    if (await page.locator('.effect-tools .action:has-text("Preset")').count()) throw new Error('pas de preset possible pour un overlay');
     await page.click('#cta');
     await page.waitForSelector('#status.ok, #status.warn', { timeout: 8000 });
     await snap('6-overlay');

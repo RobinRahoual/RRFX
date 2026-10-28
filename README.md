@@ -254,7 +254,20 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
   de valeurs identiques n'en garde que les extrémités).
 - Plusieurs coupes = une zone à la fois : l'interface reste réactive, la progression est exacte, l'arrêt est possible.
 - La recherche du calque de réglage est mise en cache et revérifiée une fois par opération.
-- La ligne d'état interroge Premiere toutes les 2 s seulement quand le panneau est visible et inactif.
+- La ligne d'état interroge Premiere toutes les 2 s seulement quand le panneau est visible et inactif ; la
+  sélection est lue en un seul passage sur la timeline, même sur une longue séquence.
+- Musique : seule la partie utilisée dans la séquence est lue et analysée (un mix d'une heure n'est pas chargé en
+  entier). Synchro : les en-têtes de chaque fichier ne sont lus qu'une fois, les longs rushs minute par minute.
+- Montage multicam : chaque piste n'est lue qu'une fois ; RR FX vérifie que Premiere sait désactiver un plan
+  **avant** de couper quoi que ce soit.
+- Les réglages sont enregistrés aussi à la fermeture du panneau ; les vidéos d'overlays ne tournent que pendant
+  leur aperçu.
+
+### Ancien nom (CutFX)
+
+Si tu as installé une version de test nommée CutFX : l'installateur de RR FX retire l'ancien panneau, ta
+bibliothèque (`Documents/CutFX/library.json`) est reprise au premier lancement, et les anciens codes de partage
+`CUTFX1:` s'ouvrent toujours.
 
 ## Tests
 

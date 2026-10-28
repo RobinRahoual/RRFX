@@ -36,3 +36,8 @@ test('clear errors for wrong or damaged codes', () => {
   assert.throws(() => Share.decode(code, null), /Décompression/);
   assert.throws(() => Share.decode(Share.encode([], null), null), /aucun effet/);
 });
+
+test('codes made under the former name (CUTFX1) still open', () => {
+  const zipped = Share.encode([{ type: 'ramp', name: 'Old', data: { points: [] } }], null).replace(/^RRFX/, 'CUTFX');
+  assert.strictEqual(Share.decode(zipped, null)[0].name, 'Old');
+});

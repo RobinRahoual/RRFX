@@ -6,7 +6,8 @@
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Core, Audio, Media, Store, Host } = app;
     const { h, hotText, actionGroup, picker, checkbox, row, section, fitCanvas, css } = app.UI;
-    const M = { info: null, manual: null, key: '', samples: null, sr: 0, duration: 0, an: null, loud: null, sync: null, beats: null, zone: null };
+    // t0 : début (s, temps du fichier) de la partie analysée ; les temps de l'analyse en partent.
+    const M = { info: null, manual: null, key: '', samples: null, sr: 0, t0: 0, duration: 0, an: null, loud: null, sync: null, beats: null, zone: null };
     app.S.music = M;
 
     const DEFAULTS = {
@@ -44,12 +45,25 @@
       return Media.nodeIO(Store.fs, src);
     }
 
+    // En-têtes déjà lus (un long rush lu minute par minute n'est analysé qu'une fois).
+    const probes = new Map();
+    async function probeOf(io, src) {
+      const key = typeof src === 'string' ? src + ':' + (await io.size()) : src;
+      let info = probes.get(key);
+      if (!info) {
+        info = await Media.probe(io);
+        probes.set(key, info);
+        if (probes.size > 8) probes.delete(probes.keys().next().value);
+      }
+      return info;
+    }
+
     // Le son mono de [t0, t1] (secondes du fichier ; t1 = null : jusqu'à la fin).
     async function readAudio(src, t0, t1) {
       const io = ioFor(src);
       t0 = Math.max(0, t0 || 0);
       try {
-        const info = await Media.probe(io);
+        const info = await probeOf(io, src);
         if (info.kind === 'wav' || info.kind === 'mp4') {
           const end = t1 == null ? info.duration : Math.min(t1, info.duration);
           const w = await Media.readWindow(io, info, t0, end);
@@ -83,9 +97,17 @@
     const seqToFile = (info, t) => info.inPoint + (t - info.start) * (info.speed || 1);
     const fileToSeq = (info, t) => info.start + (t - info.inPoint) / (info.speed || 1);
 
-    // La musique de la séquence, lue et analysée une fois (puis gardée en mémoire).
+    // La musique de la séquence, lue et analysée une fois (puis gardée en mémoire). Seule la
+    // partie utilisée dans la séquence est lue : un long mix n'est pas chargé en entier.
     async function ensureMusic(force) {
       let info;
+      if (M.manual && !M.info.manual) {
+        // Fichier choisi à la main, calé sur le clip musique : on suit le clip s'il a bougé ;
+        // si la musique de la séquence a changé, on revient à elle.
+        const r = await Host.call('musicInfo', {});
+        if (r.ok && r.name === M.info.seqName) M.info = Object.assign({}, M.info, { start: r.start, end: r.end, inPoint: r.inPoint, speed: r.speed, track: r.track });
+        else if (r.ok && r.path) M.manual = null;
+      }
       if (M.manual) info = M.info;
       else {
         const r = await Host.call('musicInfo', {});
@@ -93,14 +115,16 @@
         info = r;
         if (!info.path) throw new Error('Fichier de « ' + info.name + ' » introuvable : choisis-le à la main (Musique > Choisir un fichier).');
       }
-      const key = M.manual ? 'file:' + M.manual.name + ':' + M.manual.size : info.path;
+      const w0 = M.manual ? 0 : Math.max(0, info.inPoint - 2), w1 = M.manual ? null : seqToFile(info, info.end) + 2;
+      const key = M.manual ? 'file:' + M.manual.name + ':' + M.manual.size : info.path + '#' + w0.toFixed(2) + '-' + w1.toFixed(2);
       if (!force && M.an && M.key === key) { M.info = info; return M; }
-      const d = await readAudio(M.manual || info.path, 0, null);
+      const d = await readAudio(M.manual || info.path, w0, w1);
       const dec = decimate(d.samples, d.sampleRate);
-      Object.assign(M, { info, key, samples: dec.x, sr: dec.sr, duration: d.duration, sync: null, beats: null });
+      if (!dec.x.length) throw new Error('Aucun son lisible dans « ' + info.name + ' » à cet endroit.');
+      Object.assign(M, { info, key, samples: dec.x, sr: dec.sr, t0: d.start, duration: d.duration, sync: null, beats: null });
       M.an = Audio.analyze(dec.x, dec.sr, 100);
       M.loud = Audio.loudnessCurve(M.an);
-      app.log('Musique analysée : ' + info.name + ' (' + Math.round(d.duration) + ' s)', 'ok');
+      app.log('Musique analysée : ' + info.name + ' (' + Math.round(dec.x.length / dec.sr) + ' s lues)', 'ok');
       return M;
     }
 
@@ -135,13 +159,15 @@
       return { from, to };
     }
 
+    // Temps forts de la zone ; M.beats.times est en secondes du fichier.
     function detect(z) {
       const b = st().beats, info = M.info;
       M.zone = z;
-      M.beats = Audio.detectBeats(M.an, {
+      const r = Audio.detectBeats(M.an, {
         mode: b.mode, sensitivity: b.sensitivity, minGap: b.minGap / 1000, every: b.every,
-        from: seqToFile(info, z.from), to: seqToFile(info, z.to)
+        from: seqToFile(info, z.from) - M.t0, to: seqToFile(info, z.to) - M.t0
       });
+      M.beats = Object.assign({}, r, { times: r.times.map(t => t + M.t0) });
       return M.beats;
     }
 
@@ -158,7 +184,7 @@
     app.services.beatTimes = beatTimes;
     app.services.volumeFactors = async (times, influence) => {
       await ensureMusic(false);
-      return times.map(t => Audio.intensityFactor(Audio.loudnessAt(M.loud, seqToFile(M.info, t)), influence / 100));
+      return times.map(t => Audio.intensityFactor(Audio.loudnessAt(M.loud, seqToFile(M.info, t) - M.t0), influence / 100));
     };
     app.services.musicName = () => (M.info ? M.info.name : '');
 
@@ -270,12 +296,13 @@
         let info, ref, refItem = null, fileEnd = Infinity;
         const moves = [], places = [], lines = [];
         if (!byCamera) {
-          if (!r.music) return { kind: 'error', title: 'Pas de musique', detail: r.musicError + ' (ou choisis « Caler sur : une des caméras »).' };
+          if (!r.music && !M.manual) return { kind: 'error', title: 'Pas de musique', detail: r.musicError + ' (ou choisis « Caler sur : une des caméras »).' };
           app.status.phase('Lecture de la musique');
           await ensureMusic(false);
           info = M.info;
+          if (info.manual) return { kind: 'error', title: 'Place de la musique inconnue', detail: 'Le fichier choisi à la main n\'est calé sur aucun clip de la séquence : pose la musique dans la séquence, ou choisis « Caler sur : une des caméras ».' };
           if (!M.sync) M.sync = Audio.syncCurve(M.samples, M.sr);
-          ref = { curve: M.sync, start: 0 };
+          ref = { curve: M.sync, start: M.t0 };
           fileEnd = seqToFile(info, info.end);
         } else {
           if (list.length < 2) return { kind: 'error', title: 'Une seule caméra', detail: 'Sélectionne les plans de deux caméras ou plus (timeline ou panneau Projet).' };
@@ -410,7 +437,7 @@
       }
       g.fillStyle = css('--text-3');
       for (let x = 0; x < w; x++) {
-        const a = Math.floor((f0 + x / w * (f1 - f0)) * rate), b = Math.ceil((f0 + (x + 1) / w * (f1 - f0)) * rate);
+        const a = Math.floor((f0 - M.t0 + x / w * (f1 - f0)) * rate), b = Math.ceil((f0 - M.t0 + (x + 1) / w * (f1 - f0)) * rate);
         let m = 0;
         for (let i = Math.max(0, a); i < Math.min(v.length, b); i++) m = Math.max(m, v[i]);
         const bar = 4 + m * (hh - 12);
@@ -450,7 +477,7 @@
         if (!f) return;
         app.runTask('Analyse de la musique', async () => {
           await useFile(f);
-          detect({ from: 0, to: M.duration });
+          detect(await zone());
           drawWave();
           return { kind: 'ok', title: 'Musique analysée', detail: f.name + ' · ' + app.plural(M.beats.times.length, 'temps fort') };
         });

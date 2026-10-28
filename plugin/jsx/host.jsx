@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.5.0';
+    var VERSION = '1.5.1';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -125,23 +125,22 @@ var RRFX = (function () {
         return null;
     }
 
-    function trackIndexOf(s, item) {
-        var i, j, tr;
-        for (i = 0; i < s.videoTracks.numTracks; i++) {
-            tr = s.videoTracks[i];
-            for (j = 0; j < tr.clips.numItems; j++) if (tr.clips[j].nodeId === item.nodeId) return i;
-        }
-        return -1;
-    }
-
+    // Clips vidéo sélectionnés avec leur piste. Un seul passage sur la timeline (appelé
+    // toutes les 2 s par le panneau : doit rester rapide sur les longues séquences).
     function selectedVideo(s) {
-        var sel = s.getSelection(), out = [], i, it, ti;
-        if (!sel) return out;
+        var sel = s.getSelection(), out = [], ids = {}, n = 0, i, j, tr, c;
+        if (!sel || !sel.length) return out;
         for (i = 0; i < sel.length; i++) {
-            it = sel[i];
-            if (it.mediaType !== 'Video') continue;
-            ti = trackIndexOf(s, it);
-            if (ti >= 0) out.push({ item: it, track: ti });
+            if (sel[i].mediaType !== 'Video') continue;
+            ids[sel[i].nodeId] = sel[i];
+            n++;
+        }
+        for (i = 0; i < s.videoTracks.numTracks && n > 0; i++) {
+            tr = s.videoTracks[i];
+            for (j = 0; j < tr.clips.numItems && n > 0; j++) {
+                c = tr.clips[j];
+                if (ids[c.nodeId]) { out.push({ item: ids[c.nodeId], track: i }); ids[c.nodeId] = null; n--; }
+            }
         }
         out.sort(function (a, b) { return (a.track - b.track) || (tk(a.item.start) - tk(b.item.start)); });
         return out;
@@ -289,6 +288,7 @@ var RRFX = (function () {
 
     function addEffect(s, track, start, fx, warnings) {
         var item = findItemAt(s, track, start), before, q, eff = null, i, c;
+        if (!item) throw new Error('Élément introuvable sur V' + (track + 1));
         if (fx.intrinsic) return componentByMatch(item, fx.intrinsic === 'motion' ? 'AE.ADBE Motion' : 'AE.ADBE Opacity');
         before = item.components.numItems;
         q = qeItemFor(s, track, start);
@@ -302,7 +302,7 @@ var RRFX = (function () {
         }
         q.addVideoEffect(eff);
         item = findItemAt(s, track, start);
-        if (item.components.numItems <= before) {
+        if (!item || item.components.numItems <= before) {
             warnings.push('Premiere a refusé l\'effet "' + fx.names[0] + '"');
             return null;
         }
@@ -753,7 +753,7 @@ var RRFX = (function () {
             // Début d'un lot : on revérifie que le calque de réglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
             adj = findAdjustment(o.adjNodeId);
-            if (!adj) return fail('Aucun calque de réglage dans le projet. Créez-en un (Fichier > Nouveau > Calque de réglage) ou choisissez la cible "Clip".');
+            if (!adj) return fail('Aucun calque de réglage dans le projet. Crée-en un : Fichier > Nouveau > Calque de réglage.');
         }
         for (i = 0; i < o.targets.length; i++) {
             t = o.targets[i];
@@ -1011,13 +1011,18 @@ var RRFX = (function () {
     // Élément du projet pour un fichier (importé si besoin). stills : séquence d'images
     // numérotées, dont `path` est la première image.
     function itemForPath(path, binName, stills) {
-        var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); }), name;
+        var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); }), bin, before = {}, i;
         if (found) return found;
-        app.project.importFiles([path], true, namedBin(binName), !!stills);
+        bin = namedBin(binName);
+        for (i = 0; i < bin.children.numItems; i++) before[bin.children[i].nodeId] = true;
+        app.project.importFiles([path], true, bin, !!stills);
         found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); });
-        if (!found && stills) {
-            name = String(path).replace(/^.*[\\\/]/, '');
-            found = walk(namedBin(binName), function (c) { return c.type === 1 && (c.name === name || c.name.substr(0, name.length - 7) === name.substr(0, name.length - 7)); });
+        // Une séquence d'images ne garde pas toujours le chemin de sa première image : on prend
+        // l'élément que l'import vient d'ajouter au chutier.
+        if (!found) {
+            for (i = bin.children.numItems - 1; i >= 0 && !found; i--) {
+                if (bin.children[i].type === 1 && !before[bin.children[i].nodeId]) found = bin.children[i];
+            }
         }
         return found;
     }
@@ -1144,7 +1149,8 @@ var RRFX = (function () {
         list = audioClipsOf(s);
         for (var pass = 0; pass < 2 && !best && !it; pass++) {
             for (i = 0; i < list.length; i++) {
-                if (linkedToSelection(list[i].item) || (pass === 0 && withVideo(list[i].item))) continue;
+                // Le son posé par RR FX (caméra de référence) n'est jamais la musique.
+                if (/^RR FX \u00b7 /.test(list[i].item.name) || linkedToSelection(list[i].item) || (pass === 0 && withVideo(list[i].item))) continue;
                 d = tk(list[i].item.end) - tk(list[i].item.start);
                 if (d > bd) { bd = d; it = list[i].item; tr = list[i].track; }
             }
@@ -1359,16 +1365,36 @@ var RRFX = (function () {
         return false;
     }
 
+    // Plans d'une piste (hors calques RR FX) avec leurs bornes, lues une fois.
+    function spans(s, ti) {
+        var list = clipsOf(s, ti), out = [], i;
+        for (i = 0; i < list.length; i++) if (!isLayer(list[i])) out.push({ it: list[i], a: tk(list[i].start), b: tk(list[i].end) });
+        return out;
+    }
+
+    function covers(list, t) {
+        var i;
+        for (i = 0; i < list.length; i++) if (list[i].a <= t && t < list[i].b) return true;
+        return false;
+    }
+
+    // Un plan coupé en t (t strictement à l'intérieur, pas déjà sur une coupe).
+    function inside(list, t, f) {
+        var i;
+        for (i = 0; i < list.length; i++) if (list[i].a < t - f / 2 && t + f / 2 < list[i].b) return true;
+        return false;
+    }
+
     function multicamSwitch(o) {
-        var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs = qeSeq(), cams = [], lo = Infinity, hi = -Infinity, i, j, k, c, t, bounds, list, it;
-        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' · RR FX off', a, b, offN = 0;
+        var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs, cams = [], lo = Infinity, hi = -Infinity, i, j, k, c, t, bounds, lists = [], probe;
+        var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' · RR FX off', a, b, offN = 0, p, x;
         for (i = 0; i < sel.length; i++) {
             c = sel[i].item;
             if (isLayer(c)) continue;
             if (!inList(cams, sel[i].track)) cams.push(sel[i].track);
             lo = Math.min(lo, tk(c.start)); hi = Math.max(hi, tk(c.end));
         }
-        cams.sort(function (x, y) { return x - y; });
+        cams.sort(function (x1, y1) { return x1 - y1; });
         if (cams.length < 2) return fail('Sélectionne les plans de deux caméras ou plus, synchronisées et empilées (une piste par caméra).');
         bounds = [lo];
         for (j = 0; j < o.times.length; j++) {
@@ -1377,17 +1403,24 @@ var RRFX = (function () {
         }
         bounds.push(hi);
         if (bounds.length < 3) return fail('Aucun temps dans la zone sélectionnée.');
+        // Avant de couper quoi que ce soit : ce Premiere sait-il désactiver un plan par script ?
+        probe = sel[0].item;
+        if (!setDisabled(probe, !probe.disabled)) return fail('Cette version de Premiere ne permet pas de désactiver un plan par script.');
+        setDisabled(probe, !probe.disabled);
         multicamEnable(s, cams, lo, hi);
         // Coupe chaque caméra à chaque temps (le son n'est pas touché).
+        qs = qeSeq();
         for (k = 0; k < cams.length; k++) {
+            x = spans(s, cams[k]);
             for (j = 1; j < bounds.length - 1; j++) {
-                if (clipContaining(s, cams[k], bounds[j]) && !clipEndingAt(s, cams[k], bounds[j])) qs.getVideoTrackAt(cams[k]).razor(timecodeOf(s, bounds[j]));
+                if (inside(x, bounds[j], f)) qs.getVideoTrackAt(cams[k]).razor(timecodeOf(s, bounds[j]));
             }
         }
+        for (k = 0; k < cams.length; k++) lists.push({ track: cams[k], items: spans(s, cams[k]), next: 0 });
         for (j = 0; j < bounds.length - 1; j++) {
             a = bounds[j]; b = bounds[j + 1]; mid = (a + b) / 2;
             cover = [];
-            for (k = 0; k < cams.length; k++) if (clipContaining(s, cams[k], mid)) cover.push(cams[k]);
+            for (k = 0; k < lists.length; k++) if (covers(lists[k].items, mid)) cover.push(cams[k]);
             if (!cover.length) { seg.push(-1); continue; }
             if (o.order === 'random') {
                 seed = (seed * 48271) % 2147483647;
@@ -1400,14 +1433,16 @@ var RRFX = (function () {
             if (pick !== prev) switches++;
             prev = pick;
             seg.push(pick);
-            for (k = 0; k < cams.length; k++) {
-                if (cams[k] === pick) continue;
-                list = clipsOf(s, cams[k]);
-                for (i = 0; i < list.length; i++) {
-                    it = list[i];
-                    if (tk(it.start) >= a - f / 2 && tk(it.end) <= b + f / 2) {
-                        if (!setDisabled(it, true)) return fail('Cette version de Premiere ne permet pas de désactiver un plan par script.');
-                        try { it.name = it.name + tag; } catch (e) {}
+            // Les listes sont triées : chaque piste avance son curseur au lieu de tout relire.
+            for (k = 0; k < lists.length; k++) {
+                p = lists[k];
+                while (p.next < p.items.length && p.items[p.next].b <= a + f / 2) p.next++;
+                if (p.track === pick) continue;
+                for (i = p.next; i < p.items.length && p.items[i].a < b - f / 2; i++) {
+                    x = p.items[i];
+                    if (x.a >= a - f / 2 && x.b <= b + f / 2) {
+                        setDisabled(x.it, true);
+                        try { x.it.name = x.it.name + tag; } catch (e) {}
                         offN++;
                     }
                 }

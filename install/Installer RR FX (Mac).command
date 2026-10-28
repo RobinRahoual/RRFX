@@ -19,6 +19,9 @@ echo
 for v in 9 10 11 12 13; do defaults write "com.adobe.CSXS.$v" PlayerDebugMode 1; done
 killall cfprefsd 2>/dev/null || true
 
+# Ancien nom du plugin : le panneau CutFX est retiré pour ne pas l'avoir en double.
+rm -rf "$HOME/Library/Application Support/Adobe/CEP/extensions/CutFX"
+
 if rm -rf "$DEST" && mkdir -p "$DEST" && cp -R "$SRC/." "$DEST/"; then
   xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
   echo "RR FX est installé. Redémarre Premiere Pro, puis : Fenêtre > Extensions > RR FX"

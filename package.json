@@ -1,6 +1,6 @@
 {
   "name": "rrfx-premiere",
-  "version": "1.5.0",
+  "version": "1.5.1",
   "private": true,
   "description": "Panneau Premiere Pro (CEP) : transitions et effets de clip musical autour des coupes, speed ramps, effets perso capturés",
   "scripts": {

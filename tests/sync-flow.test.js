@@ -118,4 +118,52 @@ test('an unrelated camera is left alone', async () => {
   assert.ok(P.logs.some(([l, m]) => l === 'warn' && /laissé tel quel/.test(m)));
 });
 
+test('music sync: only the used part of the song is read, the camera lands on it', async () => {
+  const env = makeEnv(25), { seq, F, Item } = env;
+  const song = path.join(dir, 'SONG.wav'), take = path.join(dir, 'TAKE.wav');
+  writeWav(song, show);
+  writeWav(take, camera(show, 20, 15, 3000, 4)); // prise lancée à 20 s du morceau
+  const ps = env.projItem('SONG.wav', 1, 70 * 25 * F), pt = env.projItem('TAKE.wav', 1, 15 * 25 * F);
+  ps.path = song; pt.path = take;
+  const music = new Item(seq, ps, 125 * F, 1125 * F, 250 * F); // morceau de 10 s à 50 s, posé à 5 s
+  music.mediaType = 'Audio';
+  seq.audioTracks[1].add(music);
+  const clip = seq.videoTracks[0].add(new Item(seq, pt, 50 * F, 300 * F, 0));
+  clip.selected = true;
+  const P = loadPanel(env);
+  P.settings.sync = { ref: 'music', camRef: 'longest' };
+  const r = await P.app.actions.sync();
+  assert.strictEqual(r.kind, 'ok', JSON.stringify(r) + JSON.stringify(P.logs));
+  // 20 s du morceau = 5 + (20 - 10) = 15 s de séquence.
+  assert.ok(Math.abs(clip._s / F / 25 - 15) <= 0.04, 'clip at ' + clip._s / F / 25);
+  assert.ok(P.logs.some(([, m]) => /s lues/.test(m) && /4[0-9] s lues/.test(m)), 'about 44 s read, not the 70 s file: ' + JSON.stringify(P.logs));
+});
+
+test('beat markers land on the kicks of the used part of the song', async () => {
+  const env = makeEnv(25), { seq, F, Item } = env;
+  const kicks = new Float32Array(40 * SR);
+  for (let t = 0; t < 40; t += 0.5) {
+    const a = Math.round(t * SR);
+    for (let i = 0; i < SR * 0.25 && a + i < kicks.length; i++) kicks[a + i] += 0.8 * Math.exp(-i / SR * 25) * Math.sin(2 * Math.PI * 60 * i / SR);
+  }
+  const file = path.join(dir, 'KICKS.wav');
+  writeWav(file, kicks);
+  const pk = env.projItem('KICKS.wav', 1, 40 * 25 * F);
+  pk.path = file;
+  const music = new Item(seq, pk, 100 * F, 350 * F, 255 * F); // de 10,2 s à 20,2 s du fichier, posé à 4 s
+  music.mediaType = 'Audio';
+  seq.audioTracks[0].add(music);
+  const P = loadPanel(env);
+  P.settings.beats = { mode: 'kicks', sensitivity: 50, minGap: 120, every: 1, zone: 'music', replace: true };
+  const r = await P.app.actions.beats();
+  assert.strictEqual(r.kind, 'ok', JSON.stringify(r) + JSON.stringify(P.logs));
+  const times = env.call('markerList', {}).markers.map(m => m.t);
+  // Kicks du fichier à 10,5 ; 11 ; … → séquence 4 + (t - 10,2) = 4,3 ; 4,8 ; …
+  assert.ok(times.length >= 18 && times.length <= 21, times.length + ' markers');
+  times.forEach(t => {
+    const fileT = t - 4 + 10.2, err = Math.abs(fileT - Math.round(fileT * 2) / 2);
+    assert.ok(err <= 0.045, 'marker at ' + t.toFixed(3) + ' is ' + err.toFixed(3) + ' s off a kick');
+  });
+});
+
 test.after(() => fs.rmSync(dir, { recursive: true, force: true }));

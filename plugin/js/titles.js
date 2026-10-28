@@ -29,7 +29,7 @@
     }
     function scanMogrts() {
       if (!Store.fs) return [{ path: 'demo.mogrt', name: 'Titre simple (démo)' }];
-      const P = Store.path, dirs = [userDir()];
+      const P = Store.path, mine = userDir(), dirs = [mine];
       const appData = (root.process && root.process.env && root.process.env.APPDATA) || '';
       dirs.push(appData ? P.join(appData, 'Adobe', 'Common', 'Motion Graphics Templates')
         : P.join(Store.os.homedir(), 'Library', 'Application Support', 'Adobe', 'Common', 'Motion Graphics Templates'));
@@ -39,7 +39,7 @@
       dirs.forEach(d => Store.listFiles(d, /\.mogrt$/i, 300, 4).forEach(f => {
         if (seen[f]) return;
         seen[f] = true;
-        out.push({ path: f, name: P.basename(f, P.extname(f)) + (f.indexOf(userDir()) === 0 ? '' : '  ·  ' + P.basename(P.dirname(f))) });
+        out.push({ path: f, name: P.basename(f, P.extname(f)) + (f.indexOf(mine) === 0 ? '' : '  ·  ' + P.basename(P.dirname(f))) });
       }));
       out.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
       return out;
@@ -47,9 +47,14 @@
     function addMogrt() {
       const files = Store.pickFiles('Choisir un modèle de texte (.mogrt)', ['mogrt']);
       if (files === null) return app.status.finish('warn', 'Disponible dans Premiere', 'Le choix de fichier passe par Premiere.');
-      files.forEach(f => Store.fs.copyFileSync(f, Store.path.join(userDir(), Store.path.basename(f))));
+      const dir = userDir();
+      try {
+        files.forEach(f => { const to = Store.path.join(dir, Store.path.basename(f)); if (Store.path.resolve(f) !== Store.path.resolve(to)) Store.fs.copyFileSync(f, to); });
+      } catch (e) {
+        return app.status.finish('error', 'Modèle non ajouté', app.errorMessage(e));
+      }
       found = null;
-      if (files.length) st().mogrt = Store.path.join(userDir(), Store.path.basename(files[0]));
+      if (files.length) st().mogrt = Store.path.join(dir, Store.path.basename(files[0]));
       app.persist();
       app.switchTab('titles');
     }
@@ -62,7 +67,8 @@
       if (!chunks.length) throw new Error('Écris (ou colle) le texte ou les paroles.');
       const r = await Host.call('markerList', {});
       if (!r.ok) throw new Error(r.error);
-      const from = t.from === 'selection' && r.range ? r.range.a : t.from === 'start' ? 0 : r.playhead;
+      if (t.from === 'selection' && !r.range) throw new Error('Sélectionne des clips dans la timeline (ou choisis « À partir de : la tête de lecture »).');
+      const from = t.from === 'selection' ? r.range.a : t.from === 'start' ? 0 : r.playhead;
       let times = null;
       if (t.timing === 'markers') {
         times = r.markers.map(m => m.t);
@@ -124,7 +130,12 @@
     let player = null;
     function preview(canvas) {
       const g = canvas.getContext('2d'), N = 40, t = st();
-      const sample = Core.splitLyrics(t.text, t.split)[0] || 'Tes paroles ici';
+      // Le premier texte, relu quand il change (l'aperçu suit la saisie).
+      let lastText = null, sample = '';
+      const sampleText = () => {
+        if (t.text !== lastText) { lastText = t.text; sample = Core.splitLyrics(t.text, t.split)[0] || 'Tes paroles ici'; }
+        return sample;
+      };
       let spec = [];
       const build = () => {
         spec = Core.titleSpec(anim(), animParams(), N, t.inF, t.outF, 25).map(fx => Object.assign({}, fx, { props: fx.props.map(p => (p.keys ? Object.assign({}, p, { values: keysToValues(p.keys, N) }) : p)) }));
@@ -149,9 +160,10 @@
           g.textBaseline = 'middle';
           g.lineWidth = H * 0.012;
           g.strokeStyle = 'rgba(0,0,0,0.55)';
-          g.strokeText(sample, 0, 0);
+          const txt = sampleText();
+          g.strokeText(txt, 0, 0);
           g.fillStyle = '#fff';
-          g.fillText(sample, 0, 0);
+          g.fillText(txt, 0, 0);
           g.restore();
         }
       });

@@ -77,3 +77,25 @@ test('sync of rushes: the reference camera brings its sound on a free audio trac
   assert.strictEqual(u.removed, 2);
   assert.strictEqual(env.seq.audioTracks[2].items.length, 0);
 });
+
+test('multicam: RR FX layers on a camera track are never switched off', () => {
+  const env = setup();
+  const layer = env.seq.videoTracks[1].add(new env.Item(env.seq, env.adj, 0, 50 * env.F, 0, 'RR FX · Flash blanc PRE'));
+  [env.A, env.B, env.C].forEach(x => { x.selected = true; });
+  const r = env.call('multicamSwitch', { times: [1, 2, 3, 5], order: 'cycle' });
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(layer.disabled, false);
+  assert.strictEqual(layer.name, 'RR FX · Flash blanc PRE');
+});
+
+test('multicam: a Premiere that cannot switch clips off is detected before any cut', () => {
+  const env = setup();
+  [env.A, env.B, env.C].forEach(x => {
+    x.selected = true;
+    Object.defineProperty(x, 'disabled', { get: () => false, set: () => {} });
+  });
+  const before = env.seq.videoTracks.map(t => t.items.length);
+  const r = env.call('multicamSwitch', { times: [1, 2, 3], order: 'cycle' });
+  assert.match(r.error, /désactiver un plan/);
+  assert.deepStrictEqual(env.seq.videoTracks.map(t => t.items.length), before, 'nothing razored');
+});
