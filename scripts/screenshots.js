@@ -106,6 +106,21 @@ const ISSUES = [
   await page.click('.tab[data-tab=ramp]');
   await shot('rampe');
 
+  // Couleur : look appliqué, avant | après ; puis tous les panneaux ouverts.
+  await page.click('.tab[data-tab=color]');
+  await page.waitForSelector('.lr-look');
+  await page.click('.lr-look:has-text("Clip musical")');
+  await close();
+  await shot('couleur', 900);
+  for (const t of ['Courbe des tonalités', 'Mélangeur de couleurs', 'Étalonnage des couleurs', 'Calibrage']) await page.click('.lr-head:has-text("' + t + '")');
+  await page.click('.lr-head:has-text("Looks")');
+  await page.click('.lr-head:has-text("Réglages de base")');
+  await page.click('.lr-panel:has-text("Courbe des tonalités") .action:text-is("RVB")');
+  await page.click('.lr-panel:has-text("Étalonnage") .action:text-is("3 roues")');
+  await shot('couleur-panneaux', 900);
+  // Panneaux remis comme au départ pour la suite.
+  for (const t of ['Courbe des tonalités', 'Mélangeur de couleurs', 'Étalonnage des couleurs', 'Calibrage', 'Looks', 'Réglages de base']) await page.click('.lr-head:has-text("' + t + '")');
+
   // 4. Musique : analyse d'un morceau et temps forts posés
   await page.click('.tab[data-tab=music]');
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.action:has-text("Choisir un fichier")')]);

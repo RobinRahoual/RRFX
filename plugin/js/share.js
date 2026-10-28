@@ -7,7 +7,7 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const TYPES = ['preset', 'captured', 'ramp'];
+  const TYPES = ['preset', 'captured', 'ramp', 'look'];
 
   function toB64url(bytes) {
     let s = '';

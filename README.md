@@ -5,7 +5,7 @@ Plugin gratuit créé par **Robin Rahoual** — suis-moi sur Instagram : [@robin
 Des **transitions et effets de clip musical posés en un clic autour des coupes** (flashs, flickers, flous, zooms,
 shakes, slides, glitchs, motion blur) et des **overlays** (16 fournis : light leaks, flares, bokeh, pellicule, VHS…), des **speed ramps** qui ne
 décalent jamais la coupe, la **détection des temps forts** de la musique, le **montage automatique sur le rythme**, la
-**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, **tes dossiers de ressources** (SFX, polices, LUTs, overlays, titres…) à portée de clic, et **tes propres effets** capturés depuis Premiere,
+**synchro son/image en un clic** (sur la musique ou entre plusieurs caméras), le **montage multicam sur le rythme**, des **titres et paroles animés**, la **colorimétrie façon Lightroom** (LUT pour Premiere, DCTL pour Resolve), **tes dossiers de ressources** (SFX, polices, LUTs, overlays, titres…) à portée de clic, et **tes propres effets** capturés depuis Premiere,
 partageables par un simple code ou publiés dans la **bibliothèque en ligne** de la communauté.
 
 **Ton clip n'est jamais modifié** : comme chez 2WIN, les effets se posent sur des **calques de réglage** au-dessus
@@ -53,7 +53,7 @@ dépend de l'onglet) et le **bloc d'état**.
 | Réglage | Rôle |
 | --- | --- |
 | **Côté** | **PRE** = fin du plan sortant (monte jusqu'à la coupe), **POST** = début du plan entrant (redescend), ou les deux |
-| **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · Tête de lecture · Début / fin des clips · Clips entiers |
+| **Position** | Coupe la plus proche · Toutes les coupes de la sélection · **Marqueurs de la séquence** · **Temps forts de la musique** (détectés directement, sans poser de marqueurs) · Tête de lecture · Début / fin des clips · Clips entiers |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), ou **un effet au hasard** (même catégorie ou favoris) |
 | **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`RR FX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
 | **Intensité qui suit le volume** | En option : l'intensité de chaque coupe est modulée par le volume de la musique à cet instant (doux sur un couplet, fort sur un drop) ; *Influence* règle l'écart |
@@ -104,9 +104,42 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
   **le clip d'origine, son son et la coupe ne bougent pas**. L'*ancre* choisit l'image qui reste en place.
 - RR FX vérifie qu'il y a assez de média avant de poser quoi que ce soit.
 - **↶ Annuler** retire la rampe ; **＋ Enregistrer** la garde dans les préréglages.
+- **Caler sur le tempo** : la durée de la rampe devient ½, 1, 2 ou 4 temps de la musique de la séquence.
 
 Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
 constante (« RR FX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
+
+### Onglet Couleur (façon Lightroom)
+
+La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom :
+
+- **Histogramme** RVB et **aperçu avant | après** (séparateur à glisser, ou Après / Avant seuls), sur les plans de
+  test ou **ta vraie image** (📷) ;
+- **Looks** en vignettes (Clip musical, Film chaud, Noir et blanc, Pastel, Nuit bleue, Ciné désaturé, Été vintage,
+  Punchy, et les tiens) et **Intensité du look** ;
+- **Réglages de base** : Température, Teinte · Exposition, Contraste, Hautes lumières, Ombres, Blancs, Noirs ·
+  Vibrance, Saturation ;
+- **Courbe des tonalités** : paramétrique (Hautes lumières, Tons clairs, Tons foncés, Ombres, séparations) ou à points
+  (RVB, R, V, B), avec l'histogramme en fond ;
+- **Mélangeur de couleurs** : Teinte, Saturation, Luminance des 8 couleurs (rouge… magenta) ;
+- **Étalonnage des couleurs** : roues Ombres, Tons moyens, Hautes lumières (3 roues ou une par une) et Global,
+  Luminance, Fusion, Équilibre ;
+- **Calibrage** : teinte des ombres, teinte et saturation des primaires rouge, verte, bleue.
+
+Curseurs comme dans Lightroom : glisser (Maj = fin), double-clic sur le nom = valeur par défaut, clic sur la valeur =
+saisie ; ↺ remet un panneau à zéro.
+
+**Appliquer le look** (bouton du haut) : RR FX fabrique une **LUT .cube** (33³), l'installe dans le dossier des LUT
+d'Adobe et pose un **calque de réglage Lumetri** sur le clip visé (ou la sélection, ou **toute la séquence**). Les
+scripts de Premiere ne peuvent pas choisir une LUT : le chemin est copié, il reste *Lumetri > Créatif > Look >
+Parcourir…* (après un redémarrage, le look est aussi dans la liste). **Exporter .cube…** sert aussi pour Resolve,
+Final Cut, CapCut… **Exporter DCTL…** crée un vrai **DCTL pour DaVinci Resolve** avec les mêmes curseurs (60 curseurs,
+courbes intégrées) : Premiere ne lit pas les DCTL. Aperçu, LUT et DCTL font exactement le même calcul (vérifié par
+les tests : le DCTL y est compilé en C et comparé au panneau). **Enregistrer le look** le range dans Mes effets :
+partageable par code et publiable dans la Communauté.
+
+Texture, Clarté, Correction du voile, vignettage et grain dépendent des pixels voisins : une LUT ne peut pas les
+porter, ils restent dans Lumetri.
 
 ### Onglet Musique
 
@@ -327,6 +360,8 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/share.js            codes de partage RRFX1
   js/packs.js            les 16 overlays fournis, dessinés image par image
   js/community.js        bibliothèque en ligne (issues GitHub : lecture, tri, lien de publication)
+  js/develop.js          moteur couleur façon Lightroom : réglages, LUT .cube, DCTL (testé, DCTL compilé en C)
+  js/couleur.js          onglet Couleur : histogramme, avant/après, panneaux Lightroom, looks
   js/assets.js           ressources : indexation des dossiers liés, classement, filtres, LUT .cube (testé)
   js/ressources.js       onglet Ressources : vignettes, aperçus, actions
   js/core.js             courbes, compilation des effets, rampes, détection des noms (sans DOM, testé)

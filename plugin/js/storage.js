@@ -96,6 +96,24 @@
     return defaultName;
   }
 
+  // Enregistre un texte (LUT, DCTL…) via la boîte « Enregistrer sous » ; hors de Premiere, téléchargement.
+  function exportText(text, defaultName, exts, title) {
+    const c = cepFs();
+    if (fs && c && c.showSaveDialogEx) {
+      const r = c.showSaveDialogEx(title || 'Exporter', DIR || '', exts, defaultName);
+      if (!r || r.err || !r.data) return null;
+      const ext = '.' + exts[0], target = r.data.toLowerCase().endsWith(ext) ? r.data : r.data + ext;
+      fs.writeFileSync(target, text, 'utf8');
+      return target;
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([text], { type: 'text/plain' }));
+    a.download = defaultName;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    return defaultName;
+  }
+
   function importJSON() {
     const c = cepFs();
     if (fs && c && c.showOpenDialogEx) {
@@ -214,7 +232,7 @@
   }
 
   root.RRFXStorage = {
-    load, save, exportJSON, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
+    load, save, exportJSON, exportText, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
     reveal, execFile, systemDirs, readJSON, writeJSON, isWin,
     fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
   };

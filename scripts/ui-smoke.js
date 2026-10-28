@@ -187,6 +187,45 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.tab.on[data-tab=effects]', { timeout: 3000 });
     await page.waitForSelector('.badge:has-text("overlay")', { timeout: 3000 });
   });
+  await step('effets sur les temps forts (sans marqueurs)', async () => {
+    await page.click('.tab[data-tab=effects]');
+    await page.click('.chips .action:text-is("Tout")');
+    await page.click('.card:has-text("Flash blanc")');
+    await page.selectOption('.section:has-text("Placement") select >> nth=0', 'beats');
+    await page.click('#cta');
+    await page.waitForSelector('#status.ok:has-text("zones"), #status.warn:has-text("zones")', { timeout: 10000 });
+    await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
+  });
+  await step('rampe calée sur le tempo', async () => {
+    await page.click('.tab[data-tab=ramp]');
+    await page.click('.row:has-text("Caler sur le tempo") .action:text-is("1 temps")');
+    await page.waitForSelector('#status.ok:has-text("Rampe de")', { timeout: 5000 });
+    const t = await page.textContent('#status-title');
+    if (!/Rampe de 1[23] images/.test(t)) throw new Error('1 temps à 120 BPM, 25 i/s ≈ 12,5 images : ' + t);
+  });
+  await step('couleur', async () => {
+    await page.click('.tab[data-tab=color]');
+    await page.waitForSelector('.lr-look');
+    await page.click('.lr-look:has-text("Nuit bleue")');
+    const t = page.locator('.lr-row:has(.lr-label:text-is("Exposition")) .lr-track'), bx = await t.boundingBox();
+    await page.mouse.move(bx.x + bx.width / 2, bx.y + 2); await page.mouse.down();
+    await page.mouse.move(bx.x + bx.width * 0.55, bx.y + 2, { steps: 4 }); await page.mouse.up();
+    if ((await page.textContent('.lr-row:has(.lr-label:text-is("Exposition")) .lr-val')) === '0,00') throw new Error('curseur Exposition immobile');
+    const [cube] = await Promise.all([page.waitForEvent('download'), page.click('.action:has-text("Exporter .cube")')]);
+    const cubeText = fs.readFileSync(await cube.path(), 'utf8');
+    if (!/LUT_3D_SIZE 33/.test(cubeText)) throw new Error('LUT exportée invalide');
+    const [dctl] = await Promise.all([page.waitForEvent('download'), page.click('.action:has-text("Exporter DCTL")')]);
+    if (!/DEFINE_UI_PARAMS\(exposure/.test(fs.readFileSync(await dctl.path(), 'utf8'))) throw new Error('DCTL exporté invalide');
+    await page.click('.action:has-text("Enregistrer le look")');
+    await page.fill('.modal input', 'Nuit perso');
+    await page.click('.modal .cta');
+    await page.waitForSelector('.lr-look:has-text("Nuit perso")', { timeout: 3000 });
+    await page.click('#cta');
+    await page.waitForSelector('#status.ok:has-text("Look posé")', { timeout: 5000 });
+    await page.click('.tab[data-tab=mine]');
+    await page.click('.list-item:has-text("Nuit perso") .action:text-is("Ouvrir")');
+    await page.waitForSelector('.tab.on[data-tab=color]', { timeout: 3000 });
+  });
   await step('intensité selon le volume', async () => {
     await page.click('.tab[data-tab=effects]');
     await page.click('.chips .action:text-is("Tout")');

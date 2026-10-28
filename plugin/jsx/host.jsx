@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '1.6.0';
+    var VERSION = '1.7.0';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -699,12 +699,20 @@ var RRFX = (function () {
             atCut(cut, track,
                 o.placement === 'cut' ? clipEndingAt(s, track, cut) : clipContaining(s, track, cut - f),
                 clipContaining(s, track, cut));
+        } else if (o.placement === 'sequence') {
+            // Toute la séquence : une zone du début à la fin du dernier plan (looks…).
+            hi = 0;
+            for (i = 0; i < s.videoTracks.numTracks; i++) { list = clipsOf(s, i); if (list.length) hi = Math.max(hi, tk(list[list.length - 1].end)); }
+            if (!(hi > 0)) return fail('La séquence est vide.');
+            add('post', 0, hi, null, 0, 0);
         } else if (o.placement === 'markers') {
             ref = refClip(s);
             track = ref ? ref.track : 0;
             list = selectedVideo(s);
-            var times = markerTimes(s), lo = -Infinity, hi = Infinity, seen = {}, tm;
-            if (!times.length) return fail('Aucun marqueur dans la séquence. Posez-en sur les temps forts (touche M pendant la lecture).');
+            // o.times (secondes) : temps forts détectés par le panneau, à la place des marqueurs.
+            var times = [], lo = -Infinity, hi = Infinity, seen = {}, tm;
+            if (o.times) { for (i = 0; i < o.times.length; i++) times.push(o.times[i] * TICKS); } else times = markerTimes(s);
+            if (!times.length) return fail(o.times ? 'Aucun temps fort détecté.' : 'Aucun marqueur dans la séquence. Posez-en sur les temps forts (touche M pendant la lecture).');
             if (list.length) {
                 lo = Infinity; hi = -Infinity;
                 for (i = 0; i < list.length; i++) { lo = Math.min(lo, tk(list[i].item.start)); hi = Math.max(hi, tk(list[i].item.end)); }

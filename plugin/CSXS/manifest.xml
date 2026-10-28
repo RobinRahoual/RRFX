@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<ExtensionManifest Version="7.0" ExtensionBundleId="com.robinrahoual.rrfx.panel" ExtensionBundleVersion="1.6.0" ExtensionBundleName="RR FX" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
+<ExtensionManifest Version="7.0" ExtensionBundleId="com.robinrahoual.rrfx.panel" ExtensionBundleVersion="1.7.0" ExtensionBundleName="RR FX" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">
   <ExtensionList>
-    <Extension Id="com.robinrahoual.rrfx.panel" Version="1.6.0" />
+    <Extension Id="com.robinrahoual.rrfx.panel" Version="1.7.0" />
   </ExtensionList>
   <ExecutionEnvironment>
     <HostList>

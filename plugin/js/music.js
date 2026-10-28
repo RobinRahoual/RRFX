@@ -188,6 +188,7 @@
       return times.map(t => Audio.intensityFactor(Audio.loudnessAt(M.loud, seqToFile(M.info, t) - M.t0), influence / 100));
     };
     app.services.musicName = () => (M.info ? M.info.name : '');
+    app.services.tempo = async () => { await ensureMusic(false); detect(await zone()); return M.beats.bpm; };
 
     // ---------------------------------------------------------------- actions
 

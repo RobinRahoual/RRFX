@@ -15,6 +15,7 @@
     { v: 'cut', label: 'Coupe la plus proche' },
     { v: 'cuts', label: 'Toutes les coupes de la sélection' },
     { v: 'markers', label: 'Marqueurs de la séquence' },
+    { v: 'beats', label: 'Temps forts de la musique (sans marqueurs)' },
     { v: 'playhead', label: 'Tête de lecture' },
     { v: 'clipStart', label: 'Début des clips sélectionnés' },
     { v: 'clipEnd', label: 'Fin des clips sélectionnés' },
@@ -824,7 +825,7 @@
       sideCtl = actionGroup(opts, pl === 'full' ? (st.side === 'pre' ? 'pre' : 'post') : st.side, v => { st.side = v; persist(); paramChanged(true); });
     }
     const forced = def && def.target;
-    const multi = pl === 'cuts' || pl === 'markers';
+    const multi = pl === 'cuts' || pl === 'markers' || pl === 'beats';
     const where = e.kind === 'overlay' ? 'Overlay posé au-dessus du clip'
       : forced ? 'CLIP FX : copie du plan au-dessus du clip' : 'Calque de réglage au-dessus du clip';
     const volRows = [];
@@ -972,10 +973,18 @@
     const e = S.cur;
     if (!e) return null;
     const st = settings();
-    const multi = st.placement === 'cuts' || st.placement === 'markers';
+    const multi = st.placement === 'cuts' || st.placement === 'markers' || st.placement === 'beats';
     return runTask('Application · ' + e.name, async () => {
       status.phase('Analyse de la timeline');
-      const r = await Host.call('resolve', { placement: st.placement, sides: activeSides(), frames: S.params.frames, target: targetFor(e) });
+      // Temps forts : détectés dans la musique, sans passer par des marqueurs.
+      let times;
+      if (st.placement === 'beats') {
+        if (!app.services.beatTimes) return { kind: 'error', title: 'Musique indisponible', detail: 'Onglet Musique introuvable.' };
+        status.phase('Temps forts de la musique');
+        times = await app.services.beatTimes();
+        if (!times.length) return { kind: 'warn', title: 'Aucun temps fort', detail: 'Règle la détection dans l\'onglet Musique (sensibilité, type).' };
+      }
+      const r = await Host.call('resolve', { placement: st.placement === 'beats' ? 'markers' : st.placement, times, sides: activeSides(), frames: S.params.frames, target: targetFor(e) });
       if (!r.ok) {
         (r.warnings || []).forEach(w => log(w, 'warn'));
         return { kind: 'error', title: 'Rien n\'a été appliqué', detail: r.error };
@@ -1173,6 +1182,7 @@
     view.appendChild(section('Réglages', [
       row('Position', picker(RAMP_PLACEMENTS, R.placement, v => { R.placement = v; persist(); if (S.rampPlayer) S.rampPlayer.redraw(); })),
       row('Durée', hotText({ value: R.frames, min: 2, max: 600, step: 1, unit: 'i', onChange: (v, fin) => { R.frames = v; changed(fin); } })),
+      row('Caler sur le tempo', actionGroup([0.5, 1, 2, 4].map(n => ({ v: n, label: n === 0.5 ? '½ temps' : n + ' temps' })), null, n => tempoRamp(n)), { title: 'Durée de la rampe = un nombre de temps de la musique de la séquence' }),
       row('Morceaux', hotText({ value: R.segments, min: 2, max: 32, step: 1, unit: '', onChange: (v, fin) => { R.segments = v; changed(fin); } }), { title: 'Plus de morceaux = rampe plus douce, mais plus de coupes dans la timeline' }),
       row('Ancre', picker([
         { v: 'auto', label: 'Auto (coupe fixe)' },
@@ -1195,6 +1205,21 @@
     view.appendChild(section('Aperçu', h('div', { class: 'pv-frame' }, pcv, h('span', { class: 'pv-label' }, 'Aperçu simulé'))));
     view.appendChild(h('div', { class: 'note' }, 'La rampe est posée sur une copie du passage, juste au-dessus du clip, en morceaux de vitesse constante (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip d\'origine, son son et la coupe ne bougent pas ; ↶ Annuler retire la copie.'));
     requestAnimationFrame(() => S.rampEd && S.rampEd.draw());
+  }
+
+  // Durée de la rampe calée sur le tempo de la musique (onglet Musique).
+  function tempoRamp(beats) {
+    return runTask('Tempo', async () => {
+      if (!app.services.tempo) return { kind: 'error', title: 'Musique indisponible', detail: '' };
+      status.phase('Tempo de la musique');
+      const bpm = await app.services.tempo();
+      if (!bpm) return { kind: 'warn', title: 'Tempo introuvable', detail: 'La musique n\'a pas de pulsation régulière assez nette.' };
+      const R = ramp();
+      R.frames = Math.max(2, Math.round(beats * 60 / bpm * fps()));
+      persist();
+      renderRampView();
+      return { kind: 'ok', title: 'Rampe de ' + R.frames + ' images', detail: (beats === 0.5 ? '½ temps' : plural(beats, 'temps', 'temps')) + ' à ~' + String(bpm).replace('.', ',') + ' BPM.' };
+    });
   }
 
   async function saveRamp() {
@@ -1290,7 +1315,7 @@
       list.appendChild(h('div', { class: 'note' }, 'Rien pour l\'instant : enregistre un preset (« ＋ Preset » sur un effet), une rampe, ou capture un clip.'));
       return;
     }
-    const types = { preset: ['≡', 'Preset'], captured: ['◎', 'Capturé'], ramp: ['⤳', 'Rampe'] };
+    const types = { preset: ['≡', 'Preset'], captured: ['◎', 'Capturé'], ramp: ['⤳', 'Rampe'], look: ['◐', 'Look'] };
     S.lib.items.slice().sort((a, b) => b.created - a.created).forEach(item => {
       const [ic, label] = types[item.type] || ['•', item.type];
       let meta = label;
@@ -1325,6 +1350,7 @@
   }
 
   function openItem(item) {
+    if (item.type === 'look') { if (app.services.openLook) app.services.openLook(item); return; }
     if (item.type === 'ramp') {
       const R = ramp();
       R.points = clone(item.data.points);
@@ -1358,10 +1384,11 @@
   function addItems(list) {
     let n = 0;
     list.forEach(it => {
-      if (!it || ['preset', 'captured', 'ramp'].indexOf(it.type) < 0 || !it.data || typeof it.name !== 'string') return;
+      if (!it || ['preset', 'captured', 'ramp', 'look'].indexOf(it.type) < 0 || !it.data || typeof it.name !== 'string') return;
       if (it.type === 'preset' && !Lib.byId[it.data.base]) return;
       if (it.type === 'captured' && !Array.isArray(it.data.components)) return;
       if (it.type === 'ramp' && !Array.isArray(it.data.points)) return;
+      if (it.type === 'look' && (!it.data.params || typeof it.data.params !== 'object')) return;
       S.lib.items.push(Object.assign({}, it, { id: uid(), created: Date.now() }));
       n++;
     });
@@ -1446,7 +1473,7 @@
       h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de RR FX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
       h('div', { class: 'search' }, search, refresh),
       row('Trier', actionGroup([{ v: 'popular', label: 'Les plus aimés' }, { v: 'recent', label: 'Les plus récents' }], C.sort, v => { C.sort = v; renderCommunityList(); })),
-      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }], C.type, v => { C.type = v; renderCommunityList(); })),
+      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }, { v: 'look', label: 'Looks (couleur)' }], C.type, v => { C.type = v; renderCommunityList(); })),
       h('div', { id: 'comm-list' })
     ]));
     view.appendChild(section('Publier', [
@@ -1467,6 +1494,15 @@
     let entry = null;
     if (it.type === 'preset' && Lib.byId[it.data.base]) entry = { kind: 'preset', name: it.name, def: Lib.byId[it.data.base], item: it };
     if (it.type === 'captured') entry = { kind: 'captured', name: it.name, def: null, item: it };
+    if (it.type === 'look' && window.RRFXDevelop) {
+      // Un look : le plan de test passé dans sa LUT.
+      const g = cv.getContext('2d');
+      g.drawImage(Pv.shots().A, 0, 0, 160, 90);
+      const d = g.getImageData(0, 0, 160, 90);
+      window.RRFXAssets.applyLut(d.data, window.RRFXDevelop.buildLut(it.data.params, 9));
+      g.putImageData(d, 0, 0);
+      return cv;
+    }
     if (entry) drawThumb(cv, entry);
     else {
       const g = cv.getContext('2d');
@@ -1869,6 +1905,7 @@
   // Pour les autres onglets (Ressources…) : ajouter un overlay ou des effets à la bibliothèque.
   app.services.addOverlay = file => { addOverlayList([file]); if (S.tab !== 'effects') switchTab('effects'); };
   app.services.addItems = list => addItems(list);
+  app.services.grabFrames = () => grabRealFrames();
   app.fileURL = fileURL;
   function loadFeatures() {
     (window.RRFXFeatures || []).forEach(feature => {
