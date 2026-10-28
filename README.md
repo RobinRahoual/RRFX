@@ -238,6 +238,7 @@ d'étalonnage, calibrage.
 
 - **Looks** prêts à l'emploi (Clip musical, Film chaud, Nuit bleue…) et avant/après sur ta vraie image.
 - Un clic pour l'appliquer dans Premiere. Exporte aussi en **LUT .cube** ou en **DCTL pour DaVinci Resolve**.
+- Un **sommaire** toujours visible : Looks, Réglages, Courbe, Roues, Mes LUTs, Dégradés, LOG, Raccord, en un clic.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/couleur.png" alt="Étalonnage façon Lightroom" width="300"></td>
@@ -397,6 +398,7 @@ Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : to
 - **Packs de style** : tes effets, looks, textes et overlays dans un seul fichier, pour un autre projet ou un
   pote.
 - Partage un effet par un simple **code** à envoyer en message.
+- Ta bibliothèque se **cherche et se filtre par type** dès qu'elle grandit.
 - **Importe presque tout** en un bouton : presets, rampes, looks, styles de texte, animations, dégradés,
   palettes, styles Express, packs, LUTs, nuanciers `.ase`, modèles `.mogrt`. RR FX reconnaît le fichier tout seul.
 

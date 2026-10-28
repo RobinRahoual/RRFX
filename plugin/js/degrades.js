@@ -26,11 +26,12 @@
     const userGradients = () => app.S.lib.items.filter(i => i.type === 'gradient');
 
     // Aperçu : le plan de test (ou ta vraie image), le dégradé fondu par-dessus.
-    function draw(cv, x) {
+    function draw(cv, x, before) {
       const g = cv.getContext('2d'), W = cv.width, H = cv.height, gr = x.g;
       g.globalCompositeOperation = 'source-over';
       g.globalAlpha = 1;
       g.drawImage(Pv.shots()[Pv.isReal() ? 'B' : 'A'], 0, 0, W, H);
+      if (before) return;
       const r = C.rampOf(gr);
       let fill;
       if (gr.type === 'radial') { fill = g.createRadialGradient(W / 2, H / 2, 0, W / 2, H / 2, Math.hypot(W, H) / 2); } else fill = g.createLinearGradient(r.start[0] * W, r.start[1] * H, r.end[0] * W, r.end[1] * H);
@@ -59,17 +60,12 @@
     function apply() {
       const x = st();
       return app.runTask('Dégradé de couleur', async () => {
-        const r = await Host.call('resolve', x.target === 'sequence' ? { placement: 'sequence', sides: ['post'], frames: 1, target: 'adjustment' } : { placement: 'full', sides: ['post'], frames: 1, target: 'adjustment' });
-        if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error };
         const names = await Host.call('listEffects', { filter: 'ramp|grad|verlauf|rampa' });
         const fx = fxOf(x);
         if (names.ok && names.names.length) fx[0].names = names.names.filter(n => !/4|quatre|vier|cuatro|quattro/i.test(n)).concat(RAMP_NAMES);
-        const name = 'RR FX · Dégradé';
-        const res = await Host.call('apply', { target: 'adjustment', name, targets: r.targets.map(t => Object.assign({}, t, { name, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
-        if (!res.ok) return { kind: 'error', title: 'Dégradé non posé', detail: res.error };
-        if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'Dégradé', entries: res.created });
-        (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title: 'Dégradé posé', detail: 'Calque de réglage « RR FX · Dégradé » (effet Dégradé + mode de fusion), réglable dans Options d\'effet.' };
+        const { res, fail } = await app.services.adjustmentLayer('RR FX · Dégradé', fx, { scope: x.target });
+        if (fail) return fail;
+        return { kind: res.kind, title: 'Dégradé posé', detail: 'Calque de réglage « RR FX · Dégradé » (effet Dégradé + mode de fusion), réglable dans Options d\'effet.' };
       });
     }
 
@@ -88,7 +84,11 @@
           x.preset = v; app.persist(); refresh();
         })));
         const swatch = h('div', { class: 'grad-swatch', style: { background: C.gradientCss(x.g) } });
-        box.appendChild(h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, 'Aperçu'))));
+        // Maintenir le clic sur l'aperçu : l'image sans le dégradé.
+        const frame = h('div', { class: 'pv-frame', title: 'Maintiens le clic pour voir l\'avant' }, cv, h('span', { class: 'pv-label' }, 'Aperçu · maintiens pour l\'avant'));
+        frame.addEventListener('pointerdown', () => draw(cv, x, true));
+        ['pointerup', 'pointerleave'].forEach(ev => frame.addEventListener(ev, redraw));
+        box.appendChild(h('div', { class: 'preview' }, frame));
         const custom = () => { x.preset = 'custom'; swatch.style.background = C.gradientCss(x.g); app.persist(); redraw(); };
         box.appendChild(row('Couleur 1', app.services.colorPick(x.g.colors[0], v => { x.g.colors[0] = v || '#ffffff'; custom(); })));
         box.appendChild(row('Couleur 2', app.services.colorPick(x.g.colors[x.g.colors.length - 1], v => { x.g.colors[x.g.colors.length - 1] = v || '#000000'; custom(); })));

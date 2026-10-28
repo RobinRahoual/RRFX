@@ -269,7 +269,7 @@
     app.actions.express = launch;
     app.itemTypes.xpStyle = {
       icon: '⚡', label: 'Style Express', valid: d => !!d.recipe && Array.isArray(d.recipe.chain) && !!d.recipe.beats && !!d.recipe.cut,
-      meta: it => it.data.recipe.chain.length + ' effet(s) · ' + Object.keys(it.data.recipe.steps || {}).length + ' étape(s)',
+      meta: it => app.plural(it.data.recipe.chain.length, 'effet') + ' · ' + app.plural(Object.keys(it.data.recipe.steps || {}).length, 'étape'),
       open: it => { st().recipe = 'u:' + it.id; app.persist(); app.switchTab('express'); }
     };
   });

@@ -6,7 +6,7 @@
   'use strict';
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
-    const D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Host, Pv } = app;
+    const D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Pv } = app;
     const { h, actionGroup, row, fitCanvas, css } = app.UI;
 
     const PW = 480, PH = 270; // taille de calcul de l'aperçu
@@ -161,11 +161,13 @@
 
     // ---------------------------------------------------------------- panneaux
 
+    // Panneaux fermés à la première ouverture (le sommaire les ouvre en un clic).
+    const FOLDED = { gradient: true, calib: true };
     function panel(id, title, body, onReset) {
-      const s = st(), open = s.open[id] !== false;
+      const s = st(), open = s.open[id] === undefined ? !FOLDED[id] : s.open[id] !== false;
       const reset = onReset ? h('button', { class: 'action quiet icon lr-reset', title: 'Réinitialiser ce panneau' }, '↺') : null;
       const head = h('div', { class: 'lr-head' }, h('span', { class: 'lr-chev' }, open ? '▾' : '▸'), h('span', { class: 'lr-title' }, title), reset);
-      const el = h('div', { class: 'lr-panel' + (open ? '' : ' closed') }, head, h('div', { class: 'lr-body' }, body));
+      const el = h('div', { class: 'lr-panel' + (open ? '' : ' closed'), 'data-panel': id }, head, h('div', { class: 'lr-body' }, body));
       head.addEventListener('click', e => {
         if (e.target === reset) return;
         s.open[id] = el.classList.contains('closed');
@@ -463,17 +465,11 @@
           if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
         }
         app.status.phase('Calque de réglage');
-        const placement = s.target === 'sequence' ? 'sequence' : 'full';
-        const r = await Host.call('resolve', { placement, sides: ['post'], frames: 1, target: 'adjustment' });
-        if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error + (s.target === 'clip' ? ' (ou choisis « Toute la séquence »)' : '') };
-        const label = 'RR FX · Look ' + name, fx = await app.services.lumetriFx(file);
-        const res = await Host.call('apply', { target: 'adjustment', name: label, targets: r.targets.map(t => Object.assign({}, t, { name: label, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
-        if (!res.ok) return { kind: 'error', title: 'Calque non posé', detail: res.error };
-        if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'Look · ' + name, entries: res.created });
-        (res.warnings || []).forEach(w => app.log(w, 'warn'));
+        const { res, fail } = await app.services.adjustmentLayer('RR FX · Look ' + name, await app.services.lumetriFx(file), { scope: s.target === 'sequence' ? 'sequence' : 'clip', history: 'Look · ' + name });
+        if (fail) return fail;
         if (file) app.log('LUT du look : ' + file, 'ok');
         const title = 'Look posé · ' + app.plural(res.created.length, 'calque Lumetri', 'calques Lumetri');
-        if (file && res.lutSet) return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title, detail: 'LUT « ' + Store.path.basename(file) + ' » chargée dans Lumetri (LUT d\'entrée).' };
+        if (file && res.lutSet) return { kind: res.kind, title, detail: 'LUT « ' + Store.path.basename(file) + ' » chargée dans Lumetri (LUT d\'entrée).' };
         // LUT non chargée par script : on l'installe aussi dans les Looks de Lumetri.
         if (file) {
           try {
@@ -484,7 +480,7 @@
         }
         const copied = file && navigator.clipboard ? await navigator.clipboard.writeText(file).then(() => true, () => false) : false;
         return {
-          kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
+          kind: res.kind,
           title,
           detail: file
             ? 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + Store.path.basename(file) + ' »' + (copied ? ' (chemin copié)' : '') + '. Après un redémarrage de Premiere, il est aussi dans la liste des Looks.'
@@ -534,6 +530,7 @@
 
     // ---------------------------------------------------------------- page
 
+    const NAV = [['looks', 'Looks'], ['basic', 'Réglages'], ['curve', 'Courbe'], ['grading', 'Roues'], ['luts', 'Mes LUTs'], ['gradient', 'Dégradés'], ['log', 'LOG'], ['fix', 'Raccord'], ['out', 'Exporter']];
     function render(view) {
       if (view) V.view = view;
       view = V.view;
@@ -565,6 +562,9 @@
           actionGroup([{ v: 'split', label: 'Avant | Après' }, { v: 'after', label: 'Après' }, { v: 'before', label: 'Avant' }], s.view, v => { s.view = v; app.persist(); drawPreview(); }),
           actionGroup([{ v: 'A', label: 'Plan 1' }, { v: 'B', label: 'Plan 2' }], s.shot, v => { s.shot = v; V.src = null; app.persist(); update(true); }),
           realBtn)));
+      // Sommaire collant : un clic amène au panneau (et l'ouvre).
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Panneaux de l\'onglet Couleur' });
+      view.appendChild(nav);
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       if (app.correction) view.appendChild(app.correction.panel(panel));
       if (app.lutLibrary) view.appendChild(app.lutLibrary.panel(panel));
@@ -576,6 +576,17 @@
       view.appendChild(gradingPanel());
       view.appendChild(calibPanel());
       view.appendChild(outPanel());
+      NAV.forEach(([id, label]) => {
+        const el = view.querySelector('[data-panel="' + id + '"]');
+        if (!el) return;
+        const b = h('button', { class: 'action' }, label);
+        b.addEventListener('click', () => {
+          if (el.classList.contains('closed')) el.querySelector('.lr-head').click();
+          const sc = document.getElementById('scroll');
+          sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - nav.offsetHeight - 4;
+        });
+        nav.appendChild(b);
+      });
       requestAnimationFrame(() => update(true));
     }
 

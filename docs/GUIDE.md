@@ -148,7 +148,7 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
   **le clip d'origine, son son et la coupe ne bougent pas**. L'*ancre* choisit l'image qui reste en place.
 - RR FX vérifie qu'il y a assez de média avant de poser quoi que ce soit.
 - **↶ Annuler** retire la rampe ; **＋ Enregistrer** la garde dans les préréglages.
-- **Caler sur le tempo** : la durée de la rampe devient ½, 1, 2 ou 4 temps de la musique de la séquence.
+- **Sur le tempo** : la durée de la rampe devient ½, 1, 2 ou 4 temps de la musique de la séquence.
 
 Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
 constante (« RR FX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
@@ -201,7 +201,10 @@ L'ordre des calques est toujours le même, de bas en haut : rushs, **conversion*
 
 ### Onglet Couleur (façon Lightroom)
 
-La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom :
+La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom.
+Sous l'aperçu, un **sommaire** reste en haut quand tu fais défiler : *Looks, Réglages, Courbe, Roues, Mes LUTs,
+Dégradés, LOG, Raccord, Exporter*. Un clic amène au panneau et l'ouvre. Chaque panneau se replie d'un clic sur son
+titre (Dégradés et Calibrage sont repliés à la première ouverture) ; RR FX se souvient de ton choix.
 
 - **Histogramme** RVB et **aperçu avant | après** (séparateur à glisser, ou Après / Avant seuls), sur les plans de
   test ou **ta vraie image** (📷) ;
@@ -239,7 +242,7 @@ Ta bibliothèque de LUTs, **gardée d'un projet à l'autre** : plus besoin de r�
   copiées une fois dans `Documents/RRFX/Mes LUTs` (une LUT déjà présente n'est pas recopiée). 📂 ouvre le dossier.
 - Les LUTs de tes **dossiers liés** (onglet Ressources) apparaissent aussi, sans copie.
 - **Vignettes** de chaque LUT sur le plan de test ou ta vraie image (📷), **grand aperçu** (maintiens le clic pour
-  voir l'avant), recherche, **favorites** ★, *Afficher plus* au-delà de 24.
+  voir l'avant), recherche, **favorites** ★, *Afficher plus* au-delà de 48.
 - **Appliquer** (ou double-clic sur une vignette) : calque de réglage Lumetri sur le clip visé ou **toute la
   séquence**, la LUT chargée en *LUT d'entrée*. ↶ Annuler le retire. ✕ retire une LUT de Mes LUTs.
 
@@ -254,6 +257,7 @@ Un dégradé fondu sur l'image : ciel plus chaud, teinte de marque, vignette col
 - **Couleur 1 / Couleur 2** (avec Mes couleurs), **Forme** linéaire ou radiale, **Angle**, **Fusion** (Lumière
   tamisée, Incrustation, Produit, Écran, Normal), **Intensité**, sur le **clip visé** ou **toute la séquence**.
   L'aperçu fait le même mélange.
+- **Maintiens le clic sur l'aperçu** pour voir l'image sans le dégradé.
 - **Coller du CSS…** : un `linear-gradient(…)` ou `radial-gradient(…)` copié d'uiGradients, CSS Gradient, Figma…
   (les deux couleurs extrêmes et l'angle sont repris).
 - **Enregistrer…** : dans Mes effets, partageable et publiable.
@@ -414,6 +418,10 @@ Premiere refuse, le chemin est copié : *LUT d'entrée > Parcourir…*). Les LUT
 dans les listes de Premiere après un redémarrage.
 
 ### Onglet Mes effets
+
+Dès 6 éléments, la bibliothèque a une **recherche** et des **filtres par type** (Preset, Look, Style de texte,
+Dégradé…, avec leur nombre). Sur un panneau étroit, seul *Ouvrir* reste affiché : les autres actions (renommer,
+exporter, partager, publier, supprimer) apparaissent au survol. Double-clic sur un élément : il s'ouvre.
 
 - **Preset** : sur un effet, **＋ Preset** garde tes réglages (catégorie « Mes effets »).
 - **Capture** : monte n'importe quel effet dans Premiere (sur un clip ou un calque de réglage, avec tes images clés,

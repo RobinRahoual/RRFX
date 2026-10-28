@@ -150,6 +150,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   // Mes LUTs (LUTs d'exemple ici) et dégradé de couleur.
   await page.click('.lr-panel:has(.lut-grid) .lut-card >> nth=2');
   await shot('mes-luts', '.lr-panel:has(.lut-grid)', 900);
+  await page.click('.view.on .sec-nav .action:text-is("Dégradés")');
   await page.selectOption('.lr-panel:has(.grad-swatch) select >> nth=0', 'b:teal-orange');
   await shot('degrade', '.lr-panel:has(.grad-swatch)', 700);
   await page.click('.lr-head:has-text("Conversion LOG")');

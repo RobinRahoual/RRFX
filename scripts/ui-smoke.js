@@ -205,7 +205,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('rampe calée sur le tempo', async () => {
     await page.click('.tab[data-tab=ramp]');
-    await page.click('.row:has-text("Caler sur le tempo") .action:text-is("1 temps")');
+    await page.click('.row:has-text("Sur le tempo") .action:text-is("1 temps")');
     await page.waitForSelector('#status.ok:has-text("Rampe de")', { timeout: 5000 });
     const t = await page.textContent('#status-title');
     if (!/Rampe de 1[23] images/.test(t)) throw new Error('1 temps à 120 BPM, 25 i/s ≈ 12,5 images : ' + t);
@@ -376,6 +376,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.warn:has-text("LUT d\'exemple")', { timeout: 5000 });
     await snap('9b-mes-luts');
     const g = '.lr-panel:has(.lr-title:text-is("Dégradés de couleur"))';
+    // Fermé à la première ouverture : le sommaire l'ouvre et l'amène en vue.
+    await page.click('.view.on .sec-nav .action:text-is("Dégradés")');
+    await page.waitForSelector(g + ':not(.closed)', { timeout: 2000 });
     await page.click(g + ' .action:text-is("Coller du CSS…")');
     await page.fill('.modal textarea', 'linear-gradient(to right, #ff7e5f, #feb47b)');
     await page.click('.modal .cta');
@@ -425,6 +428,24 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/Ton montage est prêt · Chill/.test(t)) throw new Error('express : ' + t + ' / ' + await page.textContent('#status-detail'));
     const kept = await page.evaluate(() => window.RRFXApp.settings().vary);
     if (kept === 'chain') throw new Error('réglages de l\'onglet Effets non rendus');
+  });
+  await step('Mes effets : recherche et filtres', async () => {
+    await page.click('.tab[data-tab=mine]');
+    await page.waitForSelector('.mine-chips .action', { timeout: 2000 });
+    await page.click('.mine-chips .action:has-text("Style de texte")');
+    const metas = await page.locator('#mine-list .li-meta').allTextContents();
+    if (!metas.length || metas.some(m => !/^Style de texte/.test(m))) throw new Error('filtre : ' + metas.join(' | '));
+    await page.click('.mine-chips .action:has-text("Tout")');
+    await page.fill('#mine-filter input', 'reçu');
+    const names = await page.locator('#mine-list .li-name').allTextContents();
+    if (names.join() !== 'Dégradé reçu,Style reçu' && names.join() !== 'Style reçu,Dégradé reçu') throw new Error('recherche : ' + names.join(' | '));
+    await page.fill('#mine-filter input', '');
+  });
+  await step('couleur : sommaire', async () => {
+    await page.click('.tab[data-tab=color]');
+    await page.click('.view.on .sec-nav .action:text-is("Mes LUTs")');
+    const top = await page.evaluate(() => { const el = document.querySelector('.view.on [data-panel=luts]'), sc = document.getElementById('scroll'); return el.getBoundingClientRect().top - sc.getBoundingClientRect().top; });
+    if (top < 0 || top > 80) throw new Error('panneau Mes LUTs à ' + top + ' px du haut');
   });
   await step('express : enregistrer ce style', async () => {
     await page.click('.tab[data-tab=express]');
@@ -537,7 +558,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('partage', async () => {
     await page.click('.tab[data-tab=mine]');
-    await page.click('.list-item .action[title^="Partager"] >> nth=0');
+    await page.hover(".list-item >> nth=0");
+    await page.click(".list-item .action[title^=\"Partager\"] >> nth=0");
     const code = await page.inputValue('.modal textarea');
     if (!/^RRFX[01]:/.test(code)) throw new Error('code de partage invalide');
     await page.click('.modal .cta');
@@ -563,6 +585,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const [popup] = await Promise.all([
       page.waitForEvent('popup', { timeout: 5000 }),
       (async () => {
+        await page.hover('.list-item:has-text("Zoom drop")');
         await page.click('.list-item:has-text("Zoom drop") .action[title^="Publier"]');
         await page.fill('.modal textarea', 'Mon test');
         await page.click('.modal .cta');

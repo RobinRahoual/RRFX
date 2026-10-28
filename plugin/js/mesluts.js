@@ -6,7 +6,7 @@
   'use strict';
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
-    const A = root.RRFXAssets, D = root.RRFXDevelop, { Store, Host, Pv } = app;
+    const A = root.RRFXAssets, D = root.RRFXDevelop, { Store, Pv } = app;
     const { h, actionGroup, row } = app.UI;
     const EXTS = ['cube', '3dl', 'look', 'lut', 'csp'];
     const PAGE = 48;
@@ -33,12 +33,18 @@
       return out.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
     }
 
-    // LUT .cube lue une fois (les autres formats : pas d'aperçu, mais Lumetri les accepte).
+    // Liste relue à chaque ouverture de l'onglet et après un import, pas à chaque recherche.
+    let listed = null;
+    const entries = () => listed || (listed = list());
+
+    // LUT .cube lue une fois (les autres formats : pas d'aperçu, mais Lumetri les accepte). Une
+    // à la fois, en rendant la main entre deux : le panneau reste fluide avec de grosses LUTs.
     const cache = new Map();
+    let queue = Promise.resolve();
     function lutOf(e) {
       if (e.lut) return Promise.resolve(e.lut);
       if (e.ext !== 'cube' || !Store.fs || !e.path) return Promise.resolve(null);
-      if (!cache.has(e.id)) cache.set(e.id, Promise.resolve().then(() => A.parseCube(Store.fs.readFileSync(e.path, 'utf8'))).catch(() => null));
+      if (!cache.has(e.id)) cache.set(e.id, queue = queue.then(() => new Promise(r => setTimeout(r, 0))).then(() => A.parseCube(Store.fs.readFileSync(e.path, 'utf8'))).catch(() => null));
       return cache.get(e.id);
     }
     const thumbs = new Map();
@@ -74,6 +80,7 @@
         n++;
       });
       thumbs.clear();
+      listed = null;
       return { n, what: 'dans Mes LUTs (onglet Couleur)' };
     }
     async function importFiles(refresh) {
@@ -98,14 +105,9 @@
       const s = st();
       return app.runTask('LUT · ' + e.name, async () => {
         if (!e.path) return { kind: 'warn', title: 'LUT d\'exemple', detail: 'Importe tes propres LUTs (.cube) pour les poser dans Premiere.' };
-        const r = await Host.call('resolve', s.target === 'sequence' ? { placement: 'sequence', sides: ['post'], frames: 1, target: 'adjustment' } : { placement: 'full', sides: ['post'], frames: 1, target: 'adjustment' });
-        if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error };
-        const fx = await app.services.lumetriFx(e.path), name = 'RR FX · LUT ' + e.name;
-        const res = await Host.call('apply', { target: 'adjustment', name, targets: r.targets.map(t => Object.assign({}, t, { name, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
-        if (!res.ok) return { kind: 'error', title: 'LUT non posée', detail: res.error };
-        if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'LUT · ' + e.name, entries: res.created });
-        (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        return { kind: res.lutSet ? 'ok' : 'warn', title: 'LUT « ' + e.name + ' » posée', detail: res.lutSet ? 'Calque Lumetri, LUT d\'entrée chargée. ↶ Annuler la retire.' : 'Calque Lumetri posé : charge la LUT dans Correction de base > LUT d\'entrée (' + e.path + ').' };
+        const { res, fail } = await app.services.adjustmentLayer('RR FX · LUT ' + e.name, await app.services.lumetriFx(e.path), { scope: s.target, history: 'LUT · ' + e.name });
+        if (fail) return fail;
+        return { kind: res.lutSet ? res.kind : 'warn', title: 'LUT « ' + e.name + ' » posée', detail: res.lutSet ? 'Calque Lumetri, LUT d\'entrée chargée. ↶ Annuler la retire.' : 'Calque Lumetri posé : charge la LUT dans Correction de base > LUT d\'entrée (' + e.path + ').' };
       });
     }
 
@@ -113,9 +115,10 @@
 
     function panel(makePanel) {
       const box = h('div');
+      listed = null;
       let shown = PAGE;
       const refresh = () => {
-        const s = st(), all = list(), q = s.search.trim().toLowerCase();
+        const s = st(), all = entries(), q = s.search.trim().toLowerCase();
         const rows = all.filter(e => (!q || e.name.toLowerCase().includes(q)) && (!s.favOnly || s.favs.indexOf(e.id) >= 0));
         box.innerHTML = '';
         const search = h('input', { class: 'textfield', placeholder: 'Rechercher parmi ' + app.plural(all.length, 'LUT'), value: s.search });
@@ -149,6 +152,7 @@
           if (del) del.addEventListener('click', async () => {
             if (!(await app.confirmDialog('Retirer « ' + sel.name + ' » ?', 'Le fichier est supprimé du dossier Mes LUTs.', 'Retirer'))) return;
             try { Store.fs.unlinkSync(sel.path); } catch (err) { app.log(app.errorMessage(err), 'warn'); }
+            listed = null;
             refresh();
           });
           box.appendChild(stage);

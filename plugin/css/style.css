@@ -289,7 +289,7 @@ textarea.code:focus { border-color: var(--accent); }
 .li-icon { flex: none; width: 24px; height: 24px; display: grid; place-items: center; border-radius: 4px; background: var(--btn-selected); font-size: 12px; }
 .li-text { flex: 1; min-width: 0; }
 .li-name { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.li-meta { color: var(--text-muted); font-size: 11px; }
+.li-meta { color: var(--text-muted); font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .li-actions { display: flex; opacity: 0.6; }
 .list-item:hover .li-actions { opacity: 1; }
 .li-actions .action { height: 24px; padding: 0 6px; }
@@ -520,3 +520,16 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .lut-card.on { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
 .lut-thumb { width: 100%; height: auto; border-radius: 3px; display: block; }
 .grad-swatch { height: 14px; border-radius: 4px; margin: 6px 0; border: 1px solid var(--border); }
+
+/* ---------- 2.3.1 : panneau étroit ---------- */
+/* Les onglets tiennent sur deux lignes jusqu'à 330 px de large. */
+@media (max-width: 380px) {
+  .tab { padding: 0 3px; font-size: 12px; }
+}
+.mine-chips { margin: 4px 0 6px; }
+/* Bibliothèque : sur un panneau étroit, seul « Ouvrir » reste affiché ; les autres actions
+   apparaissent au survol ou au clavier, et le nom garde sa place. */
+@media (max-width: 420px) {
+  .list-item .li-actions .action:not(.li-main) { display: none; }
+  .list-item:hover .li-actions .action, .list-item:focus-within .li-actions .action { display: inline-flex; }
+}

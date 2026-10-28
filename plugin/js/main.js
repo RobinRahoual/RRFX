@@ -1326,7 +1326,7 @@
       });
       chips.appendChild(row_);
     });
-    const impRamp = h('button', { class: 'action quiet', title: 'Rampes reçues (.json, code de partage dans Mes effets)' }, 'Importer…');
+    const impRamp = h('button', { class: 'action', title: 'Rampes reçues (.json, code de partage dans Mes effets)' }, 'Importer des rampes…');
     impRamp.addEventListener('click', () => importItems().then(() => renderRampView()));
     chips.appendChild(h('div', { class: 'row-buttons' }, impRamp));
     const saveBtn = h('button', { class: 'action quiet' }, '＋ Enregistrer');
@@ -1362,7 +1362,7 @@
     view.appendChild(section('Réglages', [
       row('Position', picker(RAMP_PLACEMENTS, R.placement, v => { R.placement = v; persist(); if (S.rampPlayer) S.rampPlayer.redraw(); })),
       row('Durée', hotText({ value: R.frames, min: 2, max: 600, step: 1, unit: 'i', onChange: (v, fin) => { R.frames = v; changed(fin); } })),
-      row('Caler sur le tempo', actionGroup([0.5, 1, 2, 4].map(n => ({ v: n, label: n === 0.5 ? '½ temps' : n + ' temps' })), null, n => tempoRamp(n)), { title: 'Durée de la rampe = un nombre de temps de la musique de la séquence' }),
+      row('Sur le tempo', actionGroup([0.5, 1, 2, 4].map(n => ({ v: n, label: n === 0.5 ? '½ temps' : n + ' temps' })), null, n => tempoRamp(n)), { title: 'Durée de la rampe = un nombre de temps de la musique de la séquence' }),
       row('Morceaux', hotText({ value: R.segments, min: 2, max: 32, step: 1, unit: '', onChange: (v, fin) => { R.segments = v; changed(fin); } }), { title: 'Plus de morceaux = rampe plus douce, mais plus de coupes dans la timeline' }),
       row('Ancre', picker([
         { v: 'auto', label: 'Auto (coupe fixe)' },
@@ -1465,7 +1465,7 @@
     shareAll.addEventListener('click', () => shareItems(S.lib.items, 'Ma bibliothèque'));
     const paste = h('button', { class: 'action' }, 'Coller un code…');
     paste.addEventListener('click', pasteCode);
-    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, '« Importer… » reconnaît tout seul les presets (.json), packs de style (.rrfxpack), LUTs (.cube, .3dl), nuanciers (.ase) et modèles de texte (.mogrt). Partager donne un code « RRFX1:… » à coller dans « Coller un code… ». Fichier : ' + Store.location)]));
+    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-filter' }), h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, '« Importer… » reconnaît tout seul ce que tu lui donnes : presets et exports RR FX (.json), packs (.rrfxpack), LUTs (.cube, .3dl…), nuanciers (.ase), modèles de texte (.mogrt). « Tout partager » donne un code à envoyer en message. Bibliothèque enregistrée dans : ' + Store.location)]));
     if (app.stylePacks) view.appendChild(app.stylePacks.section());
     renderMineList();
   }
@@ -1499,15 +1499,51 @@
     look: { icon: '◐', label: 'Look', valid: d => !!d.params && typeof d.params === 'object', open: it => app.services.openLook && app.services.openLook(it) }
   };
 
+  /* Recherche et filtre par type, dès que la bibliothèque s'allonge. Le champ reste en place
+     (pas de perte du curseur) ; seules les puces et la liste sont refaites. */
+  const mineFilter = { q: '', type: 'all' };
+  function renderMineFilter() {
+    const box = $('mine-filter');
+    if (!box) return;
+    const items = S.lib.items, counts = {};
+    items.forEach(i => { counts[i.type] = (counts[i.type] || 0) + 1; });
+    const types = Object.keys(counts);
+    if (items.length < 6 || !types.length) { box.innerHTML = ''; mineFilter.q = ''; mineFilter.type = 'all'; return; }
+    if (mineFilter.type !== 'all' && !counts[mineFilter.type]) mineFilter.type = 'all';
+    let input = box.querySelector('input');
+    if (!input) {
+      input = h('input', { class: 'textfield', placeholder: 'Rechercher dans ' + plural(items.length, 'élément'), value: mineFilter.q, 'aria-label': 'Rechercher dans la bibliothèque' });
+      input.addEventListener('input', () => { mineFilter.q = input.value; renderMineItems(); });
+      box.appendChild(h('div', { class: 'search-row' }, input));
+      box.appendChild(h('div', { class: 'chips mine-chips' }));
+    }
+    input.placeholder = 'Rechercher dans ' + plural(items.length, 'élément');
+    const chips = box.querySelector('.mine-chips');
+    chips.innerHTML = '';
+    [['all', 'Tout', items.length]].concat(types.map(t => [t, (ITEM_TYPES[t] || { label: t }).label, counts[t]])).forEach(([v, label, n]) => {
+      const b = h('button', { class: 'action' + (mineFilter.type === v ? ' selected' : '') }, label + ' ', h('span', { class: 'count' }, String(n)));
+      b.addEventListener('click', () => { mineFilter.type = v; renderMineList(); });
+      chips.appendChild(b);
+    });
+  }
+
   function renderMineList() {
+    renderMineFilter();
+    renderMineItems();
+  }
+
+  function renderMineItems() {
     const list = $('mine-list');
     if (!list) return;
     list.innerHTML = '';
     if (!S.lib.items.length) {
-      list.appendChild(h('div', { class: 'note' }, 'Rien pour l\'instant : enregistre un preset (« ＋ Preset » sur un effet), une rampe, ou capture un clip.'));
+      list.appendChild(h('div', { class: 'note' }, 'Rien pour l\'instant : enregistre un preset (« ＋ Preset » sur un effet), une rampe, un look, un style de texte… ou capture un clip. « Importer… » ajoute ce qu\'on t\'a envoyé.'));
       return;
     }
-    S.lib.items.slice().sort((a, b) => b.created - a.created).forEach(item => {
+    const q = mineFilter.q.trim().toLowerCase();
+    const shown = S.lib.items.filter(i => (mineFilter.type === 'all' || i.type === mineFilter.type) && (!q || i.name.toLowerCase().includes(q)));
+    if (!shown.length) { list.appendChild(h('div', { class: 'note' }, 'Rien ne correspond.')); return; }
+    shown.sort((a, b) => b.created - a.created).forEach(item => {
       const T = ITEM_TYPES[item.type] || { icon: '•', label: item.type }, ic = T.icon;
       let meta = T.label;
       try { if (T.meta) meta += ' · ' + T.meta(item); } catch (e) { /* détail illisible : le nom suffit */ }
@@ -1516,7 +1552,7 @@
         h('span', { class: 'li-icon' }, ic),
         h('div', { class: 'li-text' }, h('div', { class: 'li-name' }, item.name), h('div', { class: 'li-meta' }, meta)),
         h('div', { class: 'li-actions' },
-          btn('Ouvrir', 'Ouvrir', () => openItem(item)),
+          btn('Ouvrir', 'Ouvrir (ou double-clic)', () => openItem(item), 'li-main'),
           btn('✎', 'Renommer', async () => { const n = await promptName('Renommer', item.name); if (n) { item.name = n; persist(); renderMineList(); } }),
           btn('⤓', 'Exporter', () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.rrfx.json')),
           btn('⇪', 'Partager (code à copier-coller)', () => shareItems([item], item.name)),
@@ -2196,6 +2232,20 @@
       lumetriLocal = (r.ok && r.names.find(n => /lumetri/i.test(n) && !/preset|préréglage/i.test(n))) || null;
     }
     return [{ type: 'lumetri', names: (lumetriLocal ? [lumetriLocal] : []).concat(window.RRFXAssets.LUMETRI_NAMES), props: [], lut: lut || undefined }];
+  };
+  /* Calque de réglage « name » portant fx, sur le clip visé ou toute la séquence (scope) : pose,
+     ↶ Annuler (history) et avertissements au journal. → { res } (res.kind : ok ou warn), ou
+     { fail } : le résultat de tâche à rendre tel quel. */
+  app.services.adjustmentLayer = async (name, fx, o) => {
+    const scope = (o && o.scope) || 'clip';
+    const r = await Host.call('resolve', { placement: scope === 'sequence' ? 'sequence' : 'full', sides: ['post'], frames: 1, target: 'adjustment' });
+    if (!r.ok) return { fail: { kind: 'error', title: 'Aucun clip visé', detail: r.error + (scope === 'clip' ? ' (ou choisis « Toute la séquence »)' : '') } };
+    const res = await Host.call('apply', { target: 'adjustment', name, targets: r.targets.map(t => Object.assign({}, t, { name, fx })), adjNodeId: settings().adjNodeId, refreshAdj: true });
+    if (!res.ok) return { fail: { kind: 'error', title: 'Calque non posé', detail: res.error } };
+    if (res.created && res.created.length) pushHistory({ date: Date.now(), label: (o && o.history) || name.replace(/^RR FX · /, ''), entries: res.created });
+    (res.warnings || []).forEach(w => log(w, 'warn'));
+    res.kind = res.warnings && res.warnings.length ? 'warn' : 'ok';
+    return { res };
   };
   app.fileURL = fileURL;
   function loadFeatures() {

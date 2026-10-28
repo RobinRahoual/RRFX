@@ -366,17 +366,11 @@
     // Calque de réglage avec Lumetri sur le clip visé, la LUT chargée en LUT d'entrée.
     function lumetriLayer(e) {
       return app.runTask('Calque Lumetri · ' + e.name, async () => {
-        const r = await Host.call('resolve', { placement: 'full', sides: ['post'], frames: 1, target: 'adjustment' });
-        if (!r.ok) return { kind: 'error', title: 'Aucun clip visé', detail: r.error };
-        const fx = await app.services.lumetriFx(e.path);
-        const name = 'RR FX · LUT ' + e.name;
-        const res = await Host.call('apply', { target: 'adjustment', name, targets: r.targets.map(t => Object.assign({}, t, { name, fx })), adjNodeId: app.settings().adjNodeId, refreshAdj: true });
-        if (!res.ok) return { kind: 'error', title: 'Calque non posé', detail: res.error };
-        if (res.created && res.created.length) app.pushHistory({ date: Date.now(), label: 'LUT · ' + e.name, entries: res.created });
-        (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        if (res.lutSet) return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title: 'Calque Lumetri posé', detail: 'LUT « ' + e.fileName + ' » chargée dans Lumetri (Correction de base > LUT d\'entrée).' };
+        const { res, fail } = await app.services.adjustmentLayer('RR FX · LUT ' + e.name, await app.services.lumetriFx(e.path), { history: 'LUT · ' + e.name });
+        if (fail) return fail;
+        if (res.lutSet) return { kind: res.kind, title: 'Calque Lumetri posé', detail: 'LUT « ' + e.fileName + ' » chargée dans Lumetri (Correction de base > LUT d\'entrée).' };
         const copied = e.path ? await copy(e.path) : false;
-        return { kind: res.warnings && res.warnings.length ? 'warn' : 'ok', title: 'Calque Lumetri posé', detail: 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + e.fileName + ' »' + (copied ? ' (chemin copié : colle-le dans la fenêtre).' : '.') };
+        return { kind: res.kind, title: 'Calque Lumetri posé', detail: 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + e.fileName + ' »' + (copied ? ' (chemin copié : colle-le dans la fenêtre).' : '.') };
       });
     }
 
