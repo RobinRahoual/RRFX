@@ -31,6 +31,8 @@
       st().roots.forEach(r => { if (saved && saved.roots && saved.roots[r]) R.index[r] = saved.roots[r]; });
       rebuild();
     }
+    // LUTs des dossiers liés, pour « Mes LUTs » (onglet Couleur).
+    app.services.resourceLuts = () => { loadIndex(); return R.list.filter(e => e.type === 'lut' && e.path); };
     function saveIndex() {
       const roots = {};
       Object.keys(R.index).forEach(r => { if (!R.index[r].browser) roots[r] = { files: R.index[r].files, truncated: R.index[r].truncated, scanned: R.index[r].scanned }; });
@@ -658,6 +660,7 @@
       loadIndex();
       view.innerHTML = '';
       const s = st();
+      if (app.linkImport) view.appendChild(app.linkImport.section());
       const linkBtn = btn('＋ Lier un dossier…', linkFolder);
       const refresh = btn('↻ Actualiser', () => scanRoots(s.roots.filter(r => !(R.index[r] && R.index[r].browser))), 'quiet', 'Relire les dossiers (nouveaux fichiers, fichiers supprimés)');
       view.appendChild(section('Dossiers liés', [

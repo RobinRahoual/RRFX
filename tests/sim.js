@@ -32,7 +32,9 @@ function makeEnv(fps) {
     'Echo': ['AE.ADBE Echo', [-0.033, 1, 1, 1, 1]],
     'Lumetri Color': ['AE.ADBE Lumetri', [0, null, 0, '', 0, 0, 0, 100, 0]],
     'Auto Reframe': ['AE.ADBE AutoReframe', [0, 1]],
-    'Tint': ['AE.ADBE Tint', [[255, 0, 0, 0], [255, 255, 255, 255], 100]]
+    'Tint': ['AE.ADBE Tint', [[255, 0, 0, 0], [255, 255, 255, 255], 100]],
+    'Drop Shadow': ['AE.ADBE Drop Shadow', [[255, 0, 0, 0], 50, 135, 5, 0, false]],
+    'Ramp': ['AE.ADBE Ramp', [[0.5, 0], [255, 0, 0, 0], [0.5, 1], [255, 255, 255, 255], 0, 0, 0]]
   };
 
   class Param {
@@ -46,6 +48,7 @@ function makeEnv(fps) {
     getValueAtKey(t) { const k = this.keys && this.keys.find(x => x.t === t._t); if (!k) throw new Error('no key'); return k.v; }
     setValue(v) { if (this.keys) throw new Error('setValue on animated'); this.v = v; }
     setColorValue(a, r, g, b) { this.v = [a, r, g, b]; }
+    getColorValue() { if (Array.isArray(this.v) && this.v.length === 4) return this.v; throw new Error('not a colour'); }
     getValueAtTime(t) {
       if (!this.keys || !this.keys.length) return this.v;
       const x = t._t, ks = this.keys;
@@ -203,7 +206,7 @@ function makeEnv(fps) {
       const a = Number(ticks), tr = this.videoTracks[vIdx];
       tr.items.slice().forEach(x => { if (x._s < a + 250 * F && a < x._e) throw new Error('sim: importMGT over a clip'); });
       const it = tr.add(new Item(this, pi, a, a + 250 * F, 0, 'Graphic'));
-      it._mgt = { properties: coll([new Param('Source Text', '{"textEditValue":"Title","fontSize":40}'), new Param('Position', [0.5, 0.5])]) };
+      it._mgt = { properties: coll(mgtProps ? mgtProps() : [new Param('Source Text', '{"textEditValue":"Title","fontSize":40}'), new Param('Position', [0.5, 0.5])]) };
       mgtCalls.push(path);
       return it;
     },
@@ -257,6 +260,7 @@ function makeEnv(fps) {
     };
   }
   const frames = [], mgtCalls = [];
+  let mgtProps = null;
   let projectSelection = null;
   const qe = {
     project: {
@@ -321,7 +325,7 @@ function makeEnv(fps) {
     it.components = coll([comp('Internal Volume Stereo', 'Volume', [false, Math.pow(10, -15 / 20)], it)]);
     return it;
   };
-  return { ctx, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };

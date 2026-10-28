@@ -1302,22 +1302,33 @@
     view.innerHTML = '';
     const R = ramp();
 
-    const chips = h('div', { class: 'chips' });
-    const presets = Object.keys(Core.RAMP_PRESETS).map(k => ({ key: k, label: Core.RAMP_PRESETS[k].label, data: Core.RAMP_PRESETS[k] }))
-      .concat(S.lib.items.filter(i => i.type === 'ramp').map(i => ({ key: 'u:' + i.id, label: '★ ' + i.name, data: i.data })));
-    presets.forEach(pr => {
-      const b = h('button', { class: 'action' + (R.preset === pr.key ? ' selected' : '') }, pr.label);
-      b.addEventListener('click', () => {
-        R.points = clone(pr.data.points);
-        if (pr.data.placement) R.placement = pr.data.placement;
-        if (pr.data.frames) R.frames = pr.data.frames;
-        if (pr.data.segments) R.segments = pr.data.segments;
-        R.preset = pr.key;
-        persist();
-        renderRampView();
+    // Préréglages rangés par usage, puis tes rampes enregistrées ou importées.
+    const presets = Object.keys(Core.RAMP_PRESETS).map(k => ({ key: k, label: Core.RAMP_PRESETS[k].label, data: Core.RAMP_PRESETS[k], group: Core.RAMP_PRESETS[k].placement }))
+      .concat(S.lib.items.filter(i => i.type === 'ramp').map(i => ({ key: 'u:' + i.id, label: '★ ' + i.name, data: i.data, group: 'mine' })));
+    const GROUPS = [['pre', 'Avant la coupe'], ['post', 'Après la coupe'], ['playhead', 'Sur le temps fort'], ['full', 'Plan entier'], ['mine', 'Mes rampes']];
+    const chips = h('div', { class: 'ramp-groups' });
+    GROUPS.forEach(([g, title]) => {
+      const list = presets.filter(pr => pr.group === g);
+      if (!list.length) return;
+      const row_ = h('div', { class: 'chips' }, h('span', { class: 'chips-group' }, title));
+      list.forEach(pr => {
+        const b = h('button', { class: 'action' + (R.preset === pr.key ? ' selected' : '') }, pr.label);
+        b.addEventListener('click', () => {
+          R.points = clone(pr.data.points);
+          if (pr.data.placement) R.placement = pr.data.placement;
+          if (pr.data.frames) R.frames = pr.data.frames;
+          if (pr.data.segments) R.segments = pr.data.segments;
+          R.preset = pr.key;
+          persist();
+          renderRampView();
+        });
+        row_.appendChild(b);
       });
-      chips.appendChild(b);
+      chips.appendChild(row_);
     });
+    const impRamp = h('button', { class: 'action quiet', title: 'Rampes reçues (.json, code de partage dans Mes effets)' }, 'Importer…');
+    impRamp.addEventListener('click', () => importItems().then(() => renderRampView()));
+    chips.appendChild(h('div', { class: 'row-buttons' }, impRamp));
     const saveBtn = h('button', { class: 'action quiet' }, '＋ Enregistrer');
     saveBtn.addEventListener('click', saveRamp);
     view.appendChild(section('Préréglages', chips, saveBtn));
@@ -1446,7 +1457,7 @@
       h('div', { class: 'field' }, checkbox('Inclure Trajectoire et Opacité', captureOpts.intrinsic, v => { captureOpts.intrinsic = v; }))
     ]));
 
-    const imp = h('button', { class: 'action' }, 'Importer…');
+    const imp = h('button', { class: 'action go', title: 'Presets (.json), packs (.rrfxpack), LUTs (.cube), couleurs (.ase), modèles de texte (.mogrt)…' }, 'Importer…');
     imp.addEventListener('click', importItems);
     const exp = h('button', { class: 'action' }, 'Tout exporter…');
     exp.addEventListener('click', () => exportItems(S.lib.items, 'RRFX-bibliotheque.json'));
@@ -1454,7 +1465,7 @@
     shareAll.addEventListener('click', () => shareItems(S.lib.items, 'Ma bibliothèque'));
     const paste = h('button', { class: 'action' }, 'Coller un code…');
     paste.addEventListener('click', pasteCode);
-    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, 'Partager donne un code « RRFX1:… » à envoyer en message : la personne le colle dans « Coller un code… ». Fichier : ' + Store.location)]));
+    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, '« Importer… » reconnaît tout seul les presets (.json), packs de style (.rrfxpack), LUTs (.cube, .3dl), nuanciers (.ase) et modèles de texte (.mogrt). Partager donne un code « RRFX1:… » à coller dans « Coller un code… ». Fichier : ' + Store.location)]));
     if (app.stylePacks) view.appendChild(app.stylePacks.section());
     renderMineList();
   }
@@ -1477,6 +1488,17 @@
     });
   }
 
+  /* Types d'éléments de la bibliothèque (Mes effets). Chaque module ajoute les siens
+     (animations de texte, styles de texte, couleurs, dégradés, styles Express…) : ils
+     s'importent, s'exportent, se partagent par code et se publient tous de la même façon.
+     icon, label ; valid(data) : contenu acceptable ; meta(item) : détail ; open(item). */
+  const ITEM_TYPES = {
+    preset: { icon: '≡', label: 'Preset', valid: d => !!Lib.byId[d.base], meta: it => (Lib.byId[it.data.base] || {}).name || '?' },
+    captured: { icon: '◎', label: 'Capturé', valid: d => Array.isArray(d.components), meta: it => plural((it.data.components || []).length, 'effet') + ' · ' + (it.data.frames || 0) + ' i' },
+    ramp: { icon: '⤳', label: 'Rampe', valid: d => Array.isArray(d.points), meta: it => it.data.frames + ' i' },
+    look: { icon: '◐', label: 'Look', valid: d => !!d.params && typeof d.params === 'object', open: it => app.services.openLook && app.services.openLook(it) }
+  };
+
   function renderMineList() {
     const list = $('mine-list');
     if (!list) return;
@@ -1485,13 +1507,10 @@
       list.appendChild(h('div', { class: 'note' }, 'Rien pour l\'instant : enregistre un preset (« ＋ Preset » sur un effet), une rampe, ou capture un clip.'));
       return;
     }
-    const types = { preset: ['≡', 'Preset'], captured: ['◎', 'Capturé'], ramp: ['⤳', 'Rampe'], look: ['◐', 'Look'] };
     S.lib.items.slice().sort((a, b) => b.created - a.created).forEach(item => {
-      const [ic, label] = types[item.type] || ['•', item.type];
-      let meta = label;
-      if (item.type === 'preset') meta += ' · ' + ((Lib.byId[item.data.base] || {}).name || '?');
-      if (item.type === 'captured') meta += ' · ' + plural((item.data.components || []).length, 'effet') + ' · ' + (item.data.frames || 0) + ' i';
-      if (item.type === 'ramp') meta += ' · ' + item.data.frames + ' i';
+      const T = ITEM_TYPES[item.type] || { icon: '•', label: item.type }, ic = T.icon;
+      let meta = T.label;
+      try { if (T.meta) meta += ' · ' + T.meta(item); } catch (e) { /* détail illisible : le nom suffit */ }
       const btn = (text, title, fn, cls) => { const b = h('button', { class: 'action quiet' + (cls ? ' ' + cls : ''), title }, text); b.addEventListener('click', fn); return b; };
       const li = h('div', { class: 'list-item' },
         h('span', { class: 'li-icon' }, ic),
@@ -1520,7 +1539,8 @@
   }
 
   function openItem(item) {
-    if (item.type === 'look') { if (app.services.openLook) app.services.openLook(item); return; }
+    const T = ITEM_TYPES[item.type];
+    if (T && T.open) { T.open(item); return; }
     if (item.type === 'ramp') {
       const R = ramp();
       R.points = clone(item.data.points);
@@ -1554,11 +1574,9 @@
   function addItems(list) {
     let n = 0;
     list.forEach(it => {
-      if (!it || ['preset', 'captured', 'ramp', 'look'].indexOf(it.type) < 0 || !it.data || typeof it.name !== 'string') return;
-      if (it.type === 'preset' && !Lib.byId[it.data.base]) return;
-      if (it.type === 'captured' && !Array.isArray(it.data.components)) return;
-      if (it.type === 'ramp' && !Array.isArray(it.data.points)) return;
-      if (it.type === 'look' && (!it.data.params || typeof it.data.params !== 'object')) return;
+      const T = it && ITEM_TYPES[it.type];
+      if (!T || !it.data || typeof it.data !== 'object' || typeof it.name !== 'string') return;
+      try { if (T.valid && !T.valid(it.data)) return; } catch (e) { return; }
       S.lib.items.push(Object.assign({}, it, { id: uid(), created: Date.now() }));
       n++;
     });
@@ -1567,13 +1585,50 @@
     return n;
   }
 
+  /* Fichiers choisis par l'utilisateur → [{ name, ext, path, bytes }] (boîte de dialogue de
+     Premiere, ou du navigateur en mode démo). */
+  function pickFiles(title, exts) {
+    const paths = Store.pickFiles(title, exts);
+    if (paths !== null) return Promise.resolve(paths.map(p => ({ name: Store.path.basename(p), ext: Store.path.extname(p).slice(1).toLowerCase(), path: p, bytes: new Uint8Array(Store.fs.readFileSync(p)) })));
+    return new Promise(resolve => {
+      const input = h('input', { type: 'file', class: 'hidden', multiple: true, accept: exts.map(e => '.' + e).join(',') });
+      input.addEventListener('change', () => Promise.all(Array.from(input.files).map(f => f.arrayBuffer().then(b => ({ name: f.name, ext: (/\.([^.]+)$/.exec(f.name) || [0, ''])[1].toLowerCase(), path: null, bytes: new Uint8Array(b) })))).then(resolve, () => resolve([])));
+      document.body.appendChild(input);
+      input.click();
+      setTimeout(() => input.remove(), 60000);
+    });
+  }
+
+  /* Importeurs par type de fichier : chaque module ajoute les siens ({ exts, label, run(files) }
+     → { n, what }, ou { handled } quand l'importeur a déjà affiché son propre résultat). « Importer… » de Mes effets reconnaît tout seul ce qu'on lui donne. */
+  const importers = [{
+    exts: ['json'], label: 'presets RR FX (.json)',
+    run: files => {
+      const items = [].concat(...files.map(f => { const j = JSON.parse(new TextDecoder().decode(f.bytes)); return Array.isArray(j.items) ? j.items : Array.isArray(j) ? j : [j]; }));
+      return { n: addItems(items), what: 'dans Mes effets' };
+    }
+  }];
+
   async function importItems() {
-    let packs = [];
-    try { packs = await Store.importJSON(); } catch (e) { status.finish('error', 'Import impossible', errorMessage(e)); return; }
-    if (!packs.length) return;
-    const n = addItems([].concat.apply([], packs.map(pack => (pack && Array.isArray(pack.items) ? pack.items : []))));
-    if (n) status.finish('ok', plural(n, 'élément importé', 'éléments importés'), 'Dans « Mes effets ».');
-    else status.finish('warn', 'Rien d\'importé', 'Aucun effet RR FX valide dans ce fichier.');
+    const exts = Array.from(new Set([].concat(...importers.map(i => i.exts))));
+    const files = await pickFiles('Importer des presets, packs, LUTs, couleurs ou modèles', exts);
+    if (!files.length) return;
+    const done = [], bad = [];
+    let handled = false;
+    for (const imp of importers) {
+      const mine = files.filter(f => imp.exts.indexOf(f.ext) >= 0);
+      if (!mine.length) continue;
+      try {
+        const r = await imp.run(mine);
+        if (r && r.n) done.push(plural(r.n, 'élément') + ' ' + (r.what || ''));
+        if (r && r.handled) handled = true;
+      } catch (e) { bad.push(mine.map(f => f.name).join(', ') + ' : ' + errorMessage(e)); }
+    }
+    files.filter(f => !importers.some(i => i.exts.indexOf(f.ext) >= 0)).forEach(f => bad.push(f.name + ' : type non reconnu'));
+    bad.forEach(b => log(b, 'warn'));
+    renderMineList();
+    if (done.length) status.finish(bad.length ? 'warn' : 'ok', 'Importé', done.join(' · ') + (bad.length ? ' · ' + plural(bad.length, 'fichier') + ' ignoré(s) (journal)' : ''));
+    else if (!handled) status.finish('warn', 'Rien d\'importé', bad[0] || 'Aucun élément valide dans ces fichiers.');
   }
 
   function copyText(text, field) {
@@ -1605,7 +1660,7 @@
     let items;
     try { items = Share.decode(code, Store.zip); } catch (e) { status.finish('error', 'Code invalide', errorMessage(e)); return; }
     const n = addItems(items);
-    if (n) status.finish('ok', plural(n, 'effet ajouté', 'effets ajoutés'), items.map(i => i.name).slice(0, 4).join(', ') + (items.length > 4 ? '…' : ''));
+    if (n) status.finish('ok', plural(n, 'élément ajouté', 'éléments ajoutés'), items.map(i => i.name).slice(0, 4).join(', ') + (items.length > 4 ? '…' : ''));
     else status.finish('warn', 'Rien d\'ajouté', 'Ce code ne contient pas d\'effet compatible avec cette version.');
   }
 
@@ -1643,7 +1698,7 @@
       h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de RR FX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
       h('div', { class: 'search' }, search, refresh),
       row('Trier', actionGroup([{ v: 'popular', label: 'Les plus aimés' }, { v: 'recent', label: 'Les plus récents' }], C.sort, v => { C.sort = v; renderCommunityList(); })),
-      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }, { v: 'look', label: 'Looks (couleur)' }], C.type, v => { C.type = v; renderCommunityList(); })),
+      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }, { v: 'look', label: 'Looks (couleur)' }, { v: 'textStyle', label: 'Styles de texte' }, { v: 'titleAnim', label: 'Animations de texte' }, { v: 'gradient', label: 'Dégradés' }, { v: 'palette', label: 'Palettes' }, { v: 'xpStyle', label: 'Styles Express' }], C.type, v => { C.type = v; renderCommunityList(); })),
       h('div', { id: 'comm-list' })
     ]));
     view.appendChild(section('Publier', [
@@ -1928,6 +1983,8 @@
   function requestCancel() {
     if (!S.busy) return;
     S.cancel = true;
+    // Tâche qui tourne hors de Premiere (téléchargement…) : arrêtée aussi.
+    if (S.onCancel) { try { S.onCancel(); } catch (e) { /* déjà finie */ } }
     $('status-detail').textContent = 'Arrêt après la zone en cours…';
   }
 
@@ -2121,6 +2178,9 @@
   app.services.addOverlays = list => addOverlayList(list);
   app.services.grabFrames = () => grabRealFrames();
   app.services.grabClean = grabClean;
+  app.itemTypes = ITEM_TYPES;
+  app.services.pickFiles = pickFiles;
+  app.importers = importers;
   app.services.defaultParams = e => defaultParams(e);
   app.services.entryByKey = k => entryByKey(k);
   app.services.entries = () => entries();

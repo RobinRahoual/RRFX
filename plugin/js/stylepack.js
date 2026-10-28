@@ -146,6 +146,8 @@
     const types = t => m.items.filter(i => i.type === t).length;
     return [
       n(types('preset') + types('captured'), 'effet', 'effets'), n(types('ramp'), 'rampe', 'rampes'), n(types('look') + (m.look ? 1 : 0), 'look', 'looks'),
+      n(types('textStyle'), 'style de texte perso', 'styles de texte perso'), n(types('titleAnim'), 'animation de texte', 'animations de texte'),
+      n(types('gradient'), 'dégradé', 'dégradés'), n(types('palette'), 'palette', 'palettes'), n(types('xpStyle'), 'style Express', 'styles Express'),
       n(m.overlays.length, 'overlay', 'overlays'), m.titles ? 'style de texte' : '', m.chain && m.chain.length ? 'enchaînement de ' + m.chain.length + ' effets' : ''
     ].filter(Boolean).join(', ') || 'vide';
   }

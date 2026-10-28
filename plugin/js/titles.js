@@ -7,7 +7,7 @@
     const { Core, Lib, Store, Host, Pv } = app;
     const { h, hotText, actionGroup, picker, row, section, Player } = app.UI;
 
-    const DEFAULTS = { mogrt: '', text: '', split: 'lines', timing: 'markers', from: 'playhead', gap: 2, maxDur: 0, fixed: 1.5, anim: 'pop', inF: 6, outF: 5, params: {} };
+    const DEFAULTS = { mogrt: '', style: '', text: '', split: 'lines', timing: 'markers', from: 'playhead', gap: 2, maxDur: 0, fixed: 1.5, anim: 'pop', inF: 6, outF: 5, params: {} };
     // Complète les réglages sans remplacer l'objet (l'interface garde une référence dessus).
     const st = () => {
       const s = app.settings();
@@ -16,6 +16,22 @@
       return s.titles;
     };
     const anim = () => Lib.titleById[st().anim] || Lib.titleById.pop;
+    // Animations enregistrées (Mes effets) : « u:<id> ».
+    const userAnims = () => app.S.lib.items.filter(i => i.type === 'titleAnim' && Lib.titleById[i.data.anim]);
+    /* Animation choisie (intégrée ou enregistrée) → { a, params, inF, outF }. */
+    function resolveAnim(id) {
+      const t = st();
+      if (id && id.indexOf('u:') === 0) {
+        const it = app.S.lib.items.find(i => 'u:' + i.id === id);
+        if (it && Lib.titleById[it.data.anim]) {
+          const a = Lib.titleById[it.data.anim];
+          return { a, params: Object.assign(Core.paramDefaults(a), it.data.params || {}), inF: it.data.inF != null ? it.data.inF : t.inF, outF: it.data.outF != null ? it.data.outF : t.outF };
+        }
+      }
+      const a = Lib.titleById[id] || anim();
+      return { a, params: Object.assign(Core.paramDefaults(a), t.params[a.id] || {}), inF: t.inF, outF: t.outF };
+    }
+    const animOptions = () => Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name })).concat(userAnims().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
     const animParams = () => Object.assign(Core.paramDefaults(anim()), st().params[st().anim] || {});
 
     // ---------------------------------------------------------------- modèles .mogrt
@@ -86,18 +102,20 @@
        track, warnings, error } */
     async function placeItems(items, opts) {
       const t = st(), o = opts || {}, fps = app.fps(), created = [], warnings = [];
-      const a = (o.anim && Lib.titleById[o.anim]) || anim();
-      const params = Object.assign(Core.paramDefaults(a), st().params[a.id] || {});
+      const { a, params, inF, outF } = resolveAnim(o.anim || t.anim);
+      // Style de texte : celui demandé, sinon celui de l'onglet Textes ('' : celui du modèle).
+      const TS = app.textStyles, style = TS ? TS.styleById('style' in o ? o.style : t.style) : null;
+      const styleFx = style ? TS.styleFx(style) : null;
       let track = null;
       for (let i = 0; i < items.length; i++) {
         if (app.S.cancel) break;
         const it = items[i];
         app.status.progress(i, items.length, it.text);
         const frames = Math.max(1, Math.round((it.end - it.start) * fps));
-        const fx = Core.titleSpec(a, params, frames, t.inF, t.outF, fps, app.registry());
+        const fx = Core.titleSpec(a, params, frames, inF, outF, fps, app.registry());
         // Mot clé : effets en plus (couleur, taille) donnés par opts.keyFx.
         const all = it.key && o.keyFx ? fx.concat(o.keyFx) : fx;
-        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null });
+        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null, style, styleFx });
         if (!r.ok) {
           if (!created.length) return { created, track, warnings, error: r.error };
           warnings.push(it.text + ' : ' + r.error);
@@ -242,19 +260,61 @@
       };
       renderParams();
       const rebuild = () => { app.persist(); if (player) player.rebuild(); };
+      // Une animation enregistrée se charge dans les réglages (modifiable, ré-enregistrable).
+      const pickAnim = v => {
+        if (v.indexOf('u:') === 0) {
+          const it = app.S.lib.items.find(i => 'u:' + i.id === v);
+          if (it) { t.anim = it.data.anim; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; }
+          app.persist();
+          return render(view);
+        }
+        t.anim = v; renderParams(); rebuild();
+      };
+      const saveAnim = h('button', { class: 'action' }, 'Enregistrer l\'animation…');
+      saveAnim.addEventListener('click', async () => {
+        const name = await app.promptName('Nom de l\'animation', anim().name + ' perso');
+        if (!name) return;
+        app.services.addItems([{ type: 'titleAnim', name, data: { anim: t.anim, params: Object.assign({}, animParams()), inF: t.inF, outF: t.outF } }]);
+        app.status.finish('ok', 'Animation « ' + name + ' » enregistrée', 'Dans la liste des animations (★), dans Mes effets, et pour les sous-titres et bandeaux.');
+        render(view);
+      });
       view.appendChild(section('Animation', [
-        row('Style', picker(Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name })), t.anim, v => { t.anim = v; renderParams(); rebuild(); })),
+        row('Style', picker(animOptions(), t.anim, pickAnim)),
         row('Entrée', hotText({ value: t.inF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.inF = v; if (fin) rebuild(); } })),
         row('Sortie', hotText({ value: t.outF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.outF = v; if (fin) rebuild(); } })),
         params,
-        h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, 'Aperçu simulé')))
+        h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, 'Aperçu simulé'))),
+        h('div', { class: 'row-buttons' }, saveAnim)
       ]));
       preview(cv);
+      if (app.textStyles) {
+        view.appendChild(app.textStyles.section(t, 'style', 'Style du texte', Core.splitLyrics(t.text, t.split)[0]));
+        view.appendChild(app.textStyles.colorsSection(() => render(view)));
+      }
     }
 
     app.actions.titles = place;
     app.services.lyrics = () => String(st().text || '').trim();
     app.services.placeTexts = placeItems;
+    app.services.titleAnimOptions = animOptions;
+    app.itemTypes.titleAnim = {
+      icon: 'T', label: 'Animation de texte', valid: d => !!Lib.titleById[d.anim],
+      meta: it => Lib.titleById[it.data.anim].name + ' · entrée ' + (it.data.inF || 0) + ' i',
+      open: it => { const t = st(); t.anim = it.data.anim; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; app.persist(); app.switchTab('titles'); }
+    };
+    // Un modèle de texte importé depuis Mes effets > Importer… rejoint la liste des modèles.
+    app.importers.push({
+      exts: ['mogrt'], label: 'modèles de texte',
+      run: files => {
+        const dir = userDir();
+        if (!dir) throw new Error('Disponible dans Premiere.');
+        files.forEach(f => Store.fs.writeFileSync(Store.path.join(dir, f.name), Buffer.from(f.bytes)));
+        found = null;
+        st().mogrt = Store.path.join(dir, files[files.length - 1].name);
+        app.persist();
+        return { n: files.length, what: 'dans les modèles de texte (onglet Textes)' };
+      }
+    });
     app.services.mogrt = () => st().mogrt || (found || (found = scanMogrts()))[0] && found[0].path || '';
     app.services.mogrtName = () => { const m = app.services.mogrt(); return m ? (Store.path ? Store.path.basename(m, Store.path.extname(m)) : m) : ''; };
     app.tabs.titles = { render, cta: () => ({ label: 'Poser les textes', run: place, enabled: true }), leave: () => { if (player) { player.stop(); player = null; } } };

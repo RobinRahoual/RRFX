@@ -63,6 +63,10 @@
       act('Couper les « euh » et répétitions', 'Action', () => A.cutFillers && A.cutFillers());
       act('Égaliser le son de la voix (-14 LUFS)', 'Action', () => A.levelVoice && A.levelVoice());
       act('Baisser la musique sous la voix', 'Action', () => A.duckMusic && A.duckMusic());
+      act('Importer une vidéo ou un son depuis un lien', 'Action', () => app.switchTab('assets'));
+      act('Importer des presets, LUTs, couleurs…', 'Action', () => { app.switchTab('mine'); const b = Array.from(document.querySelectorAll('#view-mine .action')).find(x => /^Importer…$/.test(x.textContent)); if (b) b.click(); });
+      act('Mes LUTs', 'Action', () => app.switchTab('color'));
+      act('Dégradé de couleur', 'Action', () => app.gradients && app.gradients.apply());
       act('Créer les chapitres YouTube', 'Action', () => { app.switchTab('speech'); if (A.chapters) A.chapters(); });
       act('Créer la copie 9:16', 'Action', () => A.formatCopy && A.formatCopy());
       act('Tester mon Premiere (compatibilité)', 'Action', () => { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); });

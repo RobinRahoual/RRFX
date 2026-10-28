@@ -38,7 +38,8 @@ on y revient.
    musique, flashs, leaks dorés), *Mariage / cérémonie* (fondus blancs, bokeh, lumière chaude), *Vlog voyage*,
    *Cinématique*, *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Rétro VHS*, ou **Mon style**
    (ton enchaînement d'effets et ton look en cours). Ce sont des points de départ, utilisables pour n'importe
-   quelle vidéo : décoche les étapes inutiles.
+   quelle vidéo : décoche les étapes inutiles. **Enregistrer ce style…** garde le style choisi avec ses étapes
+   cochées et son look : il passe en tête de la liste (★), s'exporte et se partage comme un effet.
 2. **Avant de lancer** : RR FX vérifie ce dont ce style a besoin : séquence ouverte, calque de réglage, musique
    (seulement pour les étapes qui suivent le rythme), plans où l'on parle sélectionnés (coupe des silences), rushs
    sélectionnés dans le panneau *Projet* (montage), caméras (conversion), paroles, sous-titres ou bandeau. Ce qui
@@ -138,7 +139,11 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
 ### Onglet Speed ramp
 
 - Dessine la courbe de vitesse (10 % à 1000 %) : glisse les points, double-clic pour en ajouter ou retirer.
-  Préréglages : accélération vers la coupe, décélération après, ralenti sur le temps fort, pulse…
+- **20 rampes prédéfinies**, rangées par usage : *Avant la coupe* (coup de fouet vers la coupe, ralenti puis claque
+  sur la coupe…), *Après la coupe* (coup de fouet après, atterrissage doux…), *Sur le temps fort* (ralenti
+  dramatique, quasi-arrêt, double pulsation, rebond, respiration, saut…), *Plan entier* (timelapse, ralenti
+  intégral, accélère puis freine, escalier…), puis *Mes rampes*. Choisir une rampe règle aussi son placement.
+- **Importer…** : des rampes reçues en `.json` (un code de partage se colle dans Mes effets).
 - La rampe est posée sur **une copie du passage** juste au-dessus du clip (voir « Les copies du plan ») :
   **le clip d'origine, son son et la coupe ne bougent pas**. L'*ancre* choisit l'image qui reste en place.
 - RR FX vérifie qu'il y a assez de média avant de poser quoi que ce soit.
@@ -226,6 +231,36 @@ partageable par code et publiable dans la Communauté.
 Texture, Clarté, Correction du voile, vignettage et grain dépendent des pixels voisins : une LUT ne peut pas les
 porter, ils restent dans Lumetri.
 
+### Mes LUTs (onglet Couleur)
+
+Ta bibliothèque de LUTs, **gardée d'un projet à l'autre** : plus besoin de réimporter une LUT pour l'essayer.
+
+- **Importer des LUTs…** (.cube, .3dl, .look, .lut, .csp) ou **Importer un dossier…** (sous-dossiers compris) :
+  copiées une fois dans `Documents/RRFX/Mes LUTs` (une LUT déjà présente n'est pas recopiée). 📂 ouvre le dossier.
+- Les LUTs de tes **dossiers liés** (onglet Ressources) apparaissent aussi, sans copie.
+- **Vignettes** de chaque LUT sur le plan de test ou ta vraie image (📷), **grand aperçu** (maintiens le clic pour
+  voir l'avant), recherche, **favorites** ★, *Afficher plus* au-delà de 24.
+- **Appliquer** (ou double-clic sur une vignette) : calque de réglage Lumetri sur le clip visé ou **toute la
+  séquence**, la LUT chargée en *LUT d'entrée*. ↶ Annuler le retire. ✕ retire une LUT de Mes LUTs.
+
+Les vignettes se calculent pour les `.cube` ; les autres formats sont posés tels quels par Premiere.
+
+### Dégradés de couleur (onglet Couleur)
+
+Un dégradé fondu sur l'image : ciel plus chaud, teinte de marque, vignette colorée.
+
+- **Dégradé** : 6 fournis (Coucher de soleil, Teal & orange, Ciel bleu, Rose doré, Nuit violette, Vignette chaude),
+  les tiens (★), ou *Mon réglage*.
+- **Couleur 1 / Couleur 2** (avec Mes couleurs), **Forme** linéaire ou radiale, **Angle**, **Fusion** (Lumière
+  tamisée, Incrustation, Produit, Écran, Normal), **Intensité**, sur le **clip visé** ou **toute la séquence**.
+  L'aperçu fait le même mélange.
+- **Coller du CSS…** : un `linear-gradient(…)` ou `radial-gradient(…)` copié d'uiGradients, CSS Gradient, Figma…
+  (les deux couleurs extrêmes et l'angle sont repris).
+- **Enregistrer…** : dans Mes effets, partageable et publiable.
+
+Dans Premiere : un calque de réglage « RR FX · Dégradé » avec l'effet **Dégradé** (Ramp) et le mode de fusion de
+l'**Opacité**, tout reste réglable dans *Options d'effet*.
+
 ### Onglet Musique
 
 La musique est le plus long clip son de la séquence (ou le clip son sélectionné). **Analyser** la lit et affiche sa
@@ -263,6 +298,26 @@ Titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mo
 réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèle de texte** `.mogrt` : ceux de
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
 *Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/RRFX/Titres`).
+
+**Enregistrer l'animation…** garde l'animation choisie avec ses réglages (★ dans la liste des animations, ici et
+dans l'onglet Parole), exportable et partageable comme un effet.
+
+**Style du texte** : *Celui du modèle .mogrt* (rien n'est changé), un des 6 styles fournis (Blanc propre, Reels
+jaune, Bloc noir, Pastel rose, Néon bleu, Entreprise) ou les tiens. *Créer un style…* ouvre l'éditeur, avec
+aperçu : police (nom PostScript, ex. `Montserrat-ExtraBold`), taille, couleur, contour et épaisseur, fond et son
+opacité, ombre, MAJUSCULES. *Enregistrer comme style…* le range dans Mes effets ; *Mettre à jour* modifie le tien.
+Le même choix existe pour les **sous-titres** et les **bandeaux** (onglet Parole).
+
+Ce que Premiere laisse faire : police, taille et majuscules vont dans le texte du modèle ; couleur, contour, ombre
+et fond passent par les réglages que le modèle expose dans *Objets graphiques essentiels*. Sinon, la couleur passe
+par l'effet **Teinte** et l'ombre par **Ombre portée** ; le contour et le fond ne sont possibles que si le modèle les
+propose (RR FX le signale). Premiere ne permet pas de poser un dégradé *dans* un texte par script.
+
+**Mes couleurs** : ta palette (couleurs de ta marque), proposée partout où tu choisis une couleur (mots clés, styles
+de texte, dégradés). Ajoute une couleur, **Coller des codes…** (`#264653`, `rgb(…)`, lien d'une palette Coolors ou
+Adobe Color), **Importer .ase…** (nuancier Adobe : Photoshop, Illustrator, Adobe Color ; RVB, CMJN, gris et Lab
+lus), **Exporter .ase…**, **Enregistrer comme palette…** (dans Mes effets, partageable). Clic sur une couleur : la
+retirer.
 
 ### Onglet Parole
 
@@ -339,6 +394,21 @@ Recherche (nom, dossier, type), filtres par type et par dossier, tri, favoris �
 défilement. L'index est gardé (`Documents/RRFX/ressources-index.json`) et relu en arrière-plan au-delà d'une heure ;
 **↻ Actualiser** le relit tout de suite. Un disque débranché garde son index (signalé dans la liste).
 
+**Importer depuis un lien** : colle un lien, choisis **Vidéo (MP4)** ou **Son (MP3)**, *Importer dans la
+timeline* : le fichier est téléchargé dans `Documents/RRFX/Téléchargements`, rangé dans le chutier « RR FX
+Ressources » et posé **à la tête de lecture** sur une piste libre (la vidéo et son son, ou le son seul).
+
+- **Liens directs** (fin en .mp4, .mov, .mp3, .wav, .m4a…), **Dropbox** et **Google Drive** (lien de partage
+  public) : téléchargés par RR FX, rien à installer.
+- **YouTube, Vimeo, SoundCloud, Instagram, TikTok, X, Facebook, Twitch, Dailymotion…** : par
+  [yt-dlp](https://github.com/yt-dlp/yt-dlp), outil gratuit et open source, à installer une fois
+  (`winget install yt-dlp` sur Windows, `brew install yt-dlp` sur Mac). RR FX le trouve tout seul (PATH, WinGet,
+  Homebrew, Scoop…), ou *Indiquer yt-dlp…*. Avec **ffmpeg** installé aussi, le son sort en MP3 et la vidéo en
+  meilleure qualité ; sans, le son sort en M4A (lu par Premiere) et la vidéo dans la meilleure version MP4 simple.
+  Une seule vidéo à la fois (pas de playlist). *Arrêter* interrompt le téléchargement.
+- Uniquement pour des contenus **dont tu as les droits** : télécharger une vidéo YouTube sans autorisation est
+  contraire à ses conditions d'utilisation, et la musique d'un autre reste protégée dans ton montage.
+
 *Calque de réglage Lumetri* charge la LUT directement dans *Correction de base > LUT d'entrée* (si ta version de
 Premiere refuse, le chemin est copié : *LUT d'entrée > Parcourir…*). Les LUT et polices **installées** apparaissent
 dans les listes de Premiere après un redémarrage.
@@ -352,7 +422,12 @@ dans les listes de Premiere après un redémarrage.
   PRE/POST automatique).
 - **Partager** (⇪ sur un effet, ou *Tout partager*) : un **code** `RRFX1:…` à envoyer en message ; la personne le
   colle dans **Coller un code…**. Aucun chemin de fichier ni info perso dans le code.
-- **Importer / exporter** en `.json` pour sauvegarder tes effets.
+- **Importer…** reconnaît tout seul ce que tu lui donnes, plusieurs fichiers à la fois : presets et exports RR FX
+  (`.json` : presets, effets capturés, rampes, looks, styles de texte, animations de texte, dégradés, palettes,
+  styles Express), packs (`.rrfxpack`), LUTs (`.cube`, `.3dl`, `.look`… vers Mes LUTs), nuanciers (`.ase` vers Mes
+  couleurs), modèles de texte (`.mogrt`). **Exporter** en `.json` pour sauvegarder ta bibliothèque.
+- Chaque élément a son type et s'**ouvre** à sa place (un style de texte dans l'onglet Textes, un dégradé dans
+  l'onglet Couleur, un style Express dans Express…). Tout se partage par code et se publie dans la Communauté.
 - **Packs de style** (`.rrfxpack`) : *Créer un pack…* rassemble dans un seul fichier tes effets et rampes perso, tes
   looks (et celui en cours dans l'onglet Couleur), l'animation des textes et son modèle `.mogrt`, tes overlays
   importés (fichiers compris) et ton enchaînement d'effets. *Importer un pack…* (ou depuis l'onglet Ressources)

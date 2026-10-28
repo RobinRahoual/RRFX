@@ -106,6 +106,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   // Rampe.
   await tab('ramp');
   await shot('rampe');
+  await shot('rampes-predefinies', '.ramp-groups', 400);
 
   // Couleur : caméras enregistrées, conversion.
   await page.evaluate(() => {
@@ -146,6 +147,11 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await mark('.lr-panel|Courbe des tonalités', 'cv');
   await shot('couleur-panneaux', '[data-shot=cv]', 800);
   for (const t of ['Courbe des tonalités', 'Étalonnage des couleurs']) await page.click('.lr-head:has-text("' + t + '")');
+  // Mes LUTs (LUTs d'exemple ici) et dégradé de couleur.
+  await page.click('.lr-panel:has(.lut-grid) .lut-card >> nth=2');
+  await shot('mes-luts', '.lr-panel:has(.lut-grid)', 900);
+  await page.selectOption('.lr-panel:has(.grad-swatch) select >> nth=0', 'b:teal-orange');
+  await shot('degrade', '.lr-panel:has(.grad-swatch)', 700);
   await page.click('.lr-head:has-text("Conversion LOG")');
   await page.click('.lr-head:has-text("Looks")');
   await page.click('.lr-head:has-text("Réglages de base")');
@@ -167,6 +173,11 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.fill('textarea.lyrics', 'On roule la nuit\nLes phares dans les yeux\nRien ne nous arrête\nJusqu\'au matin');
   await mark('.section|Animation', 'an');
   await shot('textes', '[data-shot=an]', 900);
+  await page.selectOption('.section:has-text("Style du texte") select >> nth=0', 'b:reels');
+  await page.click('.section:has-text("Style du texte") .action:has-text("Modifier")');
+  await mark('.section|Style du texte', 'sty');
+  await shot('style-texte', '[data-shot=sty]', 700);
+  await page.click('.section:has-text("Style du texte") .action:has-text("Fermer l\'éditeur")');
 
   // Express : le style choisi, les vérifications, puis le compte rendu du clip.
   await page.evaluate(() => { const t = window.RRFXApp.settings().titles; t.mogrt = t.mogrt || 'demo'; });
@@ -237,12 +248,18 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await close();
   await page.click('#res-grid .card:has-text("Teal")');
   await shot('ressources', null, 1500);
+  await page.fill('input[aria-label="Lien à importer"]', 'https://www.youtube.com/watch?v=MaVideo123');
+  await mark('.section|Importer depuis un lien', 'lk');
+  await shot('import-lien', '[data-shot=lk]', 400);
 
   // Mes effets : bibliothèque et packs de style.
   await page.evaluate(() => window.RRFXApp.services.addItems([
     { type: 'preset', name: 'Zoom drop perso', cat: 'zoom', data: { base: 'zoom-in', params: { frames: 6, intensity: 140 } } },
     { type: 'ramp', name: 'Rampe refrain', data: { points: [{ t: 0, v: 100 }, { t: 0.6, v: 25 }, { t: 1, v: 300 }], frames: 16, segments: 10 } },
-    { type: 'look', name: 'Nuit perso', data: { params: { exposure: -0.3, temp: -12 } } }
+    { type: 'look', name: 'Nuit perso', data: { params: { exposure: -0.3, temp: -12 } } },
+    { type: 'textStyle', name: 'Jaune shorts', data: { style: { font: 'Montserrat-Black', fill: '#ffd21e', stroke: '#000000', strokeWidth: 6, shadow: true, caps: true } } },
+    { type: 'gradient', name: 'Soleil couchant', data: { g: { type: 'linear', angle: 180, colors: ['#ff7e5f', '#2b1055'] }, blend: 13, opacity: 45 } },
+    { type: 'palette', name: 'Couleurs de la marque', data: { colors: ['#264653', '#2a9d8f', '#e9c46a', '#e76f51'] } }
   ]));
   await tab('mine');
   await page.click('#cta');

@@ -567,6 +567,8 @@
           realBtn)));
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       if (app.correction) view.appendChild(app.correction.panel(panel));
+      if (app.lutLibrary) view.appendChild(app.lutLibrary.panel(panel));
+      if (app.gradients) view.appendChild(app.gradients.panel(panel));
       view.appendChild(looksPanel());
       view.appendChild(basicPanel());
       view.appendChild(curvePanel());

@@ -186,16 +186,18 @@ Choisis 2 à 4 effets (Maj + clic) : ils **s'enchaînent sur chaque temps fort**
 <td width="44%"><img src="docs/captures/outils/overlays.png" alt="Overlays" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/rampe.png" alt="Speed ramp" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/rampes-predefinies.png" alt="Speed ramps prédéfinies" width="300"></td>
 <td width="56%">
 
 ### 🏎️ Des speed ramps qui ne cassent pas ta coupe
 
-Dessine ta courbe de vitesse (de 10 % à 1000 %) ou pars d'un préréglage : accélération vers la coupe, ralenti sur
-le temps fort…
+Dessine ta courbe de vitesse (de 10 % à 1000 %) ou pars d'une des **20 rampes prédéfinies**, rangées par usage :
+avant la coupe, après la coupe, sur le temps fort, plan entier (coup de fouet, claque sur la coupe, quasi-arrêt,
+double pulsation, timelapse, escalier…).
 
 - **Ta coupe reste à sa place**, ton son aussi.
 - Cale la durée sur le tempo : ½, 1, 2 ou 4 temps.
+- Tes rampes s'enregistrent, s'exportent et **s'importent** (fichier ou code de partage).
 
 </td>
 </tr>
@@ -241,6 +243,36 @@ d'étalonnage, calibrage.
 <td width="44%"><img src="docs/captures/outils/couleur.png" alt="Étalonnage façon Lightroom" width="300"></td>
 </tr>
 <tr>
+<td width="44%"><img src="docs/captures/outils/mes-luts.png" alt="Mes LUTs" width="300"></td>
+<td width="56%">
+
+### 📚 Toutes tes LUTs, dans tous tes projets
+
+Fini de réimporter tes LUTs à chaque projet pour en tester une.
+
+- **Importe-les une fois** (.cube, .3dl, .look… ou un dossier entier) : elles restent dans *Mes LUTs*.
+- **Une vignette par LUT sur ta vraie image**, un grand aperçu (maintiens le clic pour voir l'avant), recherche et
+  favorites.
+- Double-clic : posée dans Premiere (calque Lumetri, LUT chargée), sur le plan visé ou toute la séquence.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🌈 Dégradés de couleur
+
+Un ciel plus orangé, une teinte aux couleurs de ta marque, une vignette chaude : un **dégradé fondu sur l'image**
+(lumière tamisée, incrustation, produit…).
+
+- 6 dégradés fournis, ou les tiens : deux couleurs, un angle, linéaire ou radial.
+- **Colle un dégradé CSS** (uiGradients, CSS Gradient, Figma) : il est repris tel quel.
+- Enregistre-le, partage-le comme un effet.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/degrade.png" alt="Dégradé de couleur" width="300"></td>
+</tr>
+<tr>
 <td width="44%"><img src="docs/captures/outils/musique.png" alt="Temps forts de la musique" width="300"></td>
 <td width="56%">
 
@@ -276,6 +308,38 @@ Colle tes textes ou tes paroles : **une ligne par temps fort**, par marqueur ou 
 Glissement, Impact…).
 
 - Avec ta police et ton style : exporte un titre de Premiere en modèle, RR FX s'en sert.
+- **Tes animations** s'enregistrent et s'importent, comme tes modèles `.mogrt`.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🅰️ Tes styles de texte et tes couleurs
+
+Crée tes **styles de texte** une fois : police, taille, couleur, contour, ombre, fond, majuscules. Aperçu direct
+sur ton image, et ils servent partout : titres, sous-titres, bandeaux.
+
+- 6 styles fournis (Reels jaune, Bloc noir, Néon…), et les tiens.
+- **Mes couleurs** : la palette de ta marque, proposée partout où tu choisis une couleur. Colle des codes, un lien
+  Coolors, ou importe un **nuancier Adobe (.ase)**. Export en .ase aussi.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/style-texte.png" alt="Style de texte" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/import-lien.png" alt="Importer depuis un lien" width="300"></td>
+<td width="56%">
+
+### 🔗 Une vidéo ou un son depuis un lien
+
+Colle un lien, choisis **Vidéo (MP4)** ou **Son (MP3)** : c'est téléchargé et posé dans ta timeline, à la tête
+de lecture.
+
+- Liens directs (.mp4, .mp3, .wav…), **Dropbox** et **Google Drive** : rien à installer.
+- **YouTube, Vimeo, SoundCloud…** : avec [yt-dlp](https://github.com/yt-dlp/yt-dlp), outil gratuit à installer une
+  fois (RR FX te dit comment et le trouve tout seul).
+- Seulement pour les contenus dont tu as les droits (tes vidéos, musiques libres, contenus de ton client).
 
 </td>
 </tr>
@@ -319,6 +383,7 @@ Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic.
 Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : tout est classé dans le panneau.
 
 - Écoute un son, essaie une LUT sur ton image, vois une police avant de l'installer.
+- Les LUTs de tes dossiers apparaissent aussi dans *Mes LUTs* (onglet Couleur).
 - Pose un whoosh **sur chaque coupe** en un clic.
 
 </td>
@@ -332,6 +397,8 @@ Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : to
 - **Packs de style** : tes effets, looks, textes et overlays dans un seul fichier, pour un autre projet ou un
   pote.
 - Partage un effet par un simple **code** à envoyer en message.
+- **Importe presque tout** en un bouton : presets, rampes, looks, styles de texte, animations, dégradés,
+  palettes, styles Express, packs, LUTs, nuanciers `.ase`, modèles `.mogrt`. RR FX reconnaît le fichier tout seul.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/mes-effets.png" alt="Mes effets et packs de style" width="300"></td>
@@ -450,6 +517,16 @@ cam et YouTube marchent sans musique : leurs transitions se posent sur toutes le
 
 RR FX te prévient quand une nouvelle version sort : clique sur **Installer la mise à jour** dans le panneau, puis
 redémarre Premiere. Tes effets perso et tes réglages sont gardés.
+</details>
+
+<details>
+<summary><b>L'import depuis YouTube, comment ça marche ?</b></summary>
+
+RR FX passe par [yt-dlp](https://github.com/yt-dlp/yt-dlp), un outil gratuit et open source que tu installes une
+fois (`winget install yt-dlp` sur Windows, `brew install yt-dlp` sur Mac) : RR FX ne l'embarque pas. Avec
+[ffmpeg](https://ffmpeg.org) installé aussi, les sons sortent en MP3 (sinon en M4A, que Premiere lit aussi). Les
+fichiers vont dans `Documents/RRFX/Téléchargements`. Réserve-le aux contenus dont tu as les droits : télécharger
+une vidéo YouTube sans autorisation est contraire à ses conditions d'utilisation.
 </details>
 
 <details>

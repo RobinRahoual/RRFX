@@ -20,7 +20,7 @@
   const KEY_CACHE = 'rrfx.community.cache';
   const MAX_URL = 7000; // au-delà, le navigateur ou GitHub peut couper l'adresse
 
-  const TYPES = { preset: 'Preset', captured: 'Capturé', ramp: 'Rampe', look: 'Look' };
+  const TYPES = { preset: 'Preset', captured: 'Capturé', ramp: 'Rampe', look: 'Look', textStyle: 'Style de texte', palette: 'Palette', gradient: 'Dégradé', titleAnim: 'Animation de texte', xpStyle: 'Style Express' };
 
   function safeGet(storage, key) { try { return storage ? storage.getItem(key) : null; } catch (e) { return null; } }
   function safeSet(storage, key, v) { try { if (storage) storage.setItem(key, v); } catch (e) { /* cache facultatif */ } }

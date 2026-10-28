@@ -18,7 +18,14 @@
       if (!s.express.picks || typeof s.express.picks !== 'object') s.express.picks = {};
       return s.express;
     };
-    const recipe = () => (st().recipe === 'mine' ? R.fromSettings(app.settings()) : R.byId(st().recipe) || R.RECIPES[0]);
+    // Tes styles enregistrés (Mes effets) : « u:<id> ».
+    const userRecipes = () => app.S.lib.items.filter(i => i.type === 'xpStyle').map(i => Object.assign({}, i.data.recipe, { id: 'u:' + i.id, name: '★ ' + i.name, desc: i.data.recipe.desc || 'Ton style enregistré.' }));
+    const recipe = () => {
+      const id = st().recipe;
+      if (id === 'mine') return R.fromSettings(app.settings());
+      if (id && id.indexOf('u:') === 0) { const u = userRecipes().find(r => r.id === id); if (u) return u; }
+      return R.byId(id) || R.RECIPES[0];
+    };
     // Étapes cochées pour une recette : ton choix s'il y en a un, sinon celui de la recette.
     const picks = r => { const x = st(); if (!x.picks[r.id] || typeof x.picks[r.id] !== 'object') x.picks[r.id] = {}; return x.picks[r.id]; };
     const wants = (r, step) => { const p = picks(r); return step.id in p ? !!p[step.id] : step.on; };
@@ -193,12 +200,26 @@
         h('div', { class: 'xp-hero-text' }, 'Choisis un style, RR FX enchaîne ce qu\'il faut : silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, bandeau, version 9:16. Chaque outil reste dispo à part.')));
 
       // 1. Style
-      const cards = h('div', { class: 'xp-styles' }, R.RECIPES.concat([R.fromSettings(app.settings())]).map(rc => {
+      const cards = h('div', { class: 'xp-styles' }, userRecipes().concat(R.RECIPES, [R.fromSettings(app.settings())]).map(rc => {
         const card = h('button', { class: 'xp-style' + (rc.id === x.recipe ? ' on' : ''), title: rc.desc }, lookThumb(rc), h('b', null, rc.name), h('span', { class: 'xp-sub' }, rc.chain.slice(0, 4).map(nameOf).join(' · ') || 'Aucun effet'));
         card.addEventListener('click', () => { x.recipe = rc.id; app.persist(); render(); app.renderCTA(); });
         return card;
       }));
-      view.appendChild(section('1. Style', [cards, h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : ''))]));
+      // Enregistrer le style choisi (avec ses étapes cochées) : réutilisable et partageable.
+      const saveStyle = h('button', { class: 'action', title: 'Le style choisi et ses étapes cochées, dans Mes effets (exportable, partageable)' }, 'Enregistrer ce style…');
+      saveStyle.addEventListener('click', async () => {
+        const name = await app.promptName('Nom du style', r.name.replace(/^★ /, '') + ' perso');
+        if (!name) return;
+        const data = JSON.parse(JSON.stringify(Object.assign({}, r, { id: undefined, name, lookParams: lookParams(r) })));
+        data.steps = {};
+        R.stepsOf(r).forEach(q => { data.steps[q.id] = wants(r, q); });
+        app.services.addItems([{ type: 'xpStyle', name, data: { recipe: data } }]);
+        const it = app.S.lib.items.filter(i => i.type === 'xpStyle' && i.name === name).pop();
+        if (it) x.recipe = 'u:' + it.id;
+        app.persist(); render(); app.renderCTA();
+        app.status.finish('ok', 'Style « ' + name + ' » enregistré', 'En tête des styles, et dans Mes effets pour l\'exporter ou le partager.');
+      });
+      view.appendChild(section('1. Style', [cards, h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : '')), h('div', { class: 'row-buttons' }, saveStyle)]));
 
       // 2. Vérifications, selon les étapes de ce style
       const all = R.stepsOf(r), has = id => all.some(q => q.id === id && wants(r, q));
@@ -246,5 +267,10 @@
       leave: () => {}
     };
     app.actions.express = launch;
+    app.itemTypes.xpStyle = {
+      icon: '⚡', label: 'Style Express', valid: d => !!d.recipe && Array.isArray(d.recipe.chain) && !!d.recipe.beats && !!d.recipe.cut,
+      meta: it => it.data.recipe.chain.length + ' effet(s) · ' + Object.keys(it.data.recipe.steps || {}).length + ' étape(s)',
+      open: it => { st().recipe = 'u:' + it.id; app.persist(); app.switchTab('express'); }
+    };
   });
 })(typeof self !== 'undefined' ? self : this);

@@ -16,12 +16,12 @@
     // ---------------------------------------------------------------- créer
 
     async function createPack() {
-      const s = app.settings(), items = app.S.lib.items.filter(i => ['preset', 'captured', 'ramp', 'look'].includes(i.type));
+      const s = app.settings(), items = app.S.lib.items.filter(i => app.itemTypes[i.type]);
       const overlays = (s.overlays || []).filter(o => o.path && !o.pack);
       const chain = (s.chain && s.chain.keys) || [], color = s.color && s.color.params;
       const pick = { items: new Set(items.map(i => i.id)), look: !!color, titles: !!s.titles, overlays: overlays.length > 0 && !!Store.fs, chain: chain.length > 0 };
       const name = h('input', { class: 'textfield', value: 'Mon style', placeholder: 'Nom du pack' });
-      const list = h('div', { class: 'pack-list' }, items.map(i => checkbox(i.name + ' · ' + ({ preset: 'preset', captured: 'capturé', ramp: 'rampe', look: 'look' })[i.type], true, v => { if (v) pick.items.add(i.id); else pick.items.delete(i.id); })));
+      const list = h('div', { class: 'pack-list' }, items.map(i => checkbox(i.name + ' · ' + app.itemTypes[i.type].label.toLowerCase(), true, v => { if (v) pick.items.add(i.id); else pick.items.delete(i.id); })));
       const body = h('div', null,
         name,
         h('div', { class: 'lr-sub' }, 'Contenu'),
@@ -126,5 +126,7 @@
       },
       importPack, createPack
     };
+    // « Importer… » de Mes effets reconnaît aussi les packs.
+    app.importers.push({ exts: ['rrfxpack', 'zip'], label: 'packs de style', run: async files => { for (const f of files) await importPack({ name: f.name, bytes: f.bytes }); return { n: 0, handled: true }; } });
   });
 })(typeof self !== 'undefined' ? self : this);

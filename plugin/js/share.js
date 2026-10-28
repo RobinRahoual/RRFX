@@ -7,7 +7,8 @@
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
-  const TYPES = ['preset', 'captured', 'ramp', 'look'];
+  // Tout ce que la bibliothèque sait garder (le panneau vérifie ensuite chaque élément).
+  const TYPES = ['preset', 'captured', 'ramp', 'look', 'textStyle', 'palette', 'gradient', 'titleAnim', 'xpStyle'];
 
   function toB64url(bytes) {
     let s = '';
@@ -52,5 +53,5 @@
     return items;
   }
 
-  return { encode, decode, clean };
+  return { encode, decode, clean, TYPES };
 });

@@ -611,7 +611,24 @@
     slowHit: { label: 'Ralenti sur le temps fort', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.35, v: 30 }, { t: 0.65, v: 30 }, { t: 1, v: 100 }] },
     pulse: { label: 'Pulse rapide', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.5, v: 500 }, { t: 1, v: 100 }] },
     slowDown: { label: 'Ralenti progressif', placement: 'full', points: [{ t: 0, v: 100 }, { t: 1, v: 25 }] },
-    speedUp: { label: 'Montée en vitesse', placement: 'full', points: [{ t: 0, v: 30 }, { t: 1, v: 300 }] }
+    speedUp: { label: 'Montée en vitesse', placement: 'full', points: [{ t: 0, v: 30 }, { t: 1, v: 300 }] },
+    // Coupe : ce qui arrive sur la coupe et ce qui en repart.
+    whipIn: { label: 'Coup de fouet vers la coupe', placement: 'pre', points: [{ t: 0, v: 100 }, { t: 0.7, v: 200 }, { t: 0.9, v: 700 }, { t: 1, v: 1000 }] },
+    whipOut: { label: 'Coup de fouet après la coupe', placement: 'post', points: [{ t: 0, v: 1000 }, { t: 0.1, v: 700 }, { t: 0.3, v: 200 }, { t: 1, v: 100 }] },
+    slamIn: { label: 'Ralenti puis claque sur la coupe', placement: 'pre', points: [{ t: 0, v: 100 }, { t: 0.45, v: 35 }, { t: 0.8, v: 40 }, { t: 1, v: 600 }] },
+    softLand: { label: 'Atterrissage en douceur', placement: 'post', points: [{ t: 0, v: 400 }, { t: 0.5, v: 120 }, { t: 1, v: 30 }] },
+    // Temps fort : autour de la tête de lecture.
+    dramatic: { label: 'Ralenti dramatique', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.2, v: 20 }, { t: 0.8, v: 20 }, { t: 1, v: 100 }] },
+    nearFreeze: { label: 'Presque figé (bullet time)', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.25, v: 12 }, { t: 0.75, v: 12 }, { t: 1, v: 100 }] },
+    doublePulse: { label: 'Double pulse', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.25, v: 450 }, { t: 0.5, v: 100 }, { t: 0.75, v: 450 }, { t: 1, v: 100 }] },
+    bounce: { label: 'Rebond', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.3, v: 450 }, { t: 0.6, v: 50 }, { t: 1, v: 100 }] },
+    breath: { label: 'Respiration', placement: 'playhead', points: [{ t: 0, v: 100 }, { t: 0.33, v: 65 }, { t: 0.66, v: 140 }, { t: 1, v: 100 }] },
+    jumpHit: { label: 'Saut (montée, ralenti, chute)', placement: 'playhead', points: [{ t: 0, v: 250 }, { t: 0.4, v: 25 }, { t: 0.6, v: 25 }, { t: 1, v: 250 }] },
+    // Plan entier.
+    timelapse: { label: 'Accéléré façon timelapse', placement: 'full', points: [{ t: 0, v: 800 }, { t: 1, v: 800 }] },
+    slowmoFull: { label: 'Ralenti doux sur tout le plan', placement: 'full', points: [{ t: 0, v: 50 }, { t: 1, v: 50 }] },
+    accelDecel: { label: 'Accélère puis ralentit', placement: 'full', points: [{ t: 0, v: 60 }, { t: 0.5, v: 400 }, { t: 1, v: 60 }] },
+    stairs: { label: 'Paliers de vitesse', placement: 'full', points: [{ t: 0, v: 100 }, { t: 0.32, v: 100 }, { t: 0.34, v: 200 }, { t: 0.65, v: 200 }, { t: 0.67, v: 400 }, { t: 1, v: 400 }] }
   };
 
   return {

@@ -23,7 +23,7 @@
       faceAmount: 20, faceAlt: true, faceTrack: true, faceFrame: 'keep',
       srt: '', words: 0, capAnim: 'pop', capFrom: 'start',
       name: '', role: '', lowerDur: 5, lowerPos: 'left', lowerAnim: 'slide-up',
-      keys: 'color', keyColor: '#ffd21e', keyList: '', emoji: false, popSound: 'none',
+      capStyle: '', lowerStyle: '', keys: 'color', keyColor: '#ffd21e', keyList: '', emoji: false, popSound: 'none',
       fillerLevel: 'normal', fillerMode: 'copy',
       voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers'
     };
@@ -298,7 +298,7 @@
         if (remap && lastCuts.length) { items = cutAware(items); app.log('Sous-titres recalés sur ' + app.plural(lastCuts.length, 'coupe') + ' (' + lastCuts[lastCuts.length - 1].name + ')', 'info'); }
         app.status.phase('Pose des sous-titres');
         const keyFx = x.keys === 'color' ? Core.toWire(Core.compileEffect({ params: [], build: () => [{ type: 'tint', props: { black: [0, 0, 0], white: rgb(x.keyColor), amount: 100 } }] }, {}, 'post', 1, app.fps(), app.registry())) : null;
-        const r = await app.services.placeTexts(items, { anim: x.capAnim, label: 'Sous-titres', pos: [0.5, 0.78], keyFx });
+        const r = await app.services.placeTexts(items, { anim: x.capAnim, label: 'Sous-titres', pos: [0.5, 0.78], keyFx, style: x.capStyle });
         if (r.error) return { kind: 'error', title: 'Sous-titres non posés', detail: r.error };
         // Petit « pop » sonore sur les mots clés ou sur chaque sous-titre.
         let pops = 0;
@@ -338,7 +338,7 @@
         if (!text) return { kind: 'error', title: 'Écris un nom', detail: 'Le nom (et la fonction) de la personne qui parle.' };
         if (!app.services.mogrt()) return { kind: 'error', title: 'Choisis un modèle de texte', detail: 'Onglet Textes > Modèle de texte.' };
         const t0 = await startTime('playhead');
-        const r = await app.services.placeTexts([{ start: t0, end: t0 + x.lowerDur, text }], { anim: x.lowerAnim, label: 'Bandeau', pos: LOWER_POS[x.lowerPos] || LOWER_POS.left });
+        const r = await app.services.placeTexts([{ start: t0, end: t0 + x.lowerDur, text }], { anim: x.lowerAnim, label: 'Bandeau', pos: LOWER_POS[x.lowerPos] || LOWER_POS.left, style: x.lowerStyle });
         if (r.error) return { kind: 'error', title: 'Bandeau non posé', detail: r.error };
         return { kind: r.warnings.length ? 'warn' : 'ok', title: 'Bandeau posé · ' + String(x.name || x.role).trim(), detail: x.lowerDur + ' s à la tête de lecture' + (r.track !== null ? ', sur V' + (r.track + 1) : '') + '. Déplace-le comme un clip.' };
       });
@@ -440,7 +440,8 @@
       imp.addEventListener('click', () => importSrt(() => app.switchTab('speech')));
       const capBtn = h('button', { class: 'action go' }, 'Poser les sous-titres');
       capBtn.addEventListener('click', use('soustitres', () => captions()));
-      const anims = Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name }));
+      const anims = app.services.titleAnimOptions ? app.services.titleAnimOptions() : Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name }));
+      const styles = app.textStyles ? app.textStyles.options() : [{ v: '', label: 'Celui du modèle .mogrt' }];
       const model = app.services.mogrtName ? app.services.mogrtName() : '';
       view.appendChild(sec('soustitres', 'Sous-titres', [
         h('div', { class: 'note' }, 'Un fichier .srt ou .vtt : Premiere le crée (Texte > Transcription, puis Sous-titres > Exporter en fichier SRT), comme la plupart des outils de transcription.'),
@@ -448,8 +449,9 @@
         ta, count,
         row('À l\'écran', actionGroup([{ v: 0, label: 'Phrase entière' }, { v: 3, label: '3 mots' }, { v: 1, label: 'Mot par mot', title: 'Le style TikTok / Reels' }], x.words, v => { x.words = v; updateCount(); app.persist(); })),
         row('Animation', picker(anims, x.capAnim, v => { x.capAnim = v; app.persist(); })),
+        row('Style', picker(styles, x.capStyle, v => { x.capStyle = v; app.persist(); }), { title: 'Tes styles se créent dans l\'onglet Textes > Style du texte' }),
         row('Mots clés', actionGroup([{ v: 'color', label: 'En couleur' }, { v: 'none', label: 'Non' }], x.keys, v => { x.keys = v; app.persist(); app.switchTab('speech'); }), { title: 'Chiffres, mots forts, mots en MAJUSCULES ou suivis de « ! », et ta liste' }),
-        x.keys === 'color' ? row('Couleur', swatches()) : null,
+        x.keys === 'color' ? row('Couleur', app.services.colorPick ? app.services.colorPick(x.keyColor, v => { x.keyColor = v || '#ffd21e'; app.persist(); }) : swatches()) : null,
         row('Tes mots', keyListField(), { title: 'Toujours mis en avant (séparés par des virgules)' }),
         h('div', { class: 'field' }, app.UI.checkbox('Emoji après les mots clés (💰 🔥 💡…)', x.emoji, v => { x.emoji = v; app.persist(); })),
         row('Son « pop »', actionGroup([{ v: 'none', label: 'Aucun' }, { v: 'keys', label: 'Mots clés' }, { v: 'all', label: 'Chaque texte' }], x.popSound, v => { x.popSound = v; app.persist(); })),
@@ -474,6 +476,7 @@
         row('Durée', hotText({ value: x.lowerDur, min: 1, max: 30, step: 0.5, unit: 's', onChange: v => { x.lowerDur = v; app.persist(); } })),
         row('Place', actionGroup([{ v: 'left', label: '↙ Bas' }, { v: 'center', label: '↓ Centre' }, { v: 'top', label: '↖ Haut' }], x.lowerPos, v => { x.lowerPos = v; app.persist(); })),
         row('Animation', picker(anims, x.lowerAnim, v => { x.lowerAnim = v; app.persist(); })),
+        row('Style', picker(styles, x.lowerStyle, v => { x.lowerStyle = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, lowBtn)
       ]));
 
