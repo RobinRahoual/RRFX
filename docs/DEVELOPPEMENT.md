@@ -81,8 +81,3 @@ tests/                   tests Node (sim.js = timeline Premiere simulée)
   **avant** de couper quoi que ce soit.
 - Les réglages sont enregistrés aussi à la fermeture du panneau ; les vidéos d'overlays ne tournent que pendant
   leur aperçu.
-
-## Pourquoi pas un `.ccx` comme Rotate ?
-Rotate est un plugin UXP. L'API UXP de Premiere ne permet pas (encore) de découper un clip ni de changer sa vitesse :
-les speed ramps seraient impossibles. RR FX est donc une extension CEP (HTML + ExtendScript), avec la même interface.
-
