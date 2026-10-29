@@ -11,13 +11,57 @@
     const FOLLOW = { smooth: { smooth: 0.6 }, tight: { smooth: 0.15 }, fixed: { fixed: true } };
     const pause = () => new Promise(res => setTimeout(res, 0));
 
+    /* Détection YuNet (yunet.js) dans un Worker : le panneau reste fluide pendant l'analyse. Le
+       Worker est fabriqué à partir du code du moteur (rien à charger) ; s'il ne démarre pas, le
+       calcul se fait ici, et si YuNet échoue, la détection classique (Viola-Jones) prend le relais. */
+    const Y = root.RRFXYuNet, YM = root.RRFXYuNetModel;
+    let worker = null, seq = 0, yunetOk = !!(Y && YM);
+    const waiting = new Map();
+    function yunetWorker() {
+      if (worker !== null) return worker;
+      worker = false;
+      try {
+        if (typeof Worker === 'undefined' || typeof Blob === 'undefined' || !yunetOk) return worker;
+        const src = 'const Y = (' + Y.factory.toString() + ')();\nlet model = null;\n' +
+          'onmessage = e => { const d = e.data; if (d.model) { model = d.model; return; }\n' +
+          '  try { postMessage({ id: d.id, faces: Y.detect(model, d.data, d.w, d.h) }); } catch (err) { postMessage({ id: d.id, error: String((err && err.message) || err) }); } };';
+        const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+        w.onmessage = e => { const p = waiting.get(e.data.id); if (!p) return; waiting.delete(e.data.id); if (e.data.error) p.reject(new Error(e.data.error)); else p.resolve(e.data.faces); };
+        w.onerror = e => { waiting.forEach(p => p.reject(new Error((e && e.message) || 'Worker'))); waiting.clear(); worker = false; };
+        w.postMessage({ model: YM });
+        worker = w;
+      } catch (e) { worker = false; }
+      return worker;
+    }
+    function yunetFaces(img) {
+      const w = yunetWorker();
+      if (!w) return Promise.resolve(Y.detect(YM, img.data, img.width, img.height));
+      return new Promise((resolve, reject) => {
+        const id = ++seq;
+        waiting.set(id, { resolve, reject });
+        // Pas de réponse en 10 s : le Worker est bloqué, on calcule ici.
+        setTimeout(() => { if (waiting.delete(id)) { worker = false; resolve(Y.detect(YM, img.data, img.width, img.height)); } }, 10000);
+        w.postMessage({ id, data: img.data, w: img.width, h: img.height });
+      });
+    }
+    async function findEyes(img, prev) {
+      if (yunetOk) {
+        try { return F.pickFace(await yunetFaces(img), img.width, img.height, prev); } catch (e) {
+          yunetOk = false;
+          app.log(_T('Détection précise des visages indisponible (') + app.errorMessage(e) + _T(') : détection classique.'), 'warn');
+        }
+      }
+      return F.eyesIn(img, prev);
+    }
+    app.services.findEyes = findEyes;
+
     // Yeux trouvés dans les images d'un plan (le visage précédent guide la recherche).
     async function eyesAlong(frames, from, count, onStep) {
       let prev = null;
       const out = [];
       for (let j = 0; j < count; j++) {
         if (onStep) onStep();
-        const eyes = F.eyesIn(frames[from + j], prev);
+        const eyes = await findEyes(frames[from + j], prev);
         if (eyes) prev = eyes;
         out.push(eyes);
         await pause(); // le panneau reste réactif pendant l'analyse

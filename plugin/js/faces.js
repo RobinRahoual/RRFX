@@ -218,5 +218,20 @@
     });
   }
 
-  return { EYES_X, EYES_Y, luma, detect, eyesIn, track, framing, sampling };
+  /* Visages trouvés par YuNet (yunet.js : boîtes et repères en pixels) → les yeux à suivre,
+     comme eyesIn : le visage le plus proche du précédent, sinon le plus sûr ; null si aucun.
+     Les yeux viennent des repères du réseau (milieu des deux yeux), pas d'une proportion de la boîte. */
+  function pickFace(faces, W, H, prev) {
+    if (!faces || !faces.length) return null;
+    const eyes = f => ({ x: (f.eyes[0][0] + f.eyes[1][0]) / 2 / W, y: (f.eyes[0][1] + f.eyes[1][1]) / 2 / H, size: f.w / W });
+    let f = faces[0];
+    if (prev) {
+      const dist = q => { const e = eyes(q); return Math.hypot(e.x - prev.x, e.y - prev.y); };
+      const near = faces.slice().sort((p, q) => dist(p) - dist(q))[0];
+      if (dist(near) <= 0.25) f = near;
+    }
+    return eyes(f);
+  }
+
+  return { EYES_X, EYES_Y, luma, detect, eyesIn, pickFace, track, framing, sampling };
 });
