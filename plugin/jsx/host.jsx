@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.5.0';
+    var VERSION = '2.5.1';
     var adjCache = null;
 
     // ------------------------------------------------------------ JSON
@@ -868,6 +868,13 @@ var RRFX = (function () {
             if (e.kind === 'aud') {
                 it = findAudioAt(s, e.track, e.start);
                 if (it && it.name === e.name) { it.remove(false, false); removed++; } else skipped++;
+                continue;
+            }
+            if (e.kind === 'move') {
+                // Rangement du projet : l'element revient dans son chutier d'origine.
+                it = itemByNodeId(e.id);
+                r = e.from === 'root' ? app.project.rootItem : itemByNodeId(e.from);
+                if (it && r) { try { it.moveBin(r); removed++; } catch (e2) { skipped++; } } else skipped++;
                 continue;
             }
             if (e.kind === 'rename') {
@@ -2807,7 +2814,7 @@ var RRFX = (function () {
         var i, c;
         for (i = 0; i < bin.children.numItems; i++) {
             c = bin.children[i];
-            if (cb(c, where || '') === false) return false;
+            if (cb(c, where || '', bin) === false) return false;
             if (c.type === 2 && walkItems(c, cb, (where ? where + '/' : '') + c.name) === false) return false;
         }
         return true;
@@ -2892,14 +2899,14 @@ var RRFX = (function () {
             c = R.children[i];
             if (c.type === 2 || isAdjustment(c)) continue;
             k = kindOf(c);
-            if (label[k]) plan.push({ item: c, bin: label[k], kind: k });
+            if (label[k]) plan.push({ item: c, bin: label[k], kind: k, from: 'root' });
         }
         if (o.unused) {
             u = usedItems();
-            walkItems(R, function (x, where) {
+            walkItems(R, function (x, where, parent) {
                 if (x.type !== 1 || isSeqItem(x) || isAdjustment(x) || /^RR FX/.test(where) || /^RR FX/.test(x.name)) return true;
                 if (where === (names.unused || 'Non utilis\u00e9s')) return true;
-                if (!u.ids[x.nodeId] && !u.names[x.name] && kindOf(x) !== 'other') unused.push(x);
+                if (!u.ids[x.nodeId] && !u.names[x.name] && kindOf(x) !== 'other') unused.push({ item: x, from: parent === R ? 'root' : parent.nodeId });
                 return true;
             });
         }
@@ -2907,16 +2914,17 @@ var RRFX = (function () {
         for (i = 0; i < plan.length; i++) counts[plan[i].kind] = (counts[plan[i].kind] || 0) + 1;
         if (o.dry) {
             var list = [];
-            for (i = 0; i < unused.length && i < 200; i++) list.push(unused[i].name);
+            for (i = 0; i < unused.length && i < 200; i++) list.push(unused[i].item.name);
             return ok({ counts: counts, loose: plan.length, unused: list, unusedCount: unused.length });
         }
-        for (i = 0; i < plan.length; i++) { try { plan[i].item.moveBin(binPath(plan[i].bin)); moved++; } catch (e) {} }
-        var parked = 0;
+        // Chaque deplacement est note (element, chutier d'origine) : Annuler remet tout en place.
+        var created = [], parked = 0;
+        for (i = 0; i < plan.length; i++) { try { plan[i].item.moveBin(binPath(plan[i].bin)); moved++; created.push({ kind: 'move', id: plan[i].item.nodeId, from: plan[i].from, name: plan[i].item.name }); } catch (e) {} }
         if (unused.length) {
             var ub = binPath(names.unused || 'Non utilis\u00e9s');
-            for (i = 0; i < unused.length; i++) { try { unused[i].moveBin(ub); parked++; } catch (e2) {} }
+            for (i = 0; i < unused.length; i++) { try { unused[i].item.moveBin(ub); parked++; created.push({ kind: 'move', id: unused[i].item.nodeId, from: unused[i].from, name: unused[i].item.name }); } catch (e2) {} }
         }
-        return ok({ counts: counts, moved: moved, parked: parked });
+        return ok({ counts: counts, moved: moved, parked: parked, created: created });
     }
 
     // Renommage en serie des elements selectionnes dans le panneau Projet (o.names : nouveaux noms,
@@ -3001,7 +3009,9 @@ var RRFX = (function () {
                 mE = E;
             }
         }
-        return ok({ removed: removed, moved: moved, refused: refused, end: secs(mE), name: mi.name, warnings: refused ? [refused + ' morceau(x) de musique que Premiere a refus\u00e9 de d\u00e9placer'] : [] });
+        pieces = music();
+        var lastStart = pieces.length ? secs(tk(pieces[pieces.length - 1].start)) : mi.start;
+        return ok({ removed: removed, moved: moved, refused: refused, end: secs(mE), lastStart: lastStart, track: mi.track, name: mi.name, warnings: refused ? [refused + ' morceau(x) de musique que Premiere a refus\u00e9 de d\u00e9placer'] : [] });
     }
 
     // Activite dans Premiere (temps passe) : projet ouvert et signature de ce qui bouge.
@@ -3094,7 +3104,28 @@ var RRFX = (function () {
             if (j.finished) finished++;
             if (j.done) attached++;
         }
-        return ok({ total: total, finished: finished, attached: attached });
+        var on = null;
+        try { if (app.getEnableProxies) on = !!app.getEnableProxies(); } catch (e) {}
+        return ok({ total: total, finished: finished, attached: attached, enabled: on });
+    }
+
+    // Proxies actives ou non dans les moniteurs (comme le bouton " Activer les proxies ").
+    function setProxies(o) {
+        if (!app.setEnableProxies) return fail('Cette version de Premiere ne permet pas d\'activer les proxies par script : bouton \u00ab Activer les proxies \u00bb du Moniteur.');
+        app.setEnableProxies(o.on ? 1 : 0);
+        var on = !!o.on;
+        try { if (app.getEnableProxies) on = !!app.getEnableProxies(); } catch (e) {}
+        return ok({ enabled: on });
+    }
+
+    // Version d'une sequence supprimee (jamais la sequence ouverte).
+    function deleteSequence(o) {
+        var P = app.project, s = seqById(o.id);
+        if (!s) return fail('S\u00e9quence introuvable');
+        if (P.activeSequence && P.activeSequence.sequenceID === o.id) return fail('C\'est la s\u00e9quence ouverte : ouvre-en une autre d\'abord.');
+        if (!P.deleteSequence) return fail('Cette version de Premiere ne permet pas de supprimer une s\u00e9quence par script.');
+        if (P.deleteSequence(s) === false) return fail('Premiere a refus\u00e9 de supprimer la s\u00e9quence.');
+        return ok({ id: o.id });
     }
 
     return {
@@ -3153,6 +3184,8 @@ var RRFX = (function () {
         activityPing: guard(activityPing),
         proxyPresets: guard(proxyPresets),
         makeProxies: guard(makeProxies),
-        proxyStatus: guard(proxyStatus)
+        proxyStatus: guard(proxyStatus),
+        setProxies: guard(setProxies),
+        deleteSequence: guard(deleteSequence)
     };
 })();

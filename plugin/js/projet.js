@@ -15,7 +15,7 @@
     const st = () => {
       const s = app.settings();
       if (!s.projet || typeof s.projet !== 'object') s.projet = {};
-      const d = { unused: true, pattern: '{nom}_###', start: 1, proxyPreset: '', proxyDir: '', proxyAll: false };
+      const d = { unused: true, pattern: '{nom}_###', start: 1, find: '', by: '', proxyPreset: '', proxyDir: '', proxyAll: false, autoVersion: false };
       Object.keys(d).forEach(k => { if (!(k in s.projet)) s.projet[k] = d[k]; });
       if (!Array.isArray(s.watch)) s.watch = [];
       return s.projet;
@@ -37,6 +37,7 @@
       if (!r.ok) { app.log(_T('Dossier surveillé « ') + base(w.dir) + _T(' » : ') + r.error, 'warn'); return { imported: [], error: r.error }; }
       fresh.forEach(f => known.add(f));
       seen.set(w.dir, known);
+      if (r.imported.length) { w.last = Date.now(); w.lastCount = r.imported.length; w.total = (w.total || 0) + r.imported.length; app.persist(); }
       if (r.imported.length) app.log(app.plural(r.imported.length, _T('fichier importé'), _T('fichiers importés')) + _T(' dans « ') + w.bin + _T(' » : ') + r.imported.slice(0, 5).join(', ') + (r.imported.length > 5 ? '…' : ''), 'ok');
       return { imported: r.imported };
     }
@@ -69,6 +70,7 @@
           h('div', { class: 'watch-dir', title: w.dir }, '📂 ' + base(w.dir)),
           row(_T('Chutier'), bin),
           checkbox(_T('Surveiller (toutes les minutes)'), w.on !== false, v => { w.on = v; app.persist(); startWatching(); }),
+          w.last ? h('div', { class: 'note' }, _T('Dernier import : ') + new Date(w.last).toLocaleString() + ' (' + w.lastCount + ')' + _T(' · ') + app.plural(w.total || 0, _T('fichier importé'), _T('fichiers importés')) + _T(' en tout')) : null,
           h('div', { class: 'row-buttons' }, now, off)));
       });
       const add = h('button', { class: 'action' + (list.length ? '' : ' go'), disabled: !Store.fs }, _T('＋ Surveiller un dossier…'));
@@ -99,7 +101,8 @@
           return { kind: 'ok', title: _T('Inventaire fait'), detail: _T('Rien n\'a bougé.') };
         }
         if (out) out.textContent = '';
-        return { kind: 'ok', saved: r.moved + r.parked, title: app.plural(r.moved + r.parked, _T('élément rangé'), _T('éléments rangés')), detail: (what || _T('Rien en vrac')) + (r.parked ? ' · ' + r.parked + ' → ' + N.unused : '') + _T('. Rien n\'est supprimé : glisse un élément pour le ranger ailleurs.') };
+        if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: _T('Rangement du projet'), entries: r.created });
+        return { kind: 'ok', title: app.plural(r.moved + r.parked, _T('élément rangé'), _T('éléments rangés')), detail: (what || _T('Rien en vrac')) + (r.parked ? ' · ' + r.parked + ' → ' + N.unused : '') + _T('. Rien n\'est supprimé. ↶ Annuler remet tout où c\'était.') };
       });
     }
     function tidySection() {
@@ -125,7 +128,7 @@
     function rename(out) {
       const x = st();
       return app.runTask(_T('Renommage en série'), async () => {
-        const items = await selection(), names = O.renamePlan(items.map(i => i.name), x.pattern, x.start);
+        const items = await selection(), names = O.renamePlan(items.map(i => i.name), x.pattern, x.start, x.find, x.by);
         const r = await Host.call('renameItems', { ids: items.map(i => i.id), names });
         if (!r.ok) return { kind: 'error', title: _T('Rien de renommé'), detail: r.error };
         app.pushHistory({ date: Date.now(), label: _T('Renommage × ') + r.renamed.length, entries: r.renamed.map(q => ({ kind: 'rename', id: q.id, old: q.old, name: q.name })) });
@@ -139,18 +142,23 @@
       pat.addEventListener('input', () => { x.pattern = pat.value; app.persist(); });
       const start = h('input', { class: 'textfield', type: 'number', min: 0, value: x.start, 'aria-label': _T('Premier numéro') });
       start.addEventListener('change', () => { x.start = Math.max(0, Math.round(+start.value) || 0); app.persist(); });
+      const find = h('input', { class: 'textfield', value: x.find, placeholder: _T('ex. C000'), 'aria-label': _T('Texte à remplacer') });
+      find.addEventListener('input', () => { x.find = find.value; app.persist(); });
+      const by = h('input', { class: 'textfield', value: x.by, placeholder: _T('(rien = l\'enlever)'), 'aria-label': _T('Remplacer par') });
+      by.addEventListener('input', () => { x.by = by.value; app.persist(); });
       const look = h('button', { class: 'action' }, _T('Aperçu'));
       look.addEventListener('click', async () => {
         try {
-          const items = await selection(), names = O.renamePlan(items.map(i => i.name), x.pattern, x.start);
+          const items = await selection(), names = O.renamePlan(items.map(i => i.name), x.pattern, x.start, x.find, x.by);
           out.textContent = items.slice(0, 4).map((i, k) => i.name + ' → ' + names[k]).join(' · ') + (items.length > 4 ? ' … (' + items.length + ')' : '');
         } catch (e) { out.textContent = app.errorMessage(e); }
       });
       const go = h('button', { class: 'action go' }, _T('Renommer la sélection'));
       go.addEventListener('click', () => rename(out));
       return [
-        h('div', { class: 'note' }, _T('Sélectionne des éléments dans le panneau Projet. « # » devient le numéro (### → 001, 002…), {nom} le nom actuel. Les fichiers sur le disque ne changent pas.')),
+        h('div', { class: 'note' }, _T('Sélectionne des éléments dans le panneau Projet. « # » devient le numéro (### → 001, 002…), {nom} le nom actuel (après le remplacement). Les fichiers sur le disque ne changent pas.')),
         row(_T('Modèle'), pat), row(_T('À partir de'), start),
+        row(_T('Remplacer'), find), row(_T('par'), by),
         h('div', { class: 'row-buttons' }, go, look), out
       ];
     }
@@ -204,6 +212,12 @@
         const go = h('button', { class: 'action go' }, _T('Créer les proxies'));
         go.addEventListener('click', proxies);
         box.appendChild(h('div', { class: 'row-buttons wrap' }, go, pick, dir));
+        const toggle = h('button', { class: 'action quiet' }, _T('Activer / désactiver les proxies'));
+        toggle.addEventListener('click', async () => {
+          const cur = await Host.call('proxyStatus', {}), r = await Host.call('setProxies', { on: !(cur.ok && cur.enabled) });
+          app.status.finish(r.ok ? 'ok' : 'warn', r.ok ? (r.enabled ? _T('Proxies activés') : _T('Proxies désactivés')) : _T('Bouton du Moniteur'), r.ok ? (r.enabled ? _T('Le montage utilise les proxies (plus fluide). L\'export garde les originaux.') : _T('Le montage utilise les originaux.')) : r.error);
+        });
+        box.appendChild(h('div', { class: 'row-buttons' }, toggle));
         box.appendChild(h('div', { class: 'note' }, _T('Dossier : ') + (x.proxyDir || _T('Documents/RRFX/Proxies')) + _T('. Media Encoder doit être installé (Creative Cloud).')));
       };
       draw();
@@ -229,6 +243,13 @@
       if (r.ok) app.log(_T('Version gardée : ') + r.name, 'ok');
       return r;
     }
+    /* Avant une coupe directe (silences, euh, texte) : une version, si l'option est cochée. */
+    async function beforeCut(note) {
+      if (!st().autoVersion) return null;
+      const r = await snapshot(note);
+      if (!r.ok) app.log(_T('Version non gardée : ') + r.error, 'warn');
+      return r;
+    }
     function keepVersion(note, refresh) {
       return app.runTask(_T('Version de la séquence'), async () => {
         const r = await snapshot(note);
@@ -252,7 +273,14 @@
           vs.forEach(v => {
             const open = h('button', { class: 'action quiet' }, _T('Ouvrir'));
             open.addEventListener('click', async () => { const r = await Host.call('openSequence', { id: v.id }); app.status.finish(r.ok ? 'ok' : 'error', r.ok ? _T('Version ouverte : ') + v.name : _T('Version introuvable'), r.ok ? _T('La séquence de travail reste dans le panneau Projet.') : r.error); });
-            listBox.appendChild(h('div', { class: 'ver-item' }, h('span', null, '🕓 ' + v.name), open));
+            const del = h('button', { class: 'action quiet icon danger', title: _T('Supprimer cette version') }, '✕');
+            del.addEventListener('click', async () => {
+              if (!(await app.confirmDialog(_T('Supprimer « ') + v.name + _T(' » ?'), _T('La copie figée est retirée du projet (Ctrl+Z dans Premiere pour la retrouver).'), _T('Supprimer')))) return;
+              const r = await Host.call('deleteSequence', { id: v.id });
+              app.status.finish(r.ok ? 'ok' : 'error', r.ok ? _T('Version supprimée') : _T('Version non supprimée'), r.ok ? v.name : r.error);
+              draw();
+            });
+            listBox.appendChild(h('div', { class: 'ver-item' }, h('span', null, '🕓 ' + v.name), h('span', { class: 'row-buttons' }, open, del)));
           });
         };
         const go = h('button', { class: 'action go' }, _T('Garder une version maintenant'));
@@ -260,12 +288,14 @@
         draw();
         box.append(
           h('div', { class: 'note' }, _T('Avant un gros changement ou des retours client : une copie figée de la séquence (« Clip v02 »), rangée dans le chutier Versions. Tu continues sur l\'originale, et tu peux rouvrir une version à tout moment.')),
-          note, h('div', { class: 'row-buttons' }, go), listBox);
+          note, h('div', { class: 'row-buttons' }, go),
+          checkbox(_T('Garder une version avant chaque coupe directe (silences, « euh », montage par le texte)'), st().autoVersion, v => { st().autoVersion = v; app.persist(); }),
+          listBox);
         return [box];
       }
     });
 
-    app.versions = { snapshot };
+    app.versions = { snapshot, beforeCut };
     app.actions.keepVersion = () => keepVersion('');
     app.actions.tidyProject = () => tidy(false);
     app.actions.proxies = () => proxies();

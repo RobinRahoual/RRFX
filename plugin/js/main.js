@@ -1913,7 +1913,7 @@
     const I = window.RRFXI18n;
     if (I) {
       const langSec = section('Langue · Language', [
-        actionGroup([{ v: 'fr', label: '🇫🇷 Français' }, { v: 'en', label: '🇬🇧 English' }], I.lang, v => { if (v === I.lang) return; I.setLang(v); location.reload(); }),
+        actionGroup([{ v: 'fr', label: '🇫🇷 Français' }, { v: 'en', label: '🇬🇧 English' }], I.lang, v => { if (v === I.lang) return; I.switchTo(v); }),
         h('div', { class: 'note' }, _T('Le panneau se recharge dans la langue choisie. Tes réglages et ta bibliothèque sont gardés.'))
       ]);
       langSec.dataset.sec = 'lang';

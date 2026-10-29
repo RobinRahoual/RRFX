@@ -31,6 +31,7 @@
         if (!picked.length) return { kind: 'warn', title: _T('Aucune phrase barrée'), detail: _T('Clique sur ✕ à côté des phrases à retirer.') };
         const t0 = await app.speech.startTime(x.capFrom);
         const ranges = O.textCuts(list, picked);
+        if (!x.textCopy && app.versions) await app.versions.beforeCut(_T('avant montage texte'));
         app.status.phase(_T('Coupe et recollage'));
         const res = await Host.call('cutSilences', { ranges: ranges.map(r => ({ a: r.a + t0, b: r.b + t0 })), copy: !!x.textCopy, suffix: _T(' (montage texte)') });
         if (!res.ok) return { kind: 'error', title: _T('Phrases non coupées'), detail: res.error };
@@ -57,6 +58,16 @@
         const list = h('div', { class: 'tx-list', role: 'list' }), info = h('div', { class: 'note' });
         const go = h('button', { class: 'action go' });
         const reset = h('button', { class: 'action quiet' }, _T('Tout rétablir'));
+        // Barrer d'un coup : les prises ratées et phrases de reprise, ou tout ce que la recherche trouve.
+        const auto = h('button', { class: 'action', title: _T('Une phrase reprise juste après (la 1re prise part), ou faite seulement de « euh, attends, je recommence… »') }, _T('Barrer les prises ratées'));
+        auto.addEventListener('click', () => {
+          const all = cues(), found = O.retakes(all).filter(i => !struck.has(i));
+          found.forEach(i => struck.add(i));
+          draw();
+          app.status.finish(found.length ? 'ok' : 'idle', found.length ? app.plural(found.length, _T('prise ratée barrée'), _T('prises ratées barrées')) : _T('Aucune prise ratée trouvée'), found.length ? found.slice(0, 3).map(i => '« ' + all[i].text.replace(/\s*\n\s*/g, ' ').slice(0, 40) + ' »').join(', ') + _T('. Vérifie, ↺ pour garder une phrase.') : _T('Rien ne ressemble à une phrase recommencée.'));
+        });
+        const strikeHits = h('button', { class: 'action quiet' }, _T('Barrer les phrases trouvées'));
+        strikeHits.addEventListener('click', () => { O.findText(cues(), query).forEach(i => struck.add(i)); draw(); });
         let drawnFor = null;
         const draw = () => {
           const all = cues(), hits = new Set(O.findText(all, query));
@@ -81,8 +92,10 @@
           go.textContent = n ? _T('Couper les phrases barrées (') + n + ')' : _T('Couper les phrases barrées');
           go.disabled = !n;
           reset.disabled = !n;
+          auto.disabled = !all.length;
+          strikeHits.style.display = query && hits.size ? '' : 'none';
           info.textContent = query ? app.plural(hits.size, _T('phrase trouvée'), _T('phrases trouvées')) + (n ? ' · ' : '') + (n ? app.plural(n, _T('phrase barrée'), _T('phrases barrées')) + ', ' + Math.round(sec * 10) / 10 + _T(' s à couper') : '')
-            : n ? app.plural(n, _T('phrase barrée'), _T('phrases barrées')) + ', ' + Math.round(sec * 10) / 10 + _T(' s à couper.') : all.length ? app.plural(all.length, _T('phrase')) + _T('. Clique sur une phrase pour y aller, ✕ pour la barrer.') : '';
+            : n ? app.plural(n, _T('phrase barrée'), _T('phrases barrées')) + ', ' + Math.round(sec * 10) / 10 + _T(' s à couper.') : all.length ? app.plural(all.length, _T('phrase')) + ' · ' + mmss(all[all.length - 1].end) + _T('. Clique sur une phrase pour y aller, ✕ pour la barrer.') : '';
         };
         search.addEventListener('input', () => { query = search.value; draw(); });
         go.addEventListener('click', use('texte', () => cutText(draw)));
@@ -96,6 +109,7 @@
         box.append(
           h('div', { class: 'note' }, _T('Ton .srt en texte : barre les phrases ratées, les redites ou les hors-sujet, et RR FX les coupe dans la timeline. Sélectionne d\'abord les plans où l\'on parle.')),
           search, list, info,
+          h('div', { class: 'row-buttons wrap' }, auto, strikeHits),
           checkbox(_T('Sur une copie de la séquence'), x.textCopy, v => { x.textCopy = v; app.persist(); }),
           h('div', { class: 'row-buttons' }, go, reset));
         return [box];

@@ -387,6 +387,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('langue', null, 400);
   await page.click('.modal footer button:has-text("English")');
   await page.evaluate(() => localStorage.setItem('rrfx-lang', 'en'));
+  await page.waitForTimeout(1500);
   await page.reload();
   await page.waitForSelector('.tab[data-tab=effects]:has-text("Effects")');
   await tab('express');

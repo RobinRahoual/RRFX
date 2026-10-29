@@ -64,8 +64,7 @@
       try { skip = localStorage.getItem('rrfx-nowelcome') === '1'; } catch (e) { skip = false; }
       if (!I18n || I18n.chosen || skip) return welcome(false);
       chooseLanguage().then(l => {
-        I18n.setLang(l);
-        if (l !== I18n.lang) root.location.reload(); else welcome(false);
+        if (l !== I18n.lang) I18n.switchTo(l); else { I18n.setLang(l); welcome(false); }
       });
     }, 400));
     app.services.welcome = () => welcome(true);

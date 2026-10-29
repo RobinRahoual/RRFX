@@ -14,6 +14,7 @@
       const s = app.settings();
       if (!s.fitMusic || typeof s.fitMusic !== 'object') s.fitMusic = {};
       if (!('keep' in s.fitMusic)) s.fitMusic.keep = true;
+      if (!('fade' in s.fitMusic)) s.fitMusic.fade = true;
       return s.fitMusic;
     };
 
@@ -43,12 +44,19 @@
         const r = await Host.call('fitMusic', { a: f.a, b: f.b, trim: f.trim });
         if (!r.ok) return { kind: 'error', title: _T('Musique non ajustée'), detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));
+        // Fin coupée (pas de vraie fin sur un temps fort) : un fondu de sortie, annulable.
+        let faded = false;
+        if (f.trim && x.fade) {
+          const len = Math.min(2, Math.max(0.5, f.trim - r.lastStart - 0.1));
+          const g = await Host.call('gainKeys', { track: r.track, start: r.lastStart, keys: [[f.trim - len, 0], [f.trim, -40]], label: r.name });
+          if (g.ok) { faded = true; app.pushHistory({ date: Date.now(), label: _T('Fondu de fin de musique'), entries: g.created }); } else app.log(_T('Fondu de sortie : ') + g.error, 'warn');
+        }
         if (refresh) refresh();
         const removed = f.removed ? _T('Passage de ') + mmss(f.a) + _T(' à ') + mmss(f.b) + _T(' retiré, sur un temps fort') : _T('Pas de temps forts nets : coupe à la fin de la vidéo');
         return {
           kind: r.refused ? 'warn' : 'ok', saved: 15,
           title: _T('Musique ajustée · ') + mmss(m.end - m.start) + ' → ' + mmss(r.end - m.start),
-          detail: removed + (f.trim ? _T(', fin coupée à ') + mmss(f.trim) : _T(' : la vraie fin du morceau tombe avec la vidéo')) + '.' + (x.keep ? _T(' Version d\'avant gardée (chutier Versions).') : _T(' Ctrl+Z dans Premiere pour revenir.'))
+          detail: removed + (f.trim ? _T(', fin coupée à ') + mmss(f.trim) + (faded ? _T(' avec un fondu') : '') : _T(' : la vraie fin du morceau tombe avec la vidéo')) + '.' + (x.keep ? _T(' Version d\'avant gardée (chutier Versions).') : _T(' Ctrl+Z dans Premiere pour revenir.'))
         };
       });
     }
@@ -62,6 +70,12 @@
           try {
             const p = await plan(), d = p.music.end - p.videoEnd;
             info.textContent = _T('Musique : ') + mmss(p.music.end - p.music.start) + _T(' · vidéo : ') + mmss(p.videoEnd) + (d > 0.05 ? _T(' · ') + mmss(d) + _T(' à retirer.') : d < -0.05 ? _T(' · musique trop courte.') : _T(' · déjà à la bonne durée.'));
+            if (d > 0.05) {
+              let beats = [];
+              try { await app.musicData.ensure(false); beats = await app.musicData.beatTimes(); } catch (e) { beats = []; }
+              const f = O.fitPlan(beats, p.music.start, p.music.end, p.videoEnd);
+              if (!f.error) info.textContent += ' ' + (f.removed ? _T('Coupe prévue : de ') + mmss(f.a) + _T(' à ') + mmss(f.b) + (f.trim ? _T(', fin à ') + mmss(f.trim) : '') + '.' : _T('Pas de temps forts nets : coupe à la fin de la vidéo.'));
+            }
           } catch (e) { info.textContent = app.errorMessage(e); }
         });
         const go = h('button', { class: 'action go' }, _T('Ajuster la musique'));
@@ -69,6 +83,7 @@
         return [
           h('div', { class: 'note' }, _T('Ta musique est plus longue que ta vidéo ? RR FX retire un passage au milieu, entre deux temps forts (des mesures entières si possible) : le morceau garde son intro et sa vraie fin, qui tombe avec la dernière image.')),
           checkbox(_T('Garder une version de la séquence avant'), x.keep, v => { x.keep = v; app.persist(); }),
+          checkbox(_T('Fondu de sortie si la fin doit être coupée'), x.fade, v => { x.fade = v; app.persist(); }),
           h('div', { class: 'row-buttons' }, go, look), info
         ];
       }

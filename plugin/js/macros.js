@@ -77,9 +77,11 @@
         draft.steps.forEach((s, i) => {
           const up = h('button', { class: 'action quiet icon', title: _T('Monter'), disabled: i === 0 }, '↑');
           up.addEventListener('click', () => { draft.steps.splice(i - 1, 0, draft.steps.splice(i, 1)[0]); draw(); });
+          const down = h('button', { class: 'action quiet icon', title: _T('Descendre'), disabled: i === draft.steps.length - 1 }, '↓');
+          down.addEventListener('click', () => { draft.steps.splice(i + 1, 0, draft.steps.splice(i, 1)[0]); draw(); });
           const del = h('button', { class: 'action quiet icon', title: _T('Retirer') }, '✕');
           del.addEventListener('click', () => { draft.steps.splice(i, 1); draw(); });
-          steps.appendChild(h('div', { class: 'macro-step' }, h('span', { class: 'macro-num' }, String(i + 1)), h('span', { class: 'macro-label' }, label(s)), up, del));
+          steps.appendChild(h('div', { class: 'macro-step' }, h('span', { class: 'macro-num' }, String(i + 1)), h('span', { class: 'macro-label' }, label(s)), up, down, del));
         });
       };
       const add = h('button', { class: 'action' }, _T('＋ Ajouter'));
@@ -107,6 +109,9 @@
         go.addEventListener('click', () => run(m.id));
         const mod = h('button', { class: 'action quiet' }, _T('Modifier'));
         mod.addEventListener('click', () => edit(m));
+        const dup = h('button', { class: 'action quiet' }, _T('Dupliquer'));
+        dup.addEventListener('click', () => { list().push({ id: uid(), name: m.name + _T(' (copie)'), steps: m.steps.slice() }); register(); app.persist(); app.switchTab('settings'); });
+        const key = app.S.shortcuts && app.S.shortcuts[PREFIX + m.id];
         const del = h('button', { class: 'action quiet danger' }, _T('Supprimer'));
         del.addEventListener('click', async () => {
           if (!(await app.confirmDialog(_T('Supprimer la macro « ') + m.name + _T(' » ?'), _T('Sa touche et son adresse de télécommande ne marcheront plus.'), _T('Supprimer')))) return;
@@ -116,9 +121,9 @@
           app.switchTab('settings');
         });
         box.appendChild(h('div', { class: 'macro-item' },
-          h('div', { class: 'macro-head' }, h('b', null, m.name), h('span', { class: 'note' }, app.plural(m.steps.length, _T('étape')))),
+          h('div', { class: 'macro-head' }, h('b', null, m.name), h('span', { class: 'note' }, app.plural(m.steps.length, _T('étape')) + (key ? ' · ' + Keys.label(key, _T('Maj')) : ''))),
           h('div', { class: 'note macro-chain' }, m.steps.map(label).join(' → ')),
-          h('div', { class: 'row-buttons' }, go, mod, del)));
+          h('div', { class: 'row-buttons wrap' }, go, mod, dup, del)));
       });
       const add = h('button', { class: 'action' + (all.length ? '' : ' go') }, _T('＋ Nouvelle macro'));
       add.addEventListener('click', () => edit(null));

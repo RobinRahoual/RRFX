@@ -95,3 +95,28 @@ test('temps gagné : estimation prudente et affichage', () => {
   assert.strictEqual(O.duration(120), '2 h');
   assert.strictEqual(O.monthKey(new Date(2026, 9, 3)), '2026-10');
 });
+
+test('montage par le texte : prises ratées et phrases de reprise', () => {
+  const c = [
+    { start: 0, end: 2, text: 'Aujourd\'hui on va parler' },
+    { start: 2.3, end: 5, text: 'Aujourd\'hui on va parler de notre café' },
+    { start: 5.2, end: 6, text: 'euh attends je recommence' },
+    { start: 6.3, end: 9, text: 'Le café ouvre lundi' },
+    { start: 9.2, end: 11, text: 'Et il y a une terrasse' },
+    { start: 11.2, end: 12, text: 'Non' }
+  ];
+  assert.deepStrictEqual(O.retakes(c), [0, 2]);
+});
+
+test('renommage : remplacer un bout du nom', () => {
+  assert.deepStrictEqual(O.renamePlan(['C0001.MP4', 'C0002.MP4'], '{nom}', 1, 'c000', 'Plan_'), ['Plan_1_01', 'Plan_2_02']);
+  assert.deepStrictEqual(O.renamePlan(['IMG_4512.MOV'], '{nom}_#', 3, 'IMG_', ''), ['4512_3']);
+});
+
+test('temps passé : CSV jour par jour', () => {
+  const csv = O.timeCsv({ a: { name: 'A', minutes: 120, days: { '2026-10-28': 60, '2026-10-29': 60 } }, b: { name: 'B', minutes: 30, days: { '2026-10-29': 30 } } }, 50, true);
+  const lines = csv.trim().split('\r\n');
+  assert.strictEqual(lines.length, 4);
+  assert.strictEqual(lines[1], '"2026-10-29";"A";"1,00";"50,00"');
+  assert.strictEqual(lines[3], '"2026-10-28";"A";"1,00";"50,00"');
+});

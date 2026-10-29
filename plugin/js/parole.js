@@ -102,6 +102,7 @@
           if (!m.ok) return { kind: 'error', title: _T('Marqueurs non posés'), detail: m.error };
           return { kind: 'ok', title: app.plural(r.ranges.length, _T('silence marqué'), _T('silences marqués')), detail: fmtSecs(sec) + _T(' de blancs. Un marqueur au début de chaque silence : coupe à ton rythme.') };
         }
+        if (mode !== 'copy' && app.versions) await app.versions.beforeCut(_T('avant silences'));
         app.status.phase(_T('Coupe et recollage'));
         const res = await Host.call('cutSilences', { ranges: r.ranges, copy: mode === 'copy', suffix: _T(' (sans silences)') });
         if (!res.ok) return { kind: 'error', title: _T('Silences non coupés'), detail: res.error };
@@ -152,6 +153,7 @@
           if (!m.ok) return { kind: 'error', title: _T('Marqueurs non posés'), detail: m.error };
           return { kind: 'ok', title: n + _T(' marqué') + (all.length > 1 ? 's' : ''), detail: _T('Un marqueur au début de chacun : vérifie et coupe à ton rythme.') };
         }
+        if (x.fillerMode !== 'copy' && app.versions) await app.versions.beforeCut(_T('avant euh'));
         app.status.phase(_T('Coupe et recollage'));
         const res = await Host.call('cutSilences', { ranges: cut, copy: x.fillerMode === 'copy', suffix: _T(' (sans euh)') });
         if (!res.ok) return { kind: 'error', title: _T('Rien n\'a été coupé'), detail: res.error };

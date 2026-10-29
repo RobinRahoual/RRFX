@@ -45,6 +45,30 @@
     return cues.map((c, i) => (bare(c.text).indexOf(q) >= 0 ? i : -1)).filter(i => i >= 0);
   }
 
+  /* Phrases à barrer d'office (indices) : prises ratées et phrases de reprise.
+     - une phrase reprise juste après (« Aujourd'hui on va… » puis « Aujourd'hui on va voir… ») :
+       la première prise part ;
+     - une phrase qui ne contient que des mots de reprise (« euh attends je recommence »). */
+  const RECOVER = new Set(('euh heu hum hmm bah ben bon alors donc attends attend pardon non oups zut merde desole excuse moi ' +
+    'je j recommence recommencer reprends reprend reprenons refais refait on la le coupe coupez stop vas y ok okay').split(' '));
+  const TRIGGER = /^(recommence|recommencer|reprends|reprend|reprenons|refais|refait|pardon|oups|zut|coupe|coupez|stop|euh|heu|hum|hmm|attends|attend)$/;
+  const words = t => bare(t).replace(/[^a-z0-9' ]+/g, ' ').split(/[\s']+/).filter(Boolean);
+  function retakes(cues) {
+    const out = new Set(), w = cues.map(c => words(c.text));
+    cues.forEach((c, i) => {
+      const a = w[i];
+      if (!a.length) return;
+      if (a.every(x => RECOVER.has(x)) && a.some(x => TRIGGER.test(x))) { out.add(i); return; }
+      const b = w[i + 1];
+      if (!b || a.length < 2 || cues[i + 1].start - c.end > 4) return;
+      const n = Math.min(3, a.length);
+      const sameStart = a.slice(0, n).join(' ') === b.slice(0, n).join(' ');
+      const setB = new Set(b), common = a.filter(x => setB.has(x)).length;
+      if ((sameStart && a.length <= b.length + 1) || (common / Math.max(a.length, b.length) >= 0.7 && a.length <= b.length)) out.add(i);
+    });
+    return Array.from(out).sort((p, q) => p - q);
+  }
+
   // ---------------------------------------------------------------- musique à la durée
 
   /* Musique [mStart, mEnd] (temps de la séquence) plus longue que la vidéo (fin : target) :
@@ -102,11 +126,14 @@
 
   /* Noms en série : « # » remplacés par le numéro (autant de chiffres que de #), « {nom} »
      par le nom d'origine (sans extension). Sans # : numéro ajouté à la fin. */
-  function renamePlan(names, pattern, start) {
+  function renamePlan(names, pattern, start, find, by) {
     const pat = String(pattern || '').trim() || '{nom}_###';
     const first = Number(start) >= 0 ? Number(start) : 1;
     return names.map((n, i) => {
-      const num = first + i, stem = String(n).replace(/\.[a-z0-9]{2,5}$/i, '');
+      const num = first + i;
+      let stem = String(n).replace(/\.[a-z0-9]{2,5}$/i, '');
+      // Remplacer : un bout du nom actuel (sans tenir compte des majuscules), avant le modèle.
+      if (find) stem = stem.split(new RegExp(String(find).replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i')).join(by || '');
       let out = pat.replace(/\{nom\}|\{name\}/gi, stem);
       if (/#+/.test(out)) out = out.replace(/#+/, m => String(num).padStart(m.length, '0'));
       else out = out + '_' + String(num).padStart(2, '0');
@@ -129,9 +156,19 @@
     return { state: s, add };
   }
 
-  /* Tableau du temps passé : projets triés du plus récent, en CSV (Excel, Numbers…). */
-  function timeCsv(projects, rate) {
+  /* Tableau du temps passé : projets triés du plus récent, en CSV (Excel, Numbers…). byDay : une
+     ligne par projet et par jour (pour une facture détaillée). */
+  function timeCsv(projects, rate, byDay) {
     const r = Number(rate) || 0, esc = v => '"' + String(v).replace(/"/g, '""') + '"';
+    if (byDay) {
+      const head = [_T('Jour'), _T('Projet'), _T('Heures')].concat(r ? [_T('Montant')] : []), rows = [];
+      Object.keys(projects || {}).forEach(k => {
+        const p = projects[k];
+        Object.keys(p.days || {}).forEach(d => rows.push([d, p.name, (p.days[d] / 60).toFixed(2).replace('.', ',')].concat(r ? [(p.days[d] / 60 * r).toFixed(2).replace('.', ',')] : [])));
+      });
+      rows.sort((a, b) => b[0].localeCompare(a[0]) || a[1].localeCompare(b[1]));
+      return [head].concat(rows).map(l => l.map(esc).join(';')).join('\r\n') + '\r\n';
+    }
     const head = [_T('Projet'), _T('Fichier'), _T('Heures'), _T('Dernier jour')].concat(r ? [_T('Montant')] : []);
     const rows = Object.keys(projects || {}).map(k => projects[k]).sort((p, q) => (q.lastDay || '').localeCompare(p.lastDay || ''))
       .map(p => [p.name, p.path || '', (p.minutes / 60).toFixed(2).replace('.', ','), p.lastDay || ''].concat(r ? [(p.minutes / 60 * r).toFixed(2).replace('.', ',')] : []));
@@ -156,5 +193,5 @@
   const monthKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   const dayKey = d => monthKey(d) + '-' + String(d.getDate()).padStart(2, '0');
 
-  return { textCuts, afterCuts, findText, fitPlan, baseName, versionName, versionsOf, renamePlan, activity, timeCsv, savedMinutes, duration, monthKey, dayKey };
+  return { textCuts, afterCuts, findText, retakes, fitPlan, baseName, versionName, versionsOf, renamePlan, activity, timeCsv, savedMinutes, duration, monthKey, dayKey };
 });

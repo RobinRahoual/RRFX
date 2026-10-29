@@ -308,7 +308,8 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
   vidéo (dernier plan, toutes pistes vidéo). *Ajuster la musique* retire un passage au milieu du morceau (ni dans
   le premier cinquième, ni dans le dernier quart), entre deux temps forts, de préférence un nombre entier de
   mesures, et recolle la suite : la vraie fin du morceau tombe avec la dernière image. Si la coupe ne peut pas être
-  exacte, la fin est coupée au dernier plan. Seuls les morceaux de la musique bougent (les autres sons de la piste
+  exacte, la fin est coupée au dernier plan, avec un fondu de sortie (option, annulable). *Comparer les durées*
+  montre aussi où sera la coupe. Seuls les morceaux de la musique bougent (les autres sons de la piste
   restent). Une version de la séquence est gardée avant (option). Une musique plus courte que la vidéo n'est pas
   rallongée.
 
@@ -407,6 +408,9 @@ section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil ut
   qui contiennent un mot (sans tenir compte des accents). *Couper les phrases barrées* retire chaque phrase avec la
   moitié des blancs qui l'entourent (au plus 0,2 s), sur les plans sélectionnés, comme la coupe des silences (sur
   une copie de la séquence par défaut). Le `.srt` est ensuite recalé sur le nouveau montage.
+  *Barrer les prises ratées* barre une phrase reprise juste après (mêmes premiers mots, ou 70 % de mots en commun,
+  à moins de 4 s : la première prise part) et les phrases faites seulement de mots de reprise (« euh attends je
+  recommence », « pardon », « on la refait »). *Barrer les phrases trouvées* barre tout ce que la recherche trouve.
 
 ### Onglet Formats
 
@@ -438,7 +442,9 @@ Dans le même onglet :
 
 - **Versions de la séquence** : *Garder une version maintenant* duplique la séquence active sous le nom
   « Nom v02 » (puis v03…), avec ta note entre parenthèses, et la range dans le chutier *Versions*. Tu continues sur
-  la séquence d'origine ; la liste montre ses versions, *Ouvrir* en rouvre une.
+  la séquence d'origine ; la liste montre ses versions, *Ouvrir* en rouvre une, ✕ la supprime. Option : une
+  version avant chaque coupe directe (silences, « euh », montage par le texte), quand la coupe ne se fait pas sur
+  une copie.
 
 ### Onglet Ressources
 
@@ -487,14 +493,16 @@ Dans le même onglet, pour tenir le projet :
 - **Ranger le projet** : les éléments posés à la racine du panneau Projet partent dans des chutiers Vidéos, Sons,
   Images, Séquences, Graphiques (tes chutiers ne bougent pas). En option, les médias qui ne servent dans aucune
   séquence vont dans *Non utilisés*. *Voir ce qui sera rangé* fait l'inventaire sans rien bouger. Rien n'est
-  supprimé.
+  supprimé ; ↶ Annuler remet chaque élément dans son chutier d'origine.
 - **Renommer en série** : sur la sélection du panneau Projet, dans l'ordre de la sélection. `#` devient le numéro
-  (autant de chiffres que de `#`), `{nom}` le nom actuel ; *Aperçu* avant. ↶ Annuler remet les anciens noms. Les
+  (autant de chiffres que de `#`), `{nom}` le nom actuel ; *Remplacer… par…* change d'abord un bout du nom (sans
+  tenir compte des majuscules, vide = l'enlever) ; *Aperçu* avant. ↶ Annuler remet les anciens noms. Les
   fichiers sur le disque ne changent pas.
 - **Proxies** : choisis un préréglage de proxy (ceux fournis avec Premiere sont trouvés tout seuls, ou un `.epr`)
   et le dossier des proxies (`Documents/RRFX/Proxies` par défaut). RR FX envoie les rushs vidéo (sélection du
   Projet ou tous) à Media Encoder et attache chaque proxy à la fin de son encodage. Moniteur de programme >
-  *Activer les proxies* pour monter avec ; l'export utilise toujours les originaux. Media Encoder doit être
+  *Activer les proxies* (ou le bouton *Activer / désactiver les proxies* de RR FX) pour monter avec ; l'export
+  utilise toujours les originaux. Media Encoder doit être
   installé.
 
 ### Onglet Mes effets
@@ -603,11 +611,12 @@ ajouter d'un clic : *Interview prête* (silences, « euh », voix, sous-titres, 
 
 - **Temps gagné avec RR FX** : chaque opération réussie ajoute le temps qu'elle aurait pris à la main : une
   demi-minute pour s'y mettre et 20 s par élément posé (coupe, calque, image clé, sous-titre…), 45 min au plus.
-  *Créer la carte à partager* enregistre une image 1080 × 1920 pour une story ; *Copier le texte* donne la légende.
+  Les trois outils qui t'ont fait gagner le plus sont affichés. *Créer la carte à partager* enregistre une image 1080 × 1920 pour une story ; *Copier le texte* donne la légende.
 - **Temps passé par projet** : toutes les minutes, RR FX regarde si quelque chose a bougé dans Premiere (tête de
   lecture, nombre de plans, séquence ouverte). Une minute compte s'il y a eu du mouvement dans les 5 dernières
-  minutes. Indique ton tarif horaire pour voir le montant ; *Exporter en CSV…* donne un tableau (projet, fichier,
-  heures, dernier jour, montant) pour Excel ou Numbers. Propre à chaque ordinateur, rien ne quitte ton ordinateur.
+  minutes. Le total du jour est en haut. Indique ton tarif horaire pour voir le montant ; *Exporter en CSV…* donne
+  un tableau (projet, fichier, heures, dernier jour, montant) pour Excel ou Numbers, *Jour par jour* une ligne par
+  projet et par jour. Propre à chaque ordinateur, rien ne quitte ton ordinateur.
 
 ### Télécommande (Stream Deck, Companion)
 

@@ -122,3 +122,34 @@ test('proxies: presets found, jobs queued in Media Encoder, attached when done',
   assert.strictEqual(env.call('makeProxies', { preset: pr.presets[0].path, dir: '/rushs/Proxies' }).skipped, 2);
   assert.match(env.call('makeProxies', { dir: '/x' }).error, /préréglage/);
 });
+
+test('tidyProject: every move is undone (items back in their bins)', () => {
+  const env = setup();
+  const loose = env.projItem('logo.png', 1, 100); loose.path = '/x/logo.png'; env.root.children.push(loose);
+  const unused = env.projItem('C010.mov', 1, 100); unused.path = '/x/C010.mov'; env.bin.children.push(unused);
+  const r = env.call('tidyProject', { unused: true, names: { unused: 'Non utilisés' } });
+  assert.ok(r.created.some(e => e.kind === 'move' && e.name === 'logo.png' && e.from === 'root'));
+  assert.ok(r.created.some(e => e.name === 'C010.mov' && e.from === env.bin.nodeId));
+  assert.ok(!env.root.children.includes(loose));
+  const u = env.call('undo', { entries: r.created });
+  assert.ok(u.ok, u.error);
+  assert.ok(env.root.children.includes(loose), 'logo.png back at the root');
+  assert.ok(env.bin.children.includes(unused), 'C010.mov back in Footage');
+});
+
+test('setProxies and deleteSequence', () => {
+  const env = setup();
+  assert.strictEqual(env.call('setProxies', { on: true }).enabled, true);
+  assert.strictEqual(env.call('proxyStatus', {}).enabled, true);
+  const v = env.call('versionSequence', { name: 'Seq 01 v02' });
+  assert.match(env.call('deleteSequence', { id: env.seq.sequenceID }).error, /ouverte/);
+  assert.ok(env.call('deleteSequence', { id: v.id }).ok);
+  assert.strictEqual(env.call('listSequences', {}).sequences.length, 1);
+});
+
+test('fitMusic: start of the last piece, for the fade out', () => {
+  const env = setup();
+  const r = env.call('fitMusic', { a: 20, b: 40 });
+  assert.strictEqual(r.lastStart, 20);
+  assert.strictEqual(r.track, 1);
+});

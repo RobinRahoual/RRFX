@@ -348,7 +348,8 @@ function makeEnv(fps) {
   }
   project.name = 'Projet test.prproj';
   project.path = '/projets/Projet test.prproj';
-  const app = { project, encoder, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
+  let proxiesOn = 0;
+  const app = { project, encoder, setEnableProxies(v) { proxiesOn = v; return true; }, getEnableProxies() { return proxiesOn; }, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
 
   const ctx = vm.createContext({ app, qe, Time, Folder });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);

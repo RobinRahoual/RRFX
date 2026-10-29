@@ -24,6 +24,7 @@
       if (!s.saved || typeof s.saved !== 'object') s.saved = {};
       if (!('total' in s.saved)) s.saved.total = 0;
       if (!s.saved.months || typeof s.saved.months !== 'object') s.saved.months = {};
+      if (!s.saved.by || typeof s.saved.by !== 'object') s.saved.by = {};
       return s.saved;
     };
 
@@ -51,9 +52,10 @@
     app.whenReady.push(() => { clearInterval(timer); timer = setInterval(ping, 60000); ping(); });
     root.addEventListener && root.addEventListener('beforeunload', () => { if (pending) app.persist(); });
 
-    function exportCsv() {
-      const t = track(), csv = O.timeCsv(t.projects, t.rate);
-      const out = Store.saveBinary([new TextEncoder().encode('﻿' + csv)], _T('temps-par-projet') + '.csv', 'csv', _T('Exporter le temps passé'));
+    function exportCsv(byDay) {
+      const t = track(), csv = O.timeCsv(t.projects, t.rate, byDay);
+      // BOM UTF-8 : Excel lit les accents correctement.
+      const out = Store.saveBinary([new TextEncoder().encode('\ufeff' + csv)], (byDay ? _T('temps-par-jour') : _T('temps-par-projet')) + '.csv', 'csv', _T('Exporter le temps passé'));
       if (out) app.status.finish('ok', _T('Temps passé exporté'), out);
     }
 
@@ -63,7 +65,9 @@
       box.appendChild(checkbox(_T('Compter le temps passé sur chaque projet'), t.on, v => { t.on = v; app.persist(); app.switchTab('settings'); }));
       if (!t.on) return section(_T('Temps passé par projet'), [box], null, true);
       if (!list.length) box.appendChild(h('div', { class: 'note' }, _T('Une minute compte quand quelque chose bouge dans Premiere (lecture, montage, changement de séquence). Pratique pour facturer au temps passé. Rien ne quitte ton ordinateur.')));
-      const rate = Number(t.rate) || 0;
+      const rate = Number(t.rate) || 0, day = O.dayKey(new Date());
+      const todayAll = list.reduce((n, p) => n + ((p.days && p.days[day]) || 0), 0), todayN = list.filter(p => p.days && p.days[day]).length;
+      if (todayAll) box.appendChild(h('div', { class: 'saved-box' }, h('div', { class: 'saved-big' }, dur(todayAll)), h('div', { class: 'note' }, _T('aujourd\'hui · ') + app.plural(todayN, _T('projet')) + (rate ? ' · ' + Math.round(todayAll / 60 * rate) + ' €' : ''))));
       list.slice(0, 12).forEach(p => {
         const del = h('button', { class: 'action quiet icon', title: _T('Remettre ce projet à zéro') }, '✕');
         del.addEventListener('click', async () => {
@@ -81,8 +85,10 @@
       rateIn.addEventListener('change', () => { t.rate = Math.max(0, +rateIn.value || 0); app.persist(); app.switchTab('settings'); });
       box.appendChild(row(_T('Tarif (€ / h)'), rateIn));
       const csv = h('button', { class: 'action', disabled: !list.length }, _T('Exporter en CSV…'));
-      csv.addEventListener('click', exportCsv);
-      box.appendChild(h('div', { class: 'row-buttons' }, csv));
+      csv.addEventListener('click', () => exportCsv(false));
+      const csvDay = h('button', { class: 'action quiet', disabled: !list.length }, _T('Jour par jour (CSV)…'));
+      csvDay.addEventListener('click', () => exportCsv(true));
+      box.appendChild(h('div', { class: 'row-buttons' }, csv, csvDay));
       const sec = section(_T('Temps passé par projet'), [box], null, !list.length);
       sec.dataset.sec = 'temps';
       return sec;
@@ -96,6 +102,9 @@
       const min = n ? O.savedMinutes(n) : 0.5, s = saved(), m = O.monthKey(new Date());
       s.total += min;
       s.months[m] = (s.months[m] || 0) + min;
+      // Par outil (le nom de la tâche), pour montrer ce qui fait gagner le plus.
+      const k = String(label || '').slice(0, 60);
+      if (k) s.by[k] = (s.by[k] || 0) + min;
       app.persist();
     });
 
@@ -128,6 +137,7 @@
 
     function savedSection() {
       const s = saved(), month = s.months[O.monthKey(new Date())] || 0;
+      const top = Object.keys(s.by).map(k => [k, s.by[k]]).filter(e => e[1] >= 1).sort((a, b) => b[1] - a[1]).slice(0, 3);
       const share = h('button', { class: 'action go' }, _T('Créer la carte à partager'));
       share.addEventListener('click', card);
       const copy = h('button', { class: 'action quiet' }, _T('Copier le texte'));
@@ -139,6 +149,7 @@
       const sec = section(_T('Temps gagné avec RR FX'), [
         h('div', { class: 'saved-box' },
           h('div', { class: 'saved-big' }, dur(month)), h('div', { class: 'note' }, _T('ce mois-ci · ') + dur(s.total) + _T(' au total'))),
+        top.length ? h('div', { class: 'note' }, _T('Ce qui t\'a fait gagner le plus : ') + top.map(([k, v]) => k + ' (' + dur(v) + ')').join(', ') + '.') : null,
         h('div', { class: 'note' }, _T('Estimation prudente : ce qu\'auraient pris à la main les coupes, calques, sous-titres et réglages posés par RR FX.')),
         h('div', { class: 'row-buttons' }, share, copy)
       ]);

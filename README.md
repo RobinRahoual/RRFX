@@ -42,6 +42,7 @@ pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.
 - 📝 **Montage par le texte** : barre des phrases dans ton `.srt`, RR FX les coupe dans la timeline.
 - 🎵 **Musique à la durée de la vidéo**, coupée sur un temps fort pour finir avec la dernière image.
 - ▶ **Macros** : une chaîne d'actions sur un bouton, une touche ou un bouton de Stream Deck.
+- 🎬 **Prises ratées repérées** dans le texte, **fondu de sortie** de la musique, **rangement annulable**.
 - 🕓 **Versions de la séquence** en un clic, rangées dans un chutier.
 - 📂 **Dossiers surveillés**, 🧹 **projet rangé**, 🏷️ **renommage en série** et ⚡ **proxies en un clic**.
 - ⏱️ **Temps passé par projet** (pour facturer) et 🏆 **temps gagné avec RR FX**, en carte à partager.
@@ -606,7 +607,9 @@ Ton `.srt` s'affiche comme un texte, phrase par phrase.
 - **✕ pour barrer** les phrases ratées, les redites, les hors-sujet : RR FX les coupe dans la timeline et recolle
   la suite (sur une copie de la séquence si tu veux).
 - Les sous-titres restants sont **recalés** sur le nouveau montage.
-- **Cherche un mot** dans tout le texte pour retrouver un passage.
+- **Barrer les prises ratées** : RR FX repère tout seul les phrases recommencées juste après et les « euh
+  attends, je recommence ».
+- **Cherche un mot** dans tout le texte, et barre d'un coup toutes les phrases trouvées.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/montage-texte.png" alt="Montage par le texte" width="300"></td>
@@ -621,7 +624,8 @@ Ta musique fait 3 min et ta vidéo 1 min 05 ? RR FX retire un passage **au milie
 mesures entières si possible).
 
 - Le morceau garde son intro et **sa vraie fin**, qui tombe pile avec la dernière image.
-- Pas de fondu bricolé, pas de coupe sèche.
+- Pas de fondu bricolé, pas de coupe sèche. Tu vois **où sera la coupe** avant de la faire.
+- Si la fin doit quand même être coupée, un **fondu de sortie** est posé.
 - Une version de la séquence est gardée avant, au cas où.
 
 </td>
@@ -635,7 +639,8 @@ Avant un gros changement ou les retours du client : **une copie figée** en un c
 client) »), rangée dans le chutier *Versions*.
 
 - Tu continues sur l'originale.
-- La liste des versions est là, **rouvre-en une** quand tu veux.
+- La liste des versions est là, **rouvre-en une** quand tu veux, ou supprime-la.
+- En option, **une version avant chaque coupe directe** (silences, « euh », montage par le texte).
 
 </td>
 <td width="44%"><img src="docs/captures/outils/versions.png" alt="Versions de la séquence" width="300"></td>
@@ -663,8 +668,9 @@ Enchaîne plusieurs actions RR FX et lance-les **d'un seul clic** : par exemple 
 - **Dossiers surveillés** : les nouveaux fichiers d'un dossier (carte mémoire copiée, dossier partagé avec un
   client) arrivent **tout seuls dans un chutier**, toutes les minutes.
 - **Ranger le projet** : ce qui traîne part dans des chutiers par type, les médias jamais utilisés à part.
-  Rien n'est supprimé.
-- **Renommer en série** : `Interview_###` → Interview_001, Interview_002… avec aperçu, et **↶ Annuler**.
+  Rien n'est supprimé, et **↶ Annuler** remet tout en place.
+- **Renommer en série** : `Interview_###` → Interview_001, Interview_002…, avec *Remplacer… par…*, un aperçu,
+  et **↶ Annuler**.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/ranger-projet.png" alt="Ranger le projet et renommer en série" width="300"></td>
@@ -679,6 +685,7 @@ Rushs 4K, 6K ou LOG trop lourds ? RR FX fait fabriquer **des proxies légers par
 tout seul, au fur et à mesure.
 
 - Sur la sélection du panneau Projet, ou tous les rushs vidéo.
+- Un bouton **active ou désactive les proxies** dans les moniteurs.
 - Le montage est fluide, **l'export garde les originaux**.
 
 </td>
@@ -689,9 +696,9 @@ tout seul, au fur et à mesure.
 ### 🏆 Le temps gagné, le temps passé
 
 - **Temps gagné avec RR FX** : chaque opération ajoute ce qu'elle aurait pris à la main (estimation prudente).
-  **Crée une carte** à partager en story.
+  Tu vois ce qui t'a fait gagner le plus, et tu **crées une carte** à partager en story.
 - **Temps passé par projet** : une minute compte quand quelque chose bouge dans Premiere. Ton tarif horaire, et
-  un **export CSV** pour facturer. Rien ne quitte ton ordinateur.
+  un **export CSV** (par projet ou jour par jour) pour facturer. Rien ne quitte ton ordinateur.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/temps-gagne.png" alt="Temps gagné et temps passé" width="300"></td>

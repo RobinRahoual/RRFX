@@ -753,6 +753,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await idle();
     const srt = await page.evaluate(() => window.RRFXApp.speech.settings().srt);
     if (/recommence/.test(srt) || !/^1\n00:00:01,000 --> 00:00:03,000/.test(srt) || !/00:00:03,\d{3} --> 00:00:06,\d{3}\nAujourd/.test(srt)) throw new Error('srt recalé : ' + srt);
+    // Prises ratées barrées d'office.
+    await page.fill('.section:has(textarea.lyrics) textarea', '1\n00:00:01,000 --> 00:00:02,500\nAujourd\'hui on va parler\n\n2\n00:00:02,800 --> 00:00:05,000\nAujourd\'hui on va parler du café\n\n3\n00:00:05,200 --> 00:00:06,000\neuh attends je recommence\n\n4\n00:00:06,300 --> 00:00:08,000\nLa terrasse est ouverte\n');
+    await page.waitForFunction(() => document.querySelectorAll('.tx-row').length === 4, null, { timeout: 3000 });
+    await page.click('.section:has-text("Montage par le texte") .action:text-is("Barrer les prises ratées")');
+    await page.waitForSelector('#status:has-text("2 prises ratées barrées")', { timeout: 3000 });
+    if ((await page.locator('.tx-row.cut').count()) !== 2) throw new Error('2 phrases barrées attendues');
   });
   await step('2.5 : musique à la durée, versions', async () => {
     await page.click('.tab[data-tab=music]');
@@ -769,6 +775,10 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("v03 (avant retours)")', { timeout: 5000 });
     await idle();
     await page.waitForSelector('.ver-item:has-text("v02 (avant musique)")', { timeout: 3000 });
+    await page.click('.ver-item:has-text("v02 (avant musique)") .action.danger');
+    await page.click('.modal .cta');
+    await page.waitForSelector('#status.ok:has-text("Version supprimée")', { timeout: 3000 });
+    await page.waitForFunction(() => !Array.from(document.querySelectorAll('.ver-item')).some(e => /v02 \(avant musique\)/.test(e.textContent)), null, { timeout: 3000 });
   });
   await step('2.5 : projet (ranger, renommer, proxies)', async () => {
     await page.click('.tab[data-tab=assets]');
@@ -781,6 +791,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.section:has-text("Ranger le projet") .action.go');
     await page.waitForSelector('#status.ok:has-text("éléments rangés")', { timeout: 5000 });
     await idle();
+    if (!/Rangement du projet/.test(await page.getAttribute('#undo', 'title'))) throw new Error('rangement annulable');
     await page.fill('.section:has-text("Renommer en série") input[aria-label="Modèle de nom"]', 'Interview_##');
     await page.click('.section:has-text("Renommer en série") .action:text-is("Aperçu")');
     await page.waitForSelector('.section:has-text("Renommer en série") .note:has-text("C0001.MP4 → Interview_01")', { timeout: 5000 });
@@ -793,6 +804,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("4 proxies en file")', { timeout: 5000 });
     await idle();
     await page.waitForSelector('#status:has-text("4 proxies attachés")', { timeout: 15000 });
+    await page.click('.section:has-text("Proxies") .action:text-is("Activer / désactiver les proxies")');
+    await page.waitForSelector('#status.ok:has-text("Proxies activés")', { timeout: 3000 });
   });
   await step('2.5 : macros, temps gagné, temps passé', async () => {
     await page.click('.tab[data-tab=settings]');
