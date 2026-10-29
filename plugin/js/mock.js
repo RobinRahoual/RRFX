@@ -22,7 +22,7 @@
   const handlers = {
     compat: () => ({ ok: true, version: root.RRFXHost ? root.RRFXHost.VERSION : '?', app: 'démo', appPath: '', missing: [], optional: [] }),
     getContext: () => ({
-      ok: true, hasSequence: true, version: 'démo', app: 'démo', name: 'Clip démo', fps: FPS, frameW: 1920, frameH: 1080,
+      ok: true, hasSequence: true, version: 'démo', app: 'démo', name: 'Clip démo', seqId: 'demo-1', fps: FPS, frameW: 1920, frameH: 1080,
       playhead: 12.4, selection: 2, selectionNames: ['A001_C004.mov', 'A001_C007.mov'], markers: 4,
       adj: { name: 'Calque de réglage', nodeId: 'demo' }
     }),
@@ -80,6 +80,22 @@
     placeGrades: async a => { await wait(150); const created = []; a.groups.forEach(g => g.spans.forEach(sp => created.push({ kind: 'adj', track: 1, start: sp.a, name: g.name }))); return { ok: true, created, layers: created.length, replaced: 0, lutSet: created.length, warnings: [] }; },
     formatCopy: async a => { await wait(300); return { ok: true, name: 'Clip démo (' + a.label + ')', reframed: a.mode === 'reframe' ? 6 : 0, filled: a.mode === 'fill' || a.mode === 'face' ? 6 : 0, faced: a.mode === 'face' ? (a.faces || []).length : 0, blurred: a.mode === 'blur' ? 6 : 0, width: a.width, height: a.height, warnings: [] }; },
     duckMusic: a => ({ ok: true, keys: a.keys.length, created: [{ kind: 'level', track: a.track, start: a.start * TICKS, value: 0.17, name: 'Musique (démo)' }], warnings: [] }),
+    gainKeys: a => ({ ok: true, keys: a.keys.length, created: [{ kind: 'level', track: a.track, start: a.start * TICKS, value: 0.17, name: a.label || 'Voix (démo)' }], warnings: [] }),
+    listSequences: () => ({ ok: true, active: 'demo-1', sequences: [
+      { id: 'demo-1', name: 'Clip démo', w: 1920, h: 1080, end: 60 }, { id: 'demo-2', name: 'Interview client', w: 1920, h: 1080, end: 312 },
+      { id: 'demo-3', name: 'Teaser 9:16', w: 1080, h: 1920, end: 28 }] }),
+    openSequence: a => ({ ok: true, id: a.id, name: a.id }),
+    extractCopy: async a => { await wait(200); return { ok: true, name: a.name, id: 'demo-x' + Math.round(a.a), seconds: a.b - a.a, kept: 6, warnings: [] }; },
+    preflight: async () => {
+      await wait(250);
+      return { ok: true, duration: 60, fps: FPS, w: 1920, h: 1080, issues: [
+        { level: 'error', t: 12.4, where: 'V1', text: 'Média hors ligne : A001_C009.mov' },
+        { level: 'error', t: 31.2, where: 'V', text: 'Image noire : 6 image(s) sans plan' },
+        { level: 'warn', t: 44, where: 'A2', text: 'Volume poussé à +9 dB : risque de saturation (Musique.wav)' },
+        { level: 'warn', t: 52.5, where: 'V3', text: 'Texte hors zone sûre : RR FX · Texte' }] };
+    },
+    placeStills: async a => { await wait(40 * a.items.length); return { ok: true, track: 3, end: Math.max(...a.items.map(i => i.t + i.dur)), created: a.items.map(i => ({ kind: 'adj', track: 3, start: i.t * TICKS, name: a.name || 'Image' })), warnings: [] }; },
+    newFromTemplate: async a => { await wait(200); return { ok: true, name: a.name, id: 'demo-new', clips: 3, adjPlaced: !!a.adj, warnings: [] }; },
     voiceLevel: a => ({ ok: true, done: a.clips.length, cleaned: a.denoise ? a.clips.length : 0, created: a.clips.map(c => ({ kind: 'level', track: c.track, start: c.start * TICKS, value: 0.17, name: 'Interview_A.mp4' })), warnings: [] }),
     speechInfo: () => ({ ok: true, fps: FPS, clips: [{ kind: 'video', track: 0, name: 'Interview_A.mp4', path: '', start: 0, end: 18, inPoint: 0, speed: 1, audio: [{ track: 0, start: 0 }] }], tracks: { video: [0], audio: [0] } }),
     cutSilences: async a => { await wait(400); const sec = a.ranges.reduce((s, r) => s + r.b - r.a, 0); return { ok: true, removed: a.ranges.length * 2, ranges: a.ranges.length, seconds: sec, moved: a.ranges.length * 2, name: a.copy ? 'Clip démo (sans silences)' : 'Clip démo', copy: !!a.copy, warnings: [] }; },

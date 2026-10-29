@@ -126,6 +126,52 @@
         }
         return x;
       }
+    },
+    {
+      // Riser long (4 s) : pour les grosses montées avant un drop.
+      id: 'riser-long', name: 'Riser long', kind: 'riser', dur: 4.2, peak: 4,
+      make(n) {
+        const r = noise(23), f = svf(), x = new Float32Array(n), P = 4 * SR;
+        let ph = 0, ph2 = 0;
+        for (let i = 0; i < n; i++) {
+          const up = i < P ? Math.pow(i / P, 2.4) : Math.exp(-(i - P) / (0.04 * SR));
+          ph += TAU * (90 + 1100 * up) / SR;
+          ph2 += TAU * (135 + 1650 * up) / SR;
+          x[i] = (f(r(), 250 + 8000 * up, 2.8) * 1.1 + 0.25 * Math.sin(ph) + 0.18 * Math.sin(ph2)) * up;
+        }
+        return x;
+      }
+    },
+    {
+      // Accents des mots clés de sous-titres.
+      id: 'ding', name: 'Ding', kind: 'accent', dur: 0.9, peak: 0.005,
+      make(n) {
+        const x = new Float32Array(n);
+        for (let i = 0; i < n; i++) {
+          const t = i / SR;
+          x[i] = (Math.sin(TAU * 1318 * t) + 0.5 * Math.sin(TAU * 2637 * t) * Math.exp(-t / 0.08) + 0.25 * Math.sin(TAU * 3950 * t) * Math.exp(-t / 0.04)) * Math.exp(-t / 0.25) * Math.min(1, i / 24);
+        }
+        return x;
+      }
+    },
+    {
+      id: 'clic', name: 'Clic', kind: 'accent', dur: 0.08, peak: 0.002,
+      make(n) {
+        const r = noise(29), f = svf(), x = new Float32Array(n);
+        for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (f(r(), 3200, 3) * 1.5 + Math.sin(TAU * 1800 * t)) * Math.exp(-t / 0.006); }
+        return x;
+      }
+    },
+    {
+      id: 'swish', name: 'Swish court', kind: 'accent', dur: 0.32, peak: 0.16,
+      make(n) {
+        const r = noise(31), f = svf(), x = new Float32Array(n), P = 0.16 * SR;
+        for (let i = 0; i < n; i++) {
+          const up = i < P ? smooth(i / P) : Math.exp(-(i - P) / (0.04 * SR));
+          x[i] = f(r(), 2000 + 7000 * up, 2.4) * up * 1.4;
+        }
+        return x;
+      }
     }
   ];
   const byId = id => SOUNDS.find(s => s.id === id) || null;
@@ -144,8 +190,9 @@
     return x;
   }
 
-  // WAV 16 bits mono.
-  function wav(x) {
+  // WAV 16 bits mono (rate : fréquence d'échantillonnage, 48 kHz par défaut).
+  function wav(x, rate) {
+    const SR = rate || 48000;
     const data = new Uint8Array(44 + x.length * 2), v = new DataView(data.buffer);
     const str = (o, s) => { for (let i = 0; i < s.length; i++) data[o + i] = s.charCodeAt(i); };
     str(0, 'RIFF'); v.setUint32(4, 36 + x.length * 2, true); str(8, 'WAVEfmt ');

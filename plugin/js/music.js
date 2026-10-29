@@ -566,9 +566,12 @@
         row('Influence', inf),
         h('div', { class: 'note' }, 'Sur un passage calme, l\'effet est plus doux ; sur un drop, plus fort. Aussi réglable dans l\'onglet Effets.')
       ]));
+      app.renderExtras('music', view);
       requestAnimationFrame(drawWave);
     }
 
+    // Pour les outils ajoutés à l'onglet (risers, réverb de fin…).
+    app.musicData = { M, ensure: ensureMusic, beatTimes, seqToFile, fileToSeq, zone };
     app.tabs.music = { render, cta: () => ({ label: 'Poser les marqueurs des temps forts', run: placeMarkers, enabled: true }), redraw: drawWave };
     app.actions.beats = placeMarkers;
     app.actions.sync = sync;

@@ -23,11 +23,13 @@
       faceAmount: 20, faceAlt: true, faceTrack: true, faceFrame: 'keep',
       srt: '', words: 0, capAnim: 'pop', capFrom: 'start',
       name: '', role: '', lowerDur: 5, lowerPos: 'left', lowerAnim: 'slide-up',
-      capStyle: '', lowerStyle: '', keys: 'color', keyColor: '#ffd21e', keyList: '', emoji: false, popSound: 'none',
+      capStyle: '', lowerStyle: '', keys: 'color', keyColor: '#ffd21e', keyList: '', emoji: false, popSound: 'none', popId: 'auto', popVol: 0,
       fillerLevel: 'normal', fillerMode: 'copy',
       voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers'
     };
     const NAV = [['silences', '✂ Silences'], ['euh', 'Euh'], ['visage', 'Visage'], ['soustitres', 'Sous-titres'], ['bandeau', 'Bandeau'], ['voix', 'Voix'], ['musique', 'Musique'], ['chapitres', 'Chapitres']];
+    // Outils ajoutés par d'autres modules (respirations, plans de coupe, traduction…).
+    const extras = () => app.extras.speech;
     const TOOLS = {
       silences: ['Couper les silences', () => cutSilences()], euh: ['Couper les « euh »', () => cutFillers()],
       visage: ['Zoomer sur le visage', () => punchIn()], soustitres: ['Poser les sous-titres', () => captions()],
@@ -284,14 +286,32 @@
       return 0;
     }
 
-    // opts.remap : recaler sur la dernière coupe des silences (le .srt vient d'avant la coupe).
+    /* Bruitages des sous-titres : [{ id, times }]. auto : pop sur les mots clés, ding sur les
+       emojis. Chaque son est calé sur l'instant estimé du mot clé. */
+    function accentPlan(items) {
+      const x = st(), out = new Map();
+      items.forEach(it => {
+        if (x.popSound === 'keys' && !it.hasKey && !it.key) return;
+        const id = x.popId === 'auto' ? (it.emoji ? 'ding' : 'pop') : x.popId;
+        const snd = root.RRFXSons.byId(id);
+        if (!snd) return;
+        const at = Math.max(0, (it.hasKey ? it.keyAt : it.start) - snd.peak);
+        if (!out.has(id)) out.set(id, []);
+        out.get(id).push(Math.round(at * 1000) / 1000);
+      });
+      return Array.from(out, ([id, times]) => ({ id, times }));
+    }
+
+    /* opts.remap : recaler sur la dernière coupe des silences (le .srt vient d'avant la coupe).
+       opts.range { a, b } : seulement ce passage, posé à partir de 0 (extraits pour les réseaux). */
     function captions(opts) {
-      const x = st(), remap = opts && 'remap' in opts ? opts.remap : x.remap !== false;
+      const x = st(), range = opts && opts.range, remap = range ? false : opts && 'remap' in opts ? opts.remap : x.remap !== false;
       return app.runTask('Sous-titres', async () => {
-        const cues = Sp.parseSubtitles(x.srt);
+        let cues = Sp.parseSubtitles(x.srt);
+        if (range) cues = cues.filter(c => c.end > range.a + 0.05 && c.start < range.b - 0.05).map(c => Object.assign({}, c, { start: Math.max(0, c.start - range.a), end: Math.min(range.b, c.end) - range.a }));
         if (!cues.length) return { kind: 'error', title: 'Pas de sous-titres', detail: 'Importe ou colle un fichier .srt / .vtt (Premiere : Texte > Sous-titres > Exporter en fichier SRT).' };
         if (!app.services.mogrt()) return { kind: 'error', title: 'Choisis un modèle de texte', detail: 'Onglet Textes > Modèle de texte.' };
-        const t0 = await startTime(x.capFrom);
+        const t0 = range ? 0 : await startTime(x.capFrom);
         // Mots clés repérés (couleur, emoji) pendant le découpage.
         const marked = x.keys !== 'none' || x.emoji;
         let items = Sp.offset(marked ? Sp.highlight(cues, x.words, { emoji: x.emoji, list: String(x.keyList || '').split(/[,;\n]+/) }) : Sp.splitCues(cues, x.words), t0);
@@ -300,18 +320,19 @@
         const keyFx = x.keys === 'color' ? Core.toWire(Core.compileEffect({ params: [], build: () => [{ type: 'tint', props: { black: [0, 0, 0], white: rgb(x.keyColor), amount: 100 } }] }, {}, 'post', 1, app.fps(), app.registry())) : null;
         const r = await app.services.placeTexts(items, { anim: x.capAnim, label: 'Sous-titres', pos: [0.5, 0.78], keyFx, style: x.capStyle });
         if (r.error) return { kind: 'error', title: 'Sous-titres non posés', detail: r.error };
-        // Petit « pop » sonore sur les mots clés ou sur chaque sous-titre.
+        // Bruitages sur les mots clés (et emojis), ou sur chaque sous-titre, calés sur le mot.
         let pops = 0;
         if (x.popSound !== 'none' && r.created.length && !app.S.cancel) {
-          const times = items.filter(it => x.popSound === 'all' || it.key).map(it => it.start);
-          if (times.length) {
-            const snd = await Host.call('placeAsset', { kind: 'audio', path: app.services.ensureSound('pop'), name: 'Pop', times });
-            if (snd.ok) { pops = snd.created.length; app.pushHistory({ date: Date.now(), label: 'Pops des sous-titres', entries: snd.created }); } else app.log('Pops : ' + snd.error, 'warn');
+          const done = [];
+          for (const part of accentPlan(items)) {
+            const s = root.RRFXSons.byId(part.id), snd = await Host.call('placeAsset', { kind: 'audio', path: app.services.ensureSound(part.id), name: s.name, times: part.times, gain: x.popVol });
+            if (snd.ok) { pops += snd.created.length; done.push(...snd.created); } else app.log('Bruitages : ' + snd.error, 'warn');
           }
+          if (done.length) app.pushHistory({ date: Date.now(), label: 'Bruitages des sous-titres', entries: done });
         }
         const keyCount = items.filter(it => it.key).length;
         return { kind: r.warnings.length ? 'warn' : 'ok', title: app.plural(r.created.length, 'sous-titre posé', 'sous-titres posés') + (r.track !== null ? ' sur V' + (r.track + 1) : ''),
-          detail: (marked ? app.plural(keyCount, 'mot clé mis en avant', 'mots clés mis en avant') + (pops ? ', ' + app.plural(pops, 'pop') : '') + '. ' : '') + 'Animation « ' + r.anim.name + ' ». Police : modifie le modèle dans Objets graphiques essentiels.' };
+          detail: (marked ? app.plural(keyCount, 'mot clé mis en avant', 'mots clés mis en avant') + (pops ? ', ' + app.plural(pops, 'bruitage') : '') + '. ' : (pops ? app.plural(pops, 'bruitage') + '. ' : '')) + 'Animation « ' + r.anim.name + ' ». Police : modifie le modèle dans Objets graphiques essentiels.' };
       }, true);
     }
 
@@ -368,7 +389,7 @@
 
       // Sommaire collant : un clic amène à la section (et la déplie).
       const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Sections de l\'onglet Parole' });
-      NAV.forEach(([k, label]) => {
+      NAV.concat(extras().map(e => [e.id, e.nav])).forEach(([k, label]) => {
         const b = h('button', { class: 'action' + (x.lastTool === k ? ' selected' : '') }, label);
         b.addEventListener('click', () => {
           const el = view.querySelector('[data-sec="' + k + '"]');
@@ -454,7 +475,9 @@
         x.keys === 'color' ? row('Couleur', app.services.colorPick ? app.services.colorPick(x.keyColor, v => { x.keyColor = v || '#ffd21e'; app.persist(); }) : swatches()) : null,
         row('Tes mots', keyListField(), { title: 'Toujours mis en avant (séparés par des virgules)' }),
         h('div', { class: 'field' }, app.UI.checkbox('Emoji après les mots clés (💰 🔥 💡…)', x.emoji, v => { x.emoji = v; app.persist(); })),
-        row('Son « pop »', actionGroup([{ v: 'none', label: 'Aucun' }, { v: 'keys', label: 'Mots clés' }, { v: 'all', label: 'Chaque texte' }], x.popSound, v => { x.popSound = v; app.persist(); })),
+        row('Bruitage', actionGroup([{ v: 'none', label: 'Aucun' }, { v: 'keys', label: 'Mots clés' }, { v: 'all', label: 'Chaque texte' }], x.popSound, v => { x.popSound = v; app.persist(); })),
+        row('Son', picker([{ v: 'auto', label: 'Auto (pop, ding sur les emojis)' }, { v: 'pop', label: 'Pop' }, { v: 'ding', label: 'Ding' }, { v: 'clic', label: 'Clic' }, { v: 'swish', label: 'Swish court' }, { v: 'swoosh', label: 'Swoosh' }], x.popId, v => { x.popId = v; app.persist(); }), { title: 'Calé sur le mot clé, pas seulement sur le début du sous-titre' }),
+        row('Volume', hotText({ value: x.popVol, min: -24, max: 6, step: 1, unit: 'dB', onChange: v => { x.popVol = v; app.persist(); } })),
         row('Départ du .srt', picker([{ v: 'start', label: 'Début de la séquence' }, { v: 'playhead', label: 'Tête de lecture' }, { v: 'selection', label: 'Début des clips sélectionnés' }], x.capFrom, v => { x.capFrom = v; app.persist(); })),
         lastCuts.length ? h('div', { class: 'field' }, app.UI.checkbox('Recaler sur les coupes (silences, euh) : .srt fait avant', x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
         h('div', { class: 'note' }, 'Modèle de texte : ' + (model || 'aucun') + ' (onglet Textes).'),
@@ -529,6 +552,7 @@
         chapBox
       ]));
       drawChap();
+      app.renderExtras('speech', view, use);
     }
 
     // Section repérée par une clé (sommaire, dernier outil utilisé).
@@ -562,6 +586,11 @@
     app.services.speechClips = async () => { const r = await Host.call('speechInfo', {}).catch(() => ({ ok: false })); return r.ok ? r.clips.length : 0; };
     app.services.hasCaptions = () => Sp.parseSubtitles(st().srt).length;
     app.services.hasLowerThird = () => !!String(st().name || '').trim();
-    app.tabs.speech = { render, cta: () => { const t = TOOLS[st().lastTool] || TOOLS.silences; return { label: t[0], run: t[1], enabled: true }; }, leave: () => {} };
+    app.tabs.speech = {
+      render, leave: () => {},
+      cta: () => { const e = extras().find(q => q.id === st().lastTool && q.tool), t = e ? e.tool : TOOLS[st().lastTool] || TOOLS.silences; return { label: t[0], run: t[1], enabled: true }; }
+    };
+    // Pour les outils ajoutés à l'onglet.
+    app.speech = { clips: speechClips, readClip, settings: st, cues: () => Sp.parseSubtitles(st().srt), lastCuts: () => lastCuts, captions, analyzeSilences: analyze, startTime };
   });
 })(typeof self !== 'undefined' ? self : this);

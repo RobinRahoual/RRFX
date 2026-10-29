@@ -72,8 +72,24 @@
         c.addEventListener('click', () => { s.id = x.id; app.persist(); render(); app.renderCTA(); });
         return c;
       }));
+      // Sommaire collant : le format, puis les outils de l'onglet (extraits, vérification…).
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Sections de l\'onglet Formats' });
+      [['format', 'Format']].concat(app.extras.formats.map(e => [e.id, e.nav])).forEach(([k, label]) => {
+        const b = h('button', { class: 'action' }, label);
+        b.addEventListener('click', () => {
+          const el = view.querySelector('[data-sec="' + k + '"]');
+          if (!el) return;
+          if (el.classList.contains('folded')) el.querySelector('.section-title').click();
+          const sc = document.getElementById('scroll');
+          sc.scrollTop += el.getBoundingClientRect().top - sc.getBoundingClientRect().top - nav.offsetHeight - 4;
+        });
+        nav.appendChild(b);
+      });
+      view.appendChild(nav);
       const cv = h('canvas', { class: 'fmt-preview' });
-      view.appendChild(section('Format', [cards, h('div', { class: 'fmt-stage' }, cv), h('div', { class: 'note' }, f.w + ' × ' + f.h + (f.safe.some(Boolean) ? ' · le cadre pointillé évite les boutons et légendes de l\'app.' : ''))]));
+      const formatSec = section('Format', [cards, h('div', { class: 'fmt-stage' }, cv), h('div', { class: 'note' }, f.w + ' × ' + f.h + (f.safe.some(Boolean) ? ' · le cadre pointillé évite les boutons et légendes de l\'app.' : ''))]);
+      formatSec.dataset.sec = 'format';
+      view.appendChild(formatSec);
       view.appendChild(section('Cadrage', [
         row('Rushs', actionGroup([{ v: 'reframe', label: 'Recadrage auto', title: 'Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan' }, { v: 'face', label: 'Suivre le visage', title: 'RR FX trouve le visage dans chaque plan et le garde au centre du cadre' }, { v: 'fill', label: 'Remplir, centré' }, { v: 'blur', label: 'Fond flou', title: 'Le plan entier, net, sur le même plan agrandi et flouté' }], s.mode, v => { s.mode = v; app.persist(); render(); })),
         row('Aperçu', actionGroup([{ v: true, label: 'Zones sûres' }, { v: false, label: 'Image seule' }], s.safe, v => { s.safe = v; app.persist(); drawPreview(cv); })),
@@ -84,12 +100,18 @@
           : 'Chaque rush est agrandi pour remplir le cadre et centré. Recadre ensuite avec Trajectoire > Position si besoin.'),
         h('div', { class: 'note' }, 'RR FX crée une copie de ta séquence et l\'ouvre : l\'originale ne bouge pas. Les titres et calques gardent leur place : vérifie-les dans le nouveau cadre.')
       ]));
+      app.renderExtras('formats', view);
       requestAnimationFrame(() => drawPreview(cv));
     }
 
     function makeCopy() {
+      return app.runTask('Format ' + fmt().label, copyNow);
+    }
+
+    // Copie de la séquence active au format choisi (aussi pour les extraits). → résultat de tâche.
+    function copyNow() {
       const f = fmt(), s = st();
-      return app.runTask('Format ' + f.label, async () => {
+      return (async () => {
         app.status.phase('Copie de la séquence');
         let names = REFRAME;
         if (s.mode === 'reframe') {
@@ -122,8 +144,9 @@
           title: '« ' + res.name + ' » créée (' + f.label + ')',
           detail: [how, faced || fill, blurred].filter(Boolean).join(', ') + '. ' + (res.reframed ? 'Premiere analyse les plans en arrière-plan. ' : '') + 'Vérifie les titres dans le nouveau cadre.'
         };
-      });
+      })();
     }
+    app.formats = { copyNow, fmt, settings: st, FORMATS };
 
     app.actions.formatCopy = makeCopy;
     app.tabs.formats = {

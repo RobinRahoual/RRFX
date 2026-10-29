@@ -9,7 +9,7 @@
   const INSTAGRAM_URL = 'https://www.instagram.com/robin.rahoual/';
   const LONG_TASK_MS = 8000; // au-delà, signal de fin
   const MAX_LOG_LINES = 300;
-  const MAX_HISTORY = 10;
+  const MAX_HISTORY = 50;
 
   const PLACEMENTS = [
     { v: 'cut', label: 'Coupe la plus proche' },
@@ -88,8 +88,10 @@
     clearTimeout(saveTimer);
     saveTimer = 0;
     try { if (S.lib) Store.save(S.lib); } catch (e) { log('Sauvegarde impossible : ' + errorMessage(e), 'error'); }
+    ((window.RRFXApp && window.RRFXApp.afterSave) || []).forEach(fn => { try { fn(); } catch (e) { log(errorMessage(e), 'warn'); } });
   }
   function persist() {
+    if (S.lib) S.lib.updated = Date.now();
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveNow, 250);
   }
@@ -1218,6 +1220,8 @@
 
   function pushHistory(op) {
     const list = S.lib.history;
+    // Séquence de l'opération : l'annuler plus tard la rouvre si besoin.
+    if (S.ctx && S.ctx.seqId && !op.seq) { op.seq = S.ctx.seqId; op.seqName = S.ctx.name; }
     list.push(op);
     while (list.length > MAX_HISTORY) list.shift();
     persist();
@@ -1231,6 +1235,8 @@
     b.textContent = last ? '↶ Annuler (' + last.entries.length + ')' : '↶ Annuler';
     b.title = last ? 'Retirer : ' + last.label : 'Rien à annuler';
     show(b, !S.busy);
+    const hb = $('history');
+    if (hb) { show(hb, !S.busy); setDisabled(hb, !S.lib || !S.lib.history.length); }
   }
 
   function describeOp(op) {
@@ -1242,19 +1248,70 @@
     const last = S.lib.history[S.lib.history.length - 1];
     if (!last || S.busy) return;
     if (!(await confirmDialog('Annuler la dernière opération ?', describeOp(last) + ' : les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.', 'Annuler l\'opération', 'confirmUndo'))) return;
-    await runTask('Annulation', async () => {
-      status.phase('Retrait des effets');
-      const r = await Host.call('undo', { entries: last.entries });
-      if (!r.ok) return { kind: 'error', title: 'Annulation impossible', detail: r.error };
-      S.lib.history.pop();
+    await undoOps([last]);
+  }
+
+  /* Annule des opérations de l'historique, de la plus récente à la plus ancienne. Chaque
+     opération rouvre sa séquence si une autre est ouverte. */
+  function undoOps(ops) {
+    return runTask(ops.length > 1 ? 'Annulation de ' + plural(ops.length, 'opération') : 'Annulation', async () => {
+      const todo = ops.slice().sort((a, b) => S.lib.history.indexOf(b) - S.lib.history.indexOf(a));
+      const sum = { removed: 0, effects: 0, skipped: 0 }, errors = [];
+      for (let i = 0; i < todo.length; i++) {
+        if (S.cancel) break;
+        const op = todo[i];
+        status.progress(i, todo.length, op.label);
+        const r = await Host.call('undo', { entries: op.entries, seq: op.seq || '' });
+        if (!r.ok) { errors.push(op.label + ' : ' + r.error); continue; }
+        S.lib.history = S.lib.history.filter(x => x !== op);
+        ['removed', 'effects', 'skipped'].forEach(k => { sum[k] += r[k] || 0; });
+        log('Annulation de ' + op.label + (r.skipped ? ' : ' + r.skipped + ' élément(s) modifié(s) depuis, laissé(s) tel(s) quel(s)' : ''), r.skipped ? 'warn' : 'ok');
+      }
       persist();
+      renderUndo();
       const parts = [];
-      if (r.removed) parts.push(plural(r.removed, 'calque retiré', 'calques retirés'));
-      if (r.effects) parts.push(plural(r.effects, 'effet retiré', 'effets retirés'));
-      if (r.skipped) parts.push(r.skipped + ' laissé(s) tel quel (modifié depuis, ou à annuler avec Ctrl+Z / Cmd+Z)');
-      log('Annulation de ' + last.label + ' : ' + (parts.join(', ') || 'rien à retirer'), r.skipped ? 'warn' : 'ok');
-      return { kind: r.skipped ? 'warn' : 'ok', title: 'Annulation terminée', detail: parts.join(' · ') };
+      if (sum.removed) parts.push(plural(sum.removed, 'calque retiré', 'calques retirés'));
+      if (sum.effects) parts.push(plural(sum.effects, 'effet retiré', 'effets retirés'));
+      if (sum.skipped) parts.push(sum.skipped + ' laissé(s) tel quel (modifié depuis, ou à annuler avec Ctrl+Z / Cmd+Z)');
+      errors.forEach(e => log(e, 'error'));
+      if (errors.length && errors.length === todo.length) return { kind: 'error', title: 'Annulation impossible', detail: errors[0] };
+      return { kind: sum.skipped || errors.length ? 'warn' : 'ok', title: 'Annulation terminée', detail: parts.concat(errors.length ? [plural(errors.length, 'opération non annulée', 'opérations non annulées') + ' (journal)'] : []).join(' · ') || 'Rien à retirer.' };
     });
+  }
+
+  // Historique détaillé : toutes les opérations RR FX, à annuler une par une ou jusqu'à un point.
+  async function showHistory() {
+    if (S.busy) return;
+    const list = h('div', { class: 'hist-list' });
+    let pick = null;
+    const draw = () => {
+      list.innerHTML = '';
+      const ops = S.lib.history.slice().reverse();
+      if (!ops.length) { list.appendChild(h('div', { class: 'note' }, 'Aucune opération RR FX à annuler.')); return; }
+      ops.forEach((op, i) => {
+        const one = h('button', { class: 'action quiet', title: 'Annuler seulement cette opération' }, 'Annuler');
+        one.addEventListener('click', () => { pick = [op]; close(); });
+        const upTo = i ? h('button', { class: 'action quiet', title: 'Annuler celle-ci et les ' + i + ' plus récentes' }, 'Jusqu\'ici') : null;
+        if (upTo) upTo.addEventListener('click', () => { pick = ops.slice(0, i + 1); close(); });
+        const d = new Date(op.date), time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        const other = op.seq && S.ctx && S.ctx.seqId && op.seq !== S.ctx.seqId;
+        list.appendChild(h('div', { class: 'list-item hist-item' },
+          h('span', { class: 'li-icon' }, String(ops.length - i)),
+          h('div', { class: 'li-text' }, h('div', { class: 'li-name' }, op.label), h('div', { class: 'li-meta' }, time + ' · ' + plural(op.entries.length, 'élément') + (op.seqName ? ' · ' + (other ? '↪ ' : '') + op.seqName : ''))),
+          h('div', { class: 'li-actions hist-actions' }, upTo, one)));
+      });
+    };
+    let close = () => {};
+    draw();
+    const all = h('button', { class: 'action quiet danger', disabled: !S.lib.history.length }, 'Tout annuler');
+    all.addEventListener('click', () => { pick = S.lib.history.slice(); close(); });
+    const p = modal('Historique RR FX', h('div', null, h('div', { class: 'note' }, 'Les ' + MAX_HISTORY + ' dernières opérations, la plus récente en haut. « Annuler » retire seulement celle-là ; « Jusqu\'ici » retire aussi toutes les plus récentes. Une opération d\'une autre séquence la rouvre.'), list, h('div', { class: 'row-buttons' }, all)), [{ label: 'Fermer', value: null }]);
+    close = () => { const b = document.querySelector('#modal-root .modal footer button'); if (b) b.click(); };
+    await p;
+    if (!pick || !pick.length) return;
+    const ask = pick.length > 1 ? 'Annuler ' + plural(pick.length, 'opération') + ' ?' : 'Annuler « ' + pick[0].label + ' » ?';
+    if (!(await confirmDialog(ask, 'Les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.', 'Annuler'))) return;
+    await undoOps(pick);
   }
 
   async function clearAll(o) {
@@ -1569,6 +1626,8 @@
     if (!yes) return;
     S.lib.items = S.lib.items.filter(i => i !== item);
     S.lib.favorites = S.lib.favorites.filter(k => k !== 'u:' + item.id);
+    // Gardé pour la synchro : supprimé ici, il l'est aussi sur tes autres ordinateurs.
+    (S.lib.removed || (S.lib.removed = [])).push(item.id);
     if (S.cur && S.cur.key === 'u:' + item.id) { S.cur = entries()[0]; S.params = defaultParams(S.cur); }
     persist();
     renderMineList();
@@ -1734,7 +1793,7 @@
       h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de RR FX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
       h('div', { class: 'search' }, search, refresh),
       row('Trier', actionGroup([{ v: 'popular', label: 'Les plus aimés' }, { v: 'recent', label: 'Les plus récents' }], C.sort, v => { C.sort = v; renderCommunityList(); })),
-      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }, { v: 'look', label: 'Looks (couleur)' }, { v: 'textStyle', label: 'Styles de texte' }, { v: 'titleAnim', label: 'Animations de texte' }, { v: 'gradient', label: 'Dégradés' }, { v: 'palette', label: 'Palettes' }, { v: 'xpStyle', label: 'Styles Express' }], C.type, v => { C.type = v; renderCommunityList(); })),
+      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }, { v: 'look', label: 'Looks (couleur)' }, { v: 'textStyle', label: 'Styles de texte' }, { v: 'titleAnim', label: 'Animations de texte' }, { v: 'gradient', label: 'Dégradés' }, { v: 'palette', label: 'Palettes' }, { v: 'xpStyle', label: 'Styles Express' }, { v: 'projectTemplate', label: 'Modèles de projet' }], C.type, v => { C.type = v; renderCommunityList(); })),
       h('div', { id: 'comm-list' })
     ]));
     view.appendChild(section('Publier', [
@@ -1894,15 +1953,17 @@
     detect.addEventListener('click', async () => { await detectEffects(true); renderSettingsView(); });
     view.appendChild(section('Effets Premiere utilisés', [fx, h('div', { class: 'note' }, 'Noms détectés dans la langue de ton Premiere. Un effet introuvable ? Voir « Avancé » plus bas.')], detect));
 
-    // Raccourcis
+    // Raccourcis : toutes les actions, une touche (ou Maj+touche) chacune.
     const sc = h('div');
-    Object.keys(Keys.ACTIONS).forEach(action => {
+    Object.keys(Keys.ACTIONS).filter(a => actionFn(a)).forEach(action => {
       const b = h('button', { class: 'action', 'data-shortcut': action });
       b.addEventListener('click', () => { S.capturing = S.capturing === action ? null : action; renderShortcuts(); });
       sc.appendChild(h('div', { class: 'shortcut-row' }, h('span', null, Keys.ACTIONS[action]), b));
     });
-    view.appendChild(section('Raccourcis clavier', [h('div', { class: 'note' }, 'Actifs quand le panneau RR FX est sélectionné (clique dedans, puis appuie sur la touche). Échap arrête une opération en cours. Clique sur une touche pour la changer.'), sc]));
+    view.appendChild(section('Raccourcis clavier', [h('div', { class: 'note' }, 'Actifs quand le panneau RR FX est sélectionné (clique dedans, puis appuie sur la touche). Une lettre ou un chiffre, seul ou avec Maj. Clique sur une touche pour la changer, Retour arrière pour la retirer. Échap arrête une opération en cours.'), sc], null, true));
     renderShortcuts();
+    // Sections des autres modules (télécommande, synchro…).
+    (app.settingsExtras || []).forEach(fn => { const el = fn(); if (el) view.appendChild(el); });
 
     // Signal de fin
     const test = h('button', { class: 'action quiet' }, 'Tester le signal');
@@ -1973,17 +2034,23 @@
     apply: () => applyEffect(),
     ramp: () => applyRamp(),
     undo: () => undoLast(),
-    capture: () => capture(),
-    beats: () => app.actions.beats && app.actions.beats(),
-    sync: () => app.actions.sync && app.actions.sync(),
-    convert: () => app.actions.convert && app.actions.convert(),
-    express: () => app.actions.express && app.actions.express()
+    history: () => showHistory(),
+    palette: () => app.services.palette && app.services.palette(),
+    capture: () => capture()
   };
+  // Une action des raccourcis ou de la télécommande : celles du panneau, sinon celles des onglets.
+  const actionFn = id => SHORTCUT_ACTIONS[id] || (app.actions[id] ? () => app.actions[id]() : null);
+  function runAction(id) {
+    const fn = actionFn(id);
+    if (!fn) return false;
+    fn();
+    return true;
+  }
 
   function renderShortcuts() {
     document.querySelectorAll('[data-shortcut]').forEach(b => {
       const a = b.getAttribute('data-shortcut');
-      b.textContent = S.capturing === a ? 'Appuie sur une touche…' : S.shortcuts[a] || 'Aucune';
+      b.textContent = S.capturing === a ? 'Appuie sur une touche…' : Keys.label(S.shortcuts[a], 'Maj') || 'Aucune';
     });
   }
 
@@ -2013,7 +2080,7 @@
     const tag = String((event.target && event.target.tagName) || '').toLowerCase();
     if (S.busy || tag === 'input' || tag === 'textarea' || tag === 'select') return;
     const action = Keys.actionFor(S.shortcuts, Keys.normalizeKey(event));
-    if (action) { event.preventDefault(); SHORTCUT_ACTIONS[action](); }
+    if (action && actionFn(action)) { event.preventDefault(); runAction(action); }
   }
 
   function requestCancel() {
@@ -2051,6 +2118,7 @@
       { id: 'autoFix', label: 'Expo et balance des blancs auto' },
       { id: 'silences', label: 'Couper les silences (plans sélectionnés)' },
       { id: 'undo', label: 'Annuler la dernière opération RR FX' },
+      { id: 'history', label: 'Historique des opérations…' },
       { id: 'clear', label: 'Tout effacer (séquence)…' },
       { separator: true },
       { id: 'compact', label: 'Mode réduit', checked: settings().compact },
@@ -2062,7 +2130,8 @@
       if (id === 'autoFix') return app.actions.autoFix && app.actions.autoFix();
       if (id === 'silences') return app.actions.cutSilences && app.actions.cutSilences();
       if (id === 'palette') return app.services.palette && app.services.palette();
-      if (SHORTCUT_ACTIONS[id]) SHORTCUT_ACTIONS[id]();
+      if (id === 'history') return showHistory();
+      runAction(id);
     });
   }
 
@@ -2179,6 +2248,7 @@
     $('toggle-compact').addEventListener('click', toggleCompact);
     $('cta').addEventListener('click', () => { const a = ctaAction(); if (a.enabled && !S.busy) a.run(); });
     $('undo').addEventListener('click', undoLast);
+    $('history').addEventListener('click', showHistory);
     $('cancel').addEventListener('click', requestCancel);
     $('status-close').addEventListener('click', () => status.reset());
     $('status-log').addEventListener('click', () => {
@@ -2208,9 +2278,23 @@
   // Pour les autres onglets (Ressources…) : ajouter un overlay ou des effets à la bibliothèque.
   app.services.addOverlay = file => { addOverlayList([file]); if (S.tab !== 'effects') switchTab('effects'); };
   app.services.addItems = list => addItems(list);
+  app.services.runAction = runAction;
+  app.services.actionAvailable = id => !!actionFn(id);
+  app.services.showHistory = () => showHistory();
+  app.settingsExtras = [];
+  /* Outils ajoutés aux onglets par d'autres modules : { id, title, nav, tool: [libellé du bouton
+     du haut, action], render: () => contenu de la section }. */
+  app.extras = { speech: [], music: [], titles: [], formats: [] };
+  app.renderExtras = (tab, view, use) => app.extras[tab].forEach(e => {
+    const el = window.RRFXUI.section(e.title, e.render(use || ((k, fn) => fn)), null, e.shut);
+    el.dataset.sec = e.id;
+    view.appendChild(el);
+  });
+  app.afterSave = [];
   // Sections repliées, gardées d'une session à l'autre.
-  window.RRFXUI.folded.get = title => !!(S.lib && settings().folded && settings().folded[title]);
-  window.RRFXUI.folded.set = (title, v) => { const f = settings().folded || (settings().folded = {}); if (v) f[title] = true; else delete f[title]; persist(); };
+  // Repliée ou non : le choix de l'utilisateur, sinon l'état par défaut de la section.
+  window.RRFXUI.folded.get = (title, dflt) => { const f = S.lib && settings().folded; return f && title in f ? !!f[title] : !!dflt; };
+  window.RRFXUI.folded.set = (title, v) => { const f = settings().folded || (settings().folded = {}); f[title] = !!v; persist(); };
   app.services.addOverlays = list => addOverlayList(list);
   app.services.grabFrames = () => grabRealFrames();
   app.services.grabClean = grabClean;

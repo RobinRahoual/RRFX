@@ -1,40 +1,72 @@
 /* RR FX : raccourcis clavier du panneau (actifs quand le panneau a le focus).
-   Une touche simple (lettre ou chiffre) par action, au choix de l'utilisateur. */
+   Une touche (lettre ou chiffre, seule ou avec Maj) par action, au choix de l'utilisateur.
+   La même liste d'actions sert à la télécommande (Stream Deck, Companion…). */
 (function (root, factory) {
   if (typeof module === 'object' && module.exports) module.exports = factory();
   else root.RRFXShortcuts = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
 
+  // Actions dans l'ordre de la liste des Réglages, rangées par onglet.
   const ACTIONS = {
+    express: 'Lancer le montage express',
     apply: 'Appliquer l\'effet choisi',
     ramp: 'Appliquer la rampe',
-    undo: 'Annuler la dernière opération',
     capture: 'Capturer la sélection',
+    undo: 'Annuler la dernière opération',
+    history: 'Historique des opérations',
+    palette: 'Recherche rapide',
+    convert: 'Convertir le LOG en Rec.709',
+    autoFix: 'Expo et balance des blancs auto',
+    applyLook: 'Appliquer le look en cours',
     beats: 'Poser les temps forts',
     sync: 'Synchroniser la sélection',
-    convert: 'Convertir le LOG en Rec.709',
-    express: 'Lancer le montage express'
+    autoEdit: 'Monter les rushs sur le rythme',
+    risers: 'Risers avant les drops',
+    reverbTail: 'Réverb de fin de musique',
+    titles: 'Poser les textes',
+    progressBar: 'Barre de progression',
+    countdown: 'Compte à rebours',
+    cutSilences: 'Couper les silences',
+    cutFillers: 'Couper les « euh »',
+    breaths: 'Atténuer respirations et clics',
+    captions: 'Poser les sous-titres',
+    lowerThird: 'Poser le bandeau',
+    broll: 'Plans de coupe sur les mots clés',
+    punchIn: 'Zoom visage',
+    levelVoice: 'Égaliser la voix',
+    duckMusic: 'Baisser la musique sous la voix',
+    formatCopy: 'Copie au format réseau',
+    extracts: 'Créer les extraits pour les réseaux',
+    preflight: 'Vérifier avant export',
+    importLink: 'Importer depuis un lien'
   };
 
   const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L', express: 'E' };
 
-  /* Touche utilisable comme raccourci (lettre ou chiffre, sans Ctrl/Cmd/Alt), sinon null. */
+  const KEY = /^(Shift\+)?[A-Z0-9]$/;
+
+  /* Touche utilisable comme raccourci (lettre ou chiffre, avec ou sans Maj, sans Ctrl/Cmd/Alt) :
+     'A', 'Shift+A'… ; sinon null. */
   function normalizeKey(event) {
     if (!event || event.ctrlKey || event.metaKey || event.altKey) return null;
-    const key = String(event.key || '');
-    if (/^[a-z0-9]$/i.test(key)) return key.toUpperCase();
-    // Clavier AZERTY : les chiffres sans Maj donnent & é " ' ( … ; on se rabat sur le code physique.
+    const key = String(event.key || ''), shift = event.shiftKey ? 'Shift+' : '';
+    // Clavier AZERTY : les chiffres donnent & é " ' ( … (sans Maj) ; on se rabat sur le code physique.
     const code = /^(?:Key([A-Z])|Digit([0-9]))$/.exec(String(event.code || ''));
-    return code ? code[1] || code[2] : null;
+    if (code) return shift + (code[1] || code[2]);
+    if (/^[a-z0-9]$/i.test(key)) return shift + key.toUpperCase();
+    return null;
   }
+
+  /* Touche à afficher : « Maj+A » (« Shift+A » en anglais). */
+  const label = (k, shiftName) => (k ? k.replace('Shift+', (shiftName || 'Maj') + '+') : '');
 
   /* Complète une configuration enregistrée avec les valeurs par défaut. */
   function withDefaults(saved) {
     const map = Object.assign({}, DEFAULTS);
     if (saved && typeof saved === 'object') {
       Object.keys(ACTIONS).forEach(action => {
-        if (action in saved) map[action] = /^[A-Z0-9]$/.test(saved[action]) ? saved[action] : '';
+        if (action in saved) map[action] = KEY.test(saved[action]) ? saved[action] : '';
       });
     }
     return map;
@@ -65,9 +97,9 @@
     return key.charCodeAt(0); // A-Z = 65-90, 0-9 = 48-57 (codes VK de Windows)
   }
 
-  /* Liste à passer à registerKeyEventsInterest : les touches attribuées + Échap. */
+  /* Liste à passer à registerKeyEventsInterest : les touches attribuées (avec et sans Maj) + Échap. */
   function keyInterest(map, isMac) {
-    const keys = Object.keys(map).map(a => map[a]).filter(Boolean).concat(['Escape']);
+    const keys = Array.from(new Set(Object.keys(map).map(a => String(map[a] || '').replace('Shift+', '')).filter(Boolean))).concat(['Escape']);
     const out = [];
     keys.forEach(k => {
       const code = isMac ? MAC_CODES[k] : winCode(k);
@@ -78,5 +110,5 @@
     return out;
   }
 
-  return { ACTIONS, DEFAULTS, normalizeKey, withDefaults, assign, actionFor, keyInterest, MAC_CODES };
+  return { ACTIONS, DEFAULTS, normalizeKey, withDefaults, assign, actionFor, keyInterest, label, MAC_CODES };
 });

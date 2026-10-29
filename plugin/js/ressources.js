@@ -33,6 +33,8 @@
     }
     // LUTs des dossiers liés, pour « Mes LUTs » (onglet Couleur).
     app.services.resourceLuts = () => { loadIndex(); return R.list.filter(e => e.type === 'lut' && e.path); };
+    // Vidéos et images des dossiers liés, pour les plans de coupe sur les mots clés (onglet Parole).
+    app.services.resourceMedia = () => { loadIndex(); return R.list.filter(e => (e.type === 'video' || e.type === 'image') && (e.path || e.file)); };
     function saveIndex() {
       const roots = {};
       Object.keys(R.index).forEach(r => { if (!R.index[r].browser) roots[r] = { files: R.index[r].files, truncated: R.index[r].truncated, scanned: R.index[r].scanned }; });

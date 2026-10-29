@@ -8,7 +8,7 @@
   'use strict';
 
   // Tout ce que la bibliothèque sait garder (le panneau vérifie ensuite chaque élément).
-  const TYPES = ['preset', 'captured', 'ramp', 'look', 'textStyle', 'palette', 'gradient', 'titleAnim', 'xpStyle'];
+  const TYPES = ['preset', 'captured', 'ramp', 'look', 'textStyle', 'palette', 'gradient', 'titleAnim', 'xpStyle', 'projectTemplate'];
 
   function toB64url(bytes) {
     let s = '';

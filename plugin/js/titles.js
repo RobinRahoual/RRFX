@@ -294,6 +294,7 @@
       ]));
       preview(cv);
       if (app.textStyles) view.appendChild(app.textStyles.colorsSection(() => render(view)));
+      app.renderExtras('titles', view);
     }
 
     app.actions.titles = place;

@@ -141,10 +141,11 @@
 
   // Section à titre en capitales (sp-detail), comme dans Rotate.
   // Sections repliables (clic sur le titre) ; l'état est gardé par le panneau (folded.get/set).
-  const folded = { get: () => false, set: () => {} };
-  function section(title, body, extra) {
+  const folded = { get: (title, dflt) => !!dflt, set: () => {} };
+  // shut : repliée tant que l'utilisateur ne l'a pas ouverte.
+  function section(title, body, extra, shut) {
     if (!title) return h('div', { class: 'section' }, body);
-    const closed = folded.get(title);
+    const closed = folded.get(title, !!shut);
     const chev = h('span', { class: 'fold-chev', 'aria-hidden': 'true' }, closed ? '▸' : '▾');
     const head = h('div', { class: 'section-title foldable', role: 'button', tabindex: '0', 'aria-expanded': String(!closed), title: 'Replier ou déplier' }, h('span', { class: 'detail' }, chev, title), extra || null);
     const el = h('div', { class: 'section' + (closed ? ' folded' : '') }, head, h('div', { class: 'section-body' }, body));

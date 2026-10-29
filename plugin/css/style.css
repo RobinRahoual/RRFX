@@ -530,6 +530,11 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 /* Bibliothèque : sur un panneau étroit, seul « Ouvrir » reste affiché ; les autres actions
    apparaissent au survol ou au clavier, et le nom garde sa place. */
 @media (max-width: 420px) {
-  .list-item .li-actions .action:not(.li-main) { display: none; }
-  .list-item:hover .li-actions .action, .list-item:focus-within .li-actions .action { display: inline-flex; }
+  .list-item:not(.hist-item) .li-actions .action:not(.li-main) { display: none; }
+  .list-item:not(.hist-item):hover .li-actions .action:not(.li-main), .list-item:not(.hist-item):focus-within .li-actions .action:not(.li-main) { display: inline-flex; }
 }
+
+/* ---------- 2.4 : historique détaillé ---------- */
+.hist-list { max-height: 50vh; overflow-y: auto; margin: 6px 0; }
+.hist-item .li-icon { font-size: 11px; color: var(--text-muted); }
+.hist-actions { opacity: 1; }

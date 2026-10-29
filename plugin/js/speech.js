@@ -187,8 +187,8 @@
   }
 
   /* Sous-titres découpés comme splitCues, avec les mots clés repérés : chaque texte reçoit
-     key (il contient un mot clé et a au plus colorMax mots) et emoji (si opts.emoji, celui du
-     premier mot clé). */
+     key (il contient un mot clé et a au plus colorMax mots), emoji (si opts.emoji, celui du
+     premier mot clé) et keyAt (instant estimé de ce mot, pour y caler un bruitage). */
   function highlight(cues, words, opts) {
     // La couleur d'un texte de plus de `colorMax` mots n'aurait plus de sens : seul l'emoji reste.
     const o = Object.assign({ emoji: false, colorMax: 3 }, opts || {}), out = [];
@@ -202,7 +202,10 @@
         const end = i === groups.length - 1 ? c.end : t + (c.end - c.start) * (g.text.length + 1) / len;
         const first = g.idx.find(k => kw.has(k));
         const em = first !== undefined && o.emoji ? emojiFor(w[first]) : '';
-        out.push({ start: t, end, text: g.text + (em ? ' ' + em : ''), key: first !== undefined && g.idx.length <= o.colorMax, emoji: em });
+        // Le mot clé est dit à peu près à sa place dans le texte (en nombre de lettres).
+        const pre = first === undefined ? 0 : g.idx.filter(k => k < first).reduce((s, k) => s + w[k].length + 1, 0);
+        const keyAt = first === undefined ? t : t + (end - t) * pre / (g.text.length + 1);
+        out.push({ start: t, end, text: g.text + (em ? ' ' + em : ''), key: first !== undefined && g.idx.length <= o.colorMax, emoji: em, keyAt, hasKey: first !== undefined });
         t = end;
       });
     });

@@ -56,7 +56,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   const snap = async name => { if (shots) await page.screenshot({ path: path.join(shots, name + '.png') }); };
   const step = async (label, fn) => {
     try { await fn(); } catch (e) {
-      errors.push(label + ' : ' + e.message.split('\n')[0]);
+      errors.push(label + ' : ' + e.message.split('\n')[0] + ' [état : ' + (await page.textContent('#status').catch(() => '')).replace(/\s+/g, ' ').trim().slice(0, 160) + ']');
+      // Une fenêtre restée ouverte ne doit pas bloquer les étapes suivantes.
+      await page.keyboard.press('Escape').catch(() => {});
       if (process.env.RRFX_DEBUG) console.log('[' + label + ']', e.message.slice(0, 900), await page.evaluate(() => document.getElementById('modal-root').innerHTML.slice(0, 600)));
     }
   };
@@ -69,6 +71,11 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     { number: 13, title: '[Preset] Rampe douce', state: 'open', html_url: 'https://github.com/RobinRahoual/RRFX/issues/13', created_at: '2026-10-05T10:00:00Z', user: { login: 'robin' }, reactions: { '+1': 2 },
       body: '### Nom\n\nRampe douce\n\n### Description\n\n_No response_\n\n### Code RR FX\n\n' + zipCode([{ type: 'ramp', name: 'Rampe douce', data: { points: [[0, 1], [1, 0.3]], frames: 12, segments: 8 } }]) }
   ];
+  // Traduction : MyMemory remplacé par une réponse locale (« EN: » devant le texte).
+  await page.route('https://api.mymemory.translated.net/**', route => {
+    const q = new URL(route.request().url()).searchParams.get('q');
+    return route.fulfill({ status: 200, contentType: 'application/json', headers: { 'Access-Control-Allow-Origin': '*' }, body: JSON.stringify({ responseStatus: 200, responseData: { translatedText: 'EN: ' + q } }) });
+  });
   await page.route('https://api.github.com/**', route => {
     const u = route.request().url();
     if (/\/issues\?/.test(u)) return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(issues) });
@@ -535,6 +542,106 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status:has-text("créée")', { timeout: 20000 });
     await page.click('.section:has-text("Cadrage") .action:has-text("Recadrage auto")');
   });
+  const idle = () => page.waitForFunction(() => !window.RRFXApp.S.busy, null, { timeout: 30000 });
+  await step('musique : risers et réverb de fin', async () => {
+    await page.click('.tab[data-tab=music]');
+    await page.click('.section:has-text("Risers avant les drops") .action:text-is("Trouver les drops")');
+    await page.waitForSelector('#status:has-text("drop")', { timeout: 10000 });
+    await idle();
+    await page.click('.section:has-text("Risers avant les drops") .action.go');
+    await page.waitForSelector('#status.ok:has-text("riser"), #status.warn:has-text("Aucun drop")', { timeout: 10000 });
+    await idle();
+    await page.click('.section:has-text("Réverb de fin") .action.go');
+    await page.waitForSelector('#status.ok:has-text("Réverb de fin posée")', { timeout: 15000 });
+    await idle();
+  });
+  await step('parole : respirations, traduction, plans de coupe', async () => {
+    await page.click('.tab[data-tab=speech]');
+    await page.click('.view.on .sec-nav .action:text-is("Souffle")');
+    await page.click('.section:has-text("Respirations et clics") .action.go');
+    await page.waitForSelector('#status.ok:has-text("baissé"), #status.warn:has-text("Rien à baisser")', { timeout: 15000 });
+    await idle();
+    if (!/Atténuer respirations et clics/.test(await page.textContent('#cta'))) throw new Error('le bouton du haut devrait reprendre l\'outil : ' + await page.textContent('#cta'));
+    await page.fill('.section:has(textarea.lyrics) textarea', '1\n00:00:01,000 --> 00:00:03,000\nRegarde ce logo tout neuf\n\n2\n00:00:09,000 --> 00:00:11,000\nEt cette lumière orange\n');
+    await page.click('.view.on .sec-nav .action:text-is("Traduire")');
+    await page.click('.section:has-text("Traduire les sous-titres") .action.go');
+    await page.waitForSelector('#status.ok:has-text("traduits en anglais")', { timeout: 10000 });
+    await idle();
+    const srt = await page.evaluate(() => window.RRFXApp.speech.settings().srt);
+    if (!/EN: Regarde ce logo tout neuf/.test(srt) || !/00:00:09,000 --> 00:00:11,000/.test(srt)) throw new Error('srt traduit : ' + srt);
+    await page.click('.section:has-text("Traduire les sous-titres") .action:text-is("Revenir à l\'original")');
+    await page.waitForFunction(() => /^1\n00:00:01,000 --> 00:00:03,000\nRegarde/.test(window.RRFXApp.speech.settings().srt));
+    await page.click('.view.on .sec-nav .action:text-is("Plans de coupe")');
+    await page.click('.section:has-text("Plans de coupe sur les mots clés") .action:text-is("Voir les correspondances")');
+    const note = await page.textContent('.section:has-text("Plans de coupe sur les mots clés")');
+    if (!/« logo » → Logo RR/.test(note) || !/« orange » → Light leak orange/.test(note)) throw new Error('correspondances : ' + note.slice(-300));
+    await page.click('.section:has-text("Plans de coupe sur les mots clés") .action.go');
+    await page.waitForSelector('#status.ok:has-text("2 plans de coupe posés")', { timeout: 10000 });
+    await idle();
+  });
+  await step('formats : vérifier, extraits, lot, modèles', async () => {
+    await page.click('.tab[data-tab=formats]');
+    await page.click('.view.on .sec-nav .action:text-is("Vérifier")');
+    await page.click('.section:has-text("Vérifier avant export") .action.go');
+    await page.waitForSelector('#status.error:has-text("2 problèmes et 2 remarques")', { timeout: 10000 });
+    if ((await page.locator('.pf-item').count()) !== 4) throw new Error('4 lignes attendues');
+    await page.click('.pf-item >> nth=0');
+    await idle();
+    await snap('formats-verif');
+    // La vidéo de démo dure 18 s : extraits de 5 à 12 s.
+    await page.evaluate(() => { const f = window.RRFXApp.settings().formatsPlus; f.min = 5; f.max = 12; f.count = 2; });
+    await page.click('.tab[data-tab=formats]');
+    await page.click('.view.on .sec-nav .action:text-is("Extraits")');
+    await page.click('.section:has-text("Extraits pour les réseaux") .action:text-is("Trouver les passages")');
+    await page.waitForSelector('#status.ok:has-text("extrait")', { timeout: 15000 });
+    await idle();
+    const n = await page.locator('.ex-item').count();
+    if (n < 1) throw new Error('aucun extrait affiché');
+    await page.click('.section:has-text("Extraits pour les réseaux") .action:text-is("Créer les extraits")');
+    await page.waitForSelector('#status.ok:has-text("créé")', { timeout: 30000 });
+    await idle();
+    const log = await page.evaluate(() => window.RRFXApp.S.logLines.map(l => l.message).join('\n'));
+    if (!/Extrait 1/.test(await page.textContent('#status-detail') + log)) throw new Error('extrait : ' + await page.textContent('#status-detail'));
+    await page.click('.view.on .sec-nav .action:text-is("Lot")');
+    await page.click('.section:has-text("Sur plusieurs séquences") .action:text-is("Lister les séquences")');
+    await page.waitForSelector('.seq-list label', { timeout: 5000 });
+    await page.click('.seq-list label >> nth=1');
+    await page.selectOption('.section:has-text("Sur plusieurs séquences") select', 'preflight');
+    await page.click('.section:has-text("Sur plusieurs séquences") .action.go');
+    await page.waitForSelector('#status.ok:has-text("1 séquence")', { timeout: 15000 });
+    await idle();
+    await page.click('.view.on .sec-nav .action:text-is("Modèles")');
+    await page.click('.tpl-card:has-text("Reels / TikTok")');
+    await page.click('.section:has-text("Nouveau projet depuis un modèle") .action.go');
+    await page.waitForSelector('#status.ok:has-text("créée")', { timeout: 10000 });
+    await idle();
+    const s = await page.evaluate(() => [window.RRFXApp.settings().express.recipe, window.RRFXApp.formats.settings().id]);
+    if (s.join() !== 'reels,9x16') throw new Error('réglages du modèle : ' + s);
+    await page.click('.section:has-text("Nouveau projet depuis un modèle") .action:has-text("Enregistrer mes réglages")');
+    await page.fill('.modal input', 'Mon modèle shorts');
+    await page.click('.modal .cta');
+    await page.waitForSelector('.tpl-card.on:has-text("Mon modèle shorts")', { timeout: 3000 });
+  });
+  await step('textes : barre de progression et compte à rebours', async () => {
+    await page.click('.tab[data-tab=titles]');
+    await page.click('.section:has-text("Barre de progression et compte à rebours") .action:text-is("Poser la barre")');
+    await page.waitForSelector('#status.ok:has-text("Barre de progression posée")', { timeout: 10000 });
+    await idle();
+    await page.click('.section:has-text("Barre de progression et compte à rebours") .action:text-is("Poser le compte à rebours")');
+    await page.waitForSelector('#status.ok:has-text("Compte à rebours 3")', { timeout: 10000 });
+    await idle();
+  });
+  await step('historique détaillé', async () => {
+    await page.click('#history');
+    await page.waitForSelector('.hist-item', { timeout: 3000 });
+    const n = await page.locator('.hist-item').count();
+    if (n < 3) throw new Error(n + ' opérations');
+    await page.locator('.hist-item').nth(2).locator('.action:text-is("Jusqu\'ici")').click();
+    await page.click('.modal .cta');
+    await page.waitForSelector('#status:has-text("Annulation terminée")', { timeout: 10000 });
+    await idle();
+    if ((await page.evaluate(() => window.RRFXApp.S.lib.history.length)) !== n - 3) throw new Error('3 opérations annulées attendues');
+  });
   await step('recherche rapide', async () => {
     await page.keyboard.press('Control+k');
     await page.waitForSelector('.pal-input');
@@ -569,8 +676,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('partage', async () => {
     await page.click('.tab[data-tab=mine]');
-    await page.hover(".list-item >> nth=0");
-    await page.click(".list-item .action[title^=\"Partager\"] >> nth=0");
+    await page.hover("#mine-list .list-item >> nth=0");
+    await page.click("#mine-list .list-item .action[title^=\"Partager\"] >> nth=0");
     const code = await page.inputValue('.modal textarea');
     if (!/^RRFX[01]:/.test(code)) throw new Error('code de partage invalide');
     await page.click('.modal .cta');
@@ -596,8 +703,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const [popup] = await Promise.all([
       page.waitForEvent('popup', { timeout: 5000 }),
       (async () => {
-        await page.hover('.list-item:has-text("Zoom drop")');
-        await page.click('.list-item:has-text("Zoom drop") .action[title^="Publier"]');
+        await page.hover('#mine-list .list-item:has-text("Zoom drop")');
+        await page.click('#mine-list .list-item:has-text("Zoom drop") .action[title^="Publier"]');
         await page.fill('.modal textarea', 'Mon test');
         await page.click('.modal .cta');
       })()
@@ -615,9 +722,20 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('réglages + raccourci', async () => {
     await page.click('.tab[data-tab=settings]');
+    await page.click('.section-title:has-text("Raccourcis clavier")');
     await page.click('[data-shortcut=apply]');
     await page.keyboard.press('KeyZ');
     if ((await page.textContent('[data-shortcut=apply]')) !== 'Z') throw new Error('raccourci non changé');
+    // Maj + touche, pour une action qui n'avait pas de raccourci.
+    await page.click('[data-shortcut=preflight]');
+    await page.keyboard.press('Shift+KeyV');
+    if ((await page.textContent('[data-shortcut=preflight]')) !== 'Maj+V') throw new Error('Maj+V non pris : ' + await page.textContent('[data-shortcut=preflight]'));
+    await page.click('#scroll');
+    await page.keyboard.press('Shift+KeyV');
+    await page.waitForSelector('#status:has-text("Vérification avant export"), #status.error, #status.warn', { timeout: 5000 });
+    // Télécommande et synchro : sections présentes (désactivées par défaut).
+    await page.waitForSelector('.section-title:has-text("Télécommande")');
+    await page.waitForSelector('.section-title:has-text("Synchro entre ordinateurs")');
     await snap('5-reglages');
   });
   await step('mode réduit', async () => {
