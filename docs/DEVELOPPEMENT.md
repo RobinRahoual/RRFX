@@ -46,6 +46,21 @@ publier sans le secret, et les panneaux refusent un pack non signé ou mal sign�
 `python3 scripts/dev/yunet-convert.py face_detection_yunet_2023mar.onnx` (il faut le module Python `onnx`).
 `tests/yunet.test.js` compare le moteur JavaScript aux sorties d'onnxruntime (`tests/fixtures/yunet-astronaute.json`).
 
+## Modèle de voix (Silero VAD)
+
+`plugin/js/vendor/silero-model.js` vient de `silero_vad_16k_op15.onnx` (paquet PyPI `silero-vad`, licence MIT) :
+`python3 scripts/dev/silero-convert.py silero_vad_16k_op15.onnx`. La STFT du modèle est recalculée par FFT (le
+script vérifie qu'elle est bien une transformée de Fourier à fenêtre de Hann). `tests/vad.test.js` compare le
+moteur aux probabilités d'onnxruntime (`tests/fixtures/silero-reference.json`).
+
+## Outils gratuits (Réglages > Outils gratuits)
+
+Le catalogue est dans `plugin/js/libres.js` : adresse de téléchargement par système, type d'installation (fichier,
+archive décompressée par `tar`, exécutable pris dans un paquet PyPI, paquet Python dans l'environnement
+`Documents/RRFX/Outils/python`, Homebrew) et modèles. Pour changer une version, modifier l'adresse et vérifier le
+nom de l'exécutable (`exe`). Les arguments et la lecture des sorties sont testés dans `tests/libres.test.js` ; les
+outils eux-mêmes se testent dans Premiere (voir la checklist).
+
 ## Tester dans Premiere
 
 Les tests automatiques tournent sur une timeline simulée. La [checklist de test](CHECKLIST-TESTS.md) liste ce qu'il
@@ -98,6 +113,14 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/vendor/haar-face.js cascade « visage de face » d'OpenCV (licences BSD / Intel en tête du fichier)
   js/whisper.js          transcription Whisper : lecture du JSON, sous-titres, « euh », répétitions (testé)
   js/transcription.js    Parole > Transcrire : outil, modèle, transcription des plans
+  js/vad.js              détection de la voix Silero : moteur (FFT, convolutions, LSTM), passages et blancs (testé)
+  js/vendor/silero-model.js le modèle Silero VAD (licence MIT), converti par scripts/dev/silero-convert.py
+  js/libres.js           outils gratuits : catalogue, paquets par système, lignes de commande et sorties (testé)
+  js/outils-panel.js     Réglages > Outils gratuits : trouver, installer, lancer les outils ; client Ollama
+  js/ia.js               IA locale : demandes à Ollama et lecture des réponses (testé)
+  js/ia-panel.js         traduction, correction, chapitres, extraits, Publier, recherche dans les rushs
+  js/podcast.js          podcast multicam : qui parle, plans, caméras (testé)
+  js/fonctions-libres.js podcast, débruitage, voix off, pistes séparées, détourage, ralenti, agrandissement
   js/visage.js           images des plans, suivi du visage ou de l'objet entouré, 9:16 qui suit le visage
   js/voix.js             sonie LUFS (BS.1770), « euh » dans le son, courbe de ducking (testé)
   js/tracker.js          suivi d'un objet par corrélation (testé)

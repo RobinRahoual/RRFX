@@ -59,8 +59,25 @@
       return info;
     }
 
-    // Le son mono de [t0, t1] (secondes du fichier ; t1 = null : jusqu'à la fin).
+    /* Le son mono de [t0, t1] (secondes du fichier ; t1 = null : jusqu'à la fin). Un format que
+       RR FX ne lit pas seul (MXF, Opus, son AAC illisible…) passe par ffmpeg s'il est installé
+       (Réglages › Outils gratuits), ou après accord pendant une opération. */
     async function readAudio(src, t0, t1) {
+      try { return await readDirect(src, t0, t1); } catch (e) {
+        if (typeof src !== 'string' || !Store.fs || !app.tools) throw e;
+        const ff = app.S.busy
+          ? await app.tools.need('ffmpeg', _T('RR FX ne sait pas lire seul le son de ce fichier : ffmpeg, gratuit, le lit.')).catch(() => '')
+          : await app.tools.find('ffmpeg');
+        if (!ff) throw e;
+        const a = Math.max(0, t0 || 0), info = await app.tools.probe(src);
+        const wav = await app.tools.audioOf(src, { start: a, dur: t1 == null ? 0 : Math.max(0.05, t1 - a), rate: 44100, channels: 1 });
+        try {
+          const d = await readDirect(wav, 0, null);
+          return { samples: d.samples, sampleRate: d.sampleRate, start: a, duration: info.dur || a + d.samples.length / d.sampleRate };
+        } finally { app.tools.clean(Store.path.dirname(wav)); }
+      }
+    }
+    async function readDirect(src, t0, t1) {
       const io = ioFor(src);
       t0 = Math.max(0, t0 || 0);
       try {
@@ -107,7 +124,8 @@
         // Fichier choisi à la main, calé sur le clip musique : on suit le clip s'il a bougé ;
         // si la musique de la séquence a changé, on revient à elle.
         const r = await Host.call('musicInfo', {});
-        if (r.ok && r.name === M.info.seqName) M.info = Object.assign({}, M.info, { start: r.start, end: r.end, inPoint: r.inPoint, speed: r.speed, track: r.track });
+        // Piste séparée par Demucs (stem) : elle commence au point d'entrée du clip.
+        if (r.ok && r.name === M.info.seqName) M.info = Object.assign({}, M.info, { start: r.start, end: r.end, inPoint: M.info.stem ? 0 : r.inPoint, speed: r.speed, track: r.track });
         else if (r.ok && r.path) M.manual = null;
       }
       if (M.manual) info = M.info;
@@ -118,7 +136,7 @@
         if (!info.path) throw new Error(_T('Fichier de « ') + info.name + _T(' » introuvable : choisis-le à la main (Musique > Choisir un fichier).'));
       }
       const w0 = M.manual ? 0 : Math.max(0, info.inPoint - 2), w1 = M.manual ? null : seqToFile(info, info.end) + 2;
-      const key = M.manual ? 'file:' + M.manual.name + ':' + M.manual.size : info.path + '#' + w0.toFixed(2) + '-' + w1.toFixed(2);
+      const key = M.manual ? 'file:' + (M.manual.name || M.manual) + ':' + (M.manual.size || '') : info.path + '#' + w0.toFixed(2) + '-' + w1.toFixed(2);
       if (!force && M.an && M.key === key) { M.info = info; return M; }
       const d = await readAudio(M.manual || info.path, w0, w1);
       const dec = decimate(d.samples, d.sampleRate);
@@ -145,6 +163,37 @@
       else app.log(_T('« ') + file.name + _T(' » calé sur « ') + M.info.seqName + _T(' » de la séquence (début à ') + M.info.start.toFixed(2) + ' s).', 'info');
     }
 
+    /* Piste séparée par Demucs (la batterie seule) calée sur le clip musique : les temps forts sont
+       cherchés dedans, bien plus nets que dans le morceau mixé. */
+    async function useStem(path) {
+      const seq = await Host.call('musicInfo', {});
+      if (!seq.ok) throw new Error(seq.error);
+      M.manual = path;
+      M.info = Object.assign({}, seq, { name: Store.path.basename(path), path: '', seqName: seq.name, inPoint: 0, stem: true });
+      M.key = '';
+      M.ai = null;
+      await ensureMusic(true);
+      app.log(_T('Temps forts cherchés dans « ') + M.info.name + _T(' » (piste séparée), calée sur « ') + seq.name + _T(' ».'), 'info');
+    }
+
+    /* Beat This! (IA, Réglages › Outils gratuits) : chaque temps et le premier temps de chaque mesure,
+       calculés une fois par musique ; M.ai.beats est en secondes du fichier. */
+    const isAi = () => /^ai/.test(st().beats.mode);
+    async function ensureAi() {
+      if (M.ai && M.ai.key === M.key) return M.ai;
+      const exe = await app.tools.need('beatthis', _T('Beat This! trouve chaque temps et le premier temps de chaque mesure.'));
+      const dir = app.tools.work('temps'), wav = Store.path.join(dir, 'musique.wav'), out = Store.path.join(dir, 'musique.beats');
+      try {
+        Store.fs.writeFileSync(wav, Buffer.from(root.RRFXSons.wav(M.samples, M.sr)));
+        app.status.phase(_T('Temps de la musique (IA, Beat This!)'));
+        await app.tools.run(exe, [wav, '-o', out]);
+        const b = root.RRFXLibres.parseBeats(Store.fs.readFileSync(out, 'utf8'));
+        if (!b.beats.length) throw new Error(_T('Beat This! n\'a trouvé aucun temps.'));
+        M.ai = { key: M.key, beats: b.beats.map(t => t + M.t0), downbeats: b.downbeats.map(t => t + M.t0) };
+      } finally { app.tools.clean(dir); }
+      return M.ai;
+    }
+
     // Zone de détection (secondes de la séquence).
     async function zone() {
       const info = M.info, b = st().beats;
@@ -165,8 +214,16 @@
     function detect(z) {
       const b = st().beats, info = M.info;
       M.zone = z;
+      if (isAi() && M.ai && M.ai.key === M.key) {
+        const from = seqToFile(info, z.from), to = seqToFile(info, z.to), every = Math.max(1, Math.round(b.every || 1));
+        const times = (b.mode === 'ai-bar' ? M.ai.downbeats : M.ai.beats).filter(t => t >= from - 1e-6 && t <= to + 1e-6).filter((t, i) => i % every === 0);
+        const gaps = M.ai.beats.slice(1).map((t, i) => t - M.ai.beats[i]).sort((p, q) => p - q), g = gaps[gaps.length >> 1];
+        M.beats = { times, bpm: g ? Math.round(600 / g) / 10 : null };
+        return M.beats;
+      }
+      // Mode IA pas encore calculé : la grille du tempo en attendant.
       const r = Audio.detectBeats(M.an, {
-        mode: b.mode, sensitivity: b.sensitivity, minGap: b.minGap / 1000, every: b.every,
+        mode: isAi() ? 'tempo' : b.mode, sensitivity: b.sensitivity, minGap: b.minGap / 1000, every: b.every,
         from: seqToFile(info, z.from) - M.t0, to: seqToFile(info, z.to) - M.t0
       });
       M.beats = Object.assign({}, r, { times: r.times.map(t => t + M.t0) });
@@ -176,6 +233,7 @@
     // Temps forts en secondes de séquence (pour les marqueurs, les textes, le montage).
     async function beatTimes() {
       await ensureMusic(false);
+      if (isAi()) await ensureAi();
       const z = await zone();
       detect(z);
       return M.beats.times.map(t => fileToSeq(M.info, t)).filter(t => t >= z.from - 1e-6 && t <= z.to + 1e-6);
@@ -190,7 +248,8 @@
       return times.map(t => Audio.intensityFactor(Audio.loudnessAt(M.loud, seqToFile(M.info, t) - M.t0), influence / 100));
     };
     app.services.musicName = () => (M.info ? M.info.name : '');
-    app.services.tempo = async () => { await ensureMusic(false); detect(await zone()); return M.beats.bpm; };
+    app.services.tempo = async () => { await ensureMusic(false); if (isAi() && app.S.busy) await ensureAi(); detect(await zone()); return M.beats.bpm; };
+    app.music = { useStem, info: () => M.info };
 
     // ---------------------------------------------------------------- actions
 
@@ -415,7 +474,9 @@
       { v: 'kicks', label: _T('Grosse caisse (kicks)'), short: 'kick' },
       { v: 'hits', label: _T('Tous les coups'), short: 'coup' },
       { v: 'snares', label: _T('Caisse claire et charleston'), short: 'snare' },
-      { v: 'tempo', label: _T('Grille du tempo (chaque temps)'), short: 'temps' }
+      { v: 'tempo', label: _T('Grille du tempo (chaque temps)'), short: 'temps' },
+      { v: 'ai', label: _T('IA : chaque temps (Beat This!)'), short: 'temps IA' },
+      { v: 'ai-bar', label: _T('IA : premier temps de chaque mesure'), short: 'mesure IA' }
     ];
 
     let waveCanvas = null, waveInfo = null, resultsBox = null;
@@ -461,6 +522,7 @@
       await app.runTask(_T('Analyse de la musique'), async () => {
         app.status.phase(_T('Lecture du fichier'));
         await ensureMusic(true);
+        if (isAi()) await ensureAi();
         app.status.phase(_T('Détection'));
         detect(await zone());
         drawWave();
@@ -472,6 +534,15 @@
     function redetect() {
       app.persist();
       if (!M.an) return;
+      if (isAi() && !(M.ai && M.ai.key === M.key)) {
+        app.runTask(_T('Temps de la musique (IA)'), async () => {
+          await ensureAi();
+          detect(await zone());
+          drawWave();
+          return { kind: 'ok', title: app.plural(M.beats.times.length, _T('temps fort')), detail: M.beats.bpm ? '~' + bpmText() + ' BPM' : '' };
+        }, true);
+        return;
+      }
       zone().then(z => { detect(z); drawWave(); }).catch(() => {});
     }
 

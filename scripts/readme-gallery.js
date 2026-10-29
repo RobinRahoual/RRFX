@@ -422,6 +422,20 @@ const SRT = '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2
     await shot('transcription-euh', '[data-sec=euh]', 300);
   });
 
+  // ------------------------------------------------------------------ 2.9 : outils gratuits et IA locale
+  await step('outils-gratuits', async () => {
+    await sec('settings', 'outils', 'Outils');
+    await shot('outils-gratuits', '[data-sec=outils]', 400);
+  });
+  await step('ia', async () => {
+    for (const [t, id, nav, name] of [['speech', 'podcast', 'Podcast', 'podcast'], ['speech', 'publier', 'Publier', 'ia-publier'], ['speech', 'debruiter', 'Débruiter', 'debruiter'],
+      ['assets', 'recherche', null, 'ia-recherche'], ['music', 'separer', null, 'separer'], ['titles', 'detourage', null, 'detourage'], ['ramp', 'ralenti', null, 'ralenti']]) {
+      await sec(t, id, nav);
+      await close();
+      await shot(name, '[data-sec=' + id + ']', 300);
+    }
+  });
+
   // ------------------------------------------------------------------ 2.7 : outils de Premiere, fenêtres
   await step('premiere', async () => {
     await goTab('native');

@@ -222,6 +222,12 @@
       if (Date.now() - started > LONG_TASK_MS && result.kind !== 'idle') signalEnd();
       return result;
     } catch (e) {
+      // Une tâche qui s'arrête proprement (outil non installé, refus) : avertissement, pas échec.
+      if (e && e.result) {
+        status.finish(e.result.kind, e.result.title, e.result.detail);
+        log(e.result.title + (e.result.detail ? ' : ' + e.result.detail : ''), 'warn');
+        return e.result;
+      }
       status.finish('error', _T('Échec'), errorMessage(e));
       log(errorMessage(e), 'error');
       if (Date.now() - started > LONG_TASK_MS) signalEnd();
@@ -799,7 +805,7 @@
   app.settingsExtras = [];
   /* Outils ajoutés aux onglets par d'autres modules : { id, title, nav, tool: [libellé du bouton
      du haut, action], render: () => contenu de la section }. */
-  app.extras = { speech: [], music: [], titles: [], formats: [], assets: [], native: [] };
+  app.extras = { speech: [], music: [], titles: [], formats: [], assets: [], native: [], ramp: [] };
   app.renderExtras = (tab, view, use) => app.extras[tab].forEach(e => {
     const el = window.RRFXUI.section(e.title, e.render(use || ((k, fn) => fn)), null, e.shut);
     el.dataset.sec = e.id;

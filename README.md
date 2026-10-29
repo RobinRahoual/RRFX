@@ -37,7 +37,7 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 
 <table>
 <tr>
-<td align="center" width="25%"><h3>50+</h3><sub>outils dans un seul panneau</sub></td>
+<td align="center" width="25%"><h3>60+</h3><sub>outils dans un seul panneau</sub></td>
 <td align="center" width="25%"><h3>36</h3><sub>transitions, mouvements et effets</sub></td>
 <td align="center" width="25%"><h3>14</h3><sub>styles Express prêts à l'emploi</sub></td>
 <td align="center" width="25%"><h3>16</h3><sub>overlays fournis (light leaks, VHS…)</sub></td>
@@ -46,7 +46,7 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 <td align="center"><h3>20</h3><sub>speed ramps prédéfinies</sub></td>
 <td align="center"><h3>24</h3><sub>langues pour traduire tes sous-titres</sub></td>
 <td align="center"><h3>45</h3><sub>actions sur une touche ou un Stream Deck</sub></td>
-<td align="center"><h3>0 €</h3><sub>pas d'abonnement, pas de compte</sub></td>
+<td align="center"><h3>0 €</h3><sub>pas d'abonnement, pas de compte, IA comprise</sub></td>
 </tr>
 </table>
 
@@ -65,6 +65,8 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 | Charger la LUT de ta caméra sur chaque rush | **Un calque de conversion** au-dessus de tous tes rushs, la bonne LUT par caméra |
 | Raccourcir la musique pour qu'elle finisse avec la vidéo | **Une coupe invisible entre deux temps forts**, la vraie fin gardée |
 | Exporter chaque version, renommer chaque fichier | **Export en lot** dans Media Encoder, avec des noms propres |
+| Monter un podcast à 3 caméras, plan par plan | **La caméra de celui qui parle**, posée toute seule, plan large quand on parle à deux |
+| Fouiller 200 rushs pour trouver « la rue la nuit » | **Tape ce que tu cherches** : l'IA locale a décrit chaque rush |
 
 Et rien n'est irréversible : **↶ Annuler** retire chaque opération, même ancienne, et les coupes se font par défaut
 sur une copie de ta séquence.
@@ -107,11 +109,13 @@ sur une copie de ta séquence.
 | [⚡ Express](#express) | [🎙️ Vidéos qui parlent](#parole) | [🎵 Musique et rythme](#musique) |
 | [✨ Effets, transitions, rampes](#effets) | [🎨 Couleur](#couleur) | [🔤 Textes et habillage](#textes) |
 | [📱 Formats et livraison](#formats) | [🗂️ Projet et ressources](#projet) | [🚀 Ton flux de travail](#flux) |
+| [🧠 IA locale et outils gratuits](#ia) | | |
 
-**Nouveau dans la 2.8** : la **transcription automatique** (Whisper, sur ton ordinateur) pour un .srt fait tout
-seul et des « euh » coupés au mot près, et une **détection de visage par réseau de neurones** (de profil, de trois
-quarts, en faible lumière). La 2.7 avait apporté les outils de Premiere en un clic, le menu Fenêtres et les espaces
-de travail. [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
+**Nouveau dans la 2.9** : l'**IA sur ton ordinateur**, installée en un clic et gratuite. Podcast multicam, voix
+débruitée, pistes séparées, titre et description écrits pour toi, recherche dans tes rushs par ce qu'ils montrent,
+ralentis fluides, texte derrière le sujet… et une coupe des silences qui reconnaît la voix (Silero), même avec de
+la musique. La 2.8 avait apporté la transcription Whisper et la détection de visage par réseau de neurones.
+[Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
 
 ---
 
@@ -175,7 +179,7 @@ transcription gratuit, écrit tout ce qui est dit, **mot par mot, sur ton ordina
 - ✅ Le `.srt` se fait tout seul : une phrase par sous-titre, à sa place dans la séquence.
 - ✅ Les **« euh » et les répétitions** sont coupés **au mot près**.
 - ✅ Les **extraits** écartent les passages pleins d'hésitations, les **chapitres** suivent les phrases.
-- ✅ RR FX trouve Whisper tout seul et télécharge le modèle (148 Mo) en un clic.
+- ✅ Pas installé ? **« Installer Whisper »** le fait pour toi, puis RR FX télécharge le modèle (148 Mo) en un clic.
 
 <table>
 <tr>
@@ -194,6 +198,8 @@ transcription gratuit, écrit tout ce qui est dit, **mot par mot, sur ton ordina
 
 - ✅ Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque blanc.
 - ✅ Les sous-titres se recalent tout seuls sur le nouveau montage.
+- ✅ **La voix est reconnue par l'IA** (Silero, intégré) : la musique, le vent ou la clim ne sont plus pris pour de
+  la parole, et une voix basse n'est plus prise pour un blanc.
 
 <table>
 <tr>
@@ -818,6 +824,99 @@ bouton de Stream Deck.
 
 ---
 
+<a id="ia"></a>
+
+## 🧠 IA locale et outils gratuits
+
+Les meilleurs outils gratuits et open source du montage, **pilotés par RR FX** : chacun s'installe en un clic
+(*Réglages › Outils gratuits*), ou au moment où une fonction en a besoin. Tout tourne **sur ton ordinateur** :
+tes vidéos et ce qui est dit dedans ne partent jamais en ligne. Et RR FX marche sans aucun d'eux.
+
+| Outil | Ce qu'il t'apporte |
+|---|---|
+| [Ollama](https://ollama.com) (Qwen, Gemma, Mistral) | Traduction, titres de chapitres, titre / description / hashtags, choix des extraits, correction des sous-titres, recherche dans les rushs |
+| [Whisper](https://github.com/ggml-org/whisper.cpp) | Le `.srt` écrit tout seul, mot par mot |
+| [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | Qui parle, même avec un seul micro (podcast multicam) |
+| [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | La voix sans le bruit de fond |
+| [Demucs](https://github.com/adefossez/demucs) | Voix, batterie, basse et reste séparés |
+| [Beat This!](https://github.com/CPJKU/beat_this) | Chaque temps et chaque premier temps de mesure, même sur les morceaux difficiles |
+| [rembg](https://github.com/danielgatis/rembg) | La personne détourée image par image |
+| [RIFE](https://github.com/nihui/rife-ncnn-vulkan) | Des ralentis fluides, sans saccade |
+| [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) | Un plan basse définition agrandi avec ses détails |
+| [Piper](https://github.com/OHF-Voice/piper1-gpl) | Une voix off de synthèse naturelle |
+| [ffmpeg](https://ffmpeg.org) | Tous les formats vidéo et son |
+
+Déjà intégrés, rien à installer : **Silero** (la voix reconnue pour couper les silences) et **YuNet** (les visages).
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/outils-gratuits.png" alt="Outils gratuits à installer en un clic" width="250"><br><sub>Chaque outil s'installe en un clic</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/podcast.png" alt="Podcast multicam" width="250"><br><sub>Le podcast multicam</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/ia-recherche.png" alt="Recherche dans les rushs" width="250"><br><sub>Tes rushs retrouvés par ce qu'ils montrent</sub></td>
+</tr>
+</table>
+
+### Un podcast multicam monté tout seul
+
+> **Le problème :** 1 h de podcast à 3 caméras, c'est des centaines de changements de plan à faire à la main.
+
+Sélectionne tes caméras (une piste chacune) et les micros : RR FX écoute chaque micro, trouve qui parle et montre
+**sa caméra**. Quand on parle à deux, ou dans un long blanc, il passe sur le **plan large**. Un seul micro pour tout
+le monde ? sherpa-onnx reconnaît les voix.
+
+- ✅ Aucun plan plus court que la durée choisie : pas de clignotement d'une caméra à l'autre.
+- ✅ Les autres caméras sont désactivées, pas supprimées : ↶ Annuler remet tout.
+
+### La voix propre, la musique séparée
+
+- 🎙️ **Débruiter la voix** (DeepFilterNet) : souffle, clim, rue, vent disparaissent ; la voix propre est posée sur une
+  piste libre et le son d'origine coupé.
+- 🥁 **Séparer les pistes** (Demucs) : garde la voix d'un rush sans la musique, enlève la voix d'un morceau, ou cale
+  tes temps forts sur la **batterie seule**.
+- 🎚️ **Temps forts par l'IA** (Beat This!) : chaque temps, ou le premier temps de chaque mesure, dans *Musique ›
+  Détection*.
+- 🔈 **Voix off témoin** (Piper) : ton texte lu par une voix de synthèse naturelle, pour caler le montage avant
+  d'enregistrer la vraie voix.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/debruiter.png" alt="Débruiter la voix" width="250"><br><sub>La voix débruitée par l'IA</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/separer.png" alt="Séparer les pistes" width="250"><br><sub>Voix, batterie, basse et reste séparés</sub></td>
+</tr>
+</table>
+
+### Les textes écrits pour toi
+
+D'après ce qui est dit (transcription Whisper ou `.srt`), l'IA locale (Ollama) :
+
+- ✍️ écrit **3 idées de titre, la description et les hashtags** pour YouTube, Reels / TikTok ou LinkedIn ;
+- 📑 donne un **vrai titre à chaque chapitre** YouTube ;
+- 🎯 choisit les **extraits pour les réseaux** qui tiennent seuls, avec une accroche ;
+- ✅ **corrige les fautes** des sous-titres (orthographe, accents, noms mal entendus) ;
+- 🌍 **traduit** les sous-titres sans rien envoyer en ligne.
+
+### Tes rushs retrouvés par ce qu'ils montrent
+
+L'IA regarde une image de chaque rush et la décrit. Tape ensuite « gros plan des mains » ou « drone sur la mer » :
+les rushs les plus proches arrivent d'abord, et se posent à la tête de lecture. Mieux : **Plans de coupe
+automatiques** cherche, pour chaque phrase de l'interview, le rush qui lui ressemble et le pose au-dessus.
+
+### Ralentis, détourage, agrandissement
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/ralenti.png" alt="Ralenti fluide" width="250"><br><sub><b>Ralenti fluide</b> (RIFE) : les images manquantes inventées</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/detourage.png" alt="Texte derrière le sujet" width="250"><br><sub><b>Texte derrière le sujet</b> (rembg), l'effet des Reels</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/ia-publier.png" alt="Titre et description par l'IA" width="250"><br><sub><b>Titre, description, hashtags</b> écrits pour toi</sub></td>
+</tr>
+</table>
+
+Et **Agrandir un plan** (Real-ESRGAN) redonne des détails à un vieux 720p ou à un zoom fort.
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
 ## Installer RR FX en 3 étapes
 
 1. **[Télécharge RR FX](https://github.com/RobinRahoual/RRFX/releases/latest)** (fichier
@@ -843,6 +942,15 @@ bouton de Stream Deck.
 <summary><b>C'est vraiment gratuit ?</b></summary>
 
 Oui. Pas d'abonnement, pas de compte, pas de publicité.
+</details>
+
+<details>
+<summary><b>L'IA envoie-t-elle mes vidéos en ligne ?</b></summary>
+
+Non. Whisper, Ollama, Silero, DeepFilterNet, Demucs et les autres tournent **sur ton ordinateur** : rien n'est
+envoyé. Ils sont gratuits et optionnels ; RR FX les installe dans `Documents/RRFX/Outils` quand tu le demandes.
+Les modèles d'IA prennent de la place (de 30 Mo à quelques Go) et un ordinateur récent va plus vite, mais aucun
+n'est obligatoire.
 </details>
 
 <details>

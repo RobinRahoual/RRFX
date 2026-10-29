@@ -191,6 +191,42 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Une opération lancée, puis Ctrl+Z dans Premiere : rien ne casse dans le panneau
 - [ ] Mise à jour en un clic (quand une nouvelle version sort) : installée, Premiere redémarré, réglages gardés
 
+## 14. Outils gratuits et IA locale (2.9)
+
+**Installation** (*Réglages › Outils gratuits*) :
+- [ ] 🔴 *Installer* ffmpeg : la carte passe à « ✓ installé », le fichier est dans `Documents/RRFX/Outils/ffmpeg`
+- [ ] 🔴 *Installer* Ollama, puis *Télécharger les modèles choisis* : les trois modèles passent à « ✓ prêt »
+- [ ] Un outil Python (Demucs ou Piper) : Python est trouvé, ou installé (Windows) / son installateur s'ouvre (Mac)
+- [ ] Sur Mac : un outil installé se lance sans alerte « développeur non identifié » (sinon, note-le)
+- [ ] Une fonction dont l'outil manque propose « Installer maintenant », puis continue toute seule
+- [ ] *Arrêter* pendant un téléchargement : rien de cassé, l'installation peut reprendre
+
+**Parole** :
+- [ ] 🔴 *Couper les silences* avec « Détecter la voix par l'IA » : sur une interview avec musique de fond, les blancs sont justes (compare en décochant)
+- [ ] 🔴 *Podcast* : 2 caméras + 2 micros, la caméra suit celui qui parle, aucun plan trop court ; ↶ Annuler réactive tout
+- [ ] *Podcast* avec 3 caméras : la 3e sert de plan large quand on parle à deux
+- [ ] *Podcast* « Un seul (IA) » sur un seul micro : les voix sont reconnues (sherpa-onnx)
+- [ ] 🔴 *Débruiter la voix* : la voix propre est posée, le son d'origine coupé ; ↶ Annuler remet tout
+- [ ] *Voix off témoin* : la voix est posée à la tête de lecture, en français et en anglais
+- [ ] *Publier* : titres, description et hashtags cohérents avec ce qui est dit
+- [ ] *Traduire* avec « IA locale (Ollama) » : même nombre de sous-titres, mêmes timings
+- [ ] *Correcteur › Corriger les fautes (IA locale)* : fautes corrigées, rien de reformulé
+- [ ] *Chapitres* avec « Titres écrits par l'IA locale » : un vrai titre par chapitre
+
+**Musique, formats, bibliothèque** :
+- [ ] 🔴 *Séparer les pistes* (Voix / reste) sur un rush avec musique : la voix seule est posée et calée
+- [ ] *Séparer* en 4 pistes, puis *Temps forts sur la batterie* : les marqueurs tombent sur la batterie
+- [ ] *Détection › IA : chaque temps* (Beat This!) puis *premier temps de chaque mesure*
+- [ ] *Extraits* avec « Choisis par l'IA locale » : les extraits ont une accroche, et tiennent seuls
+- [ ] 🔴 *Recherche › Décrire les rushs* sur 10 rushs, puis une recherche en mots : le bon rush arrive en premier
+- [ ] *Poser les plans de coupe* sur une interview transcrite : des rushs cohérents avec les phrases
+- [ ] *Agrandir un plan* ×2 sur un plan 720p : la copie agrandie est posée au-dessus
+
+**Textes et rampe** :
+- [ ] 🔴 *Texte derrière le sujet* sur un plan de 5 s : copie transparente au-dessus, un titre glissé entre les deux passe derrière la personne
+- [ ] *Ralenti fluide* ×4 sur un plan court : pas de saccade ; sans carte graphique compatible, le calcul passe sur le processeur
+- [ ] Un fichier MXF ou Opus (son illisible avant) : le son est lu grâce à ffmpeg
+
 ---
 
 ## Remonter un problème

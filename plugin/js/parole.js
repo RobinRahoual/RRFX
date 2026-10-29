@@ -17,16 +17,16 @@
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const Sp = root.RRFXSpeech, V = root.RRFXVoix, { Core, Lib, Store, Host } = app;
-    const { h, hotText, actionGroup, picker, row, section } = app.UI;
+    const { h, hotText, actionGroup, picker, row, section, checkbox } = app.UI;
 
     const DEFAULTS = {
-      level: 'normal', minSilence: 0.5, pad: 0.12, mode: 'copy', remap: true,
+      level: 'normal', minSilence: 0.5, pad: 0.12, mode: 'copy', remap: true, vad: true,
       faceAmount: 20, faceAlt: true, faceTrack: true, faceFrame: 'keep',
       srt: '', words: 0, capAnim: 'pop', capFrom: 'start',
       name: '', role: '', lowerDur: 5, lowerPos: 'left', lowerAnim: 'slide-up',
       capStyle: '', lowerStyle: '', keys: 'color', keyColor: '#ffd21e', keyList: '', emoji: false, popSound: 'none', popId: 'auto', popVol: 0,
       fillerLevel: 'normal', fillerMode: 'copy',
-      voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers'
+      voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers', chapAI: false
     };
     const NAV = [['silences', '✂ Silences'], ['euh', _T('Euh')], ['visage', _T('Visage')], ['soustitres', _T('Sous-titres')], ['bandeau', _T('Bandeau')], ['voix', _T('Voix')], ['musique', _T('Musique')], ['chapitres', _T('Chapitres')]];
     // Outils ajoutés par d'autres modules (respirations, plans de coupe, traduction…).
@@ -72,16 +72,65 @@
       return { samples, sr, toSeq: t => c.start + (t0 + t - c.inPoint) / c.speed };
     }
 
+    /* Détection de la voix par Silero (vad.js) dans un Worker : le panneau reste fluide. Le Worker
+       est fabriqué à partir du code du moteur ; s'il ne démarre pas, le calcul se fait ici. */
+    const Vad = root.RRFXVad, VM = root.RRFXSileroModel, W16 = root.RRFXWhisper;
+    let vadWorker = null, vadSeq = 0;
+    const vadWaiting = new Map();
+    function vadProbs(samples) {
+      if (vadWorker === null) {
+        vadWorker = false;
+        try {
+          if (typeof Worker !== 'undefined' && typeof Blob !== 'undefined') {
+            const src = 'const V = (' + Vad.factory.toString() + ')();\nlet model = null;\n' +
+              'onmessage = e => { const d = e.data; if (d.model) { model = d.model; return; }\n' +
+              '  try { const p = V.probs(model, d.samples, (i, n) => postMessage({ id: d.id, step: i / n })); postMessage({ id: d.id, probs: p }, [p.buffer]); } catch (err) { postMessage({ id: d.id, error: String((err && err.message) || err) }); } };';
+            const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+            w.onmessage = e => {
+              const q = vadWaiting.get(e.data.id);
+              if (!q) return;
+              if (e.data.step !== undefined) { if (q.onStep) q.onStep(e.data.step); return; }
+              vadWaiting.delete(e.data.id);
+              if (e.data.error) q.reject(new Error(e.data.error)); else q.resolve(e.data.probs);
+            };
+            w.onerror = e => { vadWaiting.forEach(q => q.reject(new Error((e && e.message) || 'Worker'))); vadWaiting.clear(); vadWorker = false; };
+            w.postMessage({ model: VM });
+            vadWorker = w;
+          }
+        } catch (e) { vadWorker = false; }
+      }
+      if (!vadWorker) return Promise.resolve(Vad.probs(VM, samples));
+      return new Promise((resolve, reject) => {
+        const id = ++vadSeq;
+        vadWaiting.set(id, { resolve, reject, onStep: f => app.status.progress(Math.round(f * 100), 100, _T('Détection de la voix')) });
+        vadWorker.postMessage({ id, samples }, [samples.buffer]);
+      });
+    }
+    // Les blancs d'un son (s, temps du son) d'après la voix détectée par Silero.
+    async function vadSilences(samples, sr, x) {
+      const s16 = W16.to16k(samples, sr), dur = s16.length / 16000;
+      const p = await vadProbs(s16);
+      return Vad.silences(Vad.speech(p, { threshold: Vad.THRESHOLDS[x.level] || 0.5 }), dur, { minSilence: x.minSilence, pad: x.pad });
+    }
+    const useVad = x => x.vad !== false && !app.S.demo && !!(Vad && VM && W16);
+
     async function analyze() {
       const x = st(), clips = await speechClips(), per = [];
-      let mute = 0;
+      let mute = 0, vadFailed = false;
       for (let i = 0; i < clips.length; i++) {
         const c = clips[i];
         app.status.progress(i, clips.length, _T('Écoute de ') + c.name);
         const a = await readClip(c);
         if (!a) { mute++; per.push({ start: c.start, end: c.end, silent: [] }); continue; }
-        const d = Sp.detect(a.samples, a.sr, { level: x.level, minSilence: x.minSilence, pad: x.pad });
-        per.push({ start: c.start, end: c.end, silent: d.ranges.map(r => ({ a: a.toSeq(r.a), b: a.toSeq(r.b) })) });
+        let ranges = null;
+        if (useVad(x) && !vadFailed) {
+          try { ranges = await vadSilences(a.samples, a.sr, x); } catch (e) {
+            vadFailed = true;
+            app.log(_T('Détection de la voix (Silero) indisponible : ') + app.errorMessage(e) + _T('. Détection par le volume.'), 'warn');
+          }
+        }
+        if (!ranges) ranges = Sp.detect(a.samples, a.sr, { level: x.level, minSilence: x.minSilence, pad: x.pad }).ranges;
+        per.push({ start: c.start, end: c.end, silent: ranges.map(r => ({ a: a.toSeq(r.a), b: a.toSeq(r.b) })) });
       }
       if (mute) app.log(app.plural(mute, _T('plan sans fichier son lisible'), _T('plans sans fichier son lisible')) + _T(' (séquence imbriquée ?) : gardés en entier.'), 'warn');
       const ranges = Sp.combine(per);
@@ -261,7 +310,13 @@
         } else {
           const cues = Sp.parseSubtitles(x.srt);
           if (!cues.length) return { kind: 'warn', title: _T('Pas de sous-titres'), detail: _T('Importe ton .srt ci-dessus, ou choisis « Marqueurs ».') };
-          res = Sp.chapters({ cues: cutAware(Sp.offset(cues, await startTime(x.capFrom))) });
+          const timed = cutAware(Sp.offset(cues, await startTime(x.capFrom)));
+          res = Sp.chapters({ cues: timed });
+          // Titres écrits par l'IA locale d'après ce qui est dit dans chaque chapitre.
+          if (x.chapAI && app.ia && res.list.length) {
+            const list = await app.ia.chapters(res.list, timed, timed.length ? timed[timed.length - 1].end : 0);
+            res = Object.assign({}, res, { list, text: root.RRFXIA.chapterText(list) });
+          }
         }
         chap = res;
         refresh();
@@ -430,6 +485,7 @@
         h('div', { class: 'note' }, _T('Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul). RR FX écoute le son, trouve les blancs et les retire en recollant la suite.')),
         row(_T('Sensibilité'), actionGroup([{ v: 'soft', label: _T('Douce'), title: _T('Seulement les vrais blancs') }, { v: 'normal', label: _T('Normale') }, { v: 'strong', label: _T('Forte'), title: _T('Aussi les respirations et les « euh » faibles') }], x.level, v => { x.level = v; reset(); })),
         row(_T('Silence min.'), hotText({ value: x.minSilence, min: 0.2, max: 3, step: 0.05, unit: 's', onChange: v => { x.minSilence = v; reset(); } }), { title: _T('Les pauses plus courtes sont gardées') }),
+        h('div', { class: 'field' }, checkbox(_T('Détecter la voix par l\'IA (Silero) : juste même avec de la musique, du vent ou un bruit de fond'), x.vad !== false, v => { x.vad = v; reset(); })),
         row(_T('Marge gardée'), hotText({ value: x.pad, min: 0, max: 0.5, step: 0.01, unit: 's', onChange: v => { x.pad = v; reset(); } }), { title: _T('Laissée de chaque côté de la voix, pour ne pas couper les mots') }),
         row(_T('Résultat'), actionGroup([{ v: 'copy', label: _T('Sur une copie'), title: _T('Une copie « (sans silences) » : ta séquence reste intacte') }, { v: 'cut', label: _T('Directement'), title: _T('Dans la séquence ouverte (Ctrl+Z pour revenir)') }, { v: 'markers', label: _T('Marqueurs'), title: _T('Un marqueur sur chaque silence, rien n\'est coupé') }], x.mode, v => { x.mode = v; app.persist(); })),
         bar,
@@ -567,6 +623,7 @@
       view.appendChild(sec('chapitres', _T('Chapitres YouTube'), [
         h('div', { class: 'note' }, _T('La liste « 00:00 Titre » à coller dans la description : depuis tes marqueurs nommés, ou depuis les grands blancs du .srt (le début de la phrase suivante sert de titre).')),
         row(_T('Depuis'), actionGroup([{ v: 'markers', label: _T('Les marqueurs') }, { v: 'srt', label: _T('Les sous-titres') }], x.chapSrc, v => { x.chapSrc = v; app.persist(); })),
+        h('div', { class: 'field' }, checkbox(_T('Titres écrits par l\'IA locale (Ollama), d\'après les sous-titres'), x.chapAI, v => { x.chapAI = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, chapBtn),
         chapBox
       ]));

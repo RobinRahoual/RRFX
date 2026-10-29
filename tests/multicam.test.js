@@ -99,3 +99,18 @@ test('multicam: a Premiere that cannot switch clips off is detected before any c
   assert.match(r.error, /désactiver un plan/);
   assert.deepStrictEqual(env.seq.videoTracks.map(t => t.items.length), before, 'nothing razored');
 });
+
+test('multicam: a camera plan (podcast) shows the camera of whoever speaks', () => {
+  const env = setup();
+  [env.A, env.B, env.C].forEach(x => { x.selected = true; });
+  // Caméra 0 jusqu'à 2 s, caméra 1 de 2 à 5 s, caméra 0 ensuite.
+  const r = env.call('multicamSwitch', { plan: [{ t: 0, cam: 0 }, { t: 2, cam: 1 }, { t: 5, cam: 0 }] });
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual(r.plan, [0, 1, 0]);
+  assert.deepStrictEqual([10, 30, 60, 110, 150].map(t => activeAt(env, t)), [[0], [0], [1], [1], [0]]);
+  // Une caméra hors liste : celle qui a des images prend le relais.
+  const env2 = setup();
+  [env2.A, env2.B, env2.C].forEach(x => { x.selected = true; });
+  assert.ok(env2.call('multicamSwitch', { plan: [{ t: 0, cam: 0 }, { t: 2, cam: 7 }] }).ok);
+  assert.match(env2.call('multicamSwitch', { plan: [{ t: 0, cam: 1 }] }).error, /rien à alterner/);
+});

@@ -299,6 +299,23 @@ textarea.code:focus { border-color: var(--accent); }
 .fx-status { display: flex; align-items: center; gap: 6px; min-height: 22px; font-size: 12px; }
 .fx-status .ok { color: var(--ok); }
 .fx-status .missing { color: var(--error); }
+/* Outils gratuits et IA locale (2.9) */
+.tool-card { border: 1px solid var(--field-border); border-radius: 4px; padding: 6px 8px; margin: 8px 0; }
+.tool-card.ok { border-left: 3px solid var(--ok); }
+.tool-head { display: flex; align-items: center; gap: 6px; font-size: 13px; }
+.tool-head strong { flex: 1; min-width: 0; }
+.tool-icon { width: 18px; text-align: center; }
+.tool-state.ok { color: var(--ok); }
+.tool-uses { overflow-wrap: anywhere; }
+.tool-card .note { overflow-wrap: anywhere; }
+.tool-model { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.tool-model .picker { flex: 1; min-width: 0; }
+/* IA locale (2.9) */
+.ia-line { display: flex; align-items: center; gap: 6px; min-width: 0; margin: 3px 0; font-size: 12px; }
+.ia-line > span:first-child, .ia-line > strong { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.ia-result { border-top: 1px solid var(--field-border); padding: 4px 0; }
+.ia-search { display: flex; gap: 6px; margin: 6px 0; }
+.ia-search .textfield { flex: 1; min-width: 0; }
 .shortcut-row { display: flex; align-items: center; justify-content: space-between; margin-top: 2px; font-size: 12px; }
 .shortcut-row .action { min-width: 44px; height: 24px; }
 .log { font-size: 11px; line-height: 15px; color: var(--text-muted); overflow-wrap: anywhere; user-select: text; }

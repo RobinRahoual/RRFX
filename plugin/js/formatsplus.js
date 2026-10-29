@@ -18,7 +18,7 @@
     const st = () => {
       const s = app.settings();
       if (!s.formatsPlus || typeof s.formatsPlus !== 'object') s.formatsPlus = {};
-      const d = { count: 3, min: 25, max: 50, exFormat: true, exCaptions: true, template: 'b:interview', pfImage: true };
+      const d = { count: 3, min: 25, max: 50, exFormat: true, exCaptions: true, exAI: false, template: 'b:interview', pfImage: true };
       Object.keys(d).forEach(k => { if (!(k in s.formatsPlus)) s.formatsPlus[k] = JSON.parse(JSON.stringify(d[k])); });
       return s.formatsPlus;
     };
@@ -54,8 +54,17 @@
       return app.runTask(_T('Recherche des meilleurs passages'), async () => {
         app.status.phase(_T('Écoute de la vidéo'));
         const an = await analyzeLong();
-        const cues = app.speech.cues();
-        found = Mo.extracts({ speech: an.speech, energy: an.energy, cues, words: app.transcript && app.transcript.has() ? app.transcript.words() : null, count: x.count, min: x.min, max: x.max }).map((e, i) => Object.assign(e, { on: true, n: i + 1 }));
+        const cues = app.speech.cues(), words = app.transcript && app.transcript.has() ? app.transcript.words() : null;
+        // Avec l'IA locale : trois fois plus de candidats, puis l'IA garde ceux qui tiennent seuls.
+        const ai = x.exAI && app.ia && (cues.length || words);
+        found = Mo.extracts({ speech: an.speech, energy: an.energy, cues, words, count: ai ? x.count * 3 : x.count, min: x.min, max: x.max });
+        if (ai && found.length > x.count) {
+          const said = words ? words.map(w => ({ start: w.start, end: w.end, text: w.text })) : await app.speech.timedCues();
+          const picked = await app.ia.extracts(found.map(e => ({ a: e.a, b: e.b, text: root.RRFXIA.textBetween(said, e.a, e.b, 900) })), x.count);
+          if (picked.length) found = picked.map(p => Object.assign(found[p.index], p.title ? { title: p.title } : {}));
+          else app.log(_T('L\'IA n\'a pas choisi d\'extraits : choix de RR FX gardé.'), 'warn');
+        }
+        found = found.slice(0, x.count).map((e, i) => Object.assign(e, { on: true, n: i + 1 }));
         if (redraw) redraw();
         if (!found.length) return { kind: 'warn', title: _T('Aucun passage trouvé'), detail: _T('Sélectionne les plans où l\'on parle (au moins ') + x.min + _T(' s de parole), ou baisse la durée minimum.') };
         return { kind: 'ok', title: app.plural(found.length, _T('extrait trouvé'), _T('extraits trouvés')), detail: (cues.length ? _T('Phrases du .srt, ') : _T('Sans .srt : coupes sur les blancs, ')) + _T('à vérifier avant de créer.') };
@@ -111,7 +120,8 @@
           row(_T('Durée'), h('span', { class: 'row-pair' }, hotText({ value: x.min, min: 10, max: 120, step: 5, unit: 's min', onChange: v => { x.min = v; app.persist(); } }), hotText({ value: x.max, min: 15, max: 180, step: 5, unit: 's max', onChange: v => { x.max = v; app.persist(); } }))),
           h('div', { class: 'row-buttons wrap' },
             checkbox(_T('Copie au format choisi plus haut'), x.exFormat, v => { x.exFormat = v; app.persist(); }),
-            checkbox(_T('Sous-titres (si un .srt est chargé)'), x.exCaptions, v => { x.exCaptions = v; app.persist(); })),
+            checkbox(_T('Sous-titres (si un .srt est chargé)'), x.exCaptions, v => { x.exCaptions = v; app.persist(); }),
+            checkbox(_T('Choisis par l\'IA locale (Ollama)'), x.exAI, v => { x.exAI = v; app.persist(); })),
           h('div', { class: 'row-buttons' }, scan, make), list);
         redraw();
         return [box];

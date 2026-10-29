@@ -156,6 +156,7 @@
     // Réglages rangés par thème, avec un sommaire en haut (comme les onglets Parole et Formats).
     const SETTING_GROUPS = [
       ['Général', [['lang', 'Langue · Language'], ['signal', 'Signal de fin'], ['confirm', 'Confirmations'], ['updates', 'Mises à jour']]],
+      ['Outils', [['outils', 'Outils gratuits et IA locale']]],
       ['Contrôle', [['shortcuts', 'Raccourcis clavier'], ['macros', 'Macros'], ['remote', 'Télécommande (Stream Deck, Companion…)']]],
       ['Temps', [['gagne', 'Temps gagné avec RR FX'], ['temps', 'Temps passé par projet'], ['astuces', 'Astuce du jour']]],
       ['Projet', [['layers', 'Calques'], ['cleanup', 'Nettoyage'], ['fx', 'Effets Premiere utilisés']]],

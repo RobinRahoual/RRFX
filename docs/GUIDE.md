@@ -749,6 +749,37 @@ panneau se recharge, tes réglages et ta bibliothèque sont gardés. Les calques
   `Documents/RRFX/Sauvegarde du panneau`, puis remplace les fichiers ; si une écriture échoue, tout est remis comme
   avant. Il reste à redémarrer Premiere.
 
+### Outils gratuits et IA locale (2.9)
+
+*Réglages › Outils gratuits* liste les outils open source que RR FX sait piloter, avec leur taille et leur licence.
+**Installer** les télécharge dans `Documents/RRFX/Outils` (les paquets Python vont dans un environnement à part,
+`Documents/RRFX/Outils/python` ; Python est installé s'il manque, sur Mac l'installateur officiel s'ouvre). Une
+fonction qui a besoin d'un outil absent propose aussi de l'installer. *Indiquer l'outil…* sert si tu l'as déjà
+ailleurs. Tout tourne sur ton ordinateur.
+
+- **Ollama** (IA de texte et d'image) : choisis les modèles *Texte*, *Images* et *Recherche*, téléchargés au premier
+  usage (de 0,3 à 7 Go). RR FX lance Ollama tout seul. Il sert à :
+  - *Parole › Traduire* (service « IA locale ») et *Correcteur › Corriger les fautes* ;
+  - *Parole › Chapitres* (case « Titres écrits par l'IA locale ») et *Parole › Publier* (3 titres, description,
+    hashtags pour YouTube, Reels / TikTok ou LinkedIn) ;
+  - *Formats › Extraits* (case « Choisis par l'IA locale ») ;
+  - *Bibliothèque › Recherche* : *Décrire les rushs* (sélection du panneau Projet ou rushs de la séquence), puis une
+    recherche en mots, et *Poser les plans de coupe* sur les phrases de la transcription.
+- **Podcast multicam** (*Parole › Podcast*) : sélectionne les caméras (une piste chacune) et les micros. *Un par
+  personne* compare le niveau de chaque micro ; *Un seul (IA)* reconnaît les voix avec sherpa-onnx. Personne 1 =
+  micro de la piste la plus basse → caméra de la piste la plus basse. *Plan large* : la caméra montrée quand on
+  parle à deux ou dans un long blanc. *Plan min.* : durée minimale d'un plan.
+- **Débruiter la voix** (DeepFilterNet), **Voix off témoin** (Piper) : dans l'onglet Parole.
+- **Séparer les pistes** (Demucs, onglet Musique) : *Voix / reste* ou *4 pistes*, posées sous le son d'origine
+  (coupé si la case est cochée). *Temps forts sur la batterie* analyse ensuite la batterie seule.
+- **Temps forts par l'IA** (Beat This!) : *Musique › Détection › IA : chaque temps* ou *premier temps de chaque
+  mesure*.
+- **Texte derrière le sujet** (rembg, onglet Textes), **Ralenti fluide** (RIFE, onglet Rampe), **Agrandir un plan**
+  (Real-ESRGAN, Bibliothèque) : sur le plan sélectionné ; le résultat est rangé dans `Documents/RRFX/Fabriqué` et posé
+  au-dessus du plan.
+- **ffmpeg** lit le son des fichiers que RR FX ne lit pas seul (MXF, Opus…).
+- **Silero** (intégré) : *Couper les silences* reconnaît la voix au lieu de mesurer le volume (case cochée par défaut).
+
 ### Test de compatibilité
 
 *Réglages > Test de compatibilité > Tester mon Premiere* : RR FX copie ta séquence, y essaie chaque fonction de
@@ -795,6 +826,9 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - la position d'un texte `.mogrt` par la *Trajectoire* du clip graphique (bandeau, sous-titres) ;
 - Whisper : le format JSON de whisper.cpp (`-ojf`, morceaux de mots horodatés) et d'openai-whisper
   (`--word_timestamps`), lus par RR FX ;
+- les outils gratuits installés par RR FX (Ollama, sherpa-onnx, DeepFilterNet, Demucs, Beat This!, rembg, RIFE,
+  Real-ESRGAN, Piper, ffmpeg) : leurs options et le format de leurs sorties viennent de leur code source et sont
+  testés, mais leur installation et leur lancement sur chaque système restent à confirmer ;
 - les transitions de Premiere posées par QE (`getVideoTransitionByName`, `addTransition`) et leur retrait
   (`Track.transitions`), la détection des changements de plan (`performSceneEditDetectionOnSelection`) et la piste
   de sous-titres (`createCaptionTrack`).

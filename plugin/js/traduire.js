@@ -42,6 +42,8 @@
 
     async function translateTexts(texts, x) {
       const out = new Array(texts.length);
+      // IA locale (Ollama) : rien ne sort de l'ordinateur.
+      if (x.service === 'ollama') return app.ia.translate(texts, x.from, x.to);
       if (x.service === 'deepl') {
         if (!String(x.key).trim()) throw new Error(_T('Colle ta clé API DeepL (compte gratuit sur deepl.com/pro-api).'));
         const groups = T.batches(texts, 50, 20000);
@@ -98,7 +100,7 @@
           const langs = T.LANGS.map(([v, label]) => ({ v, label }));
           box.appendChild(row(_T('De'), picker(langs, x.from, v => { x.from = v; app.persist(); })));
           box.appendChild(row(_T('Vers'), picker(langs, x.to, v => { x.to = v; app.persist(); })));
-          box.appendChild(row('Service', actionGroup([{ v: 'mymemory', label: _T('MyMemory (gratuit)') }, { v: 'deepl', label: _T('DeepL (clé)') }], x.service, v => { x.service = v; app.persist(); draw(); })));
+          box.appendChild(row('Service', actionGroup([{ v: 'mymemory', label: _T('MyMemory (gratuit)') }, { v: 'deepl', label: _T('DeepL (clé)') }, { v: 'ollama', label: _T('IA locale (Ollama)') }], x.service, v => { x.service = v; app.persist(); draw(); })));
           if (x.service === 'deepl') {
             const key = h('input', { class: 'textfield', type: 'password', value: x.key, placeholder: _T('Clé API DeepL (…:fx pour le compte gratuit)'), 'aria-label': _T('Clé API DeepL') });
             key.addEventListener('input', () => { x.key = key.value.trim(); app.persist(); });
@@ -119,7 +121,7 @@
           const back = x.original ? h('button', { class: 'action quiet' }, _T('Revenir à l\'original')) : null;
           if (back) back.addEventListener('click', () => { app.speech.settings().srt = x.original; x.original = ''; x.lang = ''; app.persist(); app.switchTab('speech'); });
           box.appendChild(h('div', { class: 'row-buttons wrap' }, go, save, back));
-          box.appendChild(h('div', { class: 'note' }, (cues.length ? app.plural(cues.length, _T('sous-titre')) + ', ' + T.chars(cues) + _T(' caractères') + (x.lang ? _T(' · en ') + langName(x.lang).toLowerCase() : '') + '. ' : '') + _T('Le texte est envoyé à ') + (x.service === 'deepl' ? 'DeepL' : 'MyMemory') + _T(' pour être traduit ; les timings ne bougent pas.') + _T(' Contenu confidentiel (client, interview non publiée) : demande l\'accord avant, ou traduis à la main.')));
+          box.appendChild(h('div', { class: 'note' }, (cues.length ? app.plural(cues.length, _T('sous-titre')) + ', ' + T.chars(cues) + _T(' caractères') + (x.lang ? _T(' · en ') + langName(x.lang).toLowerCase() : '') + '. ' : '') + (x.service === 'ollama' ? _T('Traduit sur ton ordinateur par l\'IA locale (Ollama) : rien n\'est envoyé en ligne ; les timings ne bougent pas.') : _T('Le texte est envoyé à ') + (x.service === 'deepl' ? 'DeepL' : 'MyMemory') + _T(' pour être traduit ; les timings ne bougent pas.') + _T(' Contenu confidentiel (client, interview non publiée) : demande l\'accord avant, ou traduis à la main.'))));
         };
         draw();
         return [box];

@@ -151,9 +151,12 @@
         });
         const fix = h('button', { class: 'action go' }, _T('Tout corriger'));
         fix.addEventListener('click', () => fixAll(draw));
+        // Orthographe, accents et noms mal entendus : relus par l'IA locale (Ollama).
+        const ai = h('button', { class: 'action' }, _T('Corriger les fautes (IA locale)'));
+        ai.addEventListener('click', () => app.ia.correctSubs(() => { checkNow(); draw(); }));
         if (lastIssues && checkedFor !== app.speech.settings().srt) lastIssues = null;
         draw();
-        box.append(h('div', { class: 'note' }, _T('Au plus 42 caractères par ligne et 2 lignes, 20 caractères par seconde, majuscule en début de phrase, espaces propres, espace insécable avant « : ; ! ? » en français. « Tout corriger » recoupe les lignes et allonge un sous-titre trop rapide dans le blanc qui suit.')), h('div', { class: 'row-buttons' }, fix, check), list);
+        box.append(h('div', { class: 'note' }, _T('Au plus 42 caractères par ligne et 2 lignes, 20 caractères par seconde, majuscule en début de phrase, espaces propres, espace insécable avant « : ; ! ? » en français. « Tout corriger » recoupe les lignes et allonge un sous-titre trop rapide dans le blanc qui suit.')), h('div', { class: 'row-buttons wrap' }, fix, check, ai), list);
         return [box];
       }
     });

@@ -136,7 +136,7 @@
     selfTest: async () => { await wait(600); return { ok: true, app: _T('démo'), version: root.RRFXHost ? root.RRFXHost.VERSION : '', frame: '', results: [['clone', _T('Copier une séquence')], ['adj', _T('Calque de réglage dans le projet')], ['lumetri', _T('Ajouter Lumetri Color (QE)')], ['lut', _T('Charger une LUT dans Lumetri (LUT d\'entrée)')], ['insert', _T('Insérer une piste au milieu (QE)')], ['frame', _T('Exporter une image de la timeline')], ['reframe', _T('Effet Recadrage automatique disponible')], ['cleanup', _T('Supprimer la séquence de test')]].map(([id, label]) => ({ id, label, ok: true, detail: _T('mode démo') })) }; },
     setPlayhead: a => ({ ok: true, t: a.t }),
     logConvert: async a => { await wait(200); return { ok: true, created: [{ kind: 'adj', track: 1, start: 0, name: a.name }], layers: 1, replaced: 0, lutSet: a.lutPath ? 1 : 0, warnings: [] }; },
-    multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
+    multicamSwitch: a => { const n = a.plan ? a.plan.length : a.times.length + 1; return { ok: true, segments: n, switches: n - 1, cams: 2, disabled: n, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } }; }
   };
   const markers = [];
   const seqs = [{ id: 'demo-1', name: _T('Clip démo'), w: 1920, h: 1080, end: 60 }, { id: 'demo-2', name: _T('Interview client'), w: 1920, h: 1080, end: 312 },

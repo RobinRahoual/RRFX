@@ -64,7 +64,7 @@
         speech: ['transcrire', 'silences', 'euh', 'visage', 'soustitres', 'bandeau', 'voix', 'texte'],
         color: ['looks', 'basic', 'out', 'log', 'fix', 'luts'],
         formats: ['format', 'cadrage', 'verif', 'export'],
-        assets: ['lien', 'dossiers', 'parcourir', 'rangement']
+        assets: ['lien', 'dossiers', 'parcourir', 'rangement', 'recherche']
       } },
     { id: 'interview', label: 'Interview et YouTube', desc: 'Parole, sous-titres, son de la voix, versions et export.',
       tabs: ['express', 'effects', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
@@ -75,7 +75,7 @@
     { id: 'social', label: 'Réseaux sociaux', desc: 'Reels, TikTok, Shorts : rythme, sous-titres, 9:16, extraits.',
       tabs: ['express', 'effects', 'music', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
-        speech: ['transcrire', 'silences', 'euh', 'visage', 'soustitres', 'correcteur', 'traduire', 'broll', 'texte'],
+        speech: ['transcrire', 'silences', 'euh', 'visage', 'soustitres', 'correcteur', 'traduire', 'broll', 'texte', 'publier'],
         color: ['looks', 'basic', 'out', 'luts', 'gradient'],
         formats: ['format', 'cadrage', 'extraits', 'verif', 'rythme', 'export']
       } },

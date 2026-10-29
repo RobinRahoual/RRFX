@@ -265,6 +265,13 @@
         return false;
     }
 
+    // Camera du plan o.plan en vigueur a l'instant a (ticks) : la derniere qui commence avant.
+    function planCam(plan, a, f) {
+        var k, cam = plan.length ? plan[0].cam : -1;
+        for (k = 0; k < plan.length; k++) if (snap(plan[k].t * TICKS, f) <= a + f / 2) cam = plan[k].cam;
+        return cam;
+    }
+
     function multicamSwitch(o) {
         var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), qs, cams = [], lo = Infinity, hi = -Infinity, i, j, k, c, t, bounds, lists = [], probe;
         var seg = [], pick, prev = -1, seed = (o.seed || 1) % 2147483647, mid, cover, switches = 0, tag = ' \u00b7 RR FX off', a, b, offN = 0, p, x;
@@ -276,13 +283,17 @@
         }
         cams.sort(function (x1, y1) { return x1 - y1; });
         if (cams.length < 2) return fail('S\u00e9lectionne les plans de deux cam\u00e9ras ou plus, synchronis\u00e9es et empil\u00e9es (une piste par cam\u00e9ra).');
+        // o.plan [{ t (s), cam }] : la camera voulue a partir de chaque instant (podcast : celui qui
+        // parle). cam : rang parmi les cameras selectionnees, de la piste du bas a celle du haut.
+        var times = o.times || [];
+        if (o.plan) { times = []; for (j = 0; j < o.plan.length; j++) times.push(o.plan[j].t); }
         bounds = [lo];
-        for (j = 0; j < o.times.length; j++) {
-            t = snap(o.times[j] * TICKS, f);
+        for (j = 0; j < times.length; j++) {
+            t = snap(times[j] * TICKS, f);
             if (t > bounds[bounds.length - 1] + f / 2 && t < hi - f / 2) bounds.push(t);
         }
         bounds.push(hi);
-        if (bounds.length < 3) return fail('Aucun temps dans la zone s\u00e9lectionn\u00e9e.');
+        if (bounds.length < 3) return fail(o.plan ? 'Une seule cam\u00e9ra \u00e0 montrer sur cette zone : rien \u00e0 alterner.' : 'Aucun temps dans la zone s\u00e9lectionn\u00e9e.');
         // Avant de couper quoi que ce soit : ce Premiere sait-il desactiver un plan par script ?
         probe = sel[0].item;
         if (!setDisabled(probe, !probe.disabled)) return fail('Cette version de Premiere ne permet pas de d\u00e9sactiver un plan par script.');
@@ -302,7 +313,11 @@
             cover = [];
             for (k = 0; k < lists.length; k++) if (covers(lists[k].items, mid)) cover.push(cams[k]);
             if (!cover.length) { seg.push(-1); continue; }
-            if (o.order === 'random') {
+            if (o.plan) {
+                pick = planCam(o.plan, a, f);
+                pick = pick >= 0 && pick < cams.length ? cams[pick] : -1;
+                if (!inList(cover, pick)) pick = inList(cover, prev) ? prev : cover[0];
+            } else if (o.order === 'random') {
                 seed = (seed * 48271) % 2147483647;
                 pick = cover[seed % cover.length];
                 if (pick === prev && cover.length > 1) pick = cover[(seed + 1) % cover.length];

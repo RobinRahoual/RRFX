@@ -31,6 +31,9 @@
     async function findWhisper() {
       const x = st();
       if (x.exe && Store.fs.existsSync(x.exe)) return x.exe;
+      // Installé par RR FX (Réglages › Outils gratuits) ou trouvé par le gestionnaire d'outils.
+      const t = app.tools ? await app.tools.find('whisper') : '';
+      if (t) return t;
       for (const tool of W.TOOLS) {
         const r = await Store.execFile(Store.isWin() ? 'where' : 'which', [tool]);
         const first = r.ok ? String(r.out).split(/\r?\n/).map(s => s.trim()).find(Boolean) : '';
@@ -126,7 +129,12 @@
         const clips = await app.speech.clips();
         let exe = '';
         if (!app.S.demo) {
-          const s = await status();
+          let s = await status();
+          if (!s.exe && app.tools) {
+            await app.tools.need('whisper', _T('Whisper écrit ce qui est dit dans les plans sélectionnés.'));
+            found = null;
+            s = await status();
+          }
           if (!s.exe) return { kind: 'warn', title: _T('Whisper n\'est pas installé'), detail: _T('Installe whisper.cpp (Mac : brew install whisper-cpp ; Windows : le zip whisper-bin-x64 de GitHub dans Documents/RRFX/Outils), puis réessaie. Voir Parole > Transcrire.') };
           if (s.cpp && !s.model) return { kind: 'warn', title: _T('Modèle à télécharger'), detail: _T('Clique sur « Télécharger le modèle » (une seule fois).') };
           exe = s.exe;
@@ -180,16 +188,19 @@
         go.addEventListener('click', transcribe);
         const dl = h('button', { class: 'action hidden' });
         dl.addEventListener('click', () => downloadModel(x.size).then(refresh));
+        const inst = h('button', { class: 'action hidden' }, _T('Installer Whisper'));
+        inst.addEventListener('click', () => app.tools.install('whisper').then(() => { found = null; refresh(); }));
         const pick = h('button', { class: 'action quiet', disabled: !Store.fs }, _T('Choisir l\'outil…'));
         pick.addEventListener('click', () => { const f = Store.pickFiles(_T('Whisper (whisper-cli ou whisper)'), []); if (f && f[0]) { x.exe = f[0]; app.persist(); found = null; refresh(); } });
         function refresh() {
           if (!Store.fs) return;
           status().then(s => {
             const m = W.MODELS.find(q => q.id === x.size);
-            state.textContent = !s.exe ? _T('Whisper n\'est pas installé. Mac : « brew install whisper-cpp ». Windows : télécharge whisper-bin-x64.zip (GitHub de whisper.cpp) et décompresse-le dans Documents/RRFX/Outils. Ou « pip install openai-whisper ».')
+            state.textContent = !s.exe ? _T('Whisper n\'est pas installé : « Installer Whisper » le fait pour toi (gratuit, sur ton ordinateur).')
               : (s.cpp ? 'whisper.cpp · ' : 'openai-whisper · ') + s.exe + (s.cpp ? (s.model ? _T(' · modèle prêt') : _T(' · modèle à télécharger')) : '');
             dl.textContent = _T('Télécharger le modèle (') + (m.mb >= 1000 ? (m.mb / 1000).toFixed(1).replace('.', ',') + ' Go' : m.mb + ' Mo') + ')';
             dl.classList.toggle('hidden', !(s.exe && s.cpp && !s.model));
+            inst.classList.toggle('hidden', !!s.exe || !app.tools);
           }).catch(e => { state.textContent = app.errorMessage(e); });
         }
         box.append(
@@ -198,7 +209,7 @@
           row(_T('Modèle'), picker(W.MODELS.map(m => ({ v: m.id, label: _T(m.label) })), x.size, v => { x.size = v; app.persist(); found = null; refresh(); })),
           row(_T('Langue'), picker([{ v: 'auto', label: _T('Détectée') }, { v: 'fr', label: 'Français' }, { v: 'en', label: 'English' }, { v: 'es', label: 'Español' }, { v: 'de', label: 'Deutsch' }, { v: 'it', label: 'Italiano' }, { v: 'pt', label: 'Português' }], x.lang, v => { x.lang = v; app.persist(); })),
           checkbox(_T('Garder les « euh » dans la transcription (pour les couper ensuite)'), x.keepFillers, v => { x.keepFillers = v; app.persist(); }),
-          h('div', { class: 'row-buttons wrap' }, go, dl, pick));
+          h('div', { class: 'row-buttons wrap' }, go, inst, dl, pick));
         if (words.length) box.appendChild(h('div', { class: 'note' }, app.plural(words.length, _T('mot'), _T('mots')) + _T(' en mémoire : « euh » et répétitions au mot près.')));
         refresh();
         return [box];

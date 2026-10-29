@@ -118,6 +118,8 @@
       S.rampPlayer.redraw = () => { frames = rampPreviewFrames(); redraw(); };
       view.appendChild(section(_T('Aperçu'), h('div', { class: 'pv-frame' }, pcv, h('span', { class: 'pv-label' }, _T('Aperçu simulé')))));
       view.appendChild(h('div', { class: 'note' }, _T('La rampe est posée sur une copie du passage, juste au-dessus du clip, en morceaux de vitesse constante (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip d\'origine, son son et la coupe ne bougent pas ; ↶ Annuler retire la copie.')));
+      // Outils ajoutés par d'autres modules (ralenti fluide par l'IA…).
+      app.renderExtras('ramp', view);
       requestAnimationFrame(() => S.rampEd && S.rampEd.draw());
     }
 
