@@ -29,7 +29,7 @@
       const d = dir();
       if (d) Store.listFiles(d, /\.(cube|3dl|look|lut|csp)$/i, 3000, 2).forEach(p => add({ id: p, name: Store.path.basename(p).replace(/\.[^.]+$/, ''), path: p, ext: extOf(p), from: 'mine' }));
       if (app.services.resourceLuts) app.services.resourceLuts().forEach(e => add({ id: e.path, name: e.name, path: e.path, ext: e.ext || extOf(e.path), from: e.rootName || 'dossier lié' }));
-      if (!out.length && app.S.demo && D) D.LOOKS.forEach(l => add({ id: 'demo:' + l.name, name: l.name, path: '', ext: 'cube', from: 'exemple', lut: D.buildLut(D.normalize(JSON.parse(JSON.stringify(l.p))), 17) }));
+      if (!out.length && app.S.demo && D) D.LOOKS.forEach(l => add({ id: 'demo:' + l.name, name: l.name, path: '', ext: 'cube', from: 'exemple', look: l.p }));
       return out.sort((a, b) => a.name.localeCompare(b.name, 'fr'));
     }
 
@@ -43,6 +43,8 @@
     let queue = Promise.resolve();
     function lutOf(e) {
       if (e.lut) return Promise.resolve(e.lut);
+      // LUT d'exemple : calculée au premier affichage.
+      if (e.look) { e.lut = D.buildLut(D.normalize(JSON.parse(JSON.stringify(e.look))), 17); return Promise.resolve(e.lut); }
       if (e.ext !== 'cube' || !Store.fs || !e.path) return Promise.resolve(null);
       if (!cache.has(e.id)) cache.set(e.id, queue = queue.then(() => new Promise(r => setTimeout(r, 0))).then(() => A.parseCube(Store.fs.readFileSync(e.path, 'utf8'))).catch(() => null));
       return cache.get(e.id);

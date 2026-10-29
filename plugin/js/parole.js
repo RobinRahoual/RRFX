@@ -395,7 +395,7 @@
       view.appendChild(sec('silences', 'Couper les silences', [
         h('div', { class: 'note' }, 'Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul). RR FX écoute le son, trouve les blancs et les retire en recollant la suite.'),
         row('Sensibilité', actionGroup([{ v: 'soft', label: 'Douce', title: 'Seulement les vrais blancs' }, { v: 'normal', label: 'Normale' }, { v: 'strong', label: 'Forte', title: 'Aussi les respirations et les « euh » faibles' }], x.level, v => { x.level = v; reset(); })),
-        row('Silence minimum', hotText({ value: x.minSilence, min: 0.2, max: 3, step: 0.05, unit: 's', onChange: v => { x.minSilence = v; reset(); } }), { title: 'Les pauses plus courtes sont gardées' }),
+        row('Silence min.', hotText({ value: x.minSilence, min: 0.2, max: 3, step: 0.05, unit: 's', onChange: v => { x.minSilence = v; reset(); } }), { title: 'Les pauses plus courtes sont gardées' }),
         row('Marge gardée', hotText({ value: x.pad, min: 0, max: 0.5, step: 0.01, unit: 's', onChange: v => { x.pad = v; reset(); } }), { title: 'Laissée de chaque côté de la voix, pour ne pas couper les mots' }),
         row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie', title: 'Une copie « (sans silences) » : ta séquence reste intacte' }, { v: 'cut', label: 'Directement', title: 'Dans la séquence ouverte (Ctrl+Z pour revenir)' }, { v: 'markers', label: 'Marqueurs', title: 'Un marqueur sur chaque silence, rien n\'est coupé' }], x.mode, v => { x.mode = v; app.persist(); })),
         bar,

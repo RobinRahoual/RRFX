@@ -515,7 +515,7 @@
         row('Détection', picker(MODES, b.mode, v => { b.mode = v; redetect(); })),
         row('Sensibilité', hotText({ value: b.sensitivity, min: 0, max: 100, step: 1, unit: '%', onChange: (v, fin) => { b.sensitivity = v; if (fin) redetect(); } })),
         row('Écart minimum', hotText({ value: b.minGap, min: 40, max: 2000, step: 10, unit: 'ms', onChange: (v, fin) => { b.minGap = v; if (fin) redetect(); } })),
-        row('Garder un temps sur', actionGroup([1, 2, 4, 8].map(n => ({ v: n, label: String(n) })), b.every, v => { b.every = v; redetect(); })),
+        row('1 temps sur', actionGroup([1, 2, 4, 8].map(n => ({ v: n, label: String(n) })), b.every, v => { b.every = v; redetect(); })),
         row('Zone', picker([
           { v: 'music', label: 'Toute la musique' },
           { v: 'playhead', label: 'Depuis la tête de lecture' },

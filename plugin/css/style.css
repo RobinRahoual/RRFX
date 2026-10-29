@@ -454,12 +454,12 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .xp-check.ok .xp-dot { background: rgba(46,160,67,0.25); color: #4cc768; }
 .xp-check.ko .xp-dot { background: rgba(230,70,70,0.22); color: var(--error); }
 .xp-check.opt .xp-dot { background: var(--btn); color: var(--text-muted); }
-.xp-styles { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.xp-styles { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 8px; }
 .xp-style { display: flex; flex-direction: column; align-items: stretch; gap: 3px; padding: 5px 5px 7px; border-radius: 7px; background: var(--btn); border: 1px solid var(--field-border); color: var(--text); cursor: pointer; text-align: left; min-width: 0; }
 .xp-style:hover { background: var(--btn-hover); }
 .xp-style.on { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
 .xp-style b { font-size: 13px; padding: 0 2px; }
-.xp-thumb { width: 100%; height: auto; aspect-ratio: 16 / 9; border-radius: 4px; display: block; }
+.xp-thumb { width: 100%; height: auto; aspect-ratio: 160 / 56; border-radius: 4px; display: block; }
 .xp-sub { font-size: 10.5px; color: var(--text-muted); padding: 0 2px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .xp-step { padding: 2px 0; }
 .xp-step .note { margin: -2px 0 2px 26px; }

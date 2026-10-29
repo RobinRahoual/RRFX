@@ -310,6 +310,7 @@ Glissement, Impact…).
 
 - Avec ta police et ton style : exporte un titre de Premiere en modèle, RR FX s'en sert.
 - **Tes animations** s'enregistrent et s'importent, comme tes modèles `.mogrt`.
+- Un seul aperçu montre l'animation **avec ton style de texte**.
 
 </td>
 </tr>

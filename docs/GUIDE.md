@@ -38,7 +38,8 @@ on y revient.
    musique, flashs, leaks dorés), *Mariage / cérémonie* (fondus blancs, bokeh, lumière chaude), *Vlog voyage*,
    *Cinématique*, *Rap énergique*, *Drill sombre*, *Pop lumineux*, *Chill / lofi*, *Rétro VHS*, ou **Mon style**
    (ton enchaînement d'effets et ton look en cours). Ce sont des points de départ, utilisables pour n'importe
-   quelle vidéo : décoche les étapes inutiles. **Enregistrer ce style…** garde le style choisi avec ses étapes
+   quelle vidéo : décoche les étapes inutiles. Six styles sont affichés (le tien toujours compris) ; *Tous les
+   styles* montre les autres. **Enregistrer ce style…** garde le style choisi avec ses étapes
    cochées et son look : il passe en tête de la liste (★), s'exporte et se partage comme un effet.
 2. **Avant de lancer** : RR FX vérifie ce dont ce style a besoin : séquence ouverte, calque de réglage, musique
    (seulement pour les étapes qui suivent le rythme), plans où l'on parle sélectionnés (coupe des silences), rushs
@@ -69,7 +70,7 @@ fois. Les réglages de tes autres onglets sont rendus tels quels à la fin.
 | **Plans** | Positions « clips entiers » : tous, ou **un sur deux** (punch-in sur les jump cuts : alterne cadre large et serré) |
 | **Entre les coupes** | Plusieurs coupes ou marqueurs : identique partout, variation aléatoire (shakes, flickers, glitchs différents à chaque fois), **un effet au hasard** (même catégorie ou favoris), ou un **enchaînement** : 2 à 4 effets choisis (Maj + clic sur les cartes) qui se succèdent sur chaque temps fort, dans l'ordre ou au hasard |
 | **Posé sur** | Toujours un **calque de réglage** au-dessus du clip (`RR FX · …`) ; Motion blur : copie du plan (CLIP FX) ; overlays : le média lui-même |
-| **Son sur les coupes** | Sons fournis par RR FX (whooshs, impacts, hit, riser, glitch), fabriqués par le plugin (rien à télécharger, aucun droit à gérer) et calés pour que leur moment fort tombe pile sur la coupe ; *Whooshs variés + impacts* met un impact sur les temps forts. Piste audio libre, ta musique n'est pas touchée |
+| **Son** (sur les coupes) | Sons fournis par RR FX (whooshs, impacts, hit, riser, glitch), fabriqués par le plugin (rien à télécharger, aucun droit à gérer) et calés pour que leur moment fort tombe pile sur la coupe ; *Whooshs variés + impacts* met un impact sur les temps forts. Piste audio libre, ta musique n'est pas touchée |
 | **Intensité qui suit le volume** | En option : l'intensité de chaque coupe est modulée par le volume de la musique à cet instant (doux sur un couplet, fort sur un drop) ; *Influence* règle l'écart |
 | **Durée / Intensité** | Images de chaque côté · force de toute l'animation (0–200 %) |
 | **Courbe** | Courbe d'animation éditable ; la moitié POST est le miroir de la PRE |
@@ -306,7 +307,7 @@ Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un t
 **Enregistrer l'animation…** garde l'animation choisie avec ses réglages (★ dans la liste des animations, ici et
 dans l'onglet Parole), exportable et partageable comme un effet.
 
-**Style du texte** : *Celui du modèle .mogrt* (rien n'est changé), un des 6 styles fournis (Blanc propre, Reels
+**Style du texte** (au-dessus de l'animation : l'aperçu montre les deux ensemble) : *Celui du modèle .mogrt* (rien n'est changé), un des 6 styles fournis (Blanc propre, Reels
 jaune, Bloc noir, Pastel rose, Néon bleu, Entreprise) ou les tiens. *Créer un style…* ouvre l'éditeur, avec
 aperçu : police (nom PostScript, ex. `Montserrat-ExtraBold`), taille, couleur, contour et épaisseur, fond et son
 opacité, ombre, MAJUSCULES. *Enregistrer comme style…* le range dans Mes effets ; *Mettre à jour* modifie le tien.
@@ -333,7 +334,7 @@ section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil ut
 - **Couper les silences** : sélectionne dans la timeline les plans où l'on parle (image et son liés, ou le son seul
   d'un micro). **Analyser** écoute le son (WAV, MOV/MP4) et montre les blancs en rouge sur une barre, sans rien
   toucher. **Couper les silences** retire les blancs sur les pistes des plans choisis (image et son, toujours
-  synchro) et recolle la suite. *Sensibilité* (douce, normale, forte), *Silence minimum* (les pauses plus courtes
+  synchro) et recolle la suite. *Sensibilité* (douce, normale, forte), *Silence min.* (les pauses plus courtes
   restent) et *Marge gardée* autour des mots se règlent. *Résultat* : **sur une copie** de la séquence
   (« … (sans silences) », par défaut), dans la séquence (Ctrl+Z dans Premiere pour revenir), ou **marquer
   seulement** (un marqueur au début de chaque silence). Avec deux caméras, RR FX ne coupe que là où personne ne
@@ -481,6 +482,7 @@ après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dan
 
 **Ctrl+K** (⌘K sur Mac), **/** ou 🔍 : tape quelques lettres pour trouver une action (montage express, couper les silences, temps forts,
 conversion…), un onglet, un effet, un overlay, un look ou un style ; ↑ ↓ et Entrée pour lancer, Échap pour fermer.
+Un outil rangé dans un onglet (Mes LUTs, dégradé, import depuis un lien, style de texte) est amené en vue et ouvert.
 
 ### Sans cliquer : menu et raccourcis
 

@@ -186,15 +186,19 @@
           g.rotate(s.rot * Math.PI / 180);
           g.scale(s.scale, s.scale);
           if (s.blur > 0.3 || s.dlen > 1) g.filter = 'blur(' + ((s.blur + s.dlen * 0.3) * 0.12 * W / Pv.W).toFixed(2) + 'px)';
-          g.font = '800 ' + Math.round(H * 0.11) + 'px ' + app.UI.css('--font');
-          g.textAlign = 'center';
-          g.textBaseline = 'middle';
-          g.lineWidth = H * 0.012;
-          g.strokeStyle = 'rgba(0,0,0,0.55)';
-          const txt = sampleText();
-          g.strokeText(txt, 0, 0);
-          g.fillStyle = '#fff';
-          g.fillText(txt, 0, 0);
+          const txt = sampleText(), TS = app.textStyles, sty = TS && TS.styleById(t.style);
+          // Avec le style choisi (section Style du texte) ; sinon un texte blanc lisible.
+          if (sty) TS.paint(g, txt, sty, 0, 0, H * 0.11);
+          else {
+            g.font = '800 ' + Math.round(H * 0.11) + 'px ' + app.UI.css('--font');
+            g.textAlign = 'center';
+            g.textBaseline = 'middle';
+            g.lineWidth = H * 0.012;
+            g.strokeStyle = 'rgba(0,0,0,0.55)';
+            g.strokeText(txt, 0, 0);
+            g.fillStyle = '#fff';
+            g.fillText(txt, 0, 0);
+          }
           g.restore();
         }
       });
@@ -243,8 +247,9 @@
         row('Un texte par', timingPick),
         fixedRow,
         row('À partir de', picker([{ v: 'playhead', label: 'La tête de lecture' }, { v: 'selection', label: 'Début des clips sélectionnés' }, { v: 'start', label: 'Début de la séquence' }], t.from, v => { t.from = v; app.persist(); })),
-        row('Écart entre deux textes', hotText({ value: t.gap, min: 0, max: 50, step: 1, unit: 'i', onChange: v => { t.gap = v; app.persist(); } })),
-        row('Durée maximum', hotText({ value: t.maxDur, min: 0, max: 30, step: 0.5, unit: 's', onChange: v => { t.maxDur = v; app.persist(); } }), { title: '0 = jusqu\'au temps suivant' })
+        row('Écart minimum', hotText({ value: t.gap, min: 0, max: 50, step: 1, unit: 'i', onChange: v => { t.gap = v; app.persist(); } })),
+        row('Durée max.', hotText({ value: t.maxDur, min: 0, max: 30, step: 0.5, unit: 's', onChange: v => { t.maxDur = v; app.persist(); } }), { title: '0 = jusqu\'au temps suivant' }),
+        h('div', { class: 'note' }, 'Écart : images laissées libres entre deux textes. Durée max. : 0 = chaque texte reste jusqu\'au suivant.')
       ]));
 
       const cv = h('canvas', { class: 'pv-canvas', width: 640, height: 360 });
@@ -278,19 +283,17 @@
         app.status.finish('ok', 'Animation « ' + name + ' » enregistrée', 'Dans la liste des animations (★), dans Mes effets, et pour les sous-titres et bandeaux.');
         render(view);
       });
+      if (app.textStyles) view.appendChild(app.textStyles.section(t, 'style', 'Style du texte', Core.splitLyrics(t.text, t.split)[0], { preview: false }));
       view.appendChild(section('Animation', [
         row('Style', picker(animOptions(), t.anim, pickAnim)),
         row('Entrée', hotText({ value: t.inF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.inF = v; if (fin) rebuild(); } })),
         row('Sortie', hotText({ value: t.outF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.outF = v; if (fin) rebuild(); } })),
         params,
-        h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, 'Aperçu simulé'))),
+        h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, 'Aperçu : animation et style'))),
         h('div', { class: 'row-buttons' }, saveAnim)
       ]));
       preview(cv);
-      if (app.textStyles) {
-        view.appendChild(app.textStyles.section(t, 'style', 'Style du texte', Core.splitLyrics(t.text, t.split)[0]));
-        view.appendChild(app.textStyles.colorsSection(() => render(view)));
-      }
+      if (app.textStyles) view.appendChild(app.textStyles.colorsSection(() => render(view)));
     }
 
     app.actions.titles = place;

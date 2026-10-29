@@ -129,24 +129,31 @@
       };
     }
 
-    // Aperçu : le texte stylé sur le plan de test.
-    function drawStyle(cv, st, text) {
-      const g = cv.getContext('2d'), W = cv.width, H = cv.height;
-      g.drawImage(Pv.shots().A, 0, 0, W, H);
-      const t = st.caps ? text.toUpperCase() : text, size = Math.round(H * (st.size ? Math.min(0.3, st.size / 600) : 0.13));
+    /* Texte stylé centré en (x, y) ; base : taille du texte pour un style sans taille (px). Sert
+       à l'aperçu du style et à celui des animations (onglet Textes). */
+    function paint(g, text, st, x, y, base) {
+      const H = g.canvas.height, t = st.caps ? text.toUpperCase() : text, size = Math.round(st.size ? H * Math.min(0.3, st.size / 600) : base);
       g.font = '800 ' + size + 'px ' + (st.font ? '"' + st.font.replace(/-/g, ' ') + '", ' : '') + app.UI.css('--font');
       g.textAlign = 'center'; g.textBaseline = 'middle';
-      const x = W / 2, y = H * 0.74, w = g.measureText(t).width;
-      if (st.box) { g.globalAlpha = st.boxOpacity / 100; g.fillStyle = st.box; g.fillRect(x - w / 2 - size * 0.4, y - size * 0.7, w + size * 0.8, size * 1.4); g.globalAlpha = 1; }
+      const w = g.measureText(t).width;
+      if (st.box) { g.save(); g.globalAlpha *= st.boxOpacity / 100; g.fillStyle = st.box; g.fillRect(x - w / 2 - size * 0.4, y - size * 0.7, w + size * 0.8, size * 1.4); g.restore(); }
       if (st.shadow) { g.shadowColor = 'rgba(0,0,0,0.6)'; g.shadowBlur = size * 0.25; g.shadowOffsetY = size * 0.08; }
       if (st.stroke && st.strokeWidth) { g.lineWidth = st.strokeWidth * size / 40; g.strokeStyle = st.stroke; g.lineJoin = 'round'; g.strokeText(t, x, y); }
       g.fillStyle = st.fill; g.fillText(t, x, y);
-      g.shadowColor = 'transparent';
+      g.shadowColor = 'transparent'; g.shadowBlur = 0; g.shadowOffsetY = 0;
+    }
+    // Aperçu : le texte stylé sur le plan de test.
+    function drawStyle(cv, st, text) {
+      const g = cv.getContext('2d');
+      g.drawImage(Pv.shots().A, 0, 0, cv.width, cv.height);
+      paint(g, text, st, cv.width / 2, cv.height * 0.74, cv.height * 0.13);
     }
 
     /* Section « Style du texte » : choix du style pour `owner` (objet de réglages, clé `key`),
        éditeur repliable pour créer ou modifier un style. */
-    function styleSection(owner, key, title, sample) {
+    function styleSection(owner, key, title, sample, opts) {
+      // opts.preview === false : l'onglet a son propre aperçu, on ne montre le nôtre qu'en édition.
+      const own = !opts || opts.preview !== false;
       const box = h('div');
       let draft = null;
       const refresh = () => {
@@ -154,8 +161,7 @@
         const cur = owner[key] || '', st = styleById(cur) || C.normStyle({});
         const cv = h('canvas', { class: 'pv-canvas style-preview', width: 480, height: 200 });
         box.appendChild(row('Style', picker(options(), cur, v => { owner[key] = v; draft = null; app.persist(); refresh(); })));
-        box.appendChild(cv);
-        drawStyle(cv, draft || st, sample || 'Ton texte ici');
+        if (own || draft) { box.appendChild(cv); drawStyle(cv, draft || st, sample || 'Ton texte ici'); }
         const edit = h('button', { class: 'action' }, draft ? 'Fermer l\'éditeur' : (cur ? 'Modifier / dupliquer…' : 'Créer un style…'));
         edit.addEventListener('click', () => { draft = draft ? null : Object.assign({}, st); refresh(); });
         box.appendChild(h('div', { class: 'row-buttons' }, edit));
@@ -210,7 +216,7 @@
     };
     app.importers.push({ exts: ['ase'], label: 'nuanciers', run: importAse });
 
-    app.textStyles = { section: styleSection, colorsSection, options, styleById, styleFx, colorPick, myColors, addColors };
+    app.textStyles = { section: styleSection, colorsSection, options, styleById, styleFx, colorPick, myColors, addColors, paint };
     app.services.colorPick = colorPick;
   });
 })(typeof self !== 'undefined' ? self : this);

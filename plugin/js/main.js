@@ -915,7 +915,7 @@
       isFull(pl) ? row('Plans', actionGroup([{ v: false, label: 'Tous' }, { v: true, label: 'Un sur deux' }], !!st.alternate, v => { st.alternate = v; persist(); }), { title: 'Un sur deux : alterne cadrage large et serré, pour masquer les jump cuts' }) : null,
       row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
       volRows,
-      row('Son sur les coupes', picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: 'Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)' })
+      row('Son',  picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: 'Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)' })
     ]));
 
     // Paramètres

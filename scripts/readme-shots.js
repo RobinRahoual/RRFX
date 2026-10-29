@@ -185,7 +185,10 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await tab('express');
   await page.waitForSelector('.xp-check');
   await page.waitForTimeout(600);
+  // Les 15 styles dépliés le temps du choix, puis la vue compacte (le style choisi y reste).
+  await page.click('.xp-more:has-text("Tous les styles")');
   await page.click('.xp-style:has-text("Rap énergique")');
+  await page.click('.xp-more:has-text("Moins de styles")');
   await close();
   await shot('express', null, 700);
   await mark('.section|1. Style', 'st');

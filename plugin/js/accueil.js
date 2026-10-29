@@ -44,6 +44,23 @@
     const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
     const TABS = [['express', '⚡ Express'], ['effects', 'Effets'], ['ramp', 'Rampe'], ['color', 'Couleur'], ['music', 'Musique'], ['titles', 'Textes'], ['speech', 'Parole'], ['formats', 'Formats'], ['assets', 'Ressources'], ['mine', 'Mes effets'], ['settings', 'Réglages']];
 
+    /* Ouvre l'onglet et amène l'outil en vue (panneau ou section ouverts) : sel, ou la section
+       dont le titre contient title ; focus : le champ reçoit le curseur. */
+    function reveal(tab, sel, focus, title) {
+      app.switchTab(tab);
+      setTimeout(() => {
+        const view = document.querySelector('.view.on');
+        const el = sel ? view && view.querySelector(sel) : view && Array.from(view.querySelectorAll('.section')).find(x => { const t = x.querySelector('.section-title'); return t && t.textContent.indexOf(title) >= 0; });
+        if (!el) return;
+        const box = el.closest('.lr-panel, .section') || el;
+        if (box.classList.contains('closed')) box.querySelector('.lr-head').click();
+        if (box.classList.contains('folded')) box.querySelector('.section-title').click();
+        const sc = document.getElementById('scroll'), nav = view.querySelector('.sec-nav');
+        sc.scrollTop += box.getBoundingClientRect().top - sc.getBoundingClientRect().top - (nav ? nav.offsetHeight + 4 : 4);
+        if (focus && el.focus) el.focus();
+      }, 30);
+    }
+
     function commands() {
       const A = app.actions, out = [];
       const act = (label, kind, run, hint) => out.push({ label, kind, run, hint: hint || '' });
@@ -63,10 +80,11 @@
       act('Couper les « euh » et répétitions', 'Action', () => A.cutFillers && A.cutFillers());
       act('Égaliser le son de la voix (-14 LUFS)', 'Action', () => A.levelVoice && A.levelVoice());
       act('Baisser la musique sous la voix', 'Action', () => A.duckMusic && A.duckMusic());
-      act('Importer une vidéo ou un son depuis un lien', 'Action', () => app.switchTab('assets'));
+      act('Importer une vidéo ou un son depuis un lien', 'Action', () => reveal('assets', 'input[aria-label="Lien à importer"]', true));
       act('Importer des presets, LUTs, couleurs…', 'Action', () => { app.switchTab('mine'); const b = Array.from(document.querySelectorAll('#view-mine .action')).find(x => /^Importer…$/.test(x.textContent)); if (b) b.click(); });
-      act('Mes LUTs', 'Action', () => app.switchTab('color'));
-      act('Dégradé de couleur', 'Action', () => app.gradients && app.gradients.apply());
+      act('Mes LUTs', 'Action', () => reveal('color', '[data-panel=luts]'));
+      act('Dégradé de couleur', 'Action', () => reveal('color', '[data-panel=gradient]'));
+      act('Style de texte et Mes couleurs', 'Action', () => reveal('titles', null, false, 'Style du texte'));
       act('Créer les chapitres YouTube', 'Action', () => { app.switchTab('speech'); if (A.chapters) A.chapters(); });
       act('Créer la copie 9:16', 'Action', () => A.formatCopy && A.formatCopy());
       act('Tester mon Premiere (compatibilité)', 'Action', () => { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); });

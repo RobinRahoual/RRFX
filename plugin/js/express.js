@@ -179,14 +179,16 @@
     // ---------------------------------------------------------------- interface
 
     const thumbs = new Map();
+    let showAll = false;
     function lookThumb(r) {
       const key = r.id + (r.id === 'mine' ? JSON.stringify(r.lookParams || {}) : '');
-      const c = h('canvas', { width: 160, height: 90, class: 'xp-thumb' }), g = c.getContext('2d');
+      // Bandeau 160 × 56 : le ciel et l'horizon du plan de test suffisent à montrer le look.
+      const c = h('canvas', { width: 160, height: 56, class: 'xp-thumb' }), g = c.getContext('2d');
       if (thumbs.has(key)) { g.putImageData(thumbs.get(key), 0, 0); return c; }
-      g.drawImage(Pv.shots().A, 0, 0, 160, 90);
+      g.drawImage(Pv.shots().A, 0, -22, 160, 90);
       const p = lookParams(r);
-      if (p) { const d = g.getImageData(0, 0, 160, 90); A.applyLut(d.data, D.buildLut(D.normalize(JSON.parse(JSON.stringify(p))), 9)); g.putImageData(d, 0, 0); }
-      thumbs.set(key, g.getImageData(0, 0, 160, 90));
+      if (p) { const d = g.getImageData(0, 0, 160, 56); A.applyLut(d.data, D.buildLut(D.normalize(JSON.parse(JSON.stringify(p))), 9)); g.putImageData(d, 0, 0); }
+      thumbs.set(key, g.getImageData(0, 0, 160, 56));
       return c;
     }
 
@@ -200,7 +202,15 @@
         h('div', { class: 'xp-hero-text' }, 'Choisis un style, RR FX enchaîne ce qu\'il faut : silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, bandeau, version 9:16. Chaque outil reste dispo à part.')));
 
       // 1. Style
-      const cards = h('div', { class: 'xp-styles' }, userRecipes().concat(R.RECIPES, [R.fromSettings(app.settings())]).map(rc => {
+      // Six styles affichés (le choisi toujours compris), les autres d'un clic.
+      const every = userRecipes().concat(R.RECIPES, [R.fromSettings(app.settings())]);
+      let shownStyles = every;
+      if (!showAll && every.length > 8) {
+        shownStyles = every.slice(0, 6);
+        const cur = every.find(rc => rc.id === x.recipe);
+        if (cur && shownStyles.indexOf(cur) < 0) shownStyles.push(cur);
+      }
+      const cards = h('div', { class: 'xp-styles' }, shownStyles.map(rc => {
         const card = h('button', { class: 'xp-style' + (rc.id === x.recipe ? ' on' : ''), title: rc.desc }, lookThumb(rc), h('b', null, rc.name), h('span', { class: 'xp-sub' }, rc.chain.slice(0, 4).map(nameOf).join(' · ') || 'Aucun effet'));
         card.addEventListener('click', () => { x.recipe = rc.id; app.persist(); render(); app.renderCTA(); });
         return card;
@@ -219,7 +229,9 @@
         app.persist(); render(); app.renderCTA();
         app.status.finish('ok', 'Style « ' + name + ' » enregistré', 'En tête des styles, et dans Mes effets pour l\'exporter ou le partager.');
       });
-      view.appendChild(section('1. Style', [cards, h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : '')), h('div', { class: 'row-buttons' }, saveStyle)]));
+      const more = every.length > 8 ? h('button', { class: 'action quiet xp-more', 'aria-expanded': String(showAll) }, showAll ? 'Moins de styles' : 'Tous les styles (' + every.length + ')') : null;
+      if (more) more.addEventListener('click', () => { showAll = !showAll; render(); });
+      view.appendChild(section('1. Style', [cards, h('div', { class: 'row-buttons' }, more), h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : '')), h('div', { class: 'row-buttons' }, saveStyle)]));
 
       // 2. Vérifications, selon les étapes de ce style
       const all = R.stepsOf(r), has = id => all.some(q => q.id === id && wants(r, q));
