@@ -23,7 +23,9 @@ RR FX le retrouve tout seul.
 
 ## Le panneau
 
-À la première ouverture, un **accueil** montre par où commencer (il revient avec *Ctrl+K > Afficher l'accueil*).
+À la première ouverture, tu choisis la langue, puis un **accueil** montre par où commencer (il revient avec *Ctrl+K >
+Afficher l'accueil*). En le fermant, la page Instagram [@robin.rahoual](https://www.instagram.com/robin.rahoual/)
+s'ouvre dans ton navigateur, cette fois-là seulement (l'accueil le dit).
 En haut du panneau, toujours visibles : le crédit, **🔍 la recherche rapide**, **▴ Réduire**, les onglets (sur deux lignes si le panneau est
 étroit : aucun n'est caché), le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
 sur le titre d'une section la replie (gardé d'une session à l'autre), et chaque onglet retrouve sa position quand

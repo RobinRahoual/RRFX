@@ -2324,6 +2324,7 @@
       "🎯 Au moment d'appliquer, la première image du plan s'affiche : entoure l'objet, RR FX le suit dans tout le plan.": "🎯 When applying, the first frame of the shot appears: draw around the object, RR FX follows it through the whole shot.",
       "🎵 Son (MP3)": "🎵 Sound (MP3)",
       "📷 Ma vraie image": "📷 My real image",
+      "📸 Ma page Instagram @robin.rahoual s'ouvre dans ton navigateur : astuces, nouveautés et coulisses de RR FX.": "📸 My Instagram page @robin.rahoual opens in your browser: tips, news and behind the scenes of RR FX.",
       "🙂 Le visage est cherché et suivi automatiquement dans chaque plan au moment d'appliquer (quelques secondes). L'aperçu ci-dessous suppose un visage en haut du cadre.": "🙂 The face is found and tracked automatically in each shot when applying (a few seconds). The preview below assumes a face at the top of the frame."
     },
     host: [

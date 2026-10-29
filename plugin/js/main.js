@@ -2257,6 +2257,7 @@
 
   function bindHeader() {
     $('instagram').addEventListener('click', () => Host.openURL(INSTAGRAM_URL));
+    app.services.openInstagram = () => Host.openURL(INSTAGRAM_URL);
     $('toggle-compact').addEventListener('click', toggleCompact);
     $('cta').addEventListener('click', () => { const a = ctaAction(); if (a.enabled && !S.busy) a.run(); });
     $('undo').addEventListener('click', undoLast);

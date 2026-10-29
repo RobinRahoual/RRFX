@@ -19,6 +19,8 @@
       let skip = false;
       try { skip = localStorage.getItem('rrfx-nowelcome') === '1'; } catch (e) { skip = false; }
       if (!force && (skip || s.welcomed === MAJOR)) return;
+      // Toute première ouverture (jamais vu l'accueil) : la page Instagram s'ouvre en fermant l'accueil.
+      const firstEver = !force && !s.welcomed && !s.instagramOpened;
       s.welcomed = MAJOR;
       app.persist();
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
@@ -29,11 +31,17 @@
         card('✨', _T('Effets et transitions'), _T('Plus de 30 transitions et mouvements (push, zoom lent, Ken Burns, punch-in…) sur une coupe, toutes les coupes ou les temps forts.')),
         card('🎨', _T('Couleur et formats'), _T('LOG → Rec.709, expo auto, raccord entre caméras, looks ; copies 9:16, 4:5, 1:1 recadrées ou sur fond flou.')),
         card('🔍', _T('Tout au clavier'), _T('Ctrl+K (ou /) cherche une action, un effet, un look ou un style.')),
-        h('div', { class: 'note' }, _T('Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage. Réglages > Test de compatibilité vérifie ton Premiere en un clic.')));
+        h('div', { class: 'note' }, _T('Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage. Réglages > Test de compatibilité vérifie ton Premiere en un clic.')),
+        firstEver ? h('div', { class: 'note' }, _T('📸 Ma page Instagram @robin.rahoual s\'ouvre dans ton navigateur : astuces, nouveautés et coulisses de RR FX.')) : null);
       app.modal(_T('Bienvenue dans RR FX ') + MAJOR + '.0', body, [
         { label: _T('Tester mon Premiere'), value: 'test' },
         { label: _T('C\'est parti'), value: 'go', primary: true }
       ]).then(v => {
+        if (firstEver) {
+          s.instagramOpened = true;
+          app.persist();
+          if (app.services.openInstagram) app.services.openInstagram();
+        }
         if (v === 'test') { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); } else if (v === 'go') app.switchTab('express');
       });
     }

@@ -757,11 +757,25 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await step('langue : choix au premier lancement', async () => {
     await page.evaluate(() => { localStorage.removeItem('rrfx-lang'); localStorage.removeItem('rrfx-nowelcome'); });
     const fresh = await browser.newPage({ viewport: { width: 360, height: 820 } });
+    await fresh.context().route('https://www.instagram.com/**', r => r.fulfill({ status: 200, contentType: 'text/html', body: 'Instagram' }));
     fresh.on('pageerror', e => errors.push('premier lancement : ' + e.message));
     await fresh.goto(url);
     await fresh.waitForSelector('.modal-title:has-text("Langue · Language")');
     await fresh.click('.modal footer button:has-text("English")');
     await fresh.waitForSelector('.modal-title:has-text("Welcome to RR FX")', { timeout: 8000 });
+    if (!/My Instagram page/.test(await fresh.textContent('.modal'))) throw new Error('accueil : la page Instagram n\'est pas annoncée');
+    // La page Instagram s'ouvre en fermant l'accueil, une seule fois.
+    const insta = fresh.waitForEvent('popup', { timeout: 5000 });
+    await fresh.click('.modal .cta');
+    const pop = await insta;
+    if (!/instagram\.com\/robin\.rahoual/.test(pop.url())) throw new Error('Instagram : ' + pop.url());
+    await pop.close();
+    await fresh.evaluate(() => window.RRFXApp.services.welcome());
+    let again = false;
+    fresh.once('popup', () => { again = true; });
+    await fresh.click('.modal .cta');
+    await fresh.waitForTimeout(300);
+    if (again) throw new Error('Instagram ouvert une deuxième fois');
     await fresh.close();
   });
 

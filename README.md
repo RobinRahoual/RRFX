@@ -626,7 +626,8 @@ besoin dans ton Premiere. La copie est supprimée ensuite, ton montage n'est pas
 
 ### 🚀 Pris en main en 30 secondes, à jour en un clic
 
-- À la première ouverture, tu choisis ta langue, puis un **accueil** te montre par où commencer.
+- À la première ouverture, tu choisis ta langue, puis un **accueil** te montre par où commencer, et ma page
+  Instagram s'ouvre pour suivre les astuces et les nouveautés (une seule fois).
 - Quand une nouvelle version sort : **Installer la mise à jour**, directement dans le panneau. Le pack est vérifié,
   ta version actuelle est gardée de côté, et rien ne change si quelque chose se passe mal.
 
