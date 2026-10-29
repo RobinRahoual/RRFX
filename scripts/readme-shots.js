@@ -429,7 +429,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.evaluate(() => localStorage.setItem('rrfx-lang', 'en'));
   await page.waitForTimeout(1500);
   await page.reload();
-  await page.waitForSelector('.tab[data-tab=speech]:has-text("Speech")');
+  await page.waitForFunction(() => /Speech/.test((document.getElementById('tabs') || {}).textContent || ''), null, { timeout: 15000 }).catch(async e => { throw new Error('anglais : ' + await page.evaluate(() => document.documentElement.lang + ' ' + document.getElementById('tabs').textContent)); });
   await tab('express');
   await shot('anglais', null, 700);
   await page.evaluate(() => localStorage.setItem('rrfx-lang', 'fr'));

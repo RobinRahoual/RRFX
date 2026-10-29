@@ -717,6 +717,9 @@
       status.phase(_T('Téléchargement'));
       const bytes = await Installer.download(Store.nodeRequire('https'), up.downloadUrl, p => status.progress(Math.round(p * 100), 100, _T('Téléchargement')));
       status.phase(_T('Vérification du pack'));
+      // Signature : le pack vient bien de RR FX (rien n'est écrit sinon).
+      const sig = up.signatureUrl ? new TextDecoder().decode(await Installer.download(Store.nodeRequire('https'), up.signatureUrl)) : '';
+      Installer.verifySignature(Store.nodeRequire('crypto'), bytes, sig);
       const files = Installer.filesOf(bytes, Store.zip && Store.zip.inflate, up.version);
       status.phase(_T('Installation'));
       const dir = Installer.extensionDir(location.href), backup = Store.path.join(Store.dir, 'Sauvegarde du panneau');

@@ -52,3 +52,19 @@ test('install replaces the panel files, keeps a backup, and rolls back on failur
   assert.throws(() => I.install(fs, path, path.join(tmp, 'nope'), files, backup), /introuvable/);
   fs.rmSync(tmp, { recursive: true, force: true });
 });
+
+test('verifySignature: a pack signed with the RR FX key passes, anything else is refused', () => {
+  const crypto = require('crypto');
+  const { publicKey, privateKey } = crypto.generateKeyPairSync('ed25519');
+  const pub = publicKey.export({ type: 'spki', format: 'der' }).toString('base64');
+  const bytes = new Uint8Array(Buffer.from('RRFX pack 2.7.0'));
+  const sig = crypto.sign(null, Buffer.from(bytes), privateKey).toString('base64');
+  assert.strictEqual(I.verifySignature(crypto, bytes, sig, pub), true);
+  const tampered = new Uint8Array(Buffer.from('RRFX pack 2.7.1'));
+  assert.throws(() => I.verifySignature(crypto, tampered, sig, pub), /Signature invalide/);
+  const other = crypto.generateKeyPairSync('ed25519').privateKey;
+  assert.throws(() => I.verifySignature(crypto, bytes, crypto.sign(null, Buffer.from(bytes), other).toString('base64'), pub), /Signature invalide/);
+  assert.throws(() => I.verifySignature(crypto, bytes, '', pub), /non signé/);
+  // Pas encore de clé dans le panneau : pas de vérification (versions d'avant la signature).
+  assert.strictEqual(I.verifySignature(crypto, bytes, '', ''), true);
+});

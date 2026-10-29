@@ -155,8 +155,9 @@
     if (!fs) return false;
     fs.mkdirSync(DIR, { recursive: true });
     const cp = nodeRequire('child_process');
-    if (isWin()) cp.exec('explorer "' + DIR + '"');
-    else cp.exec('open "' + DIR + '"');
+    // Sans passer par un shell : le chemin n'est jamais interprété comme une commande.
+    if (isWin()) cp.execFile('explorer.exe', [DIR], () => {});
+    else cp.execFile('open', [DIR], () => {});
     return true;
   }
 

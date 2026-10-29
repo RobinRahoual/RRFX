@@ -119,7 +119,7 @@
           const back = x.original ? h('button', { class: 'action quiet' }, _T('Revenir à l\'original')) : null;
           if (back) back.addEventListener('click', () => { app.speech.settings().srt = x.original; x.original = ''; x.lang = ''; app.persist(); app.switchTab('speech'); });
           box.appendChild(h('div', { class: 'row-buttons wrap' }, go, save, back));
-          box.appendChild(h('div', { class: 'note' }, (cues.length ? app.plural(cues.length, _T('sous-titre')) + ', ' + T.chars(cues) + _T(' caractères') + (x.lang ? _T(' · en ') + langName(x.lang).toLowerCase() : '') + '. ' : '') + _T('Le texte est envoyé à ') + (x.service === 'deepl' ? 'DeepL' : 'MyMemory') + _T(' pour être traduit ; les timings ne bougent pas.')));
+          box.appendChild(h('div', { class: 'note' }, (cues.length ? app.plural(cues.length, _T('sous-titre')) + ', ' + T.chars(cues) + _T(' caractères') + (x.lang ? _T(' · en ') + langName(x.lang).toLowerCase() : '') + '. ' : '') + _T('Le texte est envoyé à ') + (x.service === 'deepl' ? 'DeepL' : 'MyMemory') + _T(' pour être traduit ; les timings ne bougent pas.') + _T(' Contenu confidentiel (client, interview non publiée) : demande l\'accord avant, ou traduis à la main.')));
         };
         draw();
         return [box];

@@ -45,7 +45,7 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 <tr>
 <td align="center"><h3>20</h3><sub>speed ramps prédéfinies</sub></td>
 <td align="center"><h3>24</h3><sub>langues pour traduire tes sous-titres</sub></td>
-<td align="center"><h3>41</h3><sub>actions sur une touche ou un Stream Deck</sub></td>
+<td align="center"><h3>45</h3><sub>actions sur une touche ou un Stream Deck</sub></td>
 <td align="center"><h3>0 €</h3><sub>pas d'abonnement, pas de compte</sub></td>
 </tr>
 </table>
@@ -59,6 +59,7 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 | Écouter l'interview, repérer chaque blanc, couper, recoller | **Un clic** : les silences sont coupés sur une copie de ta séquence |
 | Taper les sous-titres, les caler, les animer un par un | **Ton `.srt` posé en textes animés**, mot par mot ou phrase par phrase |
 | Poser un zoom et un whoosh sur chaque coupe, à la main | **Toutes les coupes d'un coup**, avec leurs sons |
+| Glisser un fondu enchaîné et un fondu audio sur chaque coupe | **Les transitions de Premiere sur toutes les coupes**, en un clic |
 | Chercher le kick de la musique image par image | **Un marqueur sur chaque temps fort**, trouvé tout seul |
 | Recadrer chaque plan pour la version Reels | **Une copie 9:16 qui suit le visage**, en un clic |
 | Charger la LUT de ta caméra sur chaque rush | **Un calque de conversion** au-dessus de tous tes rushs, la bonne LUT par caméra |
@@ -107,9 +108,9 @@ sur une copie de ta séquence.
 | [✨ Effets, transitions, rampes](#effets) | [🎨 Couleur](#couleur) | [🔤 Textes et habillage](#textes) |
 | [📱 Formats et livraison](#formats) | [🗂️ Projet et ressources](#projet) | [🚀 Ton flux de travail](#flux) |
 
-**Nouveau dans la 2.6** : J-cut et L-cut en un clic, coupes recalées sur les blancs, correcteur de sous-titres,
-rythme du montage, export en lot, archive du projet, crédits musique, raccord sur une image de référence,
-vérification de l'image, astuce du jour et badges. [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
+**Nouveau dans la 2.7** : les **outils de Premiere en un clic** (transitions et fondus audio sur toutes les coupes,
+détection des changements de plan, piste de sous-titres native), des **onglets regroupés**, le menu **Fenêtres**
+pour n'afficher que tes outils, des **espaces de travail**, et les mises à jour **signées**. [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
 
 ---
 
@@ -409,6 +410,30 @@ Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toute
 </tr>
 </table>
 
+### Les outils de Premiere, en un clic
+
+> **Le problème :** Premiere sait faire un fondu enchaîné, un fondu audio ou une piste de sous-titres… mais une
+> coupe à la fois.
+
+L'onglet **Montage › Premiere** pilote les vrais outils de Premiere, partout d'un coup :
+
+- **Transitions de Premiere** sur toutes les coupes ou celles de la sélection : fondu enchaîné, fondu au noir ou
+  au blanc, fondu film, **Morph Cut** pour lisser un jump cut d'interview. Avant, centrées ou après la coupe.
+- **Fondus audio anti-clic** : 2 images de puissance constante sur chaque coupe, idéal après la coupe des silences.
+- **Changements de plan** : la détection de Premiere coupe une vidéo déjà montée, ou pose un marqueur à chaque plan.
+- **Sous-titres de Premiere** : ton `.srt` (corrigé, traduit, recalé sur tes coupes) devient une vraie piste de
+  sous-titres, à retoucher dans le panneau Texte de Premiere.
+- ✅ Ce sont des transitions et des pistes de Premiere : tu les modifies comme si tu les avais posées à la main, et
+  **↶ Annuler** retire les transitions.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/premiere-transitions.png" alt="Transitions de Premiere sur les coupes" width="250"><br><sub>Choisis la transition et le fondu audio</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/premiere-transitions-posees.png" alt="Transitions posées sur toutes les coupes" width="250"><br><sub>Posées sur toutes les coupes</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/premiere-plans.png" alt="Détection des changements de plan" width="250"><br><sub>Changements de plan et sous-titres</sub></td>
+</tr>
+</table>
+
 ### Overlays prêts à poser
 
 **16 overlays fournis** : light leaks, flares, bokeh, pellicule, VHS, glitch. Rien à télécharger. Ajoute aussi tes
@@ -590,7 +615,7 @@ une ligne, la tête de lecture y va. Et la même action peut passer **sur plusie
 <table>
 <tr>
 <td align="center" width="50%"><img src="docs/captures/outils/verification.png" alt="Vérifier avant export" width="250"><br><sub>Rouge : à corriger, orange : à regarder</sub></td>
-<td align="center" width="50%"><img src="docs/captures/outils/plusieurs-sequences.png" alt="Sur plusieurs séquences" width="250"><br><sub>Une action sur plusieurs séquences</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/plusieurs-sequences.png" alt="Plusieurs séquences : export et lot" width="250"><br><sub>Une action sur plusieurs séquences</sub></td>
 </tr>
 </table>
 
@@ -681,6 +706,25 @@ Et **importe une vidéo ou un son depuis un lien** (direct, Dropbox, Google Driv
 
 ## 🚀 Ton flux de travail
 
+### Ton panneau, à ta façon
+
+> **Le problème :** 50 outils, alors que tu en utilises 10.
+
+- **Onglets regroupés** : *Montage* (Effets, Rampe, Musique, Premiere) et *📚 Bibliothèque* (Ressources, Mes effets)
+  ouvrent leurs sous-onglets ; tout tient sur une ligne.
+- **▦ Fenêtres**, comme dans Premiere : affiche ou masque chaque onglet et chaque outil. Un outil masqué reste à un
+  Ctrl+K, un raccourci ou une macro.
+- **Espaces de travail** : *Essentiel*, *Interview et YouTube*, *Réseaux sociaux*, *Clip et événement*, ou le tien.
+- **Réglages rangés par thème** : Général, Contrôle, Temps, Projet, Plus.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/fenetres.png" alt="Menu Fenêtres et espaces de travail" width="250"><br><sub>Fenêtres et espaces de travail</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/espace-interview.png" alt="Espace Interview et YouTube" width="250"><br><sub>Seulement les outils de l'espace</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/reglages-themes.png" alt="Réglages rangés par thème" width="250"><br><sub>Réglages rangés par thème</sub></td>
+</tr>
+</table>
+
 ### Macros : tes enchaînements sur un seul bouton
 
 Enchaîne plusieurs actions RR FX et lance-les **d'un seul clic** : couper les silences, couper les « euh »,
@@ -697,7 +741,7 @@ bouton de Stream Deck.
 ### Tout au clavier, au Stream Deck, et sur tous tes ordinateurs
 
 - **Ctrl+K** (ou **/**) : tape deux lettres, appuie sur Entrée. Une action, un effet, un look : tout se trouve.
-- **Un raccourci pour chacune des 41 actions**, à ta façon.
+- **Un raccourci pour chacune des 45 actions**, à ta façon.
 - **Télécommande** : chaque action sur un bouton de **Stream Deck** ou de Companion.
 - **Synchro entre ordinateurs** par Dropbox, iCloud Drive, OneDrive ou Google Drive : tes effets, looks et
   réglages te suivent. Aucun compte.
@@ -722,7 +766,7 @@ bouton de Stream Deck.
   une **carte à partager** en story.
 - **Badges** : 1 h, 10 h, 100 h gagnées, 100 opérations, 15 outils différents…
 - **Temps passé par projet**, ton tarif horaire et un **export CSV** pour facturer. Rien ne quitte ton ordinateur.
-- **Astuce du jour** : un outil que tu n'as pas encore essayé, avec *Voir* pour y aller.
+- **Astuce du jour** (à activer dans Réglages) : un outil que tu n'as pas encore essayé, avec *Voir* pour y aller.
 
 <table>
 <tr>
@@ -737,8 +781,8 @@ bouton de Stream Deck.
 - À la première ouverture, tu choisis ta langue, puis un **accueil** te montre par où commencer.
 - **Test de compatibilité** : un clic, et RR FX vérifie sur une copie de ta séquence tout ce dont il a besoin
   dans ton Premiere.
-- Quand une nouvelle version sort : **Installer la mise à jour**, directement dans le panneau. Ta version actuelle
-  est gardée de côté, et rien ne change si quelque chose se passe mal.
+- Quand une nouvelle version sort : **Installer la mise à jour**, directement dans le panneau. Le pack est
+  **signé** et vérifié, ta version actuelle est gardée de côté, et rien ne change si quelque chose se passe mal.
 
 <table>
 <tr>

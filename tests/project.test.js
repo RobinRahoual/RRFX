@@ -39,6 +39,11 @@ test('no raw line/paragraph separators (they break regex literals in older engin
   });
 });
 
+test('docs/HOST-API.md lists every Premiere function (node scripts/host-api.js)', () => {
+  const { doc } = require('../scripts/host-api.js');
+  assert.strictEqual(read('docs/HOST-API.md'), doc());
+});
+
 test('host.jsx is built from src/host', () => {
   const { build } = require('../scripts/build-host.js');
   assert.strictEqual(read('plugin/jsx/host.jsx'), build(), 'node scripts/build-host.js');

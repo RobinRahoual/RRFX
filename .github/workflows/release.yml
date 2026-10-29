@@ -35,6 +35,21 @@ jobs:
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           echo "file=dist/RRFX-$VERSION-installation.zip" >> "$GITHUB_OUTPUT"
 
+      - name: Signer le pack
+        id: sign
+        env:
+          RRFX_SIGNING_KEY: ${{ secrets.RRFX_SIGNING_KEY }}
+          FILE: ${{ steps.package.outputs.file }}
+        run: |
+          # Une clé publique dans le panneau = les mises à jour doivent être signées.
+          if node -e "process.exit(require('./plugin/js/installer.js').PUBLIC_KEY ? 0 : 1)"; then
+            if [ -z "$RRFX_SIGNING_KEY" ]; then echo "Secret RRFX_SIGNING_KEY manquant : le pack ne peut pas être signé."; exit 1; fi
+            node scripts/sign.js "$FILE"
+            echo "sig=$FILE.sig" >> "$GITHUB_OUTPUT"
+          else
+            echo "Pas encore de clé de signature (node scripts/keys.js) : pack non signé."
+          fi
+
       - name: Vérifier que le tag correspond à la version
         if: startsWith(github.ref, 'refs/tags/')
         run: |
@@ -48,6 +63,7 @@ jobs:
           GH_TOKEN: ${{ github.token }}
           VERSION: ${{ steps.package.outputs.version }}
           FILE: ${{ steps.package.outputs.file }}
+          SIG: ${{ steps.sign.outputs.sig }}
         run: |
           TAG="v$VERSION"
           NOTES=$(cat <<'EOF'
@@ -67,8 +83,10 @@ jobs:
           NOTES="${NOTES//VERSION/$VERSION}"
           # Nouveautés de la version (.github/release-notes/vX.Y.Z.md), si le fichier existe.
           if [ -f ".github/release-notes/$TAG.md" ]; then NOTES="$NOTES"$'\n\n'"$(cat ".github/release-notes/$TAG.md")"; fi
+          ASSETS=("$FILE")
+          if [ -n "$SIG" ]; then ASSETS+=("$SIG"); fi
           if gh release view "$TAG" >/dev/null 2>&1; then
-            gh release upload "$TAG" "$FILE" --clobber
+            gh release upload "$TAG" "${ASSETS[@]}" --clobber
           else
-            gh release create "$TAG" "$FILE" --title "RR FX $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
+            gh release create "$TAG" "${ASSETS[@]}" --title "RR FX $VERSION" --notes "$NOTES" --target "$GITHUB_SHA"
           fi

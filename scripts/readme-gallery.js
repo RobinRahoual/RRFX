@@ -407,6 +407,39 @@ const SRT = '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2
     await shot('archive', '[data-sec=archive]');
   });
 
+  // ------------------------------------------------------------------ 2.7 : outils de Premiere, fenêtres
+  await step('premiere', async () => {
+    await goTab('native');
+    await close();
+    await shot('premiere-transitions', null, 400);
+    await page.click('[data-sec=transitions] .action.go');
+    await idle();
+    await shot('premiere-transitions-posees', '[data-sec=transitions]', 300);
+    await page.evaluate(() => { const t = document.querySelector('[data-sec=autres]'); if (t && t.classList.contains('folded')) t.querySelector('.section-title').click(); });
+    await page.click('[data-sec=scenes] .action.go');
+    await idle();
+    await shot('premiere-plans', '[data-sec=scenes]', 300);
+  });
+  await step('fenetres', async () => {
+    await goTab('speech');
+    await close();
+    await page.click('#open-windows');
+    await page.waitForSelector('.modal .win-spaces');
+    await shot('fenetres', null, 300);
+    await page.click('.modal .win-spaces .action:text-is("Interview et YouTube")');
+    await page.click('.modal footer .cta');
+    await goTab('formats');
+    await close();
+    await shot('espace-interview', null, 500);
+    await page.click('#open-windows');
+    await page.click('.modal footer button:has-text("Tout afficher")');
+  });
+  await step('reglages-themes', async () => {
+    await goTab('settings');
+    await close();
+    await shot('reglages-themes', null, 400);
+  });
+
   // ------------------------------------------------------------------ Réglages
   await step('reglages', async () => {
     await tab('settings');

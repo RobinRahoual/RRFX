@@ -22,7 +22,7 @@
       s.welcomed = MAJOR;
       app.persist();
       // Instagram : un bouton, jamais ouvert sans clic.
-      const follow = h('button', { class: 'action wl-follow' }, _T('📸 Suivre @robin.rahoual sur Instagram : astuces et nouveautés'));
+      const follow = h('button', { class: 'action wl-follow', title: _T('Astuces, nouveautés et coulisses de RR FX') }, _T('📸 Suivre @robin.rahoual sur Instagram'));
       follow.addEventListener('click', () => { s.instagramOpened = true; app.persist(); if (app.services.openInstagram) app.services.openInstagram(); });
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
       const body = h('div', { class: 'wl' },

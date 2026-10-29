@@ -13,7 +13,7 @@
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const Mo = root.RRFXMontage, Sp = root.RRFXSpeech, { Host } = app;
-    const { h, hotText, picker, row, checkbox } = app.UI;
+    const { h, hotText, row, checkbox } = app.UI;
 
     const st = () => {
       const s = app.settings();

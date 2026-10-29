@@ -11,6 +11,22 @@
   const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const REQUIRED = ['CSXS/manifest.xml', 'index.html', 'jsx/host.jsx', 'js/main.js'];
+  /* Clé publique (ed25519, SPKI en base64) des packs signés : node scripts/keys.js la met ici.
+     Tant qu'elle est vide, les packs ne sont pas vérifiés (versions d'avant la signature). */
+  const PUBLIC_KEY = '';
+
+  /* Le pack vient bien de RR FX : signature ed25519 (fichier .sig de la release, base64) du ZIP
+     entier. crypto : le module Node. → true, ou une erreur claire. */
+  function verifySignature(crypto, bytes, signature, publicKey) {
+    const key = publicKey === undefined ? PUBLIC_KEY : publicKey;
+    if (!key) return true;
+    if (!signature) throw new Error(_T('Pack non signé : mise à jour refusée. Télécharge-le depuis la page des versions.'));
+    if (!crypto || typeof crypto.verify !== 'function') throw new Error(_T('Vérification de signature indisponible dans ce Premiere : télécharge le pack depuis la page des versions.'));
+    const pub = crypto.createPublicKey({ key: Buffer.from(key, 'base64'), format: 'der', type: 'spki' });
+    const ok = crypto.verify(null, Buffer.from(bytes.buffer, bytes.byteOffset, bytes.byteLength), pub, Buffer.from(String(signature).trim(), 'base64'));
+    if (!ok) throw new Error(_T('Signature invalide : ce pack ne vient pas de RR FX, mise à jour refusée.'));
+    return true;
+  }
 
   /* Fichiers du panneau dans le pack d'installation (dossier « …/RRFX/ »), vérifiés.
      → [{ rel, data }] ; lève une erreur claire si le pack n'est pas le bon. */
@@ -87,5 +103,5 @@
     return files.length;
   }
 
-  return { filesOf, extensionDir, download, install, REQUIRED };
+  return { filesOf, extensionDir, download, install, verifySignature, PUBLIC_KEY, REQUIRED };
 });

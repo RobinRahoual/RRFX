@@ -24,12 +24,24 @@ RR FX le retrouve tout seul.
 ## Le panneau
 
 À la première ouverture, tu choisis la langue, puis un **accueil** montre par où commencer (il revient avec *Ctrl+K >
-Afficher l'accueil*). En le fermant, la page Instagram [@robin.rahoual](https://www.instagram.com/robin.rahoual/)
-s'ouvre dans ton navigateur, cette fois-là seulement (l'accueil le dit).
-En haut du panneau, toujours visibles : le crédit, **🔍 la recherche rapide**, **▴ Réduire**, les onglets (sur deux lignes si le panneau est
-étroit : aucun n'est caché), le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
+Afficher l'accueil*). Le bouton *Suivre @robin.rahoual sur Instagram* ouvre ma page
+[@robin.rahoual](https://www.instagram.com/robin.rahoual/) : rien ne s'ouvre sans clic.
+En haut du panneau, toujours visibles : le crédit, **🔍 la recherche rapide**, **▦ Fenêtres**, **⚙ Réglages**,
+**▴ Réduire**, les onglets, le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
 sur le titre d'une section la replie (gardé d'une session à l'autre), et chaque onglet retrouve sa position quand
 on y revient.
+
+### Onglets regroupés, Fenêtres et espaces de travail
+
+- Les onglets tiennent sur une ligne : **⚡ Express**, **Montage** (sous-onglets *Effets*, *Rampe*, *Musique*,
+  *Premiere*), **Parole**, **Couleur**, **Textes**, **Formats**, **📚** (*Ressources*, *Mes effets*). Un groupe
+  rouvre le dernier sous-onglet utilisé.
+- **▦ Fenêtres** (ou *Ctrl+K > Fenêtres*, ou le menu du panneau) : coche ou décoche chaque onglet et chaque outil
+  (section), comme le menu *Fenêtre* de Premiere. Un outil masqué reste disponible : la recherche rapide, son
+  raccourci ou une macro le réaffichent. *Réglages* ne se masque pas ; *Tout afficher* remet tout.
+- **Espaces de travail** : *Tout*, *Essentiel* (les outils de tous les jours), *Interview et YouTube*, *Réseaux
+  sociaux*, *Clip et événement*, ou les tiens (*Enregistrer cet espace…*). Ils se synchronisent avec tes autres
+  ordinateurs (*Synchro entre ordinateurs*).
 
 ### Onglet Express : ton montage en un clic
 
@@ -155,6 +167,26 @@ au-dessus du clip** (insérée si besoin, donc toujours sous tes calques de rég
 
 Premiere ne laisse pas les scripts piloter le *remappage temporel* : la copie est faite de morceaux de vitesse
 constante (« RR FX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux optique*, c'est fluide.
+
+### Onglet Montage › Premiere : les outils de Premiere en un clic
+
+- **Transitions de Premiere sur les coupes** : *Vidéo* (fondu enchaîné, fondu enchaîné film ou additif, fondu au
+  noir ou au blanc, Morph Cut), *Son* (puissance constante, gain constant, fondu exponentiel), *Durée* en images,
+  *Où* (toutes les coupes de la séquence ou celles de la sélection), *Position* (avant, centrée, après la coupe).
+  Ce sont les vraies transitions de Premiere, retrouvées par leur nom dans la langue de ton Premiere : modifiables
+  ensuite dans *Options d'effet*. **↶ Annuler** les retire. Les calques RR FX et les calques de réglage sont passés.
+- **Fondus audio anti-clic** : puissance constante, 2 images, sur toutes les coupes. À faire après la coupe des
+  silences ou des « euh ».
+- **Changements de plan** : la détection de Premiere (*Détection de modifications de scène*) sur les plans
+  sélectionnés : *Marqueurs* ou *Coupes*, sensibilité faible, moyenne ou forte, son lié coupé aussi. Ctrl+Z dans
+  Premiere pour revenir.
+- **Sous-titres de Premiere** : le `.srt` de l'onglet Parole, à sa place dans la séquence (départ choisi, recalé sur
+  les coupes faites), est enregistré dans `Documents/RRFX/Sous-titres` et devient une **piste de sous-titres** de
+  Premiere (Premiere 2022 ou plus). Le fichier est rangé dans le chutier *RR FX/Sous-titres*. Aussi : *Parole >
+  Sous-titres > En sous-titres de Premiere*.
+- **Les autres outils de Premiere** : le recadrage automatique sert aux copies 9:16 (Formats). Remix, montage basé
+  sur le texte et amélioration de la voix ne se pilotent pas depuis un plugin : RR FX a *Musique à la durée*,
+  *Montage par le texte* et *Égaliser la voix*.
 
 ### Conversion LOG → Rec.709 en un clic (onglet Couleur)
 
@@ -452,9 +484,6 @@ Dans le même onglet :
   clips ou pistes désactivés ou coupés, texte hors de la zone sûre, volume poussé au-delà de +6 dB (risque de
   saturation). Rouge : à corriger ; orange : à regarder. Un clic sur une ligne y amène
   la tête de lecture.
-- **Sur plusieurs séquences** : *Lister les séquences*, coche celles à traiter, choisis l'action (look en cours,
-  conversion LOG, copie au format choisi, vérification avant export, marqueurs des temps forts) : RR FX ouvre chaque
-  séquence et la traite, l'une après l'autre.
 - **Nouveau projet depuis un modèle** : Reels / TikTok, YouTube face cam, Interview / témoignage, Podcast vidéo, Vidéo d'entreprise,
   Aftermovie / clip. Sélectionne tes rushs dans le panneau Projet : RR FX crée la séquence au bon format avec eux,
   pose le calque de réglage et choisit le style Express et les styles des textes. *Enregistrer mes réglages comme
@@ -469,11 +498,14 @@ Dans le même onglet :
 - **Rythme du montage** : la durée de chaque plan de la piste vidéo la plus basse qui en a, en barres (orange :
   plus long que la limite choisie, 6 s par défaut). Moyenne, médiane, plan le plus long ; un clic sur un plan long y
   amène la tête de lecture, *Marquer les plans longs* pose un marqueur « RR FX · plan long » au début de chacun.
-- **Export en lot (Media Encoder)** : *Lister les séquences*, coche celles à exporter, choisis le préréglage (ceux de
-  Premiere sont trouvés tout seuls, ou un `.epr`) et le dossier (`Documents/RRFX/Exports` par défaut). Le nom vient
-  du modèle : `{client}`, `{projet}`, `{sequence}`, `{format}` (16x9, 9x16, 4x5, 1x1…), `{date}`, `{v}` ou `{vv}`
-  (numéro de version, qui avance après chaque export). Deux séquences du même nom ne s'écrasent pas. Chaque fichier
-  part dans la file de Media Encoder, qui démarre tout seul.
+- **Plusieurs séquences : export et lot** : *Lister les séquences*, coche celles à traiter, puis choisis l'*Action* :
+  - *Les exporter dans Media Encoder* : choisis le préréglage (ceux de Premiere sont trouvés tout seuls, ou un
+    `.epr`) et le dossier (`Documents/RRFX/Exports` par défaut). Le nom vient du modèle : `{client}`, `{projet}`,
+    `{sequence}`, `{format}` (16x9, 9x16, 4x5, 1x1…), `{date}`, `{v}` ou `{vv}` (numéro de version, qui avance après
+    chaque export). Deux séquences du même nom ne s'écrasent pas. Chaque fichier part dans la file de Media
+    Encoder, qui démarre tout seul.
+  - ou la même action sur chacune, l'une après l'autre : look en cours, conversion LOG, copie au format choisi,
+    vérification avant export, marqueurs des temps forts.
 - **Vérifier avant export** vérifie aussi l'image (option) : jusqu'à 12 plans, image du milieu ; plan sous- ou
   surexposé de plus de 0,6 IL, dominante bleue ou orange marquée. Corrige-les avec *Couleur > Expo et balance auto*.
 
@@ -656,12 +688,12 @@ ajouter d'un clic : *Interview prête* (silences, « euh », voix, sous-titres, 
 
 ### Astuce du jour et badges
 
-- **Astuce du jour** : une fois par jour, quelques secondes après l'ouverture, une ligne sous l'état présente un
-  outil que tu n'as pas encore utilisé, avec *Voir* pour y aller. *Réglages > Astuce du jour* pour l'arrêter ou en
-  voir une tout de suite.
+- **Astuce du jour** (désactivée au départ, *Réglages > Temps > Astuce du jour*) : une fois par jour, quelques
+  secondes après l'ouverture, une ligne sous l'état présente un outil que tu n'as pas encore utilisé, avec *Voir*
+  pour y aller.
 - **Badges** (*Réglages > Temps gagné avec RR FX*) : 1 h, 5 h, 10 h, une journée et 100 h gagnées ; 10, 100 et
-  1 000 opérations ; 5 et 15 outils différents. Un badge débloqué s'annonce en bas du panneau ; un clic le partage en
-  carte pour une story.
+  1 000 opérations ; 5 et 15 outils différents. Coche *M'annoncer les badges* pour qu'un badge débloqué s'annonce en
+  bas du panneau ; un clic le partage en carte pour une story.
 
 ### Télécommande (Stream Deck, Companion)
 
@@ -740,7 +772,12 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
   *Clip > Synchroniser* de Premiere ;
 - la coupe des silences : la lame QE (`razor`) sur les pistes audio, `remove` puis `move` des morceaux suivants
   (le son lié qui suit son image est vérifié avant d'être décalé) ;
-- la position d'un texte `.mogrt` par la *Trajectoire* du clip graphique (bandeau, sous-titres).
+- la position d'un texte `.mogrt` par la *Trajectoire* du clip graphique (bandeau, sous-titres) ;
+- les transitions de Premiere posées par QE (`getVideoTransitionByName`, `addTransition`) et leur retrait
+  (`Track.transitions`), la détection des changements de plan (`performSceneEditDetectionOnSelection`) et la piste
+  de sous-titres (`createCaptionTrack`).
+
+La [checklist de test](CHECKLIST-TESTS.md) liste tout ce qu'il faut essayer dans un vrai Premiere.
 
 ### Ancien nom (CutFX)
 

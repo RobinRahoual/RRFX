@@ -42,7 +42,9 @@
     return {
       version: String(release.tag_name).replace(/^v/i, ''),
       pageUrl: release.html_url || RELEASES_URL,
-      downloadUrl: pick(/-installation\.zip$/i) || pick(/\.zip$/i) || release.html_url || RELEASES_URL
+      downloadUrl: pick(/-installation\.zip$/i) || pick(/\.zip$/i) || release.html_url || RELEASES_URL,
+      // Signature du pack (ed25519), vérifiée avant l'installation.
+      signatureUrl: pick(/-installation\.zip\.sig$/i)
     };
   }
 

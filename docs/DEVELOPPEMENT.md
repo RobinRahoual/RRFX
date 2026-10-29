@@ -18,12 +18,40 @@ Quand le panneau tourne dans Premiere, ses outils de développement sont sur `ht
 
 ## Publier une nouvelle version
 
-1. Change `version` dans `package.json`, `plugin/CSXS/manifest.xml`, `plugin/js/host.js` et `plugin/jsx/host.jsx`
-   (un test vérifie qu'elles sont identiques).
+1. Change `version` dans `package.json`, `plugin/CSXS/manifest.xml`, `plugin/js/host.js` et
+   `src/host/01-noyau.jsx`, puis `node scripts/build-host.js` (un test vérifie qu'elles sont identiques).
 2. Écris les nouveautés dans `.github/release-notes/vX.Y.Z.md` (ajoutées sous les étapes d'installation).
 3. Pousse un tag du même numéro (`git tag vX.Y.Z && git push origin vX.Y.Z`), ou lance le workflow à la main :
    *Actions > Release > Run workflow*. GitHub Actions lance les tests, fabrique le pack et publie la release
-   (`.github/workflows/release.yml`).
+   (`.github/workflows/release.yml`). Le pack est **signé** (fichier `.sig` à côté du ZIP) si une clé est en place.
+
+### Signature des mises à jour
+
+La mise à jour en un clic vérifie que le pack vient bien de RR FX (signature ed25519 du ZIP entier) avant
+d'écrire quoi que ce soit. À faire une fois, **sur ton ordinateur** :
+
+```bash
+node scripts/keys.js
+gh secret set RRFX_SIGNING_KEY --repo RobinRahoual/RRFX < ~/.rrfx-signing-key.pem
+```
+
+`keys.js` garde la clé privée dans `~/.rrfx-signing-key.pem` (jamais dans le dépôt) et écrit la clé publique dans
+`plugin/js/installer.js` : commit ce fichier. Dès qu'une clé publique est dans le panneau, le workflow refuse de
+publier sans le secret, et les panneaux refusent un pack non signé ou mal signé. Clé perdue : `node scripts/keys.js
+--force`, mais les panneaux déjà installés devront être mis à jour à la main une fois.
+
+## Tester dans Premiere
+
+Les tests automatiques tournent sur une timeline simulée. La [checklist de test](CHECKLIST-TESTS.md) liste ce qu'il
+faut essayer dans un vrai Premiere (🔴 : le premier passage).
+
+## Côté Premiere : `src/host`
+
+`plugin/jsx/host.jsx` (le seul fichier que charge Premiere) est **assemblé** à partir de `src/host/*.jsx`, une partie
+par domaine (noyau, effets, musique, couleur, parole, projet, outils de Premiere…) : `node scripts/build-host.js`.
+Chaque partie ajoute ses fonctions publiques (`api.nom = guard(nom);`). ExtendScript = ES3 et ASCII (un test le
+vérifie). [HOST-API.md](HOST-API.md) liste chaque fonction appelée par le panneau (`node scripts/host-api.js`) :
+c'est le contrat à refaire pour passer à UXP, le reste du panneau ne change pas.
 
 ## Structure
 
@@ -31,7 +59,13 @@ Quand le panneau tourne dans Premiere, ses outils de développement sont sur `ht
 plugin/                  l'extension CEP (copiée telle quelle dans le dossier des extensions Adobe)
   CSXS/manifest.xml      manifeste (Premiere Pro 15.0+)
   index.html, css/       panneau
-  js/main.js             onglets, bloc d'état, application, overlays, partage, historique, raccourcis, menu
+  js/main.js             état, bloc d'état, fenêtres, historique, raccourcis, onglets regroupés, démarrage
+  js/effets.js           onglet Effets : effets, aperçus, overlays, application, enchaînement
+  js/rampe.js            onglet Rampe : speed ramps
+  js/bibliotheque.js     onglet Mes effets : capture, bibliothèque, import, partage, communauté
+  js/reglages.js         onglet Réglages, rangé par thème
+  js/fenetres.js         groupes d'onglets, menu Fenêtres, espaces de travail (testé)
+  js/natifs.js           onglet Montage > Premiere : transitions, changements de plan, sous-titres de Premiere
   js/music.js            onglet Musique : temps forts, montage auto, synchro son/image, volume
   js/titles.js           onglet Textes : titres et paroles animés (.mogrt)
   js/audio.js            analyse du son : filtres, attaques, tempo, volume, corrélation (sans DOM, testé)
@@ -81,12 +115,13 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/astuces.js          astuce du jour (un outil pas encore utilisé)
   js/updates.js          vérification des nouvelles versions sur GitHub
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
-  jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)
+  jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3), assemblé depuis src/host
+src/host/                le script Premiere, une partie par domaine (node scripts/build-host.js)
 install/                 scripts d'installation + LISEZMOI
 docs/captures/           captures et animations du README (npm run screenshots les refait ;
                          ONLY=nom node scripts/readme-gallery.js refait une seule étape de la galerie)
 .github/ISSUE_TEMPLATE/  formulaire « Partager un effet RR FX » (bibliothèque en ligne)
-scripts/                 fabrication du pack, test d'interface, ressources de démonstration, captures
+scripts/                 pack, test d'interface, captures, build-host, host-api, keys et sign (signature)
 tests/                   tests Node (sim.js = timeline Premiere simulée)
 ```
 
