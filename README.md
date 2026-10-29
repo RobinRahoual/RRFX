@@ -2,66 +2,127 @@
 
 <h1 align="center">RR FX</h1>
 
-<p align="center"><b>Le couteau suisse gratuit du montage dans Premiere Pro.</b><br>
-Transitions et mouvements, silences coupés, sous-titres, couleur, sons, formats réseaux : tout ce qui fait gagner du temps,<br>
-pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.</p>
+<h3 align="center">Arrête de faire à la main ce que Premiere Pro pourrait faire tout seul.</h3>
+
+<p align="center">Silences coupés, sous-titres posés, transitions calées sur la musique, LOG converti, version 9:16 prête :<br>
+<b>RR FX fait le travail répétitif du montage en un clic</b>, et tu gardes ton temps pour la partie créative.<br>
+Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 
 <p align="center">
-  <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger&style=for-the-badge&color=2680eb" alt="Télécharger RR FX"></a>
+  <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger%20gratuitement&style=for-the-badge&color=2680eb" alt="Télécharger RR FX gratuitement"></a>
 </p>
 <p align="center">
   <img src="https://img.shields.io/badge/prix-gratuit-2ea043" alt="Gratuit">
   <img src="https://img.shields.io/badge/Premiere%20Pro-2021%20%C3%A0%202026-9999ff" alt="Premiere Pro 2021 à 2026">
   <img src="https://img.shields.io/badge/Windows%20%7C%20macOS-555" alt="Windows et macOS">
+  <img src="https://img.shields.io/badge/langues-fran%C3%A7ais%20%7C%20anglais-555" alt="Français et anglais">
   <a href="https://www.instagram.com/robin.rahoual/"><img src="https://img.shields.io/badge/Instagram-%40robin.rahoual-e1306c" alt="Instagram @robin.rahoual"></a>
 </p>
 
 ---
 
-## Pourquoi RR FX ?
-
-- **🧰 Un couteau suisse.** Les mêmes outils servent partout : un Reel, une interview, une vidéo d'entreprise, un
-  aftermovie, un vlog YouTube ou un clip. Rien n'est rangé par métier, tout est à portée de clic.
-- **⚡ Ton montage en un clic.** Le mode Express enchaîne tout : de la coupe des silences ou du premier temps fort
-  jusqu'à la version Reels.
-- **🎯 Précis.** Chaque effet est posé sur ta coupe, tes marqueurs ou chaque temps fort de la musique, avec son son.
-- **🛡️ Ton montage ne bouge pas.** Les effets se posent sur des calques au-dessus de tes plans. Tes clips, ton son
-  et tes coupes ne sont jamais modifiés, et **↶ Annuler** retire tout.
-- **🧰 Tout au même endroit.** Transitions, mouvements, rampes, couleur, musique, parole, textes, formats et tes
-  propres ressources : un seul panneau dans Premiere.
-- **🧪 Fiable.** Un test de compatibilité vérifie ton Premiere en un clic, et les mises à jour s'installent toutes
-  seules.
-- **🌍 En français ou en anglais.** Au choix dès le premier lancement.
-- **⏱️ Tu vois le temps gagné.** RR FX compte ce qu'il t'a fait gagner, et le temps passé sur chaque projet.
-- **🎁 Gratuit.** Pas d'abonnement, pas de compte.
-
----
-
-## Nouveau dans la 2.6
-
-- 🎬 **J-cut et L-cut en un clic**, et ✂️ **coupes recalées sur les blancs** : plus jamais un mot coupé en deux.
-- 📝 **Correcteur de sous-titres** : lignes trop longues, lecture trop rapide, majuscules, ponctuation.
-- 📊 **Rythme du montage** : les plans trop longs repérés d'un coup d'œil.
-- 📤 **Export en lot** vers Media Encoder avec des noms propres, et 🗄️ **archive du projet**.
-- 🎵 **Crédits musique et sons**, 🎨 **raccord sur une image de référence**, ✅ **vérification de l'image** avant export.
-- 💡 **Astuce du jour** et 🏆 **badges** à partager.
-
-La 2.5 avait apporté : montage par le texte, musique à la durée de la vidéo, macros, versions de la séquence,
-dossiers surveillés, rangement du projet, proxies, temps passé par projet et temps gagné.
-
-Tout est détaillé plus bas, avec une capture par outil.
-
----
-
-## Ce que tu peux faire
+## Regarde-le travailler
 
 <table>
 <tr>
-<td width="56%">
+<td align="center" width="33%"><img src="docs/captures/animations/express.gif" alt="Express : un style, un clic, le montage est posé" width="250"><br><b>⚡ Express</b><br><sub>Choisis un style, clique : temps forts, montage, look, effets, sons et version 9:16 s'enchaînent.</sub></td>
+<td align="center" width="33%"><img src="docs/captures/animations/silences.gif" alt="Les silences repérés puis coupés" width="250"><br><b>🎙️ Silences coupés</b><br><sub>RR FX écoute, te montre les blancs en rouge, puis les coupe sur une copie de ta séquence.</sub></td>
+<td align="center" width="33%"><img src="docs/captures/animations/texte.gif" alt="Monter en barrant des phrases" width="250"><br><b>📝 Monter par le texte</b><br><sub>Barre les phrases ratées dans le texte : elles disparaissent de la timeline.</sub></td>
+</tr>
+</table>
 
-### ⚡ Express : ton montage en un clic
+---
 
-Choisis un style, clique. RR FX enchaîne **dans l'ordre** les étapes de ce style :
+## RR FX en chiffres
+
+<table>
+<tr>
+<td align="center" width="25%"><h3>50+</h3><sub>outils dans un seul panneau</sub></td>
+<td align="center" width="25%"><h3>36</h3><sub>transitions, mouvements et effets</sub></td>
+<td align="center" width="25%"><h3>14</h3><sub>styles Express prêts à l'emploi</sub></td>
+<td align="center" width="25%"><h3>16</h3><sub>overlays fournis (light leaks, VHS…)</sub></td>
+</tr>
+<tr>
+<td align="center"><h3>20</h3><sub>speed ramps prédéfinies</sub></td>
+<td align="center"><h3>24</h3><sub>langues pour traduire tes sous-titres</sub></td>
+<td align="center"><h3>41</h3><sub>actions sur une touche ou un Stream Deck</sub></td>
+<td align="center"><h3>0 €</h3><sub>pas d'abonnement, pas de compte</sub></td>
+</tr>
+</table>
+
+---
+
+## Ton montage, avant et avec RR FX
+
+| Ce que tu fais aujourd'hui | Avec RR FX |
+|---|---|
+| Écouter l'interview, repérer chaque blanc, couper, recoller | **Un clic** : les silences sont coupés sur une copie de ta séquence |
+| Taper les sous-titres, les caler, les animer un par un | **Ton `.srt` posé en textes animés**, mot par mot ou phrase par phrase |
+| Poser un zoom et un whoosh sur chaque coupe, à la main | **Toutes les coupes d'un coup**, avec leurs sons |
+| Chercher le kick de la musique image par image | **Un marqueur sur chaque temps fort**, trouvé tout seul |
+| Recadrer chaque plan pour la version Reels | **Une copie 9:16 qui suit le visage**, en un clic |
+| Charger la LUT de ta caméra sur chaque rush | **Un calque de conversion** au-dessus de tous tes rushs, la bonne LUT par caméra |
+| Raccourcir la musique pour qu'elle finisse avec la vidéo | **Une coupe invisible entre deux temps forts**, la vraie fin gardée |
+| Exporter chaque version, renommer chaque fichier | **Export en lot** dans Media Encoder, avec des noms propres |
+
+Et rien n'est irréversible : **↶ Annuler** retire chaque opération, même ancienne, et les coupes se font par défaut
+sur une copie de ta séquence.
+
+---
+
+## Fait pour ton type de vidéo
+
+<table>
+<tr>
+<td width="25%" valign="top"><b>📱 Reels, TikTok, Shorts</b><br><sub>Express « Reels dynamique », sous-titres mot par mot, mots clés en couleur, copie 9:16, extraits d'une longue vidéo, barre de progression.</sub><br><a href="#express">Voir les outils</a></td>
+<td width="25%" valign="top"><b>🎙️ Interviews, entreprise, podcasts</b><br><sub>Silences et « euh » coupés, montage par le texte, J-cut et L-cut, bandeau nom et fonction, voix égalisée, fond flou en 9:16.</sub><br><a href="#parole">Voir les outils</a></td>
+<td width="25%" valign="top"><b>▶️ YouTube et vlogs</b><br><sub>Zoom visage sur les jump cuts, chapitres YouTube, musique sous la voix, plans de coupe sur les mots clés, rythme du montage.</sub><br><a href="#parole">Voir les outils</a></td>
+<td width="25%" valign="top"><b>🎵 Clips, mariages, aftermovies</b><br><sub>Effets sur les temps forts, montage auto sur le rythme, speed ramps, overlays, conversion LOG, raccord entre caméras, looks.</sub><br><a href="#musique">Voir les outils</a></td>
+</tr>
+</table>
+
+---
+
+## Pourquoi les monteurs l'adoptent
+
+- **🛡️ Ton montage ne bouge pas.** Les effets se posent sur des calques au-dessus de tes plans. Tes clips, ton son et
+  tes coupes ne sont jamais modifiés, et les coupes se font sur une copie de ta séquence si tu veux.
+- **🎯 Précis.** Chaque effet est posé pile sur ta coupe, tes marqueurs ou chaque temps fort, avec son son.
+- **✏️ Tout reste modifiable.** Ce que pose RR FX est une image clé ou un effet Premiere normal : tu le retouches
+  dans *Options d'effet*, comme si tu l'avais fait à la main.
+- **🧰 Un seul panneau.** Montage, parole, musique, couleur, textes, formats, livraison, ressources : plus besoin de
+  dix plugins.
+- **🧪 Fiable.** Un test de compatibilité vérifie ton Premiere en un clic. Les mises à jour s'installent depuis le
+  panneau, avec retour arrière si quelque chose se passe mal.
+- **⏱️ Tu vois ce que tu gagnes.** RR FX compte le temps qu'il t'a fait gagner, et le temps passé sur chaque projet.
+- **🎁 Gratuit.** Pas d'abonnement, pas de compte, pas de publicité.
+
+---
+
+## Sommaire
+
+| | | |
+|---|---|---|
+| [⚡ Express](#express) | [🎙️ Vidéos qui parlent](#parole) | [🎵 Musique et rythme](#musique) |
+| [✨ Effets, transitions, rampes](#effets) | [🎨 Couleur](#couleur) | [🔤 Textes et habillage](#textes) |
+| [📱 Formats et livraison](#formats) | [🗂️ Projet et ressources](#projet) | [🚀 Ton flux de travail](#flux) |
+
+**Nouveau dans la 2.6** : J-cut et L-cut en un clic, coupes recalées sur les blancs, correcteur de sous-titres,
+rythme du montage, export en lot, archive du projet, crédits musique, raccord sur une image de référence,
+vérification de l'image, astuce du jour et badges. [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
+
+---
+
+<a id="express"></a>
+
+## ⚡ Express : ton montage en un clic
+
+> **Le problème :** chaque vidéo demande les mêmes vingt étapes, toujours dans le même ordre.
+> **La solution :** tu choisis un style, RR FX les enchaîne pour toi.
+
+### Un style, un clic, une vidéo montée
+
+Choisis un style, clique sur **Lancer**. RR FX enchaîne **dans l'ordre** les étapes de ce style :
 
 1. coupe les silences (sur une copie de ta séquence) ou pose les temps forts de ta musique ;
 2. monte tes rushs sur le rythme ;
@@ -69,766 +130,625 @@ Choisis un style, clique. RR FX enchaîne **dans l'ordre** les étapes de ce sty
 4. zoome un plan sur deux sur les jump cuts, pose les transitions **et leurs sons** sur chaque coupe ;
 5. pose les sous-titres, le bandeau nom et fonction ou les paroles, puis la version 9:16.
 
-Pas de musique pour une interview ? Pas de souci : seules les étapes utiles sont proposées. Tout reste
-modifiable, et **↶ Annuler** retire une étape à la fois.
+**14 styles prêts à l'emploi** : Reels dynamique, Face cam / UGC, YouTube face cam, Interview / témoignage,
+Entreprise épuré, Aftermovie, Mariage / cérémonie, Vlog voyage, Cinématique, Rap énergique, Drill sombre, Pop
+lumineux, Chill / lofi, Rétro VHS… et **ton style** à toi, enregistré une fois.
 
-</td>
-<td width="44%"><img src="docs/captures/outils/express-reels.png" alt="Onglet Express, style Reels" width="300"></td>
+- ✅ Seules les étapes utiles sont proposées : pas de musique pour une interview, pas de souci.
+- ✅ Avant de lancer, RR FX vérifie ce qui manque (séquence, musique, `.srt`) et te le dit.
+- ✅ Un compte rendu clair à la fin, et **↶ Annuler** retire une étape à la fois.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/express-reels.png" alt="Express, style Reels dynamique" width="250"><br><sub><b>1.</b> Choisis ton style</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/express-etapes.png" alt="Les étapes du style, à cocher" width="250"><br><sub><b>2.</b> Garde les étapes utiles</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/express-resultat.png" alt="Compte rendu du montage express" width="250"><br><sub><b>3.</b> Ton montage est prêt</sub></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/express-interview.png" alt="Styles prêts à l'emploi" width="300"></td>
-<td width="56%">
-
-### 🎬 14 styles prêts à l'emploi
-
-**Reels dynamique**, **Face cam / UGC**, **YouTube face cam**, **Interview / témoignage**, **Entreprise épuré**,
-**Aftermovie**, **Mariage / cérémonie**, **Vlog voyage**, **Cinématique**, **Rap énergique**, **Drill sombre**,
-**Pop lumineux**, **Chill / lofi**, **Rétro VHS**… ou **ton style** à toi. Ce sont des points de départ : prends
-celui qui colle à ta vidéo, décoche les étapes inutiles.
-
-Chaque style règle tout : les étapes, le rythme des plans, les transitions, le look, les sons et l'animation des
-textes. Un compte rendu clair à la fin : ce qui a été fait, étape par étape.
-
-</td>
+<td align="center"><img src="docs/captures/outils/express-styles.png" alt="Les styles Express" width="250"><br><sub>Les styles de musique : rap, drill, pop, lofi…</sub></td>
+<td align="center"><img src="docs/captures/outils/express-interview.png" alt="Style Interview / témoignage" width="250"><br><sub>Interview : silences, fond flou, sous-titres</sub></td>
+<td align="center"><img src="docs/captures/outils/modeles.png" alt="Nouveau projet depuis un modèle" width="250"><br><sub>Ou pars d'un modèle de projet</sub></td>
 </tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="parole"></a>
+
+## 🎙️ Vidéos qui parlent
+
+Interviews, podcasts filmés, YouTube, vidéos d'entreprise, face cam : tout ce qui prend des heures quand quelqu'un
+parle à la caméra.
+
+### Couper les silences en un clic
+
+> **Le problème :** une interview de 20 minutes, c'est des dizaines de blancs à repérer, couper et recoller.
+
+1. Sélectionne tes plans, clique **Analyser** : RR FX écoute le son et te montre les blancs en rouge.
+2. Règle la sensibilité, le silence minimum et la marge autour des mots si besoin.
+3. **Couper les silences** : l'image et le son sont recollés, toujours synchro.
+
+- ✅ Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque blanc.
+- ✅ Les sous-titres se recalent tout seuls sur le nouveau montage.
+
+<table>
 <tr>
-<td width="56%">
-
-### ⚡ Transitions et effets en un clic
-
-**36 effets** prêts à l'emploi, pour toutes tes vidéos :
-
-- **Transitions modernes** : push, zoom lent, zoom traversant, pop, fondus au blanc et au noir, fondu flou.
-- **Zoom visage** : RR FX trouve le visage dans chaque plan et zoome sur les yeux **en les suivant** (+20 % par
-  défaut). Les yeux restent à leur place à l'écran, ou sont recentrés : parfait pour la face cam et les interviews.
-  En coupe sèche, en arrivée douce ou en zoom progressif.
-- **Stabiliser le visage** : la tête reste au même endroit du cadre même si la personne bouge.
-- **Zoom suivi (objet)** : entoure un produit, un logo ou une personne sur la première image, RR FX le suit et
-  zoome dessus.
-- **Mouvements** sur tout le plan : Ken Burns (photos d'événement), zoom lent, caméra à l'épaule, punch-in.
-- **Effets de clip** : flashs, flickers, zooms, shakes, glitchs, motion blur.
-
-Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toutes les coupes de la séquence**,
-**tes marqueurs**, **chaque temps fort** ou **tous les plans**.
-- **Les sons avec** : whooshs et impacts fournis, calés pile sur chaque coupe.
-- Tout reste modifiable ensuite dans *Options d'effet*, comme si tu l'avais fait à la main.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/effets-mouvements.png" alt="Zoom visage qui suit les yeux" width="300"></td>
+<td align="center" width="33%"><img src="docs/captures/outils/parole.png" alt="Les silences repérés en rouge" width="250"><br><sub>Les blancs repérés, rien n'est encore coupé</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/silences-resultat.png" alt="Silences coupés sur une copie" width="250"><br><sub>Coupés, sur une copie de ta séquence</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/zoom-visage-parole.png" alt="Zoom visage sur les jump cuts" width="250"><br><sub>Puis un zoom visage un plan sur deux</sub></td>
 </tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/parole.png" alt="Couper les silences" width="300"></td>
-<td width="56%">
+</table>
 
-### 🎙️ Couper les silences en un clic
-
-Pour YouTube, les vlogs, les interviews et les podcasts filmés. Sélectionne tes plans, clique **Analyser** :
-RR FX écoute le son et te montre les blancs en rouge, avant de toucher à quoi que ce soit.
-
-- **Couper** : les blancs sont retirés, l'image et le son recollés et toujours synchro.
-- Par défaut sur **une copie** de ta séquence : l'originale reste intacte. Ou juste un marqueur sur chaque silence.
-- Sensibilité, silence minimum et marge autour des mots réglables.
-- Puis **Zoom visage** : un plan sur deux resserré sur les yeux, chaque jump cut devient un changement de cadre.
-- L'onglet Parole a son **sommaire** : un clic amène à l'outil voulu, et le bouton bleu reprend le dernier utilisé.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### ✂️ Les « euh » en moins
+### Les « euh » et les répétitions en moins
 
 RR FX repère dans le son les **« euh », « hum » et hésitations** (une voyelle tenue entre deux pauses), et dans
 ton `.srt` les **répétitions** (« on va, on va ») et les **faux départs**.
 
-- Coupés sur une copie de ta séquence, directement, ou simplement **marqués** pour vérifier d'abord.
-- Les sous-titres se recalent tout seuls sur chaque coupe.
+- ✅ Coupés sur une copie, directement, ou simplement **marqués** pour vérifier d'abord.
+- ✅ Trois sensibilités, et les sous-titres recalés sur chaque coupe.
 
-</td>
-<td width="44%"><img src="docs/captures/outils/parole-euh.png" alt="Couper les euh et les répétitions" width="300"></td>
-</tr>
+<table>
 <tr>
-<td width="44%"><img src="docs/captures/outils/suivi-objet.png" alt="Zoom suivi : l'objet entouré sur la première image" width="300"></td>
-<td width="56%">
-
-### 🎯 Un zoom qui suit ton produit
-
-**Zoom suivi (objet)** : entoure un produit, un logo ou une personne sur la première image du plan. RR FX le
-retrouve image par image et zoome dessus pendant tout le plan.
-
-- Idéal pour la pub, l'e-commerce, les démos et le sport.
-- L'objet reste à sa place à l'écran, ou il est recentré. Arrivée douce ou sèche.
-- **Stabiliser le visage** fait pareil avec une tête : elle ne bouge plus dans le cadre.
-
-</td>
+<td align="center" width="50%"><img src="docs/captures/outils/parole-euh.png" alt="Réglages des euh et répétitions" width="250"><br><sub>Sensibilité et façon de couper</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/euh-resultat.png" alt="Euh et répétitions marqués" width="250"><br><sub>Marqués pour vérifier avant de couper</sub></td>
 </tr>
-<tr>
-<td width="56%">
+</table>
 
-### 💬 Sous-titres, mots clés et bandeaux
+### Monter en barrant du texte
+
+> **Le problème :** retrouver dans la timeline la phrase ratée que tu as entendue il y a dix minutes.
+
+Ton `.srt` s'affiche comme un texte, phrase par phrase. **Barre une phrase, elle disparaît de la timeline.**
+
+- ✅ **Un clic sur une phrase** : la tête de lecture y va.
+- ✅ **Barrer les prises ratées** : RR FX repère tout seul les phrases recommencées et les « attends, je reprends ».
+- ✅ **Cherche un mot** dans tout le texte, et barre d'un coup les phrases trouvées.
+- ✅ Les coupes se font sur une copie si tu veux, et les sous-titres restants sont **recalés**.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/montage-texte.png" alt="Phrases barrées dans le texte" width="250"><br><sub>Barre les phrases à retirer</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/texte-prises.png" alt="Prises ratées barrées automatiquement" width="250"><br><sub>Les prises ratées trouvées toutes seules</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/texte-recherche.png" alt="Recherche d'un mot dans le texte" width="250"><br><sub>Cherche un mot dans toute l'interview</sub></td>
+</tr>
+</table>
+
+### J-cut, L-cut et coupes propres
+
+> **Le problème :** des coupes « cut sec » qui font amateur, et des mots coupés en deux.
+
+- **J-cut / L-cut en un clic** sur toutes les coupes de la sélection : on entend la phrase suivante avant de voir la
+  personne, ou la voix continue sur le plan d'après. Le raccord des documentaires.
+- **Coupes sur les blancs** : RR FX écoute chaque coupe ; si elle tombe au milieu d'un mot, elle glisse de quelques
+  images vers le blanc le plus proche, image et son ensemble.
+- ✅ Le décalage se règle en images, et **↶ Annuler** remet les coupes droites.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/raccords.png" alt="Réglages J-cut et L-cut" width="250"><br><sub>J-cut ou L-cut, décalage en images</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/raccords-poses.png" alt="L-cut posés" width="250"><br><sub>Posés sur toutes les coupes</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/coupes-blancs.png" alt="Coupes déplacées sur les blancs" width="250"><br><sub>Les coupes recalées sur les blancs</sub></td>
+</tr>
+</table>
+
+### Sous-titres animés, mots clés et bandeaux
 
 - **Sous-titres** : importe un `.srt` (Premiere le crée avec sa transcription) et RR FX pose chaque phrase en texte
-  animé. **Mot par mot** pour le style TikTok, ou 3 mots, ou la phrase entière. Recalés tout seuls après la coupe
-  des silences et des « euh ».
-- **Mots clés en couleur** : chiffres, mots forts et ta propre liste ressortent en jaune (ou la couleur de ton
-  choix), avec un **emoji** et un petit **« pop » sonore** en option.
-- **Bandeau nom et fonction** pour tes interviews et témoignages, en bas à gauche, animé.
+  animé. **Mot par mot** pour le style TikTok, 3 mots, ou la phrase entière.
+- **Mots clés en couleur** : chiffres, mots forts et ta propre liste ressortent en jaune (ou ta couleur), avec un
+  **emoji** et un petit **« pop » sonore** en option.
+- **Bandeau nom et fonction** pour tes interviews, animé, en bas à gauche, au centre ou en haut.
 
-</td>
-<td width="44%"><img src="docs/captures/outils/parole-sous-titres.png" alt="Sous-titres et bandeau" width="300"></td>
-</tr>
+<table>
 <tr>
-<td width="44%"><img src="docs/captures/outils/enchainement.png" alt="Enchaînement d'effets" width="300"></td>
-<td width="56%">
-
-### 🥁 Des effets qui suivent la musique
-
-Choisis 2 à 4 effets (Maj + clic) : ils **s'enchaînent sur chaque temps fort**, dans l'ordre ou au hasard.
-
-- Zoom sur le kick, flash sur la caisse claire, shake sur le drop.
-- En option, **l'intensité suit le volume** : plus doux sur le couplet, plus fort sur le refrain.
-
-</td>
+<td align="center" width="33%"><img src="docs/captures/outils/parole-sous-titres.png" alt="Sous-titres depuis un .srt" width="250"><br><sub>Ton .srt en textes animés</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/mots-cles.png" alt="Mots clés en couleur, emoji et bruitage" width="250"><br><sub>Mots clés, emojis et bruitages</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/bandeau.png" alt="Bandeau nom et fonction" width="250"><br><sub>Bandeau nom et fonction</sub></td>
 </tr>
+</table>
+
+### Des sous-titres propres, et dans 24 langues
+
+- **Correcteur** : lignes de plus de 42 caractères, lecture trop rapide (plus de 20 caractères par seconde),
+  sous-titres trop courts, majuscules oubliées, espaces en trop, espace avant « : ; ! ? ». **Tout corriger**
+  recoupe les lignes, allonge les sous-titres trop rapides et répare la ponctuation.
+- **Traduction** sous-titre par sous-titre, **les timings ne bougent pas** : MyMemory (gratuit, sans compte) ou
+  DeepL (avec ta clé, gratuite jusqu'à 500 000 caractères par mois).
+
+<table>
 <tr>
-<td width="56%">
-
-### ✨ Overlays prêts à poser
-
-**16 overlays fournis** : light leaks, flares, bokeh, pellicule, VHS, glitch. Rien à télécharger.
-
-- Ajoute aussi tes propres vidéos et images, ou un dossier entier.
-- Posés sur tes coupes avec un fondu et le bon mode de fusion, différents à chaque coupe.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/overlays.png" alt="Overlays" width="300"></td>
+<td align="center" width="33%"><img src="docs/captures/outils/correcteur-sous-titres.png" alt="Correcteur de sous-titres" width="250"><br><sub>Les problèmes listés, un clic pour y aller</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/correcteur-corrige.png" alt="Sous-titres corrigés" width="250"><br><sub>Tout corrigé en un clic</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/traduction.png" alt="Traduire les sous-titres" width="250"><br><sub>Traduit dans 24 langues</sub></td>
 </tr>
+</table>
+
+### Le son de la voix réglé tout seul
+
+- **Égaliser la voix** : chaque plan parlé amené au même niveau (-14 LUFS pour YouTube et les réseaux, -16
+  podcast, -23 TV), sans dépasser -1 dB. Débruitage en option.
+- **Musique sous la voix** : elle baisse quand on parle et remonte dans les pauses.
+- **Respirations et clics de bouche** baissés sans rien couper (-6, -12, -20 dB ou muet).
+- **Chapitres YouTube** : la liste « 00:00 Titre » prête à coller, depuis tes marqueurs ou les blancs du `.srt`.
+
+<table>
 <tr>
-<td width="44%"><img src="docs/captures/outils/rampes-predefinies.png" alt="Speed ramps prédéfinies" width="300"></td>
-<td width="56%">
-
-### 🏎️ Des speed ramps qui ne cassent pas ta coupe
-
-Dessine ta courbe de vitesse (de 10 % à 1000 %) ou pars d'une des **20 rampes prédéfinies**, rangées par usage :
-avant la coupe, après la coupe, sur le temps fort, plan entier (coup de fouet, claque sur la coupe, quasi-arrêt,
-double pulsation, timelapse, escalier…).
-
-- **Ta coupe reste à sa place**, ton son aussi.
-- Cale la durée sur le tempo : ½, 1, 2 ou 4 temps.
-- Tes rampes s'enregistrent, s'exportent et **s'importent** (fichier ou code de partage).
-
-</td>
+<td align="center" width="33%"><img src="docs/captures/outils/parole-son.png" alt="Voix égalisée et musique sous la voix" width="250"><br><sub>Voix égalisée, musique sous la voix</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/respirations.png" alt="Respirations et clics de bouche" width="250"><br><sub>Respirations et clics baissés</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/chapitres.png" alt="Chapitres YouTube" width="250"><br><sub>Chapitres YouTube prêts à coller</sub></td>
 </tr>
+</table>
+
+### Des plans de coupe sur les mots clés
+
+Nomme tes plans de coupe comme ce qu'ils montrent (`logo.mp4`, `cafe_terrasse.mov`…) : quand le mot est dit dans
+les sous-titres, le plan apparaît au-dessus de la personne qui parle.
+
+- ✅ **Voir les correspondances** avant de poser : chaque mot et le plan qu'il appelle.
+- ✅ Durée, écart minimum et nombre maximum réglables.
+
+<p align="center"><img src="docs/captures/outils/plans-de-coupe.png" alt="Plans de coupe sur les mots clés" width="250"></p>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="musique"></a>
+
+## 🎵 Musique et rythme
+
+### Les temps forts de ta musique, trouvés tout seuls
+
+> **Le problème :** chercher le kick image par image pour caler une coupe.
+
+RR FX écoute ta musique et trouve **les kicks, les caisses claires ou la grille du tempo**. Un clic pose un marqueur
+sur chaque temps fort, et les effets, les textes et le montage auto s'en servent directement.
+
+- ✅ **Des effets qui s'enchaînent** sur les temps forts : zoom sur le kick, flash sur la caisse claire, shake sur le
+  drop, dans l'ordre ou au hasard.
+- ✅ **L'intensité suit le volume** : plus doux sur le couplet, plus fort sur le refrain.
+
+<table>
 <tr>
-<td width="56%">
-
-### 🎨 Du LOG au Rec.709 en un clic
-
-Tu filmes en S-Log3, V-Log, C-Log, F-Log, D-Log ou Apple Log ? **Enregistre ta caméra une fois**, pour tous tes
-projets.
-
-- Importe la LUT de ton fabricant, ou laisse RR FX la calculer.
-- Un clic : un calque Lumetri au-dessus de tous tes rushs, **la LUT déjà chargée**.
-- Plusieurs caméras ? RR FX **reconnaît la caméra de chaque plan** et met la bonne LUT.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/conversion.png" alt="Conversion LOG vers Rec.709" width="300"></td>
+<td align="center" width="33%"><img src="docs/captures/outils/musique.png" alt="Temps forts de la musique" width="250"><br><sub>Le morceau analysé, les temps forts trouvés</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/enchainement.png" alt="Enchaînement d'effets sur les temps forts" width="250"><br><sub>Plusieurs effets qui s'enchaînent</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/volume-intensite.png" alt="Intensité qui suit le volume" width="250"><br><sub>L'intensité qui suit la musique</sub></td>
 </tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/raccord.png" alt="Expo auto et raccord entre caméras" width="300"></td>
-<td width="56%">
+</table>
 
-### 🎯 Expo auto et raccord entre caméras
-
-- **Expo et balance des blancs auto** : chaque plan est analysé et corrigé, avec mesure.
-- **Raccord** : ton iPhone prend le rendu de ton boîtier. Choisis une image de référence, sélectionne les plans à
-  raccorder, c'est fait, avec un avant/après.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🖌️ L'étalonnage comme dans Lightroom
-
-Les mêmes panneaux que Lightroom : réglages de base, courbe des tonalités, mélangeur de couleurs, roues
-d'étalonnage, calibrage.
-
-- **Looks** prêts à l'emploi (Clip musical, Film chaud, Nuit bleue…) et avant/après sur ta vraie image.
-- Un clic pour l'appliquer dans Premiere. Exporte aussi en **LUT .cube** ou en **DCTL pour DaVinci Resolve**.
-- Un **sommaire** toujours visible : Looks, Réglages, Courbe, Roues, Mes LUTs, Dégradés, LOG, Raccord, en un clic.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/couleur.png" alt="Étalonnage façon Lightroom" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/mes-luts.png" alt="Mes LUTs" width="300"></td>
-<td width="56%">
-
-### 📚 Toutes tes LUTs, dans tous tes projets
-
-Fini de réimporter tes LUTs à chaque projet pour en tester une.
-
-- **Importe-les une fois** (.cube, .3dl, .look… ou un dossier entier) : elles restent dans *Mes LUTs*.
-- **Une vignette par LUT sur ta vraie image**, un grand aperçu (maintiens le clic pour voir l'avant), recherche et
-  favorites.
-- Double-clic : posée dans Premiere (calque Lumetri, LUT chargée), sur le plan visé ou toute la séquence.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🌈 Dégradés de couleur
-
-Un ciel plus orangé, une teinte aux couleurs de ta marque, une vignette chaude : un **dégradé fondu sur l'image**
-(lumière tamisée, incrustation, produit…).
-
-- 6 dégradés fournis, ou les tiens : deux couleurs, un angle, linéaire ou radial.
-- **Colle un dégradé CSS** (uiGradients, CSS Gradient, Figma) : il est repris tel quel.
-- Enregistre-le, partage-le comme un effet.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/degrade.png" alt="Dégradé de couleur" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/musique.png" alt="Temps forts de la musique" width="300"></td>
-<td width="56%">
-
-### 🎵 Les temps forts de ta musique
-
-RR FX écoute ta musique et trouve **les kicks, les caisses claires ou la grille du tempo**.
-
-- Un clic pose un marqueur sur chaque temps fort.
-- Les effets, les textes et le montage auto s'en servent directement.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🎬 Le montage qui se fait tout seul
+### Le montage qui se fait tout seul
 
 - **Montage auto** : tes rushs posés l'un après l'autre, un plan tous les 1, 2, 4 ou 8 temps.
 - **Synchro son/image en un clic** : en playback, l'image se cale sur la musique ; en multicam, les caméras se
   calent entre elles.
 - **Multicam sur le rythme** : une caméra différente à chaque temps fort.
 
-</td>
-<td width="44%"><img src="docs/captures/outils/montage.png" alt="Montage auto et synchro" width="300"></td>
-</tr>
+<table>
 <tr>
-<td width="44%"><img src="docs/captures/outils/textes.png" alt="Paroles animées" width="300"></td>
-<td width="56%">
-
-### 🔤 Titres et paroles animés
-
-Colle tes textes ou tes paroles : **une ligne par temps fort**, par marqueur ou à durée fixe, animée (Pop, Zoom,
-Glissement, Impact…).
-
-- Avec ta police et ton style : exporte un titre de Premiere en modèle, RR FX s'en sert.
-- **Tes animations** s'enregistrent et s'importent, comme tes modèles `.mogrt`.
-- Un seul aperçu montre l'animation **avec ton style de texte**.
-
-</td>
+<td align="center" width="50%"><img src="docs/captures/outils/montage.png" alt="Montage auto sur le rythme" width="250"><br><sub>Un plan tous les N temps</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/synchro.png" alt="Synchroniser le son et l'image" width="250"><br><sub>Synchro playback et multicam</sub></td>
 </tr>
+</table>
+
+### La musique finit pile avec ta vidéo
+
+> **Le problème :** une musique de 3 minutes pour une vidéo d'1 min 05, et un fondu bricolé à la fin.
+
+RR FX retire un passage **au milieu, entre deux temps forts** (des mesures entières si possible) : le morceau garde
+son intro et **sa vraie fin**, qui tombe pile avec la dernière image.
+
+- ✅ Tu vois **où sera la coupe** avant de la faire.
+- ✅ Une version de la séquence est gardée avant, au cas où.
+
+<table>
 <tr>
-<td width="56%">
-
-### 🅰️ Tes styles de texte et tes couleurs
-
-Crée tes **styles de texte** une fois : police, taille, couleur, contour, ombre, fond, majuscules. Aperçu direct
-sur ton image, et ils servent partout : titres, sous-titres, bandeaux.
-
-- 6 styles fournis (Reels jaune, Bloc noir, Néon…), et les tiens.
-- **Mes couleurs** : la palette de ta marque, proposée partout où tu choisis une couleur. Colle des codes, un lien
-  Coolors, ou importe un **nuancier Adobe (.ase)**. Export en .ase aussi.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/style-texte.png" alt="Style de texte" width="300"></td>
+<td align="center" width="50%"><img src="docs/captures/outils/musique-duree.png" alt="Comparer les durées" width="250"><br><sub>La coupe prévue, avant de toucher à rien</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/musique-duree-faite.png" alt="Musique ajustée" width="250"><br><sub>La musique finit avec la vidéo</sub></td>
 </tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/import-lien.png" alt="Importer depuis un lien" width="300"></td>
-<td width="56%">
+</table>
 
-### 🔗 Une vidéo ou un son depuis un lien
-
-Colle un lien, choisis **Vidéo (MP4)** ou **Son (MP3)** : c'est téléchargé et posé dans ta timeline, à la tête
-de lecture.
-
-- Liens directs (.mp4, .mp3, .wav…), **Dropbox** et **Google Drive** : rien à installer.
-- **YouTube, Vimeo, SoundCloud…** : avec [yt-dlp](https://github.com/yt-dlp/yt-dlp), outil gratuit à installer une
-  fois (RR FX te dit comment et le trouve tout seul).
-- Seulement pour les contenus dont tu as les droits (tes vidéos, musiques libres, contenus de ton client).
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🔊 Le son réglé tout seul
-
-- **Égaliser la voix** : chaque plan parlé mesuré et amené au même niveau (-14 LUFS pour YouTube et les réseaux,
-  -16 podcast, -23 TV), sans dépasser -1 dB. Débruitage en option.
-- **Musique sous la voix** : la musique baisse doucement quand on parle et remonte dans les pauses (images clés
-  de volume, modifiables).
-- **Chapitres YouTube** : la liste « 00:00 Titre » prête à coller, depuis tes marqueurs ou les blancs du `.srt`.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/parole-son.png" alt="Son de la voix, musique sous la voix, chapitres" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/formats-visage.png" alt="Copie 9:16 qui suit le visage" width="300"></td>
-<td width="56%">
-
-### 📱 Prêt pour Reels, TikTok et LinkedIn
-
-Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic.
-
-- Le **recadrage automatique** de Premiere suit ton sujet dans chaque plan.
-- Ou **en suivant le visage** : RR FX garde la personne au centre du cadre vertical, plan par plan.
-- Ou **sur fond flou** : le plan entier au centre, sur lui-même agrandi et flouté. Le classique des interviews et
-  des vidéos d'entreprise.
-- L'aperçu montre la **zone sûre**, ce que cachent les boutons de l'app.
-- Ta séquence d'origine ne bouge pas.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 📁 Toutes tes ressources à portée de clic
-
-Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : tout est classé dans le panneau.
-
-- Écoute un son, essaie une LUT sur ton image, vois une police avant de l'installer.
-- Les LUTs de tes dossiers apparaissent aussi dans *Mes LUTs* (onglet Couleur).
-- Pose un whoosh **sur chaque coupe** en un clic.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/ressources.png" alt="Tes ressources" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/mes-effets.png" alt="Mes effets et packs de style" width="300"></td>
-<td width="56%">
-
-### ⭐ Ton style, réutilisable et partageable
-
-- **Capture** n'importe quel effet monté dans Premiere (effets tiers compris) et réutilise-le en un clic.
-- **Packs de style** : tes effets, looks, textes et overlays dans un seul fichier, pour un autre projet ou un
-  pote.
-- Partage un effet par un simple **code** à envoyer en message.
-- Ta bibliothèque se **cherche et se filtre par type** dès qu'elle grandit.
-- **Importe presque tout** en un bouton : presets, rampes, looks, styles de texte, animations, dégradés,
-  palettes, styles Express, packs, LUTs, nuanciers `.ase`, modèles `.mogrt`. RR FX reconnaît le fichier tout seul.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🌍 La bibliothèque de la communauté
-
-Les effets publiés par les autres monteurs : cherche, trie par les plus aimés, **ajoute en un clic**.
-Publie les tiens en deux clics.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/communaute.png" alt="Bibliothèque de la communauté" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/extraits.png" alt="Extraits pour les réseaux" width="300"></td>
-<td width="56%">
-
-### 📱 Des extraits prêts pour les réseaux
-
-Une interview, un podcast ou un live d'une heure ? RR FX trouve **les meilleurs passages** : on parle sans blanc,
-la voix vit, et avec un `.srt` les mots forts (questions, chiffres…). Chaque extrait commence et finit sur une
-phrase.
-
-- Choisis la durée (Reels, Shorts, TikTok) et le nombre d'extraits.
-- Va voir chaque passage (▶) avant de le garder.
-- Une séquence par extrait, au format choisi et avec ses sous-titres. Ta vidéo d'origine ne bouge pas.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### ✅ Vérifié avant d'exporter
-
-Un clic avant d'envoyer à Media Encoder, et RR FX liste ce qui cloche :
-
-- **médias et sons hors ligne**, **images noires** (trous dans la timeline), fin sans image ;
-- clips ou pistes **désactivés ou coupés** ;
-- **texte hors de la zone sûre**, **volume poussé** au-delà de +6 dB.
-
-Rouge : à corriger, orange : à regarder. Clique sur une ligne, la tête de lecture y va.
-
-**Sur plusieurs séquences** : coche-les, et la même action passe sur toutes, l'une après l'autre (look, conversion
-LOG, copie au format, vérification, temps forts).
-
-</td>
-<td width="44%"><img src="docs/captures/outils/verification.png" alt="Vérifier avant export" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/modeles.png" alt="Nouveau projet depuis un modèle" width="300"></td>
-<td width="56%">
-
-### 🗂️ Un nouveau projet en un clic
-
-Choisis un modèle : **Reels / TikTok, YouTube face cam, interview, podcast, vidéo d'entreprise, aftermovie**.
-Sélectionne tes rushs : RR FX crée la séquence au bon format avec eux, pose le calque de réglage et règle le style
-Express et les styles des textes. Il ne reste qu'à lancer Express.
-
-- **Enregistre tes réglages comme modèle** pour retrouver ta recette à chaque projet.
-- Tes modèles se partagent comme un effet.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🎞️ Des plans de coupe sur les mots clés
-
-Nomme tes plans de coupe comme ce qu'ils montrent (`logo.mp4`, `cafe_terrasse.mov`…) et lie leur dossier : quand le
-mot est dit dans les sous-titres, le plan apparaît au-dessus de la personne qui parle.
-
-- **Voir les correspondances** avant de poser : chaque mot et le plan qu'il appelle.
-- Durée des plans, écart minimum et nombre maximum réglables.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/plans-de-coupe.png" alt="Plans de coupe sur les mots clés" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/traduction.png" alt="Traduire les sous-titres" width="300"></td>
-<td width="56%">
-
-### 🌐 Tes sous-titres dans 24 langues
-
-Ton `.srt` traduit sous-titre par sous-titre, **les timings ne bougent pas**.
-
-- **MyMemory** : gratuit, sans compte. **DeepL** : meilleure qualité, avec ta clé (gratuite jusqu'à 500 000
-  caractères par mois).
-- Pose la version traduite, enregistre le `.srt`, ou reviens à l'original.
-- **Bruitages** : un pop sur les mots clés, un ding sur les emojis, calés sur le mot.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🫁 Respirations et clics de bouche en moins
-
-Les respirations entre deux phrases et les petits **clics de bouche** sont baissés dans les plans choisis,
-**sans rien couper** : des images clés de volume, modifiables.
-
-- Respirations, clics, ou les deux.
-- Baisse de -6, -12 ou -20 dB, ou muet.
-- **↶ Annuler** remet le volume d'avant.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/respirations.png" alt="Respirations et clics de bouche" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/risers.png" alt="Risers avant les drops et réverb de fin" width="300"></td>
-<td width="56%">
-
-### 🎢 Risers avant les drops, réverb de fin
+### Risers, réverb de fin et crédits
 
 - **Risers** : RR FX trouve les drops de ta musique et pose un riser qui finit pile dessus, avec un impact si tu
   veux.
-- **Réverb de fin** : la musique s'arrête où tu veux (ou à sa fin) et **résonne** au lieu d'être coupée net.
-  Salle petite, grande ou cathédrale.
+- **Réverb de fin** : la musique s'arrête où tu veux et **résonne** au lieu d'être coupée net.
+- **Crédits musique et sons** : toutes les musiques et tous les sons de la séquence, avec leur place et leur durée,
+  à copier pour la description ou le client.
 
-</td>
-</tr>
+<table>
 <tr>
-<td width="56%">
-
-### ⏳ Barre de progression et compte à rebours
-
-- Une **barre qui avance** du début à la fin de la vidéo : les gens voient combien il reste et restent jusqu'au
-  bout. En haut ou en bas, à ta couleur.
-- Un **compte à rebours** (3, 5 ou 10 s) à la tête de lecture ou qui finit à la fin de la vidéo.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/barre-progression.png" alt="Barre de progression et compte à rebours" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/historique.png" alt="Historique détaillé" width="300"></td>
-<td width="56%">
-
-### 🕘 Un historique pour tout annuler
-
-Chaque opération RR FX avec son heure, sa séquence et ce qu'elle a posé.
-
-- **Annuler** celle que tu veux, même ancienne.
-- **Jusqu'ici** : retire toutes les plus récentes d'un coup.
-- Les 50 dernières opérations, même après avoir fermé Premiere.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🎛️ Stream Deck, raccourcis et synchro
-
-- **Télécommande** : chaque action sur un bouton de **Stream Deck** ou de Companion, même quand le panneau n'est
-  pas sélectionné. Rien n'est ouvert sur le réseau.
-- **Un raccourci pour chacune des 31 actions**, avec ou sans Maj, à ta façon.
-- **Synchro entre ordinateurs** : choisis un dossier Dropbox, iCloud Drive, OneDrive ou Google Drive, et tes effets,
-  looks, styles, couleurs et réglages te suivent. Aucun compte.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/telecommande.png" alt="Télécommande Stream Deck" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/langue.png" alt="Choix de la langue au premier lancement" width="146"> <img src="docs/captures/outils/anglais.png" alt="RR FX en anglais" width="146"></td>
-<td width="56%">
-
-### 🌍 En français ou en anglais
-
-Au premier lancement, choisis **Français** ou **English** (la langue de ton ordinateur est proposée) : tout le
-panneau suit, messages de Premiere compris. Ça se change à tout moment dans *Réglages*.
-
-*RR FX is also available in English: pick it on first launch, or anytime in Settings.*
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 📝 Monter en barrant du texte
-
-Ton `.srt` s'affiche comme un texte, phrase par phrase.
-
-- **Un clic sur une phrase** : la tête de lecture y va.
-- **✕ pour barrer** les phrases ratées, les redites, les hors-sujet : RR FX les coupe dans la timeline et recolle
-  la suite (sur une copie de la séquence si tu veux).
-- Les sous-titres restants sont **recalés** sur le nouveau montage.
-- **Barrer les prises ratées** : RR FX repère tout seul les phrases recommencées juste après et les « euh
-  attends, je recommence ».
-- **Cherche un mot** dans tout le texte, et barre d'un coup toutes les phrases trouvées.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/montage-texte.png" alt="Montage par le texte" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/musique-duree.png" alt="Musique à la durée de la vidéo" width="300"></td>
-<td width="56%">
-
-### 🎵 La musique finit avec ta vidéo
-
-Ta musique fait 3 min et ta vidéo 1 min 05 ? RR FX retire un passage **au milieu, entre deux temps forts** (des
-mesures entières si possible).
-
-- Le morceau garde son intro et **sa vraie fin**, qui tombe pile avec la dernière image.
-- Pas de fondu bricolé, pas de coupe sèche. Tu vois **où sera la coupe** avant de la faire.
-- Si la fin doit quand même être coupée, un **fondu de sortie** est posé.
-- Une version de la séquence est gardée avant, au cas où.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🕓 Des versions de ta séquence
-
-Avant un gros changement ou les retours du client : **une copie figée** en un clic (« Clip v02 (avant retours
-client) »), rangée dans le chutier *Versions*.
-
-- Tu continues sur l'originale.
-- La liste des versions est là, **rouvre-en une** quand tu veux, ou supprime-la.
-- En option, **une version avant chaque coupe directe** (silences, « euh », montage par le texte).
-
-</td>
-<td width="44%"><img src="docs/captures/outils/versions.png" alt="Versions de la séquence" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/macros.png" alt="Macros" width="300"></td>
-<td width="56%">
-
-### ▶ Tes macros
-
-Enchaîne plusieurs actions RR FX et lance-les **d'un seul clic** : par exemple couper les silences, couper les
-« euh », égaliser la voix, poser les sous-titres, vérifier avant export.
-
-- Sur **une touche**, dans la **recherche rapide** ou sur un bouton de **Stream Deck**.
-- Deux exemples prêts : *Interview prête* et *Reels en un clic*.
-- Une étape qui échoue arrête la macro et te dit laquelle.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🧹 Un projet propre sans y penser
-
-- **Dossiers surveillés** : les nouveaux fichiers d'un dossier (carte mémoire copiée, dossier partagé avec un
-  client) arrivent **tout seuls dans un chutier**, toutes les minutes.
-- **Ranger le projet** : ce qui traîne part dans des chutiers par type, les médias jamais utilisés à part.
-  Rien n'est supprimé, et **↶ Annuler** remet tout en place.
-- **Renommer en série** : `Interview_###` → Interview_001, Interview_002…, avec *Remplacer… par…*, un aperçu,
-  et **↶ Annuler**.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/ranger-projet.png" alt="Ranger le projet et renommer en série" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/proxies.png" alt="Proxies en un clic" width="300"></td>
-<td width="56%">
-
-### ⚡ Des proxies en un clic
-
-Rushs 4K, 6K ou LOG trop lourds ? RR FX fait fabriquer **des proxies légers par Media Encoder** et les attache
-tout seul, au fur et à mesure.
-
-- Sur la sélection du panneau Projet, ou tous les rushs vidéo.
-- Un bouton **active ou désactive les proxies** dans les moniteurs.
-- Le montage est fluide, **l'export garde les originaux**.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🏆 Le temps gagné, le temps passé
-
-- **Temps gagné avec RR FX** : chaque opération ajoute ce qu'elle aurait pris à la main (estimation prudente).
-  Tu vois ce qui t'a fait gagner le plus, et tu **crées une carte** à partager en story.
-- **Temps passé par projet** : une minute compte quand quelque chose bouge dans Premiere. Ton tarif horaire, et
-  un **export CSV** (par projet ou jour par jour) pour facturer. Rien ne quitte ton ordinateur.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/temps-gagne.png" alt="Temps gagné et temps passé" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/raccords.png" alt="J-cut et L-cut" width="300"></td>
-<td width="56%">
-
-### 🎬 J-cut, L-cut et coupes propres
-
-- **J-cut / L-cut en un clic** sur toutes les coupes de la sélection : on entend la phrase suivante avant de voir
-  la personne, ou la voix continue sur le plan d'après. Le raccord des interviews et des documentaires.
-- **Coupes sur les blancs** : chaque coupe qui tombe au milieu d'un mot glisse de quelques images vers le blanc le
-  plus proche, image et son ensemble.
-- Tout se règle en images, et **↶ Annuler** remet les coupes droites.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 📝 Des sous-titres propres
-
-Le **correcteur** relit ton `.srt` : lignes de plus de 42 caractères, lecture trop rapide (plus de 20 caractères
-par seconde), sous-titres trop courts, majuscules oubliées, espaces en trop, espace insécable avant « : ; ! ? ».
-
-- Un clic sur une remarque amène la tête de lecture.
-- **Tout corriger** recoupe les lignes, allonge les sous-titres trop rapides dans le blanc qui suit et répare la
-  ponctuation.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/correcteur-sous-titres.png" alt="Correcteur de sous-titres" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/rythme.png" alt="Rythme du montage" width="300"></td>
-<td width="56%">
-
-### 📊 Le rythme de ton montage
-
-La durée de **chaque plan** sur toute la vidéo, en un graphique : les plans trop longs ressortent en orange, là
-où l'attention décroche.
-
-- Moyenne, médiane, plan le plus long ; tu choisis à partir de combien de secondes un plan est « long ».
-- Un clic sur un plan long y amène la tête de lecture ; **Marquer les plans longs** pose des marqueurs.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 📤 Tout exporter d'un coup
-
-Coche tes séquences : chacune part dans **Media Encoder** avec le même préréglage et **un nom propre**
-(`Nike_Clip_9x16_v03`), le numéro de version avance tout seul.
-
-- `{client}`, `{projet}`, `{sequence}`, `{format}`, `{date}`, `{vv}` dans le nom.
-- **Archiver le projet** (Ressources) : un dossier avec seulement les médias utilisés, une copie du projet et un
-  récapitulatif, pour livrer ou libérer de la place.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/export-lot.png" alt="Export en lot" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/credits.png" alt="Crédits musique et sons" width="300"></td>
-<td width="56%">
-
-### 🎵 Les crédits de ta musique
-
-Toutes les **musiques et tous les sons** de la séquence, avec leur fichier, leur place et leur durée.
-
-- **Copier la liste** pour la description, les crédits ou un client.
-- Pratique pour vérifier les droits avant de publier.
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🏆 Badges et astuce du jour
-
-- **Badges** : 1 h, 10 h, 100 h gagnées, 100 opérations, 15 outils différents… annoncés quand tu les débloques, à
-  **partager en story**.
-- **Astuce du jour** : une fois par jour, un outil de RR FX que tu n'as pas encore essayé, avec *Voir* pour y aller.
-- Et dans l'onglet Couleur : **le raccord sur une image de référence** (capture d'un film, d'un Reel…), et dans la
-  vérification avant export, **les plans trop sombres, trop clairs ou avec une dominante**.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/badges.png" alt="Badges et astuce du jour" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/recherche.png" alt="Recherche rapide" width="300"></td>
-<td width="56%">
-
-### 🔍 Tout au clavier
-
-**Ctrl+K** (ou **/**) : tape deux lettres, appuie sur Entrée.
-
-- Une action, un onglet, un effet, un overlay, un look ou un style : tout se trouve au même endroit.
-- Et des raccourcis d'une touche pour le reste : **E** montage express, **A** appliquer, **B** temps forts, **L**
-  conversion LOG…
-
-</td>
-</tr>
-<tr>
-<td width="56%">
-
-### 🧪 Tu sais que ça marche chez toi
-
-**Réglages > Test de compatibilité** : un clic, et RR FX vérifie sur une copie de ta séquence tout ce dont il a
-besoin dans ton Premiere. La copie est supprimée ensuite, ton montage n'est pas touché.
-
-- Chaque ligne dit à quoi elle sert.
-- **Copier le rapport** si quelque chose coince.
-
-</td>
-<td width="44%"><img src="docs/captures/outils/test-compatibilite.png" alt="Test de compatibilité" width="300"></td>
-</tr>
-<tr>
-<td width="44%"><img src="docs/captures/outils/accueil.png" alt="Accueil de RR FX" width="300"></td>
-<td width="56%">
-
-### 🚀 Pris en main en 30 secondes, à jour en un clic
-
-- À la première ouverture, tu choisis ta langue, puis un **accueil** te montre par où commencer, et ma page
-  Instagram s'ouvre pour suivre les astuces et les nouveautés (une seule fois).
-- Quand une nouvelle version sort : **Installer la mise à jour**, directement dans le panneau. Le pack est vérifié,
-  ta version actuelle est gardée de côté, et rien ne change si quelque chose se passe mal.
-
-</td>
+<td align="center" width="33%"><img src="docs/captures/outils/risers.png" alt="Risers avant les drops" width="250"><br><sub>Un riser avant chaque drop</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/reverb.png" alt="Réverb de fin" width="250"><br><sub>Une fin qui résonne</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/credits.png" alt="Crédits musique et sons" width="250"><br><sub>Les crédits prêts à copier</sub></td>
 </tr>
 </table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="effets"></a>
+
+## ✨ Effets, transitions et rampes
+
+### 36 transitions et effets, posés partout d'un coup
+
+> **Le problème :** poser le même zoom, à la main, sur 40 coupes.
+
+- **Transitions modernes** : push, zoom lent, zoom traversant, pop, fondus au blanc et au noir, fondu flou.
+- **Mouvements** : Ken Burns, zoom lent, caméra à l'épaule, punch-in, **zoom visage** qui suit les yeux.
+- **Effets de clip** : flashs, flickers, zooms, shakes, glitchs, motion blur.
+
+Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toutes les coupes de la séquence**,
+**tes marqueurs**, **chaque temps fort** ou **tous les plans**, avec **les sons** fournis (whooshs, impacts).
+
+- ✅ Durée, intensité, courbe d'animation : tout se règle, et s'enregistre comme preset.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/effets.png" alt="Les effets" width="250"><br><sub>Choisis un effet et où le poser</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/effets-reglages.png" alt="Réglages et courbe de l'effet" width="250"><br><sub>Règle-le, jusqu'à sa courbe</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/effets-appliques.png" alt="Effet appliqué" width="250"><br><sub>Posé sur toutes les coupes</sub></td>
+</tr>
+</table>
+
+### Un zoom qui suit un visage ou ton produit
+
+- **Zoom visage** : RR FX trouve le visage dans chaque plan et zoome sur les yeux **en les suivant**. Parfait pour
+  la face cam et les interviews.
+- **Zoom suivi (objet)** : entoure un produit, un logo ou une personne sur la première image, RR FX le suit et zoome
+  dessus. Idéal pour la pub, l'e-commerce et le sport.
+- **Stabiliser le visage** : la tête reste au même endroit du cadre même si la personne bouge.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/effets-mouvements.png" alt="Zoom visage qui suit les yeux" width="250"><br><sub>Zoom visage et mouvements</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/suivi-objet.png" alt="Zoom suivi : l'objet entouré" width="250"><br><sub>Entoure l'objet, RR FX le suit</sub></td>
+</tr>
+</table>
+
+### Overlays prêts à poser
+
+**16 overlays fournis** : light leaks, flares, bokeh, pellicule, VHS, glitch. Rien à télécharger. Ajoute aussi tes
+propres vidéos ou un dossier entier : ils sont posés sur tes coupes avec un fondu et le bon mode de fusion,
+différents à chaque coupe.
+
+<p align="center"><img src="docs/captures/outils/overlays.png" alt="Overlays" width="250"></p>
+
+### Des speed ramps qui ne cassent pas ta coupe
+
+Dessine ta courbe de vitesse (de 10 % à 1000 %) ou pars d'une des **20 rampes prédéfinies** : coup de fouet,
+claque sur la coupe, quasi-arrêt, double pulsation, timelapse…
+
+- ✅ **Ta coupe reste à sa place**, ton son aussi.
+- ✅ La durée se cale sur le tempo : ½, 1, 2 ou 4 temps.
+- ✅ Tes rampes s'enregistrent, s'exportent et s'importent.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/rampes-predefinies.png" alt="Rampes prédéfinies" width="250"><br><sub>20 rampes rangées par usage</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/rampe.png" alt="Courbe de vitesse" width="250"><br><sub>Ta courbe de vitesse</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/rampe-reglages.png" alt="Réglages de la rampe" width="250"><br><sub>Calée sur le tempo, avec aperçu</sub></td>
+</tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="couleur"></a>
+
+## 🎨 Couleur
+
+### L'étalonnage comme dans Lightroom
+
+Les mêmes panneaux que Lightroom : réglages de base, courbe des tonalités, mélangeur de couleurs, roues
+d'étalonnage, calibrage. Des **looks** prêts à l'emploi et un **avant / après sur ta vraie image**.
+
+- ✅ Un clic pour l'appliquer dans Premiere.
+- ✅ Exporte aussi en **LUT .cube** ou en **DCTL pour DaVinci Resolve**.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/couleur.png" alt="Avant / après sur ta vraie image" width="250"><br><sub>Avant / après sur ton image</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/couleur-looks.png" alt="Looks prêts à l'emploi" width="250"><br><sub>Des looks en un clic</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/couleur-panneaux.png" alt="Courbe des tonalités" width="250"><br><sub>Courbe des tonalités</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/captures/outils/couleur-roues.png" alt="Roues d'étalonnage" width="250"><br><sub>Roues d'étalonnage</sub></td>
+<td align="center"><img src="docs/captures/outils/couleur-melangeur.png" alt="Mélangeur de couleurs" width="250"><br><sub>Mélangeur de couleurs</sub></td>
+<td align="center"><img src="docs/captures/outils/degrade.png" alt="Dégradé de couleur" width="250"><br><sub>Dégradés de couleur (CSS, Figma…)</sub></td>
+</tr>
+</table>
+
+### Du LOG au Rec.709 en un clic
+
+> **Le problème :** charger la bonne LUT sur chaque rush, caméra par caméra.
+
+Tu filmes en S-Log3, V-Log, C-Log, F-Log, D-Log ou Apple Log ? **Enregistre ta caméra une fois**, pour tous tes
+projets. Un clic pose un calque Lumetri au-dessus de tous tes rushs, **la LUT déjà chargée**.
+
+- ✅ Plusieurs caméras ? RR FX **reconnaît la caméra de chaque plan** et met la bonne LUT.
+- ✅ La LUT de ton fabricant, ou une LUT calculée par RR FX.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/conversion.png" alt="Conversion LOG vers Rec.709" width="250"><br><sub>Tes caméras enregistrées</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/conversion-camera.png" alt="Ajouter une caméra" width="250"><br><sub>Une caméra ajoutée en trois choix</sub></td>
+</tr>
+</table>
+
+### Expo auto et raccord entre caméras
+
+- **Expo et balance des blancs auto** : chaque plan est analysé et corrigé, avec mesure.
+- **Raccord** : ton iPhone prend le rendu de ton boîtier. Prends un plan de référence, sélectionne les plans à
+  raccorder, c'est fait, avec un avant / après.
+- **Ou une image de référence** : une capture d'un film ou d'un Reel que tu aimes, et tes plans prennent ses
+  couleurs.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/raccord.png" alt="Raccord sur un plan de référence" width="250"><br><sub>Raccord sur un plan de ta séquence</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/raccord-image.png" alt="Raccord sur une image de film" width="250"><br><sub>Ou sur l'image d'un film</sub></td>
+</tr>
+</table>
+
+### Toutes tes LUTs, dans tous tes projets
+
+Fini de réimporter tes LUTs à chaque projet. **Importe-les une fois** (.cube, .3dl, .look… ou un dossier entier) :
+**une vignette par LUT sur ta vraie image**, recherche, favorites, et un double-clic pour la poser.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/mes-luts.png" alt="Mes LUTs" width="250"><br><sub>Tes LUTs sur ton image</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/ressources.png" alt="Une LUT essayée sur ton image" width="250"><br><sub>Essaie une LUT de tes dossiers</sub></td>
+</tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="textes"></a>
+
+## 🔤 Textes et habillage
+
+### Titres et paroles animés
+
+Colle tes textes ou tes paroles : **une ligne par temps fort**, par marqueur ou à durée fixe, animée (Pop, Zoom,
+Glissement, Impact…), avec ta police et ton modèle `.mogrt`.
+
+### Tes styles de texte et les couleurs de ta marque
+
+Crée tes **styles de texte** une fois (police, taille, couleur, contour, ombre, fond, majuscules) : ils servent
+partout, titres, sous-titres, bandeaux. **Mes couleurs** garde la palette de ta marque : colle des codes, un lien
+Coolors, ou importe un **nuancier Adobe (.ase)**.
+
+### Barre de progression et compte à rebours
+
+Une **barre qui avance** jusqu'à la fin de la vidéo (les gens voient combien il reste et restent jusqu'au bout), et
+un **compte à rebours** de 3, 5 ou 10 s.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/textes.png" alt="Paroles animées" width="250"><br><sub>Paroles animées sur le rythme</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/style-texte.png" alt="Style de texte" width="250"><br><sub>Ton style de texte, aperçu direct</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/barre-progression.png" alt="Barre de progression" width="250"><br><sub>Barre de progression, compte à rebours</sub></td>
+</tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="formats"></a>
+
+## 📱 Formats et livraison
+
+### Prêt pour Reels, TikTok et LinkedIn
+
+> **Le problème :** recadrer chaque plan à la main pour la version verticale.
+
+Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic, ta séquence d'origine ne bouge pas.
+
+- **Recadrage automatique** de Premiere, qui suit ton sujet ;
+- ou **en suivant le visage** : RR FX garde la personne au centre, plan par plan ;
+- ou **sur fond flou** : le plan entier au centre, sur lui-même agrandi et flouté.
+- ✅ L'aperçu montre la **zone sûre**, ce que cachent les boutons de l'app.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/formats.png" alt="Copie 9:16" width="250"><br><sub>9:16, 4:5, 1:1 ou 16:9</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/formats-visage.png" alt="9:16 qui suit le visage" width="250"><br><sub>Le cadre suit le visage</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/formats-fond-flou.png" alt="9:16 sur fond flou" width="250"><br><sub>Ou sur fond flou</sub></td>
+</tr>
+</table>
+
+### Des extraits prêts pour les réseaux
+
+Une interview, un podcast ou un live d'une heure ? RR FX trouve **les meilleurs passages** (on parle sans blanc, la
+voix vit, les mots forts du `.srt`), chacun commence et finit sur une phrase. Une séquence par extrait, au format
+choisi, avec ses sous-titres.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/extraits.png" alt="Les meilleurs passages trouvés" width="250"><br><sub>Les meilleurs passages, à écouter</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/extraits-crees.png" alt="Extraits créés" width="250"><br><sub>Une séquence par extrait</sub></td>
+</tr>
+</table>
+
+### Vérifié avant d'exporter
+
+> **Le problème :** découvrir un média hors ligne ou une image noire… après l'export.
+
+Un clic, et RR FX liste ce qui cloche : **médias hors ligne**, **images noires**, clips **désactivés**, **texte
+hors zone sûre**, **volume poussé**, et les **plans trop sombres, trop clairs ou avec une dominante**. Clique sur
+une ligne, la tête de lecture y va. Et la même action peut passer **sur plusieurs séquences** d'un coup.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/verification.png" alt="Vérifier avant export" width="250"><br><sub>Rouge : à corriger, orange : à regarder</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/plusieurs-sequences.png" alt="Sur plusieurs séquences" width="250"><br><sub>Une action sur plusieurs séquences</sub></td>
+</tr>
+</table>
+
+### Le rythme de ton montage, d'un coup d'œil
+
+La durée de **chaque plan** en un graphique : les plans trop longs ressortent en orange, là où l'attention
+décroche. Un clic y amène la tête de lecture, ou pose un marqueur sur chacun.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/rythme.png" alt="Rythme du montage" width="250"><br><sub>Les plans trop longs en orange</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/rythme-marques.png" alt="Plans longs marqués" width="250"><br><sub>Un marqueur sur chacun</sub></td>
+</tr>
+</table>
+
+### Exporter, versionner, archiver
+
+- **Export en lot** : coche tes séquences, chacune part dans **Media Encoder** avec un nom propre
+  (`Nike_Clip_9x16_v03`). Le numéro de version avance tout seul.
+- **Versions de la séquence** : une copie figée en un clic avant les retours du client, rangée dans *Versions*.
+- **Archiver le projet** : un dossier avec seulement les médias utilisés, une copie du projet et un récapitulatif.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/export-lot.png" alt="Export en lot" width="250"><br><sub>Tout exporter d'un coup</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/versions.png" alt="Versions de la séquence" width="250"><br><sub>Une version avant chaque gros changement</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/archive.png" alt="Archiver le projet" width="250"><br><sub>Une archive avec les seuls médias utilisés</sub></td>
+</tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="projet"></a>
+
+## 🗂️ Projet et ressources
+
+### Toutes tes ressources à portée de clic
+
+Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : tout est classé dans le panneau.
+Écoute un son, essaie une LUT sur ton image, vois une police avant de l'installer, pose un whoosh sur chaque coupe.
+Et **importe une vidéo ou un son depuis un lien** (direct, Dropbox, Google Drive, ou YouTube avec yt-dlp).
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/ressources-sons.png" alt="Sons et SFX" width="250"><br><sub>Tes sons, à écouter</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/ressources-polices.png" alt="Polices" width="250"><br><sub>Tes polices, à voir</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/import-lien.png" alt="Importer depuis un lien" width="250"><br><sub>Une vidéo depuis un lien</sub></td>
+</tr>
+</table>
+
+### Un projet propre sans y penser
+
+- **Dossiers surveillés** : les nouveaux fichiers d'un dossier (carte mémoire copiée, dossier partagé avec un client)
+  arrivent **tout seuls dans un chutier**.
+- **Ranger le projet** : ce qui traîne part dans des chutiers par type, les médias jamais utilisés à part. Rien
+  n'est supprimé.
+- **Renommer en série** : `Interview_###` → Interview_001, Interview_002…, avec un aperçu.
+- **Proxies en un clic** : Media Encoder fabrique des proxies légers, RR FX les attache tout seul.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/dossiers-surveilles.png" alt="Dossiers surveillés" width="250"><br><sub>Import automatique</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/ranger-projet.png" alt="Ranger le projet et renommer" width="250"><br><sub>Rangement et renommage</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/proxies-en-cours.png" alt="Proxies en cours" width="250"><br><sub>Proxies attachés au fur et à mesure</sub></td>
+</tr>
+</table>
+
+### Ton style, réutilisable et partageable
+
+- **Capture** n'importe quel effet monté dans Premiere (effets tiers compris) et réutilise-le en un clic.
+- **Packs de style** : tes effets, looks, textes et overlays dans un seul fichier, pour un autre projet ou un pote.
+- **La bibliothèque de la communauté** : les effets publiés par les autres monteurs, à ajouter en un clic.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/mes-effets.png" alt="Ma bibliothèque" width="250"><br><sub>Ta bibliothèque</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/communaute.png" alt="Bibliothèque de la communauté" width="250"><br><sub>Les effets de la communauté</sub></td>
+</tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
+
+---
+
+<a id="flux"></a>
+
+## 🚀 Ton flux de travail
+
+### Macros : tes enchaînements sur un seul bouton
+
+Enchaîne plusieurs actions RR FX et lance-les **d'un seul clic** : couper les silences, couper les « euh »,
+égaliser la voix, poser les sous-titres, vérifier avant export. Sur une touche, dans la recherche rapide ou sur un
+bouton de Stream Deck.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/macros.png" alt="Macros" width="250"><br><sub>Deux exemples prêts</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/macro-edition.png" alt="Modifier une macro" width="250"><br><sub>Ta macro en quelques clics</sub></td>
+</tr>
+</table>
+
+### Tout au clavier, au Stream Deck, et sur tous tes ordinateurs
+
+- **Ctrl+K** (ou **/**) : tape deux lettres, appuie sur Entrée. Une action, un effet, un look : tout se trouve.
+- **Un raccourci pour chacune des 41 actions**, à ta façon.
+- **Télécommande** : chaque action sur un bouton de **Stream Deck** ou de Companion.
+- **Synchro entre ordinateurs** par Dropbox, iCloud Drive, OneDrive ou Google Drive : tes effets, looks et
+  réglages te suivent. Aucun compte.
+- **Historique** : chaque opération avec son heure, et **Annuler** celle que tu veux, même ancienne.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/recherche.png" alt="Recherche rapide" width="250"><br><sub>Ctrl+K : tout au clavier</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/telecommande.png" alt="Télécommande Stream Deck" width="250"><br><sub>Stream Deck et Companion</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/historique.png" alt="Historique" width="250"><br><sub>Un historique pour tout annuler</sub></td>
+</tr>
+<tr>
+<td align="center"><img src="docs/captures/outils/raccourcis.png" alt="Raccourcis clavier" width="250"><br><sub>Une touche par action</sub></td>
+<td align="center"><img src="docs/captures/outils/synchro-ordinateurs.png" alt="Synchro entre ordinateurs" width="250"><br><sub>Tes réglages sur tous tes ordinateurs</sub></td>
+<td align="center"><img src="docs/captures/outils/langue.png" alt="Choix de la langue" width="250"><br><sub>En français ou en anglais</sub></td>
+</tr>
+</table>
+
+### Le temps gagné, le temps passé
+
+- **Temps gagné avec RR FX** : chaque opération ajoute ce qu'elle aurait pris à la main (estimation prudente), et
+  une **carte à partager** en story.
+- **Badges** : 1 h, 10 h, 100 h gagnées, 100 opérations, 15 outils différents…
+- **Temps passé par projet**, ton tarif horaire et un **export CSV** pour facturer. Rien ne quitte ton ordinateur.
+- **Astuce du jour** : un outil que tu n'as pas encore essayé, avec *Voir* pour y aller.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/temps-gagne.png" alt="Temps gagné avec RR FX" width="250"><br><sub>Le temps que RR FX t'a fait gagner</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/badges.png" alt="Badges et astuce du jour" width="250"><br><sub>Badges et astuce du jour</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/temps-passe.png" alt="Temps passé par projet" width="250"><br><sub>Le temps passé, prêt à facturer</sub></td>
+</tr>
+</table>
+
+### Pris en main en 30 secondes, à jour en un clic
+
+- À la première ouverture, tu choisis ta langue, puis un **accueil** te montre par où commencer.
+- **Test de compatibilité** : un clic, et RR FX vérifie sur une copie de ta séquence tout ce dont il a besoin
+  dans ton Premiere.
+- Quand une nouvelle version sort : **Installer la mise à jour**, directement dans le panneau. Ta version actuelle
+  est gardée de côté, et rien ne change si quelque chose se passe mal.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/accueil.png" alt="Accueil" width="250"><br><sub>Un accueil pour démarrer</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/test-compatibilite.png" alt="Test de compatibilité" width="250"><br><sub>Tu sais que ça marche chez toi</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/anglais.png" alt="RR FX en anglais" width="250"><br><sub><i>Also in English</i></sub></td>
+</tr>
+</table>
+
+<p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
 
 ---
 
@@ -844,6 +764,10 @@ besoin dans ton Premiere. La copie est supprimée ensuite, ton montage n'est pas
 
 > **Une seule chose à faire par projet** : crée un calque de réglage (*Fichier > Nouveau > Calque de réglage*).
 > RR FX le retrouve tout seul.
+
+<p align="center">
+  <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger%20gratuitement&style=for-the-badge&color=2680eb" alt="Télécharger RR FX gratuitement"></a>
+</p>
 
 ---
 
@@ -927,5 +851,10 @@ publication, code) sont dans [DEVELOPPEMENT.md](docs/DEVELOPPEMENT.md).
 
 ---
 
+<p align="center"><b>Prêt à gagner du temps sur ton prochain montage ?</b></p>
+<p align="center">
+  <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger%20RR%20FX&style=for-the-badge&color=2680eb" alt="Télécharger RR FX"></a>
+</p>
+
 <p align="center">Plugin gratuit créé par <b>Robin Rahoual</b><br>
-Suis-moi sur Instagram : <a href="https://www.instagram.com/robin.rahoual/">@robin.rahoual</a></p>
+Suis-moi sur Instagram pour les astuces et les nouveautés : <a href="https://www.instagram.com/robin.rahoual/">@robin.rahoual</a></p>

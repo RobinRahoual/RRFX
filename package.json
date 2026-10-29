@@ -7,7 +7,7 @@
     "test": "node --test tests/*.test.js",
     "package": "node scripts/package.js",
     "smoke": "node scripts/ui-smoke.js",
-    "screenshots": "node scripts/screenshots.js docs/captures && node scripts/readme-shots.js docs/captures/outils && python3 scripts/readme-images.py docs/captures"
+    "screenshots": "node scripts/screenshots.js docs/captures && node scripts/readme-shots.js docs/captures/outils && node scripts/readme-gallery.js docs/captures/outils && python3 scripts/readme-images.py docs/captures"
   },
   "author": "Robin Rahoual (@robin.rahoual)"
 }

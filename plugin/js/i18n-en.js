@@ -1722,6 +1722,7 @@
       "Plan 2": "Shot 2",
       "Plan entier": "Whole shot",
       "Plan long au-delà de": "Long shot beyond",
+      "Plan long dès": "Long shot from",
       "Plan sous-exposé (≈ +": "Underexposed shot (≈ +",
       "Plan surexposé (≈ ": "Overexposed shot (≈ ",
       "Plans": "Shots",

@@ -8,7 +8,7 @@ Notes techniques : tests, publication, organisation du code. Le mode d'emploi es
 ```bash
 npm test          # Node 18+ : cœur, modules, cohérence du projet, et le vrai script Premiere sur une timeline simulée
 npm run smoke     # interface en mode démo dans Chromium (nécessite Playwright)
-npm run screenshots # captures de chaque page et de chaque outil, images du README (docs/captures)
+npm run screenshots # captures de chaque page et de chaque outil, galerie et animations du README (docs/captures)
 npm run package   # fabrique dist/RRFX-<version>-installation.zip
 ```
 
@@ -83,7 +83,8 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)
 install/                 scripts d'installation + LISEZMOI
-docs/captures/           captures d'écran du README (npm run screenshots les refait)
+docs/captures/           captures et animations du README (npm run screenshots les refait ;
+                         ONLY=nom node scripts/readme-gallery.js refait une seule étape de la galerie)
 .github/ISSUE_TEMPLATE/  formulaire « Partager un effet RR FX » (bibliothèque en ligne)
 scripts/                 fabrication du pack, test d'interface, ressources de démonstration, captures
 tests/                   tests Node (sim.js = timeline Premiere simulée)

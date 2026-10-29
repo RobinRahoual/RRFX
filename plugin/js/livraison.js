@@ -29,7 +29,7 @@
 
     let lastRhythm = null;
     async function analyseRhythm() {
-      const x = st(), r = await Host.call('rushList', { scope: 'sequence' });
+      const x = st(), r = await Host.call('rushList', { scope: 'sequence', rhythm: true });
       if (!r.ok) throw new Error(r.error);
       // Les plans de la piste la plus basse qui en a (le montage principal), en secondes.
       const low = Math.min(...r.clips.map(c => c.track));
@@ -91,7 +91,7 @@
         setTimeout(redraw, 0);
         return [
           h('div', { class: 'note' }, _T('La durée de chaque plan sur toute la vidéo : les barres orange sont les plans trop longs, là où l\'attention décroche. Pour les réseaux, vise 2 à 4 s par plan.')),
-          row(_T('Plan long au-delà de'), hotText({ value: x.maxShot, min: 1, max: 30, step: 0.5, unit: 's', onChange: v => { x.maxShot = v; app.persist(); if (lastRhythm) { lastRhythm = null; } } })),
+          row(_T('Plan long dès'), hotText({ value: x.maxShot, min: 1, max: 30, step: 0.5, unit: 's', onChange: v => { x.maxShot = v; app.persist(); if (lastRhythm) { lastRhythm = null; } } })),
           h('div', { class: 'row-buttons' }, go, mark), cv, info
         ];
       }

@@ -57,6 +57,25 @@ for path in sorted(glob.glob(os.path.join(folder, 'outils', '*.png'))):
     layer = Image.new('RGBA', canvas.size, (0, 0, 0, 0))
     layer.paste(im, (M, M), rounded(im))
     canvas = Image.alpha_composite(canvas, layer)
-    canvas.save(path, optimize=True)
+    # 600 px de large (affichées en 260 à 300 px) et 256 couleurs : cinq fois plus léger, pareil à l'œil.
+    canvas = canvas.resize((600, round(canvas.height * 600 / canvas.width)), Image.LANCZOS)
+    canvas.quantize(colors=256, method=Image.Quantize.FASTOCTREE, dither=Image.Dither.NONE).save(path, optimize=True)
 
 print('Images du README à jour dans ' + folder)
+
+# Animations (scripts/readme-gallery.js) : les images d'un dossier deviennent un GIF léger, la
+# dernière image reste affichée plus longtemps. Le dossier d'images est ensuite supprimé.
+import shutil
+for d in sorted(glob.glob(os.path.join(folder, 'animations', '*', ''))):
+    frames = [Image.open(p).convert('RGB').resize((400, 800), Image.LANCZOS) for p in sorted(glob.glob(os.path.join(d, '*.png')))]
+    if not frames:
+        continue
+    # Une palette commune (faite sur quelques images) : pas de scintillement entre les images.
+    sample = Image.new('RGB', (400, 800 * min(4, len(frames))))
+    for i, f in enumerate(frames[::max(1, len(frames) // 4)][:4]):
+        sample.paste(f, (0, 800 * i))
+    pal = sample.quantize(colors=128, method=Image.Quantize.MEDIANCUT)
+    q = [f.quantize(palette=pal, dither=Image.Dither.NONE) for f in frames]
+    durations = [380] * (len(q) - 1) + [2600]
+    q[0].save(os.path.normpath(d) + '.gif', save_all=True, append_images=q[1:], duration=durations, loop=0, optimize=True, disposal=1)
+    shutil.rmtree(d)
