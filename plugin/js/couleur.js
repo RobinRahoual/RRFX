@@ -4,13 +4,14 @@
    un calque de réglage Lumetri, ou s'exporte en .cube et en DCTL (DaVinci Resolve). */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Pv } = app;
     const { h, actionGroup, row, fitCanvas, css } = app.UI;
 
     const PW = 480, PH = 270; // taille de calcul de l'aperçu
-    const DEFAULTS = { open: { log: true, fix: false, looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: 'Mon look', target: 'clip' };
+    const DEFAULTS = { open: { log: true, fix: false, looks: true, basic: true, curve: false, mixer: false, grading: false, calib: false, out: true }, view: 'split', split: 0.5, shot: 'A', curveCh: 'param', mixMode: 'h', wheel: 'shadows', name: _T('Mon look'), target: 'clip' };
     const st = () => {
       const s = app.settings();
       if (!s.color || typeof s.color !== 'object') s.color = {};
@@ -73,8 +74,8 @@
         g.fillText('⇆', x, H / 2 + k);
         g.font = '600 ' + Math.round(12 * k) + 'px ' + css('--font');
         const tag = (text, cx) => { const w = g.measureText(text).width + 12 * k; g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(cx - w / 2, 8 * k, w, 20 * k); g.fillStyle = '#fff'; g.fillText(text, cx, 18 * k); };
-        tag('Avant', 8 * k + 26 * k);
-        tag('Après', W - 34 * k);
+        tag(_T('Avant'), 8 * k + 26 * k);
+        tag(_T('Après'), W - 34 * k);
       }
     }
 
@@ -101,10 +102,10 @@
     /* Curseur : libellé, piste dégradée, valeur. Double-clic sur le libellé ou le curseur = valeur par défaut. */
     function slider(label, o) {
       const d = o.decimals || 0;
-      const val = h('span', { class: 'lr-val', title: 'Cliquer pour saisir' }, sign(o.get(), d));
+      const val = h('span', { class: 'lr-val', title: _T('Cliquer pour saisir') }, sign(o.get(), d));
       const thumb = h('span', { class: 'lr-thumb' });
       const track = h('div', { class: 'lr-track', style: { background: o.grad || 'linear-gradient(90deg, #3a3a3a, #9a9a9a)' } }, thumb);
-      const lab = h('span', { class: 'lr-label', title: 'Double-clic : valeur par défaut' }, label);
+      const lab = h('span', { class: 'lr-label', title: _T('Double-clic : valeur par défaut') }, label);
       const el = h('div', { class: 'lr-row' }, lab, track, val);
       const pos = v => ((v - o.min) / (o.max - o.min) * 100) + '%';
       const show = v => { thumb.style.left = pos(v); val.textContent = sign(v, d); };
@@ -165,7 +166,7 @@
     const FOLDED = { gradient: true, calib: true };
     function panel(id, title, body, onReset) {
       const s = st(), open = s.open[id] === undefined ? !FOLDED[id] : s.open[id] !== false;
-      const reset = onReset ? h('button', { class: 'action quiet icon lr-reset', title: 'Réinitialiser ce panneau' }, '↺') : null;
+      const reset = onReset ? h('button', { class: 'action quiet icon lr-reset', title: _T('Réinitialiser ce panneau') }, '↺') : null;
       const head = h('div', { class: 'lr-head' }, h('span', { class: 'lr-chev' }, open ? '▾' : '▸'), h('span', { class: 'lr-title' }, title), reset);
       const el = h('div', { class: 'lr-panel' + (open ? '' : ' closed'), 'data-panel': id }, head, h('div', { class: 'lr-body' }, body));
       head.addEventListener('click', e => {
@@ -184,28 +185,28 @@
     const resetKeys = keys => () => { const d = D.defaults(); keys.forEach(k => { P()[k] = d[k]; }); };
 
     function basicPanel() {
-      return panel('basic', 'Réglages de base', [
-        sub('Balance des blancs'),
-        keySlider('Température', 'temp', { grad: G.temp }),
-        keySlider('Teinte', 'tint', { grad: G.tint }),
-        sub('Tonalité'),
-        keySlider('Exposition', 'exposure', { min: -5, max: 5, step: 0.01, decimals: 2, grad: G.tone }),
-        keySlider('Contraste', 'contrast', { grad: G.tone }),
-        keySlider('Hautes lumières', 'highlights', { grad: G.tone }),
-        keySlider('Ombres', 'shadows', { grad: G.tone }),
-        keySlider('Blancs', 'whites', { grad: G.tone }),
-        keySlider('Noirs', 'blacks', { grad: G.tone }),
-        sub('Présence'),
+      return panel('basic', _T('Réglages de base'), [
+        sub(_T('Balance des blancs')),
+        keySlider(_T('Température'), 'temp', { grad: G.temp }),
+        keySlider(_T('Teinte'), 'tint', { grad: G.tint }),
+        sub(_T('Tonalité')),
+        keySlider(_T('Exposition'), 'exposure', { min: -5, max: 5, step: 0.01, decimals: 2, grad: G.tone }),
+        keySlider(_T('Contraste'), 'contrast', { grad: G.tone }),
+        keySlider(_T('Hautes lumières'), 'highlights', { grad: G.tone }),
+        keySlider(_T('Ombres'), 'shadows', { grad: G.tone }),
+        keySlider(_T('Blancs'), 'whites', { grad: G.tone }),
+        keySlider(_T('Noirs'), 'blacks', { grad: G.tone }),
+        sub(_T('Présence')),
         keySlider('Vibrance', 'vibrance', { grad: G.sat }),
         keySlider('Saturation', 'saturation', { grad: G.sat }),
-        h('div', { class: 'note' }, 'Texture, Clarté et Correction du voile dépendent des pixels voisins : une LUT ne peut pas les porter. Ils restent dans Lumetri (Créatif > Netteté, Tons foncés estompés).')
+        h('div', { class: 'note' }, _T('Texture, Clarté et Correction du voile dépendent des pixels voisins : une LUT ne peut pas les porter. Ils restent dans Lumetri (Créatif > Netteté, Tons foncés estompés).'))
       ], resetKeys(['temp', 'tint', 'exposure', 'contrast', 'highlights', 'shadows', 'whites', 'blacks', 'vibrance', 'saturation']));
     }
 
     // Courbe : paramétrique (4 curseurs + séparations) ou à points (RVB, R, V, B).
     function curvePanel() {
       const s = st(), cv = h('canvas', { class: 'lr-curve' }), box = h('div');
-      const chans = [{ v: 'param', label: 'Paramétrique' }, { v: 'rgb', label: 'RVB' }, { v: 'r', label: 'R', cls: 'ch-r' }, { v: 'g', label: 'V', cls: 'ch-g' }, { v: 'b', label: 'B', cls: 'ch-b' }];
+      const chans = [{ v: 'param', label: _T('Paramétrique') }, { v: 'rgb', label: 'RVB' }, { v: 'r', label: 'R', cls: 'ch-r' }, { v: 'g', label: 'V', cls: 'ch-g' }, { v: 'b', label: 'B', cls: 'ch-b' }];
       const COL = { rgb: '#d8d8d8', r: '#e05050', g: '#4cc060', b: '#5a8cff', param: '#d8d8d8' };
       let drag = -1;
       const pts = () => P().curve[s.curveCh];
@@ -275,19 +276,19 @@
         box.innerHTML = '';
         if (s.curveCh === 'param') {
           const pk = (label, key) => keySlider(label, key, { grad: G.tone });
-          box.appendChild(pk('Hautes lumières', 'pHighlights'));
-          box.appendChild(pk('Tons clairs', 'pLights'));
-          box.appendChild(pk('Tons foncés', 'pDarks'));
-          box.appendChild(pk('Ombres', 'pShadows'));
-          box.appendChild(sub('Séparations'));
-          box.appendChild(keySlider('Ombres | Tons foncés', 'split1', { min: 5, max: 45, grad: G.flat, def: 25 }));
-          box.appendChild(keySlider('Tons foncés | clairs', 'split2', { min: 30, max: 70, grad: G.flat, def: 50 }));
-          box.appendChild(keySlider('Tons clairs | Hautes l.', 'split3', { min: 55, max: 95, grad: G.flat, def: 75 }));
-        } else box.appendChild(h('div', { class: 'note' }, 'Clique pour ajouter un point, glisse pour le déplacer, double-clic pour le retirer.'));
+          box.appendChild(pk(_T('Hautes lumières'), 'pHighlights'));
+          box.appendChild(pk(_T('Tons clairs'), 'pLights'));
+          box.appendChild(pk(_T('Tons foncés'), 'pDarks'));
+          box.appendChild(pk(_T('Ombres'), 'pShadows'));
+          box.appendChild(sub(_T('Séparations')));
+          box.appendChild(keySlider(_T('Ombres | Tons foncés'), 'split1', { min: 5, max: 45, grad: G.flat, def: 25 }));
+          box.appendChild(keySlider(_T('Tons foncés | clairs'), 'split2', { min: 30, max: 70, grad: G.flat, def: 50 }));
+          box.appendChild(keySlider(_T('Tons clairs | Hautes l.'), 'split3', { min: 55, max: 95, grad: G.flat, def: 75 }));
+        } else box.appendChild(h('div', { class: 'note' }, _T('Clique pour ajouter un point, glisse pour le déplacer, double-clic pour le retirer.')));
         requestAnimationFrame(draw);
       };
       const tabs = actionGroup(chans, s.curveCh, v => { s.curveCh = v; app.persist(); fill(); });
-      const el = panel('curve', 'Courbe des tonalités', [tabs, cv, box], () => {
+      const el = panel('curve', _T('Courbe des tonalités'), [tabs, cv, box], () => {
         const d = D.defaults();
         ['pHighlights', 'pLights', 'pDarks', 'pShadows', 'split1', 'split2', 'split3'].forEach(k => { P()[k] = d[k]; });
         P().curve = d.curve;
@@ -305,8 +306,8 @@
         D.BANDS.forEach(b => box.appendChild(slider(b.label, { min: -100, max: 100, step: 1, grad: bandGrad(b, s.mixMode), get: () => P().hsl[b.id][s.mixMode], set: v => { P().hsl[b.id][s.mixMode] = v; } })));
       };
       fill();
-      return panel('mixer', 'Mélangeur de couleurs', [
-        actionGroup([{ v: 'h', label: 'Teinte' }, { v: 's', label: 'Saturation' }, { v: 'l', label: 'Luminance' }], s.mixMode, v => { s.mixMode = v; app.persist(); fill(); }),
+      return panel('mixer', _T('Mélangeur de couleurs'), [
+        actionGroup([{ v: 'h', label: _T('Teinte') }, { v: 's', label: 'Saturation' }, { v: 'l', label: 'Luminance' }], s.mixMode, v => { s.mixMode = v; app.persist(); fill(); }),
         box
       ], () => { const d = D.defaults(); P().hsl = d.hsl; });
     }
@@ -363,7 +364,7 @@
 
     function gradingPanel() {
       const s = st(), box = h('div');
-      const labels = { shadows: 'Ombres', midtones: 'Tons moyens', highlights: 'Hautes lumières', global: 'Global' };
+      const labels = { shadows: _T('Ombres'), midtones: _T('Tons moyens'), highlights: _T('Hautes lumières'), global: 'Global' };
       const fill = () => {
         box.innerHTML = '';
         if (s.wheel === 'three') {
@@ -375,7 +376,7 @@
           box.appendChild(row3);
         } else {
           const k = s.wheel, wl = wheel(k, 170);
-          const hs = slider('Teinte', { min: 0, max: 360, step: 1, grad: 'linear-gradient(90deg, hsl(0,70%,50%), hsl(60,70%,50%), hsl(120,70%,50%), hsl(180,70%,50%), hsl(240,70%,50%), hsl(300,70%,50%), hsl(360,70%,50%))', get: () => P().grading[k].h, set: v => { P().grading[k].h = v; wl.redraw(); } });
+          const hs = slider(_T('Teinte'), { min: 0, max: 360, step: 1, grad: 'linear-gradient(90deg, hsl(0,70%,50%), hsl(60,70%,50%), hsl(120,70%,50%), hsl(180,70%,50%), hsl(240,70%,50%), hsl(300,70%,50%), hsl(360,70%,50%))', get: () => P().grading[k].h, set: v => { P().grading[k].h = v; wl.redraw(); } });
           const ss = slider('Saturation', { min: 0, max: 100, step: 1, grad: G.sat, get: () => P().grading[k].s, set: v => { P().grading[k].s = v; wl.redraw(); } });
           wl.onchange2 = () => { hs.refresh(); ss.refresh(); };
           box.appendChild(h('div', { class: 'lr-wheel-big' }, wl));
@@ -385,24 +386,24 @@
         }
       };
       fill();
-      return panel('grading', 'Étalonnage des couleurs', [
-        actionGroup([{ v: 'three', label: '3 roues' }, { v: 'shadows', label: 'Ombres' }, { v: 'midtones', label: 'Moyens' }, { v: 'highlights', label: 'Hautes l.' }, { v: 'global', label: 'Global' }], s.wheel, v => { s.wheel = v; app.persist(); fill(); }),
+      return panel('grading', _T('Étalonnage des couleurs'), [
+        actionGroup([{ v: 'three', label: _T('3 roues') }, { v: 'shadows', label: _T('Ombres') }, { v: 'midtones', label: _T('Moyens') }, { v: 'highlights', label: _T('Hautes l.') }, { v: 'global', label: 'Global' }], s.wheel, v => { s.wheel = v; app.persist(); fill(); }),
         box,
-        keySlider('Fusion', 'blending', { min: 0, max: 100, grad: G.flat, def: 50 }),
-        keySlider('Équilibre', 'balance', { grad: G.tone })
+        keySlider(_T('Fusion'), 'blending', { min: 0, max: 100, grad: G.flat, def: 50 }),
+        keySlider(_T('Équilibre'), 'balance', { grad: G.tone })
       ], () => { const d = D.defaults(); P().grading = d.grading; P().blending = 50; P().balance = 0; });
     }
 
     function calibPanel() {
       const prim = (label, hk, sk, hue) => [
         sub(label),
-        keySlider('Teinte', hk, { grad: 'linear-gradient(90deg, ' + hueCss(hue - 40, 70, 50) + ', ' + hueCss(hue, 70, 50) + ', ' + hueCss(hue + 40, 70, 50) + ')' }),
+        keySlider(_T('Teinte'), hk, { grad: 'linear-gradient(90deg, ' + hueCss(hue - 40, 70, 50) + ', ' + hueCss(hue, 70, 50) + ', ' + hueCss(hue + 40, 70, 50) + ')' }),
         keySlider('Saturation', sk, { grad: 'linear-gradient(90deg, #8a8a8a, ' + hueCss(hue, 80, 50) + ')' })
       ];
-      return panel('calib', 'Calibrage', [
-        sub('Ombres'),
-        keySlider('Teinte', 'shadowTint', { grad: G.tint })
-      ].concat(prim('Primaire rouge', 'redHue', 'redSat', 0), prim('Primaire verte', 'greenHue', 'greenSat', 120), prim('Primaire bleue', 'blueHue', 'blueSat', 240)),
+      return panel('calib', _T('Calibrage'), [
+        sub(_T('Ombres')),
+        keySlider(_T('Teinte'), 'shadowTint', { grad: G.tint })
+      ].concat(prim(_T('Primaire rouge'), 'redHue', 'redSat', 0), prim(_T('Primaire verte'), 'greenHue', 'greenSat', 120), prim(_T('Primaire bleue'), 'blueHue', 'blueSat', 240)),
       resetKeys(['shadowTint', 'redHue', 'redSat', 'greenHue', 'greenSat', 'blueHue', 'blueSat']));
     }
 
@@ -437,13 +438,13 @@
       const grid = h('div', { class: 'lr-looks' });
       const card = (name, params, title) => {
         const c = h('div', { class: 'lr-look', title: title || name }, lookThumb(params, 120, 68), h('span', null, name));
-        c.addEventListener('click', () => { setParams(params, name); app.status.finish('ok', 'Look : ' + name, 'Ajuste-le avec les panneaux, puis « Appliquer le look ».'); });
+        c.addEventListener('click', () => { setParams(params, name); app.status.finish('ok', _T('Look : ') + name, _T('Ajuste-le avec les panneaux, puis « Appliquer le look ».')); });
         return c;
       };
-      grid.appendChild(card('Aucun', D.defaults(), 'Tout remettre à zéro'));
+      grid.appendChild(card(_T('Aucun'), D.defaults(), _T('Tout remettre à zéro')));
       D.LOOKS.forEach(l => grid.appendChild(card(l.name, l.p)));
       userLooks().forEach(i => grid.appendChild(card('★ ' + i.name, i.data.params)));
-      const amount = keySlider('Intensité du look', 'amount', { min: 0, max: 100, grad: G.flat, def: 100 });
+      const amount = keySlider(_T('Intensité du look'), 'amount', { min: 0, max: 100, grad: G.flat, def: 100 });
       return panel('looks', 'Looks', [grid, amount]);
     }
 
@@ -452,9 +453,9 @@
     const slug = s => A.fileSlug(s, 'look', 40).replace(/[ .]+/g, '-');
 
     function applyInPremiere() {
-      const s = st(), name = s.name || 'Mon look';
+      const s = st(), name = s.name || _T('Mon look');
       return app.runTask('Look · ' + name, async () => {
-        app.status.phase('Fabrication de la LUT');
+        app.status.phase(_T('Fabrication de la LUT'));
         const cube = D.toCube(D.buildLut(P(), 33), name);
         let file = null;
         if (Store.fs) {
@@ -464,43 +465,43 @@
           file = Store.path.join(dir, 'RRFX ' + slug(name) + ' ' + A.hashText(cube) + '.cube');
           if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
         }
-        app.status.phase('Calque de réglage');
+        app.status.phase(_T('Calque de réglage'));
         const { res, fail } = await app.services.adjustmentLayer('RR FX · Look ' + name, await app.services.lumetriFx(file), { scope: s.target === 'sequence' ? 'sequence' : 'clip', history: 'Look · ' + name });
         if (fail) return fail;
-        if (file) app.log('LUT du look : ' + file, 'ok');
-        const title = 'Look posé · ' + app.plural(res.created.length, 'calque Lumetri', 'calques Lumetri');
-        if (file && res.lutSet) return { kind: res.kind, title, detail: 'LUT « ' + Store.path.basename(file) + ' » chargée dans Lumetri (LUT d\'entrée).' };
+        if (file) app.log(_T('LUT du look : ') + file, 'ok');
+        const title = _T('Look posé · ') + app.plural(res.created.length, _T('calque Lumetri'), _T('calques Lumetri'));
+        if (file && res.lutSet) return { kind: res.kind, title, detail: _T('LUT « ') + Store.path.basename(file) + _T(' » chargée dans Lumetri (LUT d\'entrée).') };
         // LUT non chargée par script : on l'installe aussi dans les Looks de Lumetri.
         if (file) {
           try {
             const sys = Store.systemDirs();
             Store.fs.mkdirSync(sys.luts, { recursive: true });
             Store.fs.copyFileSync(file, Store.path.join(sys.luts, Store.path.basename(file)));
-          } catch (e) { app.log('LUT non installée dans le dossier Adobe : ' + app.errorMessage(e), 'warn'); }
+          } catch (e) { app.log(_T('LUT non installée dans le dossier Adobe : ') + app.errorMessage(e), 'warn'); }
         }
         const copied = file && navigator.clipboard ? await navigator.clipboard.writeText(file).then(() => true, () => false) : false;
         return {
           kind: res.kind,
           title,
           detail: file
-            ? 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + Store.path.basename(file) + ' »' + (copied ? ' (chemin copié)' : '') + '. Après un redémarrage de Premiere, il est aussi dans la liste des Looks.'
-            : 'Mode démo : exporte la LUT (.cube) pour l\'essayer.'
+            ? _T('Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ') + Store.path.basename(file) + _T(' »') + (copied ? _T(' (chemin copié)') : '') + _T('. Après un redémarrage de Premiere, il est aussi dans la liste des Looks.')
+            : _T('Mode démo : exporte la LUT (.cube) pour l\'essayer.')
         };
       });
     }
 
     function exportCube() {
-      const name = st().name || 'Mon look';
-      const out = Store.exportText(D.toCube(D.buildLut(P(), 33), name), 'RRFX ' + slug(name) + '.cube', ['cube'], 'Exporter la LUT (.cube)');
-      if (out) app.status.finish('ok', 'LUT exportée', out + ' · Premiere (Lumetri), Resolve, Final Cut, CapCut…');
+      const name = st().name || _T('Mon look');
+      const out = Store.exportText(D.toCube(D.buildLut(P(), 33), name), 'RRFX ' + slug(name) + '.cube', ['cube'], _T('Exporter la LUT (.cube)'));
+      if (out) app.status.finish('ok', _T('LUT exportée'), out + ' · Premiere (Lumetri), Resolve, Final Cut, CapCut…');
     }
     function exportDctl() {
-      const name = st().name || 'Mon look';
-      const out = Store.exportText(D.toDCTL(P(), name), 'RRFX ' + slug(name) + '.dctl', ['dctl'], 'Exporter le DCTL (DaVinci Resolve)');
-      if (out) app.status.finish('ok', 'DCTL exporté', 'Dans Resolve : copie-le dans le dossier LUT de Resolve, puis effet DCTL sur un nœud. Les curseurs Lightroom y sont réglables.');
+      const name = st().name || _T('Mon look');
+      const out = Store.exportText(D.toDCTL(P(), name), 'RRFX ' + slug(name) + '.dctl', ['dctl'], _T('Exporter le DCTL (DaVinci Resolve)'));
+      if (out) app.status.finish('ok', _T('DCTL exporté'), _T('Dans Resolve : copie-le dans le dossier LUT de Resolve, puis effet DCTL sur un nœud. Les curseurs Lightroom y sont réglables.'));
     }
     async function saveLook() {
-      const name = await app.promptName('Enregistrer le look', st().name || 'Mon look');
+      const name = await app.promptName(_T('Enregistrer le look'), st().name || _T('Mon look'));
       if (!name) return;
       const items = app.S.lib.items, old = items.find(i => i.type === 'look' && i.name === name);
       const data = { params: JSON.parse(JSON.stringify(P())) };
@@ -509,7 +510,7 @@
       app.persist();
       render();
       app.renderCTA();
-      app.status.finish('ok', 'Look enregistré : ' + name, 'Dans Mes effets : partage-le par code ou publie-le dans la Communauté.');
+      app.status.finish('ok', _T('Look enregistré : ') + name, _T('Dans Mes effets : partage-le par code ou publie-le dans la Communauté.'));
     }
 
     function outPanel() {
@@ -517,20 +518,20 @@
       const nameIn = h('input', { class: 'textfield', value: s.name });
       nameIn.addEventListener('input', () => { s.name = nameIn.value; app.persist(); app.renderCTA(); });
       const b = (label, fn, cls, title) => { const x = h('button', { class: 'action' + (cls ? ' ' + cls : ''), title }, label); x.addEventListener('click', fn); return x; };
-      return panel('out', 'Appliquer et exporter', [
-        row('Nom', nameIn),
-        row('Sur', actionGroup([{ v: 'clip', label: 'Clip visé ou sélection' }, { v: 'sequence', label: 'Toute la séquence' }], s.target, v => { s.target = v; app.persist(); })),
+      return panel('out', _T('Appliquer et exporter'), [
+        row(_T('Nom'), nameIn),
+        row(_T('Sur'), actionGroup([{ v: 'clip', label: _T('Clip visé ou sélection') }, { v: 'sequence', label: _T('Toute la séquence') }], s.target, v => { s.target = v; app.persist(); })),
         h('div', { class: 'row-buttons wrap' },
-          b('Enregistrer le look', saveLook, '', 'Dans Mes effets, partageable et publiable'),
-          b('Exporter .cube…', exportCube, '', 'LUT 33³ pour Premiere, Resolve, Final Cut, CapCut…'),
-          b('Exporter DCTL…', exportDctl, '', 'Pour DaVinci Resolve, avec les curseurs Lightroom')),
-        h('div', { class: 'note' }, 'Dans Premiere, le look est une LUT .cube posée sur un calque de réglage Lumetri (« Appliquer le look » en haut). Premiere ne lit pas les DCTL : le DCTL est pour DaVinci Resolve, avec les mêmes curseurs que ce panneau.')
+          b(_T('Enregistrer le look'), saveLook, '', _T('Dans Mes effets, partageable et publiable')),
+          b(_T('Exporter .cube…'), exportCube, '', _T('LUT 33³ pour Premiere, Resolve, Final Cut, CapCut…')),
+          b(_T('Exporter DCTL…'), exportDctl, '', _T('Pour DaVinci Resolve, avec les curseurs Lightroom'))),
+        h('div', { class: 'note' }, _T('Dans Premiere, le look est une LUT .cube posée sur un calque de réglage Lumetri (« Appliquer le look » en haut). Premiere ne lit pas les DCTL : le DCTL est pour DaVinci Resolve, avec les mêmes curseurs que ce panneau.'))
       ]);
     }
 
     // ---------------------------------------------------------------- page
 
-    const NAV = [['looks', 'Looks'], ['basic', 'Réglages'], ['curve', 'Courbe'], ['grading', 'Roues'], ['luts', 'Mes LUTs'], ['gradient', 'Dégradés'], ['log', 'LOG'], ['fix', 'Raccord'], ['out', 'Exporter']];
+    const NAV = [['looks', 'Looks'], ['basic', _T('Réglages')], ['curve', _T('Courbe')], ['grading', _T('Roues')], ['luts', _T('Mes LUTs')], ['gradient', _T('Dégradés')], ['log', 'LOG'], ['fix', _T('Raccord')], ['out', _T('Exporter')]];
     function render(view) {
       if (view) V.view = view;
       view = V.view;
@@ -551,7 +552,7 @@
         V.canvas.addEventListener('pointermove', mv);
         V.canvas.addEventListener('pointerup', up);
       });
-      const realBtn = h('button', { class: 'action quiet', title: 'Deux images de ta séquence autour de la coupe la plus proche' }, Pv.isReal() ? 'Plans de test' : '📷 Ma vraie image');
+      const realBtn = h('button', { class: 'action quiet', title: _T('Deux images de ta séquence autour de la coupe la plus proche') }, Pv.isReal() ? _T('Plans de test') : _T('📷 Ma vraie image'));
       realBtn.addEventListener('click', async () => {
         if (Pv.isReal()) { Pv.resetShots(); render(); return; }
         if (app.services.grabFrames) { await app.services.grabFrames(); render(); }
@@ -559,11 +560,11 @@
       view.appendChild(h('div', { class: 'section' },
         V.histo, frame,
         h('div', { class: 'pv-bar lr-bar' },
-          actionGroup([{ v: 'split', label: 'Avant | Après' }, { v: 'after', label: 'Après' }, { v: 'before', label: 'Avant' }], s.view, v => { s.view = v; app.persist(); drawPreview(); }),
-          actionGroup([{ v: 'A', label: 'Plan 1' }, { v: 'B', label: 'Plan 2' }], s.shot, v => { s.shot = v; V.src = null; app.persist(); update(true); }),
+          actionGroup([{ v: 'split', label: _T('Avant | Après') }, { v: 'after', label: _T('Après') }, { v: 'before', label: _T('Avant') }], s.view, v => { s.view = v; app.persist(); drawPreview(); }),
+          actionGroup([{ v: 'A', label: _T('Plan 1') }, { v: 'B', label: _T('Plan 2') }], s.shot, v => { s.shot = v; V.src = null; app.persist(); update(true); }),
           realBtn)));
       // Sommaire collant : un clic amène au panneau (et l'ouvre).
-      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Panneaux de l\'onglet Couleur' });
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Panneaux de l\'onglet Couleur') });
       view.appendChild(nav);
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       if (app.correction) view.appendChild(app.correction.panel(panel));
@@ -593,7 +594,7 @@
     app.actions.applyLook = applyInPremiere;
     app.tabs.color = {
       render,
-      cta: () => ({ label: 'Appliquer le look · ' + (st().name || 'Mon look'), run: applyInPremiere, enabled: true }),
+      cta: () => ({ label: _T('Appliquer le look · ') + (st().name || _T('Mon look')), run: applyInPremiere, enabled: true }),
       leave: () => { cancelAnimationFrame(V.timer); clearTimeout(V.hq); V.timer = 0; }
     };
     // Un look de la bibliothèque (Mes effets, communauté) s'ouvre ici.

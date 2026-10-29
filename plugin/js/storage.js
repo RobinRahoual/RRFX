@@ -2,6 +2,7 @@
    (Documents/RRFX/library.json), ou localStorage hors de Premiere (mode démo). */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const nodeRequire = (() => {
     try {
@@ -82,7 +83,7 @@
     const text = JSON.stringify(data, null, 1);
     const c = cepFs();
     if (fs && c && c.showSaveDialogEx) {
-      const r = c.showSaveDialogEx('Exporter des effets RR FX', DIR || '', ['json'], defaultName);
+      const r = c.showSaveDialogEx(_T('Exporter des effets RR FX'), DIR || '', ['json'], defaultName);
       if (!r || r.err || !r.data) return null;
       const target = /\.json$/i.test(r.data) ? r.data : r.data + '.json';
       fs.writeFileSync(target, text, 'utf8');
@@ -100,7 +101,7 @@
   function exportText(text, defaultName, exts, title) {
     const c = cepFs();
     if (fs && c && c.showSaveDialogEx) {
-      const r = c.showSaveDialogEx(title || 'Exporter', DIR || '', exts, defaultName);
+      const r = c.showSaveDialogEx(title || _T('Exporter'), DIR || '', exts, defaultName);
       if (!r || r.err || !r.data) return null;
       const ext = '.' + exts[0], target = r.data.toLowerCase().endsWith(ext) ? r.data : r.data + ext;
       fs.writeFileSync(target, text, 'utf8');
@@ -118,7 +119,7 @@
   function saveBinary(chunks, defaultName, ext, title) {
     const c = cepFs();
     if (fs && c && c.showSaveDialogEx) {
-      const r = c.showSaveDialogEx(title || 'Enregistrer', DIR || '', [ext], defaultName);
+      const r = c.showSaveDialogEx(title || _T('Enregistrer'), DIR || '', [ext], defaultName);
       if (!r || r.err || !r.data) return null;
       const target = r.data.toLowerCase().endsWith('.' + ext) ? r.data : r.data + '.' + ext;
       const fd = fs.openSync(target, 'w');
@@ -136,7 +137,7 @@
   function importJSON() {
     const c = cepFs();
     if (fs && c && c.showOpenDialogEx) {
-      const r = c.showOpenDialogEx(true, false, 'Importer des effets RR FX', DIR || '', ['json']);
+      const r = c.showOpenDialogEx(true, false, _T('Importer des effets RR FX'), DIR || '', ['json']);
       if (!r || r.err || !r.data || !r.data.length) return Promise.resolve([]);
       return Promise.resolve(r.data.map(p => JSON.parse(fs.readFileSync(p, 'utf8'))));
     }
@@ -253,6 +254,6 @@
   root.RRFXStorage = {
     load, save, exportJSON, exportText, saveBinary, importJSON, openFolder, cacheDir, zip, pickFiles, listFiles,
     reveal, execFile, systemDirs, readJSON, writeJSON, isWin, nodeRequire,
-    fs, path, os, dir: DIR, location: FILE || 'navigateur (localStorage)', onDisk: !!fs
+    fs, path, os, dir: DIR, location: FILE || _T('navigateur (localStorage)'), onDisk: !!fs
   };
 })(typeof self !== 'undefined' ? self : this);

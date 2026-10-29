@@ -14,11 +14,12 @@
   else root.RRFXDevelop = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const BANDS = [
-    { id: 'red', label: 'Rouge', hue: 0 }, { id: 'orange', label: 'Orange', hue: 30 }, { id: 'yellow', label: 'Jaune', hue: 60 },
-    { id: 'green', label: 'Vert', hue: 120 }, { id: 'aqua', label: 'Bleu-vert', hue: 180 }, { id: 'blue', label: 'Bleu', hue: 240 },
-    { id: 'purple', label: 'Violet', hue: 270 }, { id: 'magenta', label: 'Magenta', hue: 300 }
+    { id: 'red', label: _T('Rouge'), hue: 0 }, { id: 'orange', label: 'Orange', hue: 30 }, { id: 'yellow', label: _T('Jaune'), hue: 60 },
+    { id: 'green', label: _T('Vert'), hue: 120 }, { id: 'aqua', label: _T('Bleu-vert'), hue: 180 }, { id: 'blue', label: _T('Bleu'), hue: 240 },
+    { id: 'purple', label: _T('Violet'), hue: 270 }, { id: 'magenta', label: 'Magenta', hue: 300 }
   ];
   const WHEELS = ['shadows', 'midtones', 'highlights', 'global'];
 
@@ -261,23 +262,23 @@
   // Curseurs du DCTL : [nom du paramètre, libellé (ASCII), clé dans les réglages, min, max, pas].
   function sliderList() {
     const S = [
-      ['temp', 'Temperature', 'temp', -100, 100, 1], ['tint', 'Teinte', 'tint', -100, 100, 1], ['exposure', 'Exposition', 'exposure', -5, 5, 0.01],
-      ['contrast', 'Contraste', 'contrast', -100, 100, 1], ['highlights', 'Hautes lumieres', 'highlights', -100, 100, 1], ['shadows', 'Ombres', 'shadows', -100, 100, 1],
-      ['whites', 'Blancs', 'whites', -100, 100, 1], ['blacks', 'Noirs', 'blacks', -100, 100, 1], ['vibrance', 'Vibrance', 'vibrance', -100, 100, 1], ['saturation', 'Saturation', 'saturation', -100, 100, 1],
-      ['pHighlights', 'Courbe Hautes lumieres', 'pHighlights', -100, 100, 1], ['pLights', 'Courbe Tons clairs', 'pLights', -100, 100, 1], ['pDarks', 'Courbe Tons fonces', 'pDarks', -100, 100, 1], ['pShadows', 'Courbe Ombres', 'pShadows', -100, 100, 1]
+      ['temp', 'Temperature', 'temp', -100, 100, 1], ['tint', _T('Teinte'), 'tint', -100, 100, 1], ['exposure', _T('Exposition'), 'exposure', -5, 5, 0.01],
+      ['contrast', _T('Contraste'), 'contrast', -100, 100, 1], ['highlights', _T('Hautes lumieres'), 'highlights', -100, 100, 1], ['shadows', _T('Ombres'), 'shadows', -100, 100, 1],
+      ['whites', _T('Blancs'), 'whites', -100, 100, 1], ['blacks', _T('Noirs'), 'blacks', -100, 100, 1], ['vibrance', 'Vibrance', 'vibrance', -100, 100, 1], ['saturation', 'Saturation', 'saturation', -100, 100, 1],
+      ['pHighlights', _T('Courbe Hautes lumieres'), 'pHighlights', -100, 100, 1], ['pLights', _T('Courbe Tons clairs'), 'pLights', -100, 100, 1], ['pDarks', _T('Courbe Tons fonces'), 'pDarks', -100, 100, 1], ['pShadows', _T('Courbe Ombres'), 'pShadows', -100, 100, 1]
     ];
-    const ascii = { Rouge: 'Rouge', Orange: 'Orange', Jaune: 'Jaune', Vert: 'Vert', 'Bleu-vert': 'Bleu-vert', Bleu: 'Bleu', Violet: 'Violet', Magenta: 'Magenta' };
-    [['h', 'Teinte'], ['s', 'Saturation'], ['l', 'Luminance']].forEach(([k, lab]) => BANDS.forEach(b => S.push(['hsl_' + b.id + '_' + k, lab + ' ' + ascii[b.label], 'hsl.' + b.id + '.' + k, -100, 100, 1])));
-    const wl = { shadows: 'Ombres', midtones: 'Tons moyens', highlights: 'Hautes lumieres', global: 'Global' };
+    const ascii = { Rouge: _T('Rouge'), Orange: 'Orange', Jaune: _T('Jaune'), Vert: _T('Vert'), 'Bleu-vert': _T('Bleu-vert'), Bleu: _T('Bleu'), Violet: _T('Violet'), Magenta: 'Magenta' };
+    [['h', _T('Teinte')], ['s', 'Saturation'], ['l', 'Luminance']].forEach(([k, lab]) => BANDS.forEach(b => S.push(['hsl_' + b.id + '_' + k, lab + ' ' + ascii[b.label], 'hsl.' + b.id + '.' + k, -100, 100, 1])));
+    const wl = { shadows: _T('Ombres'), midtones: _T('Tons moyens'), highlights: _T('Hautes lumieres'), global: 'Global' };
     WHEELS.forEach(w => {
-      S.push(['grade_' + w + '_h', wl[w] + ' Teinte', 'grading.' + w + '.h', 0, 360, 1]);
+      S.push(['grade_' + w + '_h', wl[w] + _T(' Teinte'), 'grading.' + w + '.h', 0, 360, 1]);
       S.push(['grade_' + w + '_s', wl[w] + ' Saturation', 'grading.' + w + '.s', 0, 100, 1]);
       S.push(['grade_' + w + '_l', wl[w] + ' Luminance', 'grading.' + w + '.l', -100, 100, 1]);
     });
-    S.push(['blending', 'Fusion', 'blending', 0, 100, 1], ['balance', 'Equilibre', 'balance', -100, 100, 1]);
-    S.push(['shadowTint', 'Calibrage Ombres', 'shadowTint', -100, 100, 1], ['redHue', 'Rouge primaire Teinte', 'redHue', -100, 100, 1], ['redSat', 'Rouge primaire Saturation', 'redSat', -100, 100, 1],
-      ['greenHue', 'Vert primaire Teinte', 'greenHue', -100, 100, 1], ['greenSat', 'Vert primaire Saturation', 'greenSat', -100, 100, 1],
-      ['blueHue', 'Bleu primaire Teinte', 'blueHue', -100, 100, 1], ['blueSat', 'Bleu primaire Saturation', 'blueSat', -100, 100, 1], ['amount', 'Intensite du look', 'amount', 0, 100, 1]);
+    S.push(['blending', _T('Fusion'), 'blending', 0, 100, 1], ['balance', _T('Equilibre'), 'balance', -100, 100, 1]);
+    S.push(['shadowTint', _T('Calibrage Ombres'), 'shadowTint', -100, 100, 1], ['redHue', _T('Rouge primaire Teinte'), 'redHue', -100, 100, 1], ['redSat', _T('Rouge primaire Saturation'), 'redSat', -100, 100, 1],
+      ['greenHue', _T('Vert primaire Teinte'), 'greenHue', -100, 100, 1], ['greenSat', _T('Vert primaire Saturation'), 'greenSat', -100, 100, 1],
+      ['blueHue', _T('Bleu primaire Teinte'), 'blueHue', -100, 100, 1], ['blueSat', _T('Bleu primaire Saturation'), 'blueSat', -100, 100, 1], ['amount', _T('Intensite du look'), 'amount', 0, 100, 1]);
     return S;
   }
   const getKey = (p, key) => key.split('.').reduce((o, k) => o[k], p);
@@ -290,7 +291,7 @@
     const L = [];
     // Tout en ASCII : le DCTL est compilé pour la carte graphique par Resolve.
     const ascii = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
-    L.push('// ' + ascii(title || 'RR FX') + ' : look cree avec RR FX (@robin.rahoual) - onglet Couleur.');
+    L.push('// ' + ascii(title || 'RR FX') + _T(' : look cree avec RR FX (@robin.rahoual) - onglet Couleur.'));
     L.push('// Curseurs facon Lightroom. Entree et sortie : Rec.709 (gamma 2.4).');
     L.push('// Texture, Clarte, Correction du voile, vignettage et grain ne sont pas inclus.');
     L.push('');
@@ -469,13 +470,13 @@
   // ---------------------------------------------------------------- looks fournis
 
   const LOOKS = [
-    { id: 'clip', name: 'Clip musical', p: { temp: -8, contrast: 35, highlights: -35, shadows: 20, whites: 12, blacks: -20, vibrance: 25, saturation: -5, grading: { shadows: { h: 195, s: 65, l: -5 }, highlights: { h: 32, s: 55, l: 0 } }, balance: -10 } },
-    { id: 'film', name: 'Film chaud', p: { temp: 22, tint: 6, contrast: -8, blacks: 18, saturation: -12, curve: { rgb: [[0, 0.07], [0.5, 0.52], [1, 0.96]] }, grading: { highlights: { h: 40, s: 25, l: 0 }, shadows: { h: 25, s: 12, l: 0 } } } },
-    { id: 'bw', name: 'Noir et blanc', p: { saturation: -100, contrast: 35, blacks: -20, whites: 15, highlights: -10, hsl: { red: { h: 0, s: 0, l: 15 }, blue: { h: 0, s: 0, l: -20 } } } },
+    { id: 'clip', name: _T('Clip musical'), p: { temp: -8, contrast: 35, highlights: -35, shadows: 20, whites: 12, blacks: -20, vibrance: 25, saturation: -5, grading: { shadows: { h: 195, s: 65, l: -5 }, highlights: { h: 32, s: 55, l: 0 } }, balance: -10 } },
+    { id: 'film', name: _T('Film chaud'), p: { temp: 22, tint: 6, contrast: -8, blacks: 18, saturation: -12, curve: { rgb: [[0, 0.07], [0.5, 0.52], [1, 0.96]] }, grading: { highlights: { h: 40, s: 25, l: 0 }, shadows: { h: 25, s: 12, l: 0 } } } },
+    { id: 'bw', name: _T('Noir et blanc'), p: { saturation: -100, contrast: 35, blacks: -20, whites: 15, highlights: -10, hsl: { red: { h: 0, s: 0, l: 15 }, blue: { h: 0, s: 0, l: -20 } } } },
     { id: 'pastel', name: 'Pastel', p: { exposure: 0.25, contrast: -35, highlights: -20, shadows: 35, saturation: -25, vibrance: 15, curve: { rgb: [[0, 0.1], [1, 0.95]] }, grading: { global: { h: 330, s: 10, l: 0 } } } },
-    { id: 'nuit', name: 'Nuit bleue', p: { temp: -35, exposure: -0.3, contrast: 20, saturation: -15, grading: { shadows: { h: 220, s: 60, l: -5 }, highlights: { h: 190, s: 25, l: 0 } } } },
-    { id: 'cine', name: 'Ciné désaturé', p: { contrast: 18, highlights: -25, shadows: 10, saturation: -30, hsl: { orange: { h: 0, s: 20, l: 5 }, green: { h: -20, s: -45, l: -10 }, blue: { h: -15, s: -10, l: -10 } }, grading: { shadows: { h: 190, s: 25, l: 0 } } } },
-    { id: 'vintage', name: 'Été vintage', p: { temp: 20, tint: 10, contrast: 15, vibrance: 10, saturation: -10, curve: { rgb: [[0, 0.06], [1, 0.96]], b: [[0, 0.16], [1, 0.84]], r: [[0, 0], [0.25, 0.2], [0.75, 0.82], [1, 1]] }, grading: { midtones: { h: 45, s: 25, l: 0 } } } },
+    { id: 'nuit', name: _T('Nuit bleue'), p: { temp: -35, exposure: -0.3, contrast: 20, saturation: -15, grading: { shadows: { h: 220, s: 60, l: -5 }, highlights: { h: 190, s: 25, l: 0 } } } },
+    { id: 'cine', name: _T('Ciné désaturé'), p: { contrast: 18, highlights: -25, shadows: 10, saturation: -30, hsl: { orange: { h: 0, s: 20, l: 5 }, green: { h: -20, s: -45, l: -10 }, blue: { h: -15, s: -10, l: -10 } }, grading: { shadows: { h: 190, s: 25, l: 0 } } } },
+    { id: 'vintage', name: _T('Été vintage'), p: { temp: 20, tint: 10, contrast: 15, vibrance: 10, saturation: -10, curve: { rgb: [[0, 0.06], [1, 0.96]], b: [[0, 0.16], [1, 0.84]], r: [[0, 0], [0.25, 0.2], [0.75, 0.82], [1, 1]] }, grading: { midtones: { h: 45, s: 25, l: 0 } } } },
     { id: 'punch', name: 'Punchy', p: { contrast: 50, highlights: -25, shadows: 20, whites: 15, blacks: -15, vibrance: 50, saturation: 10 } }
   ];
 

@@ -9,6 +9,7 @@
   else root.RRFXSyncData = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const FILE = 'RR FX - synchro.json';
   // Propres à chaque ordinateur : jamais envoyés, jamais remplacés.
@@ -38,7 +39,7 @@
   /* Bibliothèque locale + fichier reçu → { lib, added, removed, settings (bool) }. La locale
      n'est pas modifiée. localUpdated : dernière modification locale (ms). */
   function merge(local, remote, localUpdated) {
-    if (!valid(remote)) throw new Error('Fichier de synchro illisible.');
+    if (!valid(remote)) throw new Error(_T('Fichier de synchro illisible.'));
     const lib = clone(local), newer = remote.savedAt > (localUpdated || 0);
     const gone = new Set((lib.removed || []).concat(remote.removed || []));
     const before = new Set(lib.items.map(i => i.id));

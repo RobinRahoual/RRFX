@@ -6,14 +6,15 @@
   else root.RRFXAssets = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const TYPES = [
-    { id: 'video', label: 'Vidéos', icon: '▶', exts: ['mov', 'mp4', 'm4v', 'webm', 'mxf', 'avi', 'mkv', 'mts', 'm2ts', 'wmv', 'mpg', 'mpeg'] },
+    { id: 'video', label: _T('Vidéos'), icon: '▶', exts: ['mov', 'mp4', 'm4v', 'webm', 'mxf', 'avi', 'mkv', 'mts', 'm2ts', 'wmv', 'mpg', 'mpeg'] },
     { id: 'image', label: 'Images', icon: '▣', exts: ['png', 'jpg', 'jpeg', 'gif', 'tif', 'tiff', 'psd', 'webp', 'bmp', 'exr', 'tga', 'heic'] },
-    { id: 'audio', label: 'Sons & SFX', icon: '♪', exts: ['wav', 'mp3', 'aif', 'aiff', 'm4a', 'flac', 'ogg', 'aac', 'caf', 'wma'] },
+    { id: 'audio', label: _T('Sons & SFX'), icon: '♪', exts: ['wav', 'mp3', 'aif', 'aiff', 'm4a', 'flac', 'ogg', 'aac', 'caf', 'wma'] },
     { id: 'lut', label: 'LUTs', icon: '◐', exts: ['cube', '3dl', 'look', 'lut', 'csp', 'ilut'] },
-    { id: 'font', label: 'Polices', icon: 'Aa', exts: ['ttf', 'otf', 'ttc', 'otc', 'woff', 'woff2'] },
-    { id: 'mogrt', label: 'Titres', icon: 'T', exts: ['mogrt'] },
+    { id: 'font', label: _T('Polices'), icon: 'Aa', exts: ['ttf', 'otf', 'ttc', 'otc', 'woff', 'woff2'] },
+    { id: 'mogrt', label: _T('Titres'), icon: 'T', exts: ['mogrt'] },
     { id: 'preset', label: 'Presets', icon: '≡', exts: ['prfpset', 'rrfxpack', 'ffx', 'epr', 'aep', 'prproj'] }
   ];
   const typeById = {};
@@ -75,7 +76,7 @@
     const roots = {};
     Array.from(list || []).forEach(f => {
       const parts = String(f.webkitRelativePath || f.name).split('/');
-      const rootName = parts.length > 1 ? parts.shift() : 'Dossier';
+      const rootName = parts.length > 1 ? parts.shift() : _T('Dossier');
       const type = classify(parts[parts.length - 1]);
       if (!type || parts.some(p => SKIP_DIRS.test(p) && p !== parts[parts.length - 1])) return;
       const r = roots[rootName] || (roots[rootName] = { files: [], truncated: false, scanned: Date.now() });
@@ -151,10 +152,10 @@
   }
 
   function formatSize(n) {
-    if (n < 1024) return n + ' o';
-    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0).replace('.', ',') + ' Ko';
-    if (n < 1024 * 1024 * 1024) return (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace('.', ',') + ' Mo';
-    return (n / 1073741824).toFixed(1).replace('.', ',') + ' Go';
+    if (n < 1024) return n + _T(' o');
+    if (n < 1024 * 1024) return (n / 1024).toFixed(n < 10240 ? 1 : 0).replace('.', ',') + _T(' Ko');
+    if (n < 1024 * 1024 * 1024) return (n / 1048576).toFixed(n < 10485760 ? 1 : 0).replace('.', ',') + _T(' Mo');
+    return (n / 1073741824).toFixed(1).replace('.', ',') + _T(' Go');
   }
 
   // ---------------------------------------------------------------- LUT .cube
@@ -178,8 +179,8 @@
       }
     });
     const need = lut.dim === 3 ? lut.size * lut.size * lut.size * 3 : lut.size * 3;
-    if (!(lut.size >= 2) || values.length < need) throw new Error('LUT .cube illisible');
-    if (lut.size > 256) throw new Error('LUT trop grande');
+    if (!(lut.size >= 2) || values.length < need) throw new Error(_T('LUT .cube illisible'));
+    if (lut.size > 256) throw new Error(_T('LUT trop grande'));
     lut.data = Float32Array.from(values.slice(0, need));
     return lut;
   }

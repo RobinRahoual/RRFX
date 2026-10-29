@@ -9,6 +9,7 @@
   else root.RRFXMedia = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const u16 = (b, o) => (b[o] << 8) | b[o + 1];
   const u32 = (b, o) => ((b[o] << 24) >>> 0) + (b[o + 1] << 16) + (b[o + 2] << 8) + b[o + 3];
@@ -71,8 +72,8 @@
       if (len === 0xffffffff) break;
       pos += 8 + len + (len & 1);
     }
-    if (!fmt || dataOffset < 0) throw new Error('WAV illisible (morceaux fmt/data manquants)');
-    if (fmt.tag !== 1 && fmt.tag !== 3) throw new Error('WAV compressé non pris en charge (format ' + fmt.tag + ')');
+    if (!fmt || dataOffset < 0) throw new Error(_T('WAV illisible (morceaux fmt/data manquants)'));
+    if (fmt.tag !== 1 && fmt.tag !== 3) throw new Error(_T('WAV compressé non pris en charge (format ') + fmt.tag + ')');
     const pcm = { channels: fmt.channels, bits: fmt.bits, float: fmt.tag === 3, bigEndian: false, signed: fmt.bits > 8 };
     const frame = fmt.channels * fmt.bits / 8;
     return { kind: 'wav', codec: 'pcm', sampleRate: fmt.sampleRate, channels: fmt.channels, pcm, dataOffset, frame, duration: dataSize / frame / fmt.sampleRate, frames: Math.floor(dataSize / frame) };
@@ -169,7 +170,7 @@
       const info = { kind: 'mp4', format, sampleRate: rate, channels, timescale, delay, mediaTime, stbl, entry: { start: e, kids, end: entryEnd } };
       if (format === 'mp4a') {
         const esds = scan(b, kids, entryEnd, 'esds');
-        if (!esds) throw new Error('AAC sans configuration (esds)');
+        if (!esds) throw new Error(_T('AAC sans configuration (esds)'));
         info.codec = 'aac';
         info.asc = parseAsc(b, esds);
         info.sampleRate = info.asc.rate || rate;
@@ -188,14 +189,14 @@
         const c = scan(b, kids, entryEnd, 'pcmC');
         pcm = { bits: c ? b[c.body + 5] : bits, bigEndian: c ? !(b[c.body + 4] & 1) : true, float: format === 'fpcm', signed: true };
       }
-      if (!pcm) throw new Error('Son « ' + format.trim() + ' » non pris en charge');
+      if (!pcm) throw new Error(_T('Son « ') + format.trim() + _T(' » non pris en charge'));
       pcm.channels = channels;
       info.codec = 'pcm';
       info.pcm = pcm;
       info.frame = bpf || channels * pcm.bits / 8;
       return info;
     }
-    throw new Error('Aucune piste son dans ce fichier');
+    throw new Error(_T('Aucune piste son dans ce fichier'));
   }
 
   // AudioSpecificConfig (profil, fréquence, canaux) dans esds.
@@ -217,7 +218,7 @@
       }
       p += l;
     }
-    throw new Error('Configuration AAC introuvable');
+    throw new Error(_T('Configuration AAC introuvable'));
   }
 
   // Tables d'échantillons (temps, position, taille), par morceau (chunk).
@@ -261,7 +262,7 @@
     const top = await topBoxes(io, size);
     const moovBox = top.find(x => x.type === 'moov');
     if (!moovBox) return null;
-    if (moovBox.end - moovBox.start > 96 * 1024 * 1024) throw new Error('En-tête MP4 trop gros');
+    if (moovBox.end - moovBox.start > 96 * 1024 * 1024) throw new Error(_T('En-tête MP4 trop gros'));
     const b = await io.read(moovBox.start, moovBox.end - moovBox.start);
     const moov = { type: 'moov', start: 0, body: moovBox.body - moovBox.start, end: b.length };
     const mvhd = child(b, moov, 'mvhd');
@@ -318,7 +319,7 @@
   }
 
   async function readMp4Aac(io, info, t0, t1) {
-    if (info.asc.freqIndex === 15) throw new Error('Fréquence AAC non standard');
+    if (info.asc.freqIndex === 15) throw new Error(_T('Fréquence AAC non standard'));
     const frames = [];
     let start = null;
     for (const c of info.chunks) {
@@ -359,7 +360,7 @@
 
   async function probe(io) {
     const size = await io.size();
-    if (size < 12) throw new Error('Fichier vide');
+    if (size < 12) throw new Error(_T('Fichier vide'));
     const head = await io.read(0, 12);
     if (/RIFF|RF64|BW64/.test(str4(head, 0))) {
       const w = await probeWav(io, size);
@@ -375,7 +376,7 @@
     if (info.kind === 'wav') return readWav(io, info, t0, t1);
     if (info.kind === 'mp4' && info.codec === 'pcm') return readMp4Pcm(io, info, t0, t1);
     if (info.kind === 'mp4' && info.codec === 'aac') return readMp4Aac(io, info, t0, t1);
-    throw new Error('Format non lu directement');
+    throw new Error(_T('Format non lu directement'));
   }
 
   // ---------------------------------------------------------------- accès aux fichiers

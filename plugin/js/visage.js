@@ -4,6 +4,7 @@
    retrouvé (tracker.js), puis la position est suivie et lissée sur toute la durée du plan. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const F = root.RRFXFaces, Tr = root.RRFXTracker, { h } = app.UI, TICKS = 254016000000;
@@ -29,11 +30,11 @@
     async function trackFaces(targets, follow) {
       const plan = F.sampling(targets.map(t => ({ a: t.start / TICKS, b: t.end / TICKS })), { every: 0.6, max: 16, budget: 80 });
       const times = [].concat(...plan.map(p => p.times));
-      const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, 'Images des plans'));
+      const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, _T('Images des plans')));
       const faces = [];
       let k = 0, done = 0;
       for (let i = 0; i < targets.length; i++) {
-        const eyes = await eyesAlong(frames, k, plan[i].at.length, () => app.status.progress(done++, times.length, 'Recherche du visage'));
+        const eyes = await eyesAlong(frames, k, plan[i].at.length, () => app.status.progress(done++, times.length, _T('Recherche du visage')));
         k += plan[i].at.length;
         faces.push(F.track(plan[i].at.map((at, j) => ({ at, eyes: eyes[j] })), targets[i].frames, FOLLOW[follow] || FOLLOW.smooth));
       }
@@ -65,9 +66,9 @@
       });
       window.addEventListener('mouseup', up);
       draw();
-      return app.modal('Entoure l\'objet à suivre', h('div', null, cv, h('div', { class: 'note' }, 'Trace un rectangle autour du produit, du logo ou de la personne : RR FX le suit dans tout le plan.')), [
-        { label: 'Annuler', value: null },
-        { label: 'Suivre cet objet', primary: true, value: () => box }
+      return app.modal(_T('Entoure l\'objet à suivre'), h('div', null, cv, h('div', { class: 'note' }, _T('Trace un rectangle autour du produit, du logo ou de la personne : RR FX le suit dans tout le plan.'))), [
+        { label: _T('Annuler'), value: null },
+        { label: _T('Suivre cet objet'), primary: true, value: () => box }
       ]).then(v => { window.removeEventListener('mouseup', up); return v; });
     }
 
@@ -75,21 +76,21 @@
     async function trackObject(targets, follow) {
       const plan = F.sampling(targets.map(t => ({ a: t.start / TICKS, b: t.end / TICKS })), { every: 0.3, max: 40, budget: 90 });
       const times = [].concat(...plan.map(p => p.times));
-      const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, 'Images des plans'));
+      const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, _T('Images des plans')));
       const box = await pickBox(frames[0]);
-      if (!box) throw new Error('Aucun objet choisi.');
+      if (!box) throw new Error(_T('Aucun objet choisi.'));
       const gray = frames.map(f => ({ g: F.luma(f.data, f.width, f.height), w: f.width, h: f.height }));
       const faces = [];
       let k = 0, lost = 0;
       for (let i = 0; i < targets.length; i++) {
-        app.status.progress(i, targets.length, 'Suivi de l\'objet');
+        app.status.progress(i, targets.length, _T('Suivi de l\'objet'));
         const n = plan[i].at.length, pts = Tr.track(gray.slice(k, k + n), box);
         k += n;
         lost += pts.filter(p => p.score < 0.5).length;
         faces.push(F.track(plan[i].at.map((at, j) => ({ at, eyes: pts[j].score >= 0.5 ? pts[j] : null })), targets[i].frames, FOLLOW[follow] || FOLLOW.smooth));
         await pause();
       }
-      if (lost) app.log('Objet perdu de vue sur ' + lost + ' image(s) : la dernière position connue est gardée.', 'warn');
+      if (lost) app.log(_T('Objet perdu de vue sur ') + lost + _T(' image(s) : la dernière position connue est gardée.'), 'warn');
       return { faces };
     }
 
@@ -101,16 +102,16 @@
       const list = await app.Host.call('rushList', { scope: 'sequence' });
       if (!list.ok) throw new Error(list.error);
       const clips = list.clips.filter(c => !c.copy);
-      if (!clips.length) throw new Error('Aucun rush dans la séquence.');
+      if (!clips.length) throw new Error(_T('Aucun rush dans la séquence.'));
       const fps = list.fps || app.fps();
       const plan = F.sampling(clips.map(c => ({ a: c.start / TICKS, b: c.end / TICKS })), { every: 0.6, max: 14, budget: 80 });
       const times = [].concat(...plan.map(p => p.times));
-      const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, 'Images des plans'));
+      const frames = await app.services.grabClean(times, 3, 320, p => app.status.progress(Math.round(p * times.length), times.length, _T('Images des plans')));
       const out = [];
       let k = 0, found = 0, done = 0;
       for (let i = 0; i < clips.length; i++) {
         const c = clips[i], N = Math.max(2, Math.round((c.end - c.start) / TICKS * fps));
-        const eyes = await eyesAlong(frames, k, plan[i].at.length, () => app.status.progress(done++, times.length, 'Recherche du visage'));
+        const eyes = await eyesAlong(frames, k, plan[i].at.length, () => app.status.progress(done++, times.length, _T('Recherche du visage')));
         k += plan[i].at.length;
         const series = F.track(plan[i].at.map((at, j) => ({ at, eyes: eyes[j] })), N, FOLLOW.smooth);
         if (!series) continue;

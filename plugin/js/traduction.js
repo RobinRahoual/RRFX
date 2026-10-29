@@ -8,12 +8,13 @@
   else root.RRFXTraduction = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const LANGS = [
-    ['fr', 'Français'], ['en', 'Anglais'], ['es', 'Espagnol'], ['de', 'Allemand'], ['it', 'Italien'], ['pt', 'Portugais'],
-    ['nl', 'Néerlandais'], ['pl', 'Polonais'], ['ro', 'Roumain'], ['tr', 'Turc'], ['ar', 'Arabe'], ['ru', 'Russe'],
-    ['uk', 'Ukrainien'], ['zh', 'Chinois'], ['ja', 'Japonais'], ['ko', 'Coréen'], ['hi', 'Hindi'], ['id', 'Indonésien'],
-    ['sv', 'Suédois'], ['da', 'Danois'], ['no', 'Norvégien'], ['fi', 'Finnois'], ['el', 'Grec'], ['cs', 'Tchèque']
+    ['fr', _T('Français')], ['en', _T('Anglais')], ['es', _T('Espagnol')], ['de', _T('Allemand')], ['it', _T('Italien')], ['pt', _T('Portugais')],
+    ['nl', _T('Néerlandais')], ['pl', _T('Polonais')], ['ro', _T('Roumain')], ['tr', _T('Turc')], ['ar', _T('Arabe')], ['ru', _T('Russe')],
+    ['uk', _T('Ukrainien')], ['zh', _T('Chinois')], ['ja', _T('Japonais')], ['ko', _T('Coréen')], ['hi', 'Hindi'], ['id', _T('Indonésien')],
+    ['sv', _T('Suédois')], ['da', _T('Danois')], ['no', _T('Norvégien')], ['fi', _T('Finnois')], ['el', _T('Grec')], ['cs', _T('Tchèque')]
   ];
   // DeepL veut une variante pour l'anglais et le portugais.
   const DEEPL_TARGET = { en: 'EN-GB', pt: 'PT-PT', zh: 'ZH', no: 'NB' };
@@ -63,9 +64,9 @@
   function myMemoryParse(json) {
     const d = json && json.responseData;
     const status = Number(json && json.responseStatus);
-    if (status && status !== 200) throw new Error(/QUOTA|LIMIT/i.test(String(json.responseDetails || '')) ? 'Quota MyMemory du jour atteint : réessaie demain, ajoute ton e-mail, ou passe par DeepL.' : 'MyMemory : ' + (json.responseDetails || status));
-    if (!d || typeof d.translatedText !== 'string') throw new Error('Réponse de MyMemory illisible.');
-    if (/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(d.translatedText)) throw new Error('Quota MyMemory du jour atteint : réessaie demain, ajoute ton e-mail, ou passe par DeepL.');
+    if (status && status !== 200) throw new Error(/QUOTA|LIMIT/i.test(String(json.responseDetails || '')) ? _T('Quota MyMemory du jour atteint : réessaie demain, ajoute ton e-mail, ou passe par DeepL.') : 'MyMemory : ' + (json.responseDetails || status));
+    if (!d || typeof d.translatedText !== 'string') throw new Error(_T('Réponse de MyMemory illisible.'));
+    if (/MYMEMORY WARNING|QUERY LENGTH LIMIT/i.test(d.translatedText)) throw new Error(_T('Quota MyMemory du jour atteint : réessaie demain, ajoute ton e-mail, ou passe par DeepL.'));
     return decode(d.translatedText);
   }
 
@@ -81,14 +82,14 @@
     };
   }
   function deeplParse(json, n) {
-    if (!json || !Array.isArray(json.translations) || json.translations.length !== n) throw new Error(json && json.message ? 'DeepL : ' + json.message : 'Réponse de DeepL illisible.');
+    if (!json || !Array.isArray(json.translations) || json.translations.length !== n) throw new Error(json && json.message ? 'DeepL : ' + json.message : _T('Réponse de DeepL illisible.'));
     return json.translations.map(t => String(t.text || ''));
   }
   function httpError(status, service) {
-    if (service === 'deepl' && status === 403) return 'Clé DeepL refusée : vérifie-la (Compte DeepL > Clé d\'authentification API).';
-    if (service === 'deepl' && status === 456) return 'Quota DeepL du mois atteint.';
-    if (status === 429) return 'Trop de demandes d\'un coup : réessaie dans une minute.';
-    return (service === 'deepl' ? 'DeepL' : 'MyMemory') + ' a répondu ' + status + '.';
+    if (service === 'deepl' && status === 403) return _T('Clé DeepL refusée : vérifie-la (Compte DeepL > Clé d\'authentification API).');
+    if (service === 'deepl' && status === 456) return _T('Quota DeepL du mois atteint.');
+    if (status === 429) return _T('Trop de demandes d\'un coup : réessaie dans une minute.');
+    return (service === 'deepl' ? 'DeepL' : 'MyMemory') + _T(' a répondu ') + status + '.';
   }
 
   /* Sous-titres → texte .srt. */

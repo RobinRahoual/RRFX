@@ -9,6 +9,7 @@
   else root.RRFXLog = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const log10 = Math.log10, pow = Math.pow;
 
@@ -148,7 +149,7 @@
     { id: 'samsunglog', label: 'Samsung Log', official: true },
     { id: 'logc3', label: 'LogC3 / ARRI Wide Gamut 3', curve: 'logc3', gamut: 'awg3' },
     { id: 'logc4', label: 'LogC4 / ARRI Wide Gamut 4', curve: 'logc4', gamut: 'awg4' },
-    { id: 'other', label: 'Autre (LUT du fabricant)', official: true }
+    { id: 'other', label: _T('Autre (LUT du fabricant)'), official: true }
   ];
   const profile = id => PROFILES.find(p => p.id === id) || null;
 
@@ -164,16 +165,16 @@
     { id: 'gopro', label: 'GoPro', models: ['HERO13 Black', 'HERO12 Black'], profiles: ['gplog'] },
     { id: 'samsung', label: 'Samsung', models: ['Galaxy S25 Ultra', 'Galaxy S24 Ultra'], profiles: ['samsunglog'] },
     { id: 'arri', label: 'ARRI', models: ['ALEXA Mini', 'ALEXA 35', 'AMIRA'], profiles: ['logc3', 'logc4'] },
-    { id: 'other', label: 'Autre', models: [], profiles: PROFILES.map(p => p.id) }
+    { id: 'other', label: _T('Autre'), models: [], profiles: PROFILES.map(p => p.id) }
   ];
   const brand = id => BRANDS.find(b => b.id === id) || BRANDS[BRANDS.length - 1];
 
   // ---------------------------------------------------------------- rendu Rec.709
 
   const CONTRASTS = {
-    soft: { label: 'Doux', gamma: 0.9, knee: 0.7 },
+    soft: { label: _T('Doux'), gamma: 0.9, knee: 0.7 },
     standard: { label: 'Standard', gamma: 1, knee: 0.8 },
-    strong: { label: 'Contrasté', gamma: 1.12, knee: 0.86 }
+    strong: { label: _T('Contrasté'), gamma: 1.12, knee: 0.86 }
   };
 
   // Linéaire scène (gris 18 % = 0,18) → signal Rec.709 : contraste autour du gris, OETF BT.709,
@@ -190,7 +191,7 @@
   // Valeur Premiere → linéaire scène (même gamut que la caméra).
   function toLinear(profileId, v) {
     const p = profile(profileId), c = p && CURVES[p.curve];
-    if (!c) throw new Error('Pas de formule pour ' + (p ? p.label : profileId));
+    if (!c) throw new Error(_T('Pas de formule pour ') + (p ? p.label : profileId));
     return c.decode(toFormula(c, v));
   }
   function fromLinear(profileId, x) {
@@ -202,7 +203,7 @@
   function converter(profileId, o) {
     o = o || {};
     const p = profile(profileId);
-    if (!p || p.official) throw new Error('Pas de formule publiée pour ' + (p ? p.label : profileId) + ' : il faut la LUT du fabricant.');
+    if (!p || p.official) throw new Error(_T('Pas de formule publiée pour ') + (p ? p.label : profileId) + _T(' : il faut la LUT du fabricant.'));
     const c = CURVES[p.curve], M = matrix(p.gamut), k = pow(2, -(Number(o.ev) || 0)), con = o.contrast;
     return (r, g, b) => {
       const lr = c.decode(toFormula(c, r)) * k, lg = c.decode(toFormula(c, g)) * k, lb = c.decode(toFormula(c, b)) * k;
@@ -236,7 +237,7 @@
   // Recherche de la LUT officielle (le site du fabricant change souvent d'adresse).
   function searchURL(cam) {
     const b = brand(cam.brand), p = profile(cam.profile);
-    const q = [b.id === 'other' ? '' : b.label, cam.model || '', p && !/^other$/.test(p.id) ? p.label : 'log', 'to Rec.709 LUT officielle'].filter(Boolean).join(' ');
+    const q = [b.id === 'other' ? '' : b.label, cam.model || '', p && !/^other$/.test(p.id) ? p.label : 'log', _T('to Rec.709 LUT officielle')].filter(Boolean).join(' ');
     return 'https://www.google.com/search?q=' + encodeURIComponent(q);
   }
   const canCompute = id => { const p = profile(id); return !!(p && !p.official); };

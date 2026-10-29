@@ -4,6 +4,7 @@
    le focus, tant que Premiere est ouvert. Désactivée par défaut (Réglages > Télécommande). */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const Keys = root.RRFXShortcuts, { Store } = app;
@@ -29,11 +30,11 @@
     /* Réponse à une requête : chemin /rrfx/<jeton>/<action> → { code, body }. Pure (testable). */
     function answer(path, token, busy, run) {
       const m = /^\/rrfx\/([^/?#]+)\/?([^/?#]*)/.exec(String(path || ''));
-      if (!m) return { code: 404, body: { ok: false, error: 'Adresse inconnue' } };
-      if (m[1] !== token) return { code: 403, body: { ok: false, error: 'Jeton incorrect' } };
+      if (!m) return { code: 404, body: { ok: false, error: _T('Adresse inconnue') } };
+      if (m[1] !== token) return { code: 403, body: { ok: false, error: _T('Jeton incorrect') } };
       if (!m[2]) return { code: 200, body: { ok: true, actions: actions().map(id => ({ id, label: Keys.ACTIONS[id] })) } };
-      if (!Keys.ACTIONS[m[2]] || !app.services.actionAvailable(m[2])) return { code: 404, body: { ok: false, error: 'Action inconnue : ' + m[2] } };
-      if (busy) return { code: 409, body: { ok: false, error: 'RR FX est occupé' } };
+      if (!Keys.ACTIONS[m[2]] || !app.services.actionAvailable(m[2])) return { code: 404, body: { ok: false, error: _T('Action inconnue : ') + m[2] } };
+      if (busy) return { code: 409, body: { ok: false, error: _T('RR FX est occupé') } };
       run(m[2]);
       return { code: 202, body: { ok: true, action: m[2], label: Keys.ACTIONS[m[2]] } };
     }
@@ -47,21 +48,21 @@
     function start() {
       stop();
       const http = Store.nodeRequire && Store.nodeRequire('http');
-      if (!http) { state = 'Disponible dans Premiere (mode démo ici).'; return; }
+      if (!http) { state = _T('Disponible dans Premiere (mode démo ici).'); return; }
       const x = st();
       server = http.createServer((req, res) => {
         const r = answer(req.url, x.token, app.S.busy, id => setTimeout(() => app.services.runAction(id), 0));
         res.writeHead(r.code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify(r.body));
-        if (r.code === 202) app.log('Télécommande : ' + r.body.label, 'info');
+        if (r.code === 202) app.log(_T('Télécommande : ') + r.body.label, 'info');
       });
       server.on('error', e => {
-        state = e && e.code === 'EADDRINUSE' ? 'Le port ' + x.port + ' est déjà pris : choisis-en un autre.' : 'Télécommande arrêtée : ' + app.errorMessage(e);
+        state = e && e.code === 'EADDRINUSE' ? _T('Le port ') + x.port + _T(' est déjà pris : choisis-en un autre.') : _T('Télécommande arrêtée : ') + app.errorMessage(e);
         app.log(state, 'warn');
         server = null;
         refresh();
       });
-      server.listen(x.port, '127.0.0.1', () => { state = 'En marche sur le port ' + x.port + '.'; refresh(); });
+      server.listen(x.port, '127.0.0.1', () => { state = _T('En marche sur le port ') + x.port + '.'; refresh(); });
     }
     let refresh = () => {};
 
@@ -70,9 +71,9 @@
       refresh = () => {
         if (!box.isConnected && box.childNodes.length) return;
         box.innerHTML = '';
-        box.appendChild(checkbox('Activer la télécommande', x.on, v => { x.on = v; app.persist(); if (v) start(); else stop(); refresh(); }));
+        box.appendChild(checkbox(_T('Activer la télécommande'), x.on, v => { x.on = v; app.persist(); if (v) start(); else stop(); refresh(); }));
         if (!x.on) {
-          box.appendChild(h('div', { class: 'note' }, 'Lance les actions de RR FX depuis un Stream Deck, Bitfocus Companion, un raccourci clavier du système… même quand le panneau n\'est pas sélectionné. Rien n\'est ouvert sur le réseau : seul cet ordinateur peut l\'utiliser.'));
+          box.appendChild(h('div', { class: 'note' }, _T('Lance les actions de RR FX depuis un Stream Deck, Bitfocus Companion, un raccourci clavier du système… même quand le panneau n\'est pas sélectionné. Rien n\'est ouvert sur le réseau : seul cet ordinateur peut l\'utiliser.')));
           return;
         }
         if (state) box.appendChild(h('div', { class: 'note' }, state));
@@ -81,23 +82,23 @@
         box.appendChild(row('Port', port));
         const list = actions();
         if (list.indexOf(x.pick) < 0) x.pick = list[0];
-        const url = h('input', { class: 'textfield', readonly: true, value: base() + x.pick, 'aria-label': 'Adresse de l\'action' });
+        const url = h('input', { class: 'textfield', readonly: true, value: base() + x.pick, 'aria-label': _T('Adresse de l\'action') });
         box.appendChild(row('Action', picker(list.map(id => ({ v: id, label: Keys.ACTIONS[id] })), x.pick, v => { x.pick = v; app.persist(); url.value = base() + v; })));
-        const copy = h('button', { class: 'action go' }, 'Copier l\'adresse');
+        const copy = h('button', { class: 'action go' }, _T('Copier l\'adresse'));
         copy.addEventListener('click', () => {
           url.select();
-          const done = ok => app.status.finish(ok ? 'ok' : 'warn', ok ? 'Adresse copiée' : 'Copie impossible', ok ? 'Colle-la dans ton Stream Deck ou Companion.' : 'Sélectionne l\'adresse et copie-la à la main.');
+          const done = ok => app.status.finish(ok ? 'ok' : 'warn', ok ? _T('Adresse copiée') : _T('Copie impossible'), ok ? _T('Colle-la dans ton Stream Deck ou Companion.') : _T('Sélectionne l\'adresse et copie-la à la main.'));
           if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url.value).then(() => done(true), () => done(document.execCommand('copy')));
           else done(document.execCommand('copy'));
         });
-        const renew = h('button', { class: 'action quiet', title: 'Les anciennes adresses ne marcheront plus' }, 'Nouveau jeton');
+        const renew = h('button', { class: 'action quiet', title: _T('Les anciennes adresses ne marcheront plus') }, _T('Nouveau jeton'));
         renew.addEventListener('click', () => { x.token = newToken(); app.persist(); refresh(); });
         box.appendChild(url);
         box.appendChild(h('div', { class: 'row-buttons' }, copy, renew));
-        box.appendChild(h('div', { class: 'note' }, 'Stream Deck : installe un plugin gratuit qui envoie une requête web (« API Ninja », « Web Requests »…), action GET, colle l\'adresse. Companion : module « Generic HTTP ». ' + base() + ' (sans action) donne la liste des actions.'));
+        box.appendChild(h('div', { class: 'note' }, _T('Stream Deck : installe un plugin gratuit qui envoie une requête web (« API Ninja », « Web Requests »…), action GET, colle l\'adresse. Companion : module « Generic HTTP ». ') + base() + _T(' (sans action) donne la liste des actions.')));
       };
       refresh();
-      return section('Télécommande (Stream Deck, Companion…)', [box], null, !x.on);
+      return section(_T('Télécommande (Stream Deck, Companion…)'), [box], null, !x.on);
     }
 
     app.settingsExtras.push(remoteSection);

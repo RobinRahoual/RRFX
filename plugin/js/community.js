@@ -11,6 +11,7 @@
   else root.RRFXCommunity = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const REPO = 'RobinRahoual/RRFX';
   const LABEL = 'preset';
@@ -20,7 +21,7 @@
   const KEY_CACHE = 'rrfx.community.cache';
   const MAX_URL = 7000; // au-delà, le navigateur ou GitHub peut couper l'adresse
 
-  const TYPES = { preset: 'Preset', captured: 'Capturé', ramp: 'Rampe', look: 'Look', textStyle: 'Style de texte', palette: 'Palette', gradient: 'Dégradé', titleAnim: 'Animation de texte', xpStyle: 'Style Express', projectTemplate: 'Modèle de projet' };
+  const TYPES = { preset: 'Preset', captured: _T('Capturé'), ramp: _T('Rampe'), look: 'Look', textStyle: _T('Style de texte'), palette: 'Palette', gradient: _T('Dégradé'), titleAnim: _T('Animation de texte'), xpStyle: _T('Style Express'), projectTemplate: _T('Modèle de projet') };
 
   function safeGet(storage, key) { try { return storage ? storage.getItem(key) : null; } catch (e) { return null; } }
   function safeSet(storage, key, v) { try { if (storage) storage.setItem(key, v); } catch (e) { /* cache facultatif */ } }
@@ -46,7 +47,7 @@
     const reactions = issue.reactions || {};
     return {
       number: issue.number,
-      name: field(issue.body, 'Nom') || title || items[0].name,
+      name: field(issue.body, _T('Nom')) || title || items[0].name,
       desc: field(issue.body, 'Description').slice(0, 600),
       author: issue.user && issue.user.login ? issue.user.login : '?',
       url: issue.html_url || 'https://github.com/' + REPO + '/issues/' + issue.number,
@@ -74,9 +75,9 @@
       for (let page = 1; page <= (opts.pages || 3); page++) {
         const res = await opts.fetch(API + '?labels=' + LABEL + '&state=open&per_page=100&page=' + page, { headers: { Accept: 'application/vnd.github+json' } });
         if (!res || !res.ok) {
-          if (res && (res.status === 403 || res.status === 429)) throw new Error('GitHub limite les lectures : réessaie dans quelques minutes.');
-          if (res && res.status === 404) throw new Error('Bibliothèque introuvable (dépôt ' + REPO + ' privé ou absent).');
-          throw new Error('GitHub ne répond pas (' + (res ? res.status : 'hors ligne') + ').');
+          if (res && (res.status === 403 || res.status === 429)) throw new Error(_T('GitHub limite les lectures : réessaie dans quelques minutes.'));
+          if (res && res.status === 404) throw new Error(_T('Bibliothèque introuvable (dépôt ') + REPO + _T(' privé ou absent).'));
+          throw new Error(_T('GitHub ne répond pas (') + (res ? res.status : _T('hors ligne')) + ').');
         }
         const batch = await res.json();
         if (!Array.isArray(batch)) break;

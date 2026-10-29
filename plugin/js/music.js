@@ -2,6 +2,7 @@
    son / image, et volume de la musique pour l'intensité des effets. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Core, Audio, Media, Store, Host } = app;
@@ -29,7 +30,7 @@
 
     async function decodeBytes(bytes) {
       const Ctx = root.OfflineAudioContext || root.webkitOfflineAudioContext;
-      if (!Ctx) throw new Error('Décodage audio indisponible');
+      if (!Ctx) throw new Error(_T('Décodage audio indisponible'));
       const buf = await new Ctx(1, 1, 44100).decodeAudioData(bytes.slice().buffer);
       const n = buf.length, out = new Float32Array(n);
       for (let c = 0; c < buf.numberOfChannels; c++) {
@@ -41,7 +42,7 @@
 
     function ioFor(src) {
       if (typeof src !== 'string') return Media.blobIO(src);
-      if (!Store.fs) throw new Error('Lecture des fichiers disponible dans Premiere (ou choisis le fichier à la main).');
+      if (!Store.fs) throw new Error(_T('Lecture des fichiers disponible dans Premiere (ou choisis le fichier à la main).'));
       return Media.nodeIO(Store.fs, src);
     }
 
@@ -70,14 +71,14 @@
           if (!w.adts) return { samples: w.samples, sampleRate: w.sampleRate, start: w.start, duration: info.duration };
           let d;
           try { d = await decodeBytes(w.adts); } catch (e) {
-            throw new Error('Le son AAC de ce fichier ne peut pas être décodé ici : exporte-le en WAV, ou utilise Clip > Synchroniser de Premiere.');
+            throw new Error(_T('Le son AAC de ce fichier ne peut pas être décodé ici : exporte-le en WAV, ou utilise Clip > Synchroniser de Premiere.'));
           }
           const off = Math.max(0, Math.round((t0 - w.start) * d.sampleRate)), len = Math.round((end - t0) * d.sampleRate);
           return { samples: d.samples.subarray(off, off + len), sampleRate: d.sampleRate, start: t0, duration: info.duration };
         }
         // MP3, AIFF, FLAC… : le navigateur décode le fichier entier.
         const size = await io.size();
-        if (size > 400 * 1024 * 1024) throw new Error('Fichier trop gros pour être décodé en entier : exporte le son en WAV.');
+        if (size > 400 * 1024 * 1024) throw new Error(_T('Fichier trop gros pour être décodé en entier : exporte le son en WAV.'));
         const d = await decodeBytes(await io.read(0, size));
         const a = Math.round(t0 * d.sampleRate), b = t1 == null ? d.samples.length : Math.round(t1 * d.sampleRate);
         return { samples: d.samples.subarray(a, b), sampleRate: d.sampleRate, start: t0, duration: d.samples.length / d.sampleRate };
@@ -114,18 +115,18 @@
         const r = await Host.call('musicInfo', {});
         if (!r.ok) throw new Error(r.error);
         info = r;
-        if (!info.path) throw new Error('Fichier de « ' + info.name + ' » introuvable : choisis-le à la main (Musique > Choisir un fichier).');
+        if (!info.path) throw new Error(_T('Fichier de « ') + info.name + _T(' » introuvable : choisis-le à la main (Musique > Choisir un fichier).'));
       }
       const w0 = M.manual ? 0 : Math.max(0, info.inPoint - 2), w1 = M.manual ? null : seqToFile(info, info.end) + 2;
       const key = M.manual ? 'file:' + M.manual.name + ':' + M.manual.size : info.path + '#' + w0.toFixed(2) + '-' + w1.toFixed(2);
       if (!force && M.an && M.key === key) { M.info = info; return M; }
       const d = await readAudio(M.manual || info.path, w0, w1);
       const dec = decimate(d.samples, d.sampleRate);
-      if (!dec.x.length) throw new Error('Aucun son lisible dans « ' + info.name + ' » à cet endroit.');
+      if (!dec.x.length) throw new Error(_T('Aucun son lisible dans « ') + info.name + _T(' » à cet endroit.'));
       Object.assign(M, { info, key, samples: dec.x, sr: dec.sr, t0: d.start, duration: d.duration, sync: null, beats: null });
       M.an = Audio.analyze(dec.x, dec.sr, 100);
       M.loud = Audio.loudnessCurve(M.an);
-      app.log('Musique analysée : ' + info.name + ' (' + Math.round(dec.x.length / dec.sr) + ' s lues)', 'ok');
+      app.log(_T('Musique analysée : ') + info.name + ' (' + Math.round(dec.x.length / dec.sr) + _T(' s lues)'), 'ok');
       return M;
     }
 
@@ -141,7 +142,7 @@
       M.key = '';
       await ensureMusic(true);
       if (M.info.manual) M.info.end = M.duration;
-      else app.log('« ' + file.name + ' » calé sur « ' + M.info.seqName + ' » de la séquence (début à ' + M.info.start.toFixed(2) + ' s).', 'info');
+      else app.log(_T('« ') + file.name + _T(' » calé sur « ') + M.info.seqName + _T(' » de la séquence (début à ') + M.info.start.toFixed(2) + ' s).', 'info');
     }
 
     // Zone de détection (secondes de la séquence).
@@ -152,7 +153,7 @@
         const r = await Host.call('markerList', {});
         if (r.ok && b.zone === 'playhead') from = Math.max(from, r.playhead);
         if (r.ok && b.zone === 'selection') {
-          if (!r.range) throw new Error('Sélectionne les clips de la zone (ou choisis « Toute la musique »).');
+          if (!r.range) throw new Error(_T('Sélectionne les clips de la zone (ou choisis « Toute la musique »).'));
           from = Math.max(from, r.range.a);
           to = Math.min(to, r.range.b);
         }
@@ -194,20 +195,20 @@
     // ---------------------------------------------------------------- actions
 
     function placeMarkers() {
-      return app.runTask('Temps forts', async () => {
-        app.status.phase('Lecture de la musique');
+      return app.runTask(_T('Temps forts'), async () => {
+        app.status.phase(_T('Lecture de la musique'));
         await ensureMusic(false);
-        app.status.phase('Détection');
+        app.status.phase(_T('Détection'));
         const times = await beatTimes();
         drawWave();
-        if (!times.length) return { kind: 'warn', title: 'Aucun temps fort trouvé', detail: 'Augmente la sensibilité ou change le type de détection.' };
-        if (M.info.manual) return { kind: 'warn', title: times.length + ' temps forts détectés', detail: 'Fichier choisi à la main : sa place dans la séquence est inconnue, aucun marqueur posé.' };
-        app.status.phase('Pose des marqueurs');
+        if (!times.length) return { kind: 'warn', title: _T('Aucun temps fort trouvé'), detail: _T('Augmente la sensibilité ou change le type de détection.') };
+        if (M.info.manual) return { kind: 'warn', title: times.length + _T(' temps forts détectés'), detail: _T('Fichier choisi à la main : sa place dans la séquence est inconnue, aucun marqueur posé.') };
+        app.status.phase(_T('Pose des marqueurs'));
         const b = st().beats;
         const r = await Host.call('addMarkers', { times, name: 'RR FX · ' + MODES.find(m => m.v === b.mode).short, replace: b.replace, from: M.zone.from, to: M.zone.to });
-        if (!r.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: r.error };
-        app.log(r.added + ' marqueurs posés' + (r.removed ? ', ' + r.removed + ' anciens retirés' : '') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : ''), 'ok');
-        return { kind: 'ok', title: app.plural(r.added, 'marqueur posé', 'marqueurs posés'), detail: (M.beats.bpm ? '~' + bpmText() + ' BPM · ' : '') + 'nommés « RR FX · … » (Tout effacer les retire).' };
+        if (!r.ok) return { kind: 'error', title: _T('Marqueurs non posés'), detail: r.error };
+        app.log(r.added + _T(' marqueurs posés') + (r.removed ? ', ' + r.removed + _T(' anciens retirés') : '') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : ''), 'ok');
+        return { kind: 'ok', title: app.plural(r.added, _T('marqueur posé'), _T('marqueurs posés')), detail: (M.beats.bpm ? '~' + bpmText() + ' BPM · ' : '') + _T('nommés « RR FX · … » (Tout effacer les retire).') };
       });
     }
 
@@ -219,37 +220,37 @@
       let t = r.markers.map(m => m.t);
       if (r.range) t = t.filter(x => x >= r.range.a - 1e-6 && x <= r.range.b + 1e-6);
       else t = t.filter(x => x >= r.playhead - 1e-6);
-      if (t.length < 2) throw new Error('Il faut au moins deux marqueurs après la tête de lecture (pose les temps forts d\'abord).');
+      if (t.length < 2) throw new Error(_T('Il faut au moins deux marqueurs après la tête de lecture (pose les temps forts d\'abord).'));
       return t;
     }
 
     function autoEdit() {
-      return app.runTask('Montage auto', async () => {
-        app.status.phase('Rushs sélectionnés');
+      return app.runTask(_T('Montage auto'), async () => {
+        app.status.phase(_T('Rushs sélectionnés'));
         const pr = await Host.call('projectRushes', {});
-        if (!pr.ok) return { kind: 'error', title: 'Montage impossible', detail: pr.error };
-        app.status.phase('Rythme');
+        if (!pr.ok) return { kind: 'error', title: _T('Montage impossible'), detail: pr.error };
+        app.status.phase(_T('Rythme'));
         const times = await rhythmTimes();
         const a = st().autoEdit;
         const plan = Core.planAutoEdit(times, pr.rushes.map(x => ({ id: x.nodeId, name: x.name, inT: x.inT, outT: x.outT })), { every: a.every, order: a.order, pick: a.pick, seed: Math.floor(Math.random() * 1000) + 1 });
-        if (!plan.length) return { kind: 'warn', title: 'Rien à monter', detail: 'Pas assez de temps forts dans la zone.' };
-        app.status.phase('Pose des plans');
+        if (!plan.length) return { kind: 'warn', title: _T('Rien à monter'), detail: _T('Pas assez de temps forts dans la zone.') };
+        app.status.phase(_T('Pose des plans'));
         const r = await Host.call('placeRushes', { items: plan.map(p => ({ nodeId: p.id, name: pr.rushes[p.rush].name, seqStart: p.seqStart, seqEnd: p.seqEnd, srcIn: p.srcIn })), minTrack: 0, label: 'RR FX · Montage' });
-        if (!r.ok) return { kind: 'error', title: 'Montage impossible', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Montage impossible'), detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));
-        if (r.created.length) app.pushHistory({ date: Date.now(), label: 'Montage auto × ' + r.created.length, entries: r.created });
+        if (r.created.length) app.pushHistory({ date: Date.now(), label: _T('Montage auto × ') + r.created.length, entries: r.created });
         const short = plan.filter(p => p.short).length;
-        return { kind: r.warnings.length || short ? 'warn' : 'ok', title: app.plural(r.created.length, 'plan posé', 'plans posés') + ' sur V' + (r.track + 1), detail: (short ? short + ' rush(s) plus courts que leur créneau · ' : '') + 'vidéo seule, ta musique n\'est pas touchée.' };
+        return { kind: r.warnings.length || short ? 'warn' : 'ok', title: app.plural(r.created.length, _T('plan posé'), _T('plans posés')) + _T(' sur V') + (r.track + 1), detail: (short ? short + _T(' rush(s) plus courts que leur créneau · ') : '') + _T('vidéo seule, ta musique n\'est pas touchée.') };
       }, true);
     }
 
     function cutSelection() {
-      return app.runTask('Découpe sur le rythme', async () => {
+      return app.runTask(_T('Découpe sur le rythme'), async () => {
         const r = await Host.call('markerList', {});
-        if (!r.ok || !r.markers.length) return { kind: 'error', title: 'Aucun marqueur', detail: 'Pose les temps forts d\'abord.' };
+        if (!r.ok || !r.markers.length) return { kind: 'error', title: _T('Aucun marqueur'), detail: _T('Pose les temps forts d\'abord.') };
         const c = await Host.call('cutAtTimes', { times: r.markers.map(m => m.t) });
-        if (!c.ok) return { kind: 'error', title: 'Découpe impossible', detail: c.error };
-        return { kind: c.cuts ? 'ok' : 'warn', title: app.plural(c.cuts, 'coupe', 'coupes'), detail: 'Sur ' + app.plural(c.clips, 'clip sélectionné', 'clips sélectionnés') + ' (et leur son). Ctrl+Z / Cmd+Z pour revenir.' };
+        if (!c.ok) return { kind: 'error', title: _T('Découpe impossible'), detail: c.error };
+        return { kind: c.cuts ? 'ok' : 'warn', title: app.plural(c.cuts, _T('coupe'), _T('coupes')), detail: _T('Sur ') + app.plural(c.clips, _T('clip sélectionné'), _T('clips sélectionnés')) + _T(' (et leur son). Ctrl+Z / Cmd+Z pour revenir.') };
       });
     }
 
@@ -288,30 +289,30 @@
     const CAM_WINDOW = 2400; // au plus 40 min de la caméra de référence
 
     function sync() {
-      return app.runTask('Synchronisation', async () => {
+      return app.runTask(_T('Synchronisation'), async () => {
         const cfg = st().sync, byCamera = cfg.ref === 'camera';
-        app.status.phase('Sélection');
+        app.status.phase(_T('Sélection'));
         const r = await Host.call('syncInfo', {});
-        if (!r.ok) return { kind: 'error', title: 'Synchronisation impossible', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Synchronisation impossible'), detail: r.error };
         const onTimeline = r.clips.length > 0, list = onTimeline ? r.clips : r.rushes;
-        if (!list.length) return { kind: 'error', title: 'Rien à synchroniser', detail: 'Sélectionne des clips dans la timeline, ou des rushs dans le panneau Projet.' };
+        if (!list.length) return { kind: 'error', title: _T('Rien à synchroniser'), detail: _T('Sélectionne des clips dans la timeline, ou des rushs dans le panneau Projet.') };
 
         let info, ref, refItem = null, fileEnd = Infinity;
         const moves = [], places = [], lines = [];
         if (!byCamera) {
-          if (!r.music && !M.manual) return { kind: 'error', title: 'Pas de musique', detail: r.musicError + ' (ou choisis « Caler sur : une des caméras »).' };
-          app.status.phase('Lecture de la musique');
+          if (!r.music && !M.manual) return { kind: 'error', title: _T('Pas de musique'), detail: r.musicError + _T(' (ou choisis « Caler sur : une des caméras »).') };
+          app.status.phase(_T('Lecture de la musique'));
           await ensureMusic(false);
           info = M.info;
-          if (info.manual) return { kind: 'error', title: 'Place de la musique inconnue', detail: 'Le fichier choisi à la main n\'est calé sur aucun clip de la séquence : pose la musique dans la séquence, ou choisis « Caler sur : une des caméras ».' };
+          if (info.manual) return { kind: 'error', title: _T('Place de la musique inconnue'), detail: _T('Le fichier choisi à la main n\'est calé sur aucun clip de la séquence : pose la musique dans la séquence, ou choisis « Caler sur : une des caméras ».') };
           if (!M.sync) M.sync = Audio.syncCurve(M.samples, M.sr);
           ref = { curve: M.sync, start: M.t0 };
           fileEnd = seqToFile(info, info.end);
         } else {
-          if (list.length < 2) return { kind: 'error', title: 'Une seule caméra', detail: 'Sélectionne les plans de deux caméras ou plus (timeline ou panneau Projet).' };
+          if (list.length < 2) return { kind: 'error', title: _T('Une seule caméra'), detail: _T('Sélectionne les plans de deux caméras ou plus (timeline ou panneau Projet).') };
           const len = x => (onTimeline ? x.end - x.start : x.outT - x.inT);
           refItem = list.slice().sort((p, q) => (cfg.camRef === 'lowest' && onTimeline ? p.track - q.track || p.start - q.start : len(q) - len(p)))[0];
-          if (!refItem.path) return { kind: 'error', title: 'Référence illisible', detail: 'Fichier de « ' + refItem.name + ' » introuvable.' };
+          if (!refItem.path) return { kind: 'error', title: _T('Référence illisible'), detail: _T('Fichier de « ') + refItem.name + _T(' » introuvable.') };
           if (onTimeline) {
             info = { start: refItem.start, inPoint: refItem.inPoint, speed: refItem.speed || 1, end: refItem.end };
           } else {
@@ -319,24 +320,24 @@
             const ph = m.ok ? m.playhead : 0;
             info = { start: ph, inPoint: refItem.inT, speed: 1, end: ph + len(refItem) };
             places.push({ nodeId: refItem.nodeId, name: refItem.name, seqStart: ph, seqEnd: info.end, srcIn: refItem.inT, audio: true });
-            lines.push(refItem.name + ' : référence, posée à la tête de lecture avec son son');
+            lines.push(refItem.name + _T(' : référence, posée à la tête de lecture avec son son'));
           }
-          app.status.phase('Lecture de la caméra de référence « ' + refItem.name + ' »');
+          app.status.phase(_T('Lecture de la caméra de référence « ') + refItem.name + _T(' »'));
           const r0 = onTimeline ? Math.max(0, refItem.inPoint - 300) : refItem.inT;
           const r1 = Math.min(r0 + CAM_WINDOW, onTimeline ? refItem.outPoint + 300 : refItem.outT);
-          try { ref = await curveOf(refItem.path, r0, r1); } catch (e) { return { kind: 'error', title: 'Référence illisible', detail: refItem.name + ' : ' + app.errorMessage(e) }; }
-          if (app.S.cancel) return { kind: 'warn', title: 'Arrêté', detail: 'Rien n\'a été déplacé.' };
-          if (onTimeline) lines.push(refItem.name + ' : référence (ne bouge pas)');
+          try { ref = await curveOf(refItem.path, r0, r1); } catch (e) { return { kind: 'error', title: _T('Référence illisible'), detail: refItem.name + ' : ' + app.errorMessage(e) }; }
+          if (app.S.cancel) return { kind: 'warn', title: _T('Arrêté'), detail: _T('Rien n\'a été déplacé.') };
+          if (onTimeline) lines.push(refItem.name + _T(' : référence (ne bouge pas)'));
         }
 
         const todo = list.filter(x => x !== refItem);
         let uncertain = 0;
-        app.status.phase('Comparaison des sons');
+        app.status.phase(_T('Comparaison des sons'));
         for (let i = 0; i < todo.length; i++) {
           if (app.S.cancel) break;
           const x = todo[i];
           app.status.progress(i, todo.length, x.name);
-          if (!x.path) { lines.push(x.name + ' : fichier introuvable'); continue; }
+          if (!x.path) { lines.push(x.name + _T(' : fichier introuvable')); continue; }
           let d, score = 1;
           if (byCamera && x.path === refItem.path) d = 0; // même fichier : déjà calé
           else {
@@ -344,13 +345,13 @@
             if (m.error) { lines.push(x.name + ' : ' + m.error); continue; }
             if (m.uncertain) {
               uncertain++;
-              lines.push(x.name + ' : son introuvable dans la ' + (byCamera ? 'caméra de référence' : 'musique') + ' (score ' + m.score.toFixed(2) + '), laissé tel quel');
+              lines.push(x.name + _T(' : son introuvable dans la ') + (byCamera ? _T('caméra de référence') : 'musique') + ' (score ' + m.score.toFixed(2) + _T('), laissé tel quel'));
               continue;
             }
             d = m.d; score = m.score;
           }
           if (onTimeline) {
-            if (Math.abs((x.speed || 1) - 1) > 0.001) { lines.push(x.name + ' : vitesse modifiée, non pris en charge'); continue; }
+            if (Math.abs((x.speed || 1) - 1) > 0.001) { lines.push(x.name + _T(' : vitesse modifiée, non pris en charge')); continue; }
             const delta = fileToSeq(info, x.inPoint + d) - x.start;
             moves.push({ track: x.track, start: x.start, name: x.name, delta });
             lines.push(x.name + ' : ' + (delta >= 0 ? '+' : '') + delta.toFixed(3) + ' s (score ' + score.toFixed(2) + ')');
@@ -360,9 +361,9 @@
             const cB = byCamera ? x.outT : Math.min(x.outT, fileEnd - d);
             let seqStart = fileToSeq(info, cA + d);
             if (seqStart < 0) { cA -= seqStart * (info.speed || 1); seqStart = 0; }
-            if (cB - cA < 0.2) { lines.push(x.name + ' : ne recouvre pas ' + (byCamera ? 'la référence' : 'la musique de la séquence')); continue; }
+            if (cB - cA < 0.2) { lines.push(x.name + _T(' : ne recouvre pas ') + (byCamera ? _T('la référence') : _T('la musique de la séquence'))); continue; }
             places.push({ nodeId: x.nodeId, name: x.name, seqStart, seqEnd: seqStart + (cB - cA) / (info.speed || 1), srcIn: cA });
-            lines.push(x.name + ' : calé à ' + seqStart.toFixed(2) + ' s (score ' + score.toFixed(2) + ')');
+            lines.push(x.name + _T(' : calé à ') + seqStart.toFixed(2) + ' s (score ' + score.toFixed(2) + ')');
           }
         }
         app.status.phase('Placement');
@@ -370,7 +371,7 @@
         const warnings = [];
         if (moves.length) {
           const m = await Host.call('moveClips', { moves });
-          if (!m.ok) return { kind: 'error', title: 'Déplacement impossible', detail: m.error };
+          if (!m.ok) return { kind: 'error', title: _T('Déplacement impossible'), detail: m.error };
           done += m.moved;
           warnings.push.apply(warnings, m.warnings);
         }
@@ -378,43 +379,43 @@
         for (const p of places) {
           const pr = await Host.call('placeRushes', { items: [p], minTrack: 0, label });
           if (!pr.ok) { warnings.push(p.name + ' : ' + pr.error); continue; }
-          if (pr.created.length) app.pushHistory({ date: Date.now(), label: (byCamera ? 'Multicam · ' : 'Synchro · ') + p.name, entries: pr.created });
+          if (pr.created.length) app.pushHistory({ date: Date.now(), label: (byCamera ? 'Multicam · ' : _T('Synchro · ')) + p.name, entries: pr.created });
           warnings.push.apply(warnings, pr.warnings);
           done++;
         }
-        lines.forEach(l => app.log('Synchro · ' + l, /introuvable|non pris|laissé|recouvre/.test(l) ? 'warn' : 'ok'));
+        lines.forEach(l => app.log(_T('Synchro · ') + l, /introuvable|non pris|laissé|recouvre/.test(l) ? 'warn' : 'ok'));
         warnings.forEach(w => app.log(w, 'warn'));
         renderResults(lines);
-        if (!done) return { kind: 'error', title: 'Rien n\'a été synchronisé', detail: lines.find(l => /introuvable|non pris|laissé|recouvre/.test(l)) || warnings[0] || '' };
+        if (!done) return { kind: 'error', title: _T('Rien n\'a été synchronisé'), detail: lines.find(l => /introuvable|non pris|laissé|recouvre/.test(l)) || warnings[0] || '' };
         const how = byCamera
-          ? (onTimeline ? 'Calés sur « ' + refItem.name + ' », déplacés avec leur son. Ensuite : « Alterner les caméras » ou Imbriquer > Activer le multicaméra.' : 'Une caméra par piste, calées sur « ' + refItem.name + ' » (posée avec son son).')
-          : (onTimeline ? 'Déplacés avec leur son sur la musique.' : 'Posés calés sur la musique (vidéo seule), un rush par piste libre.');
-        return { kind: uncertain || warnings.length ? 'warn' : 'ok', title: app.plural(done, 'clip synchronisé', 'clips synchronisés'), detail: how };
+          ? (onTimeline ? _T('Calés sur « ') + refItem.name + _T(' », déplacés avec leur son. Ensuite : « Alterner les caméras » ou Imbriquer > Activer le multicaméra.') : _T('Une caméra par piste, calées sur « ') + refItem.name + _T(' » (posée avec son son).'))
+          : (onTimeline ? _T('Déplacés avec leur son sur la musique.') : _T('Posés calés sur la musique (vidéo seule), un rush par piste libre.'));
+        return { kind: uncertain || warnings.length ? 'warn' : 'ok', title: app.plural(done, _T('clip synchronisé'), _T('clips synchronisés')), detail: how };
       }, true);
     }
 
     // Montage multicam : à chaque temps (marqueurs ou temps forts), une seule caméra reste active.
     function multicam() {
-      return app.runTask('Montage multicam', async () => {
+      return app.runTask(_T('Montage multicam'), async () => {
         const a = st().autoEdit;
-        app.status.phase('Rythme');
+        app.status.phase(_T('Rythme'));
         const times = (await rhythmTimes()).filter((t, i) => i % Math.max(1, a.every) === 0);
-        app.status.phase('Alternance des caméras');
+        app.status.phase(_T('Alternance des caméras'));
         const r = await Host.call('multicamSwitch', { times, order: a.order === 'random' ? 'random' : 'cycle', seed: Math.floor(Math.random() * 100000) + 1 });
-        if (!r.ok) return { kind: 'error', title: 'Montage multicam impossible', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Montage multicam impossible'), detail: r.error };
         app.pushHistory({ date: Date.now(), label: 'Multicam × ' + r.segments, entries: [r.entry] });
-        app.log('Multicam : ' + r.segments + ' plans, ' + r.cams + ' caméras, ' + r.disabled + ' passages désactivés', 'ok');
-        return { kind: 'ok', title: app.plural(r.segments, 'plan', 'plans') + ' · ' + r.cams + ' caméras', detail: 'Les autres caméras sont désactivées (pas supprimées). ↶ Annuler les réactive.' };
+        app.log(_T('Multicam : ') + r.segments + _T(' plans, ') + r.cams + _T(' caméras, ') + r.disabled + _T(' passages désactivés'), 'ok');
+        return { kind: 'ok', title: app.plural(r.segments, _T('plan'), _T('plans')) + ' · ' + r.cams + _T(' caméras'), detail: _T('Les autres caméras sont désactivées (pas supprimées). ↶ Annuler les réactive.') };
       });
     }
 
     // ---------------------------------------------------------------- interface
 
     const MODES = [
-      { v: 'kicks', label: 'Grosse caisse (kicks)', short: 'kick' },
-      { v: 'hits', label: 'Tous les coups', short: 'coup' },
-      { v: 'snares', label: 'Caisse claire et charleston', short: 'snare' },
-      { v: 'tempo', label: 'Grille du tempo (chaque temps)', short: 'temps' }
+      { v: 'kicks', label: _T('Grosse caisse (kicks)'), short: 'kick' },
+      { v: 'hits', label: _T('Tous les coups'), short: 'coup' },
+      { v: 'snares', label: _T('Caisse claire et charleston'), short: 'snare' },
+      { v: 'tempo', label: _T('Grille du tempo (chaque temps)'), short: 'temps' }
     ];
 
     let waveCanvas = null, waveInfo = null, resultsBox = null;
@@ -428,7 +429,7 @@
       if (!M.loud || !M.info) {
         g.fillStyle = css('--text-3');
         g.font = '12px ' + css('--font');
-        g.fillText('Clique sur « Analyser » pour voir la musique et ses temps forts.', 10, hh / 2 + 4);
+        g.fillText(_T('Clique sur « Analyser » pour voir la musique et ses temps forts.'), 10, hh / 2 + 4);
         return;
       }
       // Jamais au-delà de la fin du fichier (clip plus long que le son, ou fichier choisi à la main).
@@ -452,18 +453,18 @@
         M.beats.times.forEach(t => { const x = xOf(t); if (x >= 0 && x <= w) g.fillRect(Math.round(x), 0, 1.5, hh); });
       }
       if (waveInfo) {
-        waveInfo.textContent = info.name + ' · ' + Math.round(M.duration) + ' s' + (M.beats ? ' · ' + app.plural(M.beats.times.length, 'temps fort') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : '') : '');
+        waveInfo.textContent = info.name + ' · ' + Math.round(M.duration) + ' s' + (M.beats ? ' · ' + app.plural(M.beats.times.length, _T('temps fort')) + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : '') : '');
       }
     }
 
     async function analyzeNow() {
-      await app.runTask('Analyse de la musique', async () => {
-        app.status.phase('Lecture du fichier');
+      await app.runTask(_T('Analyse de la musique'), async () => {
+        app.status.phase(_T('Lecture du fichier'));
         await ensureMusic(true);
-        app.status.phase('Détection');
+        app.status.phase(_T('Détection'));
         detect(await zone());
         drawWave();
-        return { kind: 'ok', title: 'Musique analysée', detail: app.plural(M.beats.times.length, 'temps fort') + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : '') };
+        return { kind: 'ok', title: _T('Musique analysée'), detail: app.plural(M.beats.times.length, _T('temps fort')) + (M.beats.bpm ? ' · ~' + bpmText() + ' BPM' : '') };
       });
     }
 
@@ -479,11 +480,11 @@
       input.addEventListener('change', () => {
         const f = input.files && input.files[0];
         if (!f) return;
-        app.runTask('Analyse de la musique', async () => {
+        app.runTask(_T('Analyse de la musique'), async () => {
           await useFile(f);
           detect(await zone());
           drawWave();
-          return { kind: 'ok', title: 'Musique analysée', detail: f.name + ' · ' + app.plural(M.beats.times.length, 'temps fort') };
+          return { kind: 'ok', title: _T('Musique analysée'), detail: f.name + ' · ' + app.plural(M.beats.times.length, _T('temps fort')) };
         });
       });
       document.body.appendChild(input);
@@ -502,69 +503,69 @@
       view.innerHTML = '';
       waveCanvas = h('canvas', { class: 'wave-canvas' });
       waveInfo = h('div', { class: 'note' });
-      const analyze = h('button', { class: 'action' }, 'Analyser');
+      const analyze = h('button', { class: 'action' }, _T('Analyser'));
       analyze.addEventListener('click', analyzeNow);
-      const choose = h('button', { class: 'action quiet', title: 'Si la musique de la séquence n\'est pas trouvée, ou hors de Premiere' }, 'Choisir un fichier…');
+      const choose = h('button', { class: 'action quiet', title: _T('Si la musique de la séquence n\'est pas trouvée, ou hors de Premiere') }, _T('Choisir un fichier…'));
       choose.addEventListener('click', chooseFile);
-      view.appendChild(section('Musique', [
-        h('div', { class: 'note' }, 'La musique est le plus long clip son de la séquence, ou le clip son sélectionné.'),
+      view.appendChild(section(_T('Musique'), [
+        h('div', { class: 'note' }, _T('La musique est le plus long clip son de la séquence, ou le clip son sélectionné.')),
         waveCanvas, waveInfo, h('div', { class: 'row-buttons' }, analyze, choose)
       ]));
 
-      view.appendChild(section('Temps forts', [
-        row('Détection', picker(MODES, b.mode, v => { b.mode = v; redetect(); })),
-        row('Sensibilité', hotText({ value: b.sensitivity, min: 0, max: 100, step: 1, unit: '%', onChange: (v, fin) => { b.sensitivity = v; if (fin) redetect(); } })),
-        row('Écart minimum', hotText({ value: b.minGap, min: 40, max: 2000, step: 10, unit: 'ms', onChange: (v, fin) => { b.minGap = v; if (fin) redetect(); } })),
-        row('1 temps sur', actionGroup([1, 2, 4, 8].map(n => ({ v: n, label: String(n) })), b.every, v => { b.every = v; redetect(); })),
-        row('Zone', picker([
-          { v: 'music', label: 'Toute la musique' },
-          { v: 'playhead', label: 'Depuis la tête de lecture' },
-          { v: 'selection', label: 'Clips sélectionnés' }
+      view.appendChild(section(_T('Temps forts'), [
+        row(_T('Détection'), picker(MODES, b.mode, v => { b.mode = v; redetect(); })),
+        row(_T('Sensibilité'), hotText({ value: b.sensitivity, min: 0, max: 100, step: 1, unit: '%', onChange: (v, fin) => { b.sensitivity = v; if (fin) redetect(); } })),
+        row(_T('Écart minimum'), hotText({ value: b.minGap, min: 40, max: 2000, step: 10, unit: 'ms', onChange: (v, fin) => { b.minGap = v; if (fin) redetect(); } })),
+        row(_T('1 temps sur'), actionGroup([1, 2, 4, 8].map(n => ({ v: n, label: String(n) })), b.every, v => { b.every = v; redetect(); })),
+        row(_T('Zone'), picker([
+          { v: 'music', label: _T('Toute la musique') },
+          { v: 'playhead', label: _T('Depuis la tête de lecture') },
+          { v: 'selection', label: _T('Clips sélectionnés') }
         ], b.zone, v => { b.zone = v; redetect(); })),
-        h('div', { class: 'field' }, checkbox('Remplacer les marqueurs RR FX de la zone', b.replace, v => { b.replace = v; app.persist(); })),
-        h('div', { class: 'note' }, 'Le bouton du haut pose un marqueur sur chaque temps fort : les effets (Position « Marqueurs de la séquence »), les textes et le montage auto s\'en servent.')
+        h('div', { class: 'field' }, checkbox(_T('Remplacer les marqueurs RR FX de la zone'), b.replace, v => { b.replace = v; app.persist(); })),
+        h('div', { class: 'note' }, _T('Le bouton du haut pose un marqueur sur chaque temps fort : les effets (Position « Marqueurs de la séquence »), les textes et le montage auto s\'en servent.'))
       ]));
 
-      const monter = h('button', { class: 'action' }, 'Monter les rushs sélectionnés');
+      const monter = h('button', { class: 'action' }, _T('Monter les rushs sélectionnés'));
       monter.addEventListener('click', autoEdit);
-      const couper = h('button', { class: 'action' }, 'Découper les clips sélectionnés');
+      const couper = h('button', { class: 'action' }, _T('Découper les clips sélectionnés'));
       couper.addEventListener('click', cutSelection);
-      const mcBtn = h('button', { class: 'action', title: 'Caméras synchronisées et empilées (une piste par caméra) : sélectionne-les, une seule reste active à chaque temps' }, 'Alterner les caméras (multicam)');
+      const mcBtn = h('button', { class: 'action', title: _T('Caméras synchronisées et empilées (une piste par caméra) : sélectionne-les, une seule reste active à chaque temps') }, _T('Alterner les caméras (multicam)'));
       mcBtn.addEventListener('click', multicam);
-      view.appendChild(section('Montage auto sur le rythme', [
-        h('div', { class: 'note' }, 'Sélectionne des rushs dans le panneau Projet : ils sont posés l\'un après l\'autre, un plan par temps fort, sur une piste libre (vidéo seule). Les points d\'entrée/sortie de chaque rush délimitent la partie utilisable.'),
-        row('Rythme', picker([{ v: 'markers', label: 'Marqueurs de la séquence' }, { v: 'beats', label: 'Temps forts détectés' }], a.source, v => { a.source = v; app.persist(); })),
-        row('Un plan tous les', actionGroup([1, 2, 4, 8].map(n => ({ v: n, label: n + (n > 1 ? ' temps' : ' temps') })), a.every, v => { a.every = v; app.persist(); })),
-        row('Ordre', actionGroup([{ v: 'sequence', label: 'Dans l\'ordre' }, { v: 'random', label: 'Au hasard' }], a.order, v => { a.order = v; app.persist(); })),
-        row('Extrait', picker([
-          { v: 'random', label: 'Au hasard dans le rush' },
-          { v: 'start', label: 'Début du rush' },
-          { v: 'middle', label: 'Milieu du rush' },
-          { v: 'continue', label: 'À la suite (le rush avance)' }
+      view.appendChild(section(_T('Montage auto sur le rythme'), [
+        h('div', { class: 'note' }, _T('Sélectionne des rushs dans le panneau Projet : ils sont posés l\'un après l\'autre, un plan par temps fort, sur une piste libre (vidéo seule). Les points d\'entrée/sortie de chaque rush délimitent la partie utilisable.')),
+        row(_T('Rythme'), picker([{ v: 'markers', label: _T('Marqueurs de la séquence') }, { v: 'beats', label: _T('Temps forts détectés') }], a.source, v => { a.source = v; app.persist(); })),
+        row(_T('Un plan tous les'), actionGroup([1, 2, 4, 8].map(n => ({ v: n, label: n + (n > 1 ? _T(' temps') : _T(' temps')) })), a.every, v => { a.every = v; app.persist(); })),
+        row(_T('Ordre'), actionGroup([{ v: 'sequence', label: _T('Dans l\'ordre') }, { v: 'random', label: _T('Au hasard') }], a.order, v => { a.order = v; app.persist(); })),
+        row(_T('Extrait'), picker([
+          { v: 'random', label: _T('Au hasard dans le rush') },
+          { v: 'start', label: _T('Début du rush') },
+          { v: 'middle', label: _T('Milieu du rush') },
+          { v: 'continue', label: _T('À la suite (le rush avance)') }
         ], a.pick, v => { a.pick = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, monter, couper),
         h('div', { class: 'row-buttons' }, mcBtn),
-        h('div', { class: 'note' }, '« Découper » coupe les clips sélectionnés de la timeline (et leur son) à chaque marqueur. « Alterner les caméras » : sélectionne tes caméras synchronisées, empilées une par piste ; à chaque temps une seule reste active, les autres sont désactivées (rien n\'est supprimé), dans l\'ordre des pistes ou au hasard.')
+        h('div', { class: 'note' }, _T('« Découper » coupe les clips sélectionnés de la timeline (et leur son) à chaque marqueur. « Alterner les caméras » : sélectionne tes caméras synchronisées, empilées une par piste ; à chaque temps une seule reste active, les autres sont désactivées (rien n\'est supprimé), dans l\'ordre des pistes ou au hasard.'))
       ]));
 
-      const syncBtn = h('button', { class: 'action' }, 'Synchroniser la sélection');
+      const syncBtn = h('button', { class: 'action' }, _T('Synchroniser la sélection'));
       syncBtn.addEventListener('click', sync);
       resultsBox = h('div', { class: 'log' });
       const sc = s.sync, byCam = sc.ref === 'camera';
-      view.appendChild(section('Synchroniser le son et l\'image', [
-        row('Caler sur', actionGroup([{ v: 'music', label: 'La musique / le son externe' }, { v: 'camera', label: 'Une des caméras' }], sc.ref, v => { sc.ref = v; app.persist(); render(view); })),
-        byCam ? row('Caméra de référence', picker([{ v: 'longest', label: 'Le plan le plus long' }, { v: 'lowest', label: 'La piste la plus basse (V1, V2…)' }], sc.camRef, v => { sc.camRef = v; app.persist(); })) : null,
+      view.appendChild(section(_T('Synchroniser le son et l\'image'), [
+        row(_T('Caler sur'), actionGroup([{ v: 'music', label: _T('La musique / le son externe') }, { v: 'camera', label: _T('Une des caméras') }], sc.ref, v => { sc.ref = v; app.persist(); render(view); })),
+        byCam ? row(_T('Caméra de référence'), picker([{ v: 'longest', label: _T('Le plan le plus long') }, { v: 'lowest', label: _T('La piste la plus basse (V1, V2…)') }], sc.camRef, v => { sc.camRef = v; app.persist(); })) : null,
         h('div', { class: 'note' }, byCam
-          ? 'Plusieurs caméras : RR FX compare leurs sons et les cale sur la caméra de référence, qui ne bouge pas. Clips sélectionnés dans la timeline (une piste par caméra) : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : la référence est posée à la tête de lecture avec son son, les autres caméras au-dessus, une par piste.'
-          : 'Pour un tournage en playback : RR FX compare le son de la caméra avec la musique (ou le son d\'un enregistreur externe posé dans la séquence) et cale l\'image dessus. Clips sélectionnés dans la timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste libre (vidéo seule).'),
+          ? _T('Plusieurs caméras : RR FX compare leurs sons et les cale sur la caméra de référence, qui ne bouge pas. Clips sélectionnés dans la timeline (une piste par caméra) : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : la référence est posée à la tête de lecture avec son son, les autres caméras au-dessus, une par piste.')
+          : _T('Pour un tournage en playback : RR FX compare le son de la caméra avec la musique (ou le son d\'un enregistreur externe posé dans la séquence) et cale l\'image dessus. Clips sélectionnés dans la timeline : déplacés avec leur son. Rushs sélectionnés dans le panneau Projet : posés calés, chacun sur une piste libre (vidéo seule).')),
         h('div', { class: 'row-buttons' }, syncBtn), resultsBox
       ]));
 
       const inf = hotText({ value: s.volumeInfluence, min: 0, max: 100, step: 5, unit: '%', onChange: v => { s.volumeInfluence = v; app.persist(); } });
-      view.appendChild(section('Volume et intensité', [
-        checkbox('L\'intensité des effets suit le volume de la musique', s.volumeFollow, v => { s.volumeFollow = v; app.persist(); }),
+      view.appendChild(section(_T('Volume et intensité'), [
+        checkbox(_T('L\'intensité des effets suit le volume de la musique'), s.volumeFollow, v => { s.volumeFollow = v; app.persist(); }),
         row('Influence', inf),
-        h('div', { class: 'note' }, 'Sur un passage calme, l\'effet est plus doux ; sur un drop, plus fort. Aussi réglable dans l\'onglet Effets.')
+        h('div', { class: 'note' }, _T('Sur un passage calme, l\'effet est plus doux ; sur un drop, plus fort. Aussi réglable dans l\'onglet Effets.'))
       ]));
       app.renderExtras('music', view);
       requestAnimationFrame(drawWave);
@@ -572,7 +573,7 @@
 
     // Pour les outils ajoutés à l'onglet (risers, réverb de fin…).
     app.musicData = { M, ensure: ensureMusic, beatTimes, seqToFile, fileToSeq, zone };
-    app.tabs.music = { render, cta: () => ({ label: 'Poser les marqueurs des temps forts', run: placeMarkers, enabled: true }), redraw: drawWave };
+    app.tabs.music = { render, cta: () => ({ label: _T('Poser les marqueurs des temps forts'), run: placeMarkers, enabled: true }), redraw: drawWave };
     app.actions.beats = placeMarkers;
     app.actions.sync = sync;
     app.actions.autoEdit = autoEdit;

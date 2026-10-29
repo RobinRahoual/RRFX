@@ -7,6 +7,7 @@
   else root.RRFXStylePack = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const VERSION = 1, MANIFEST = 'pack.json';
 
@@ -77,12 +78,12 @@
     const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
     let eocd = -1;
     for (let i = bytes.length - 22; i >= Math.max(0, bytes.length - 65557); i--) if (v.getUint32(i, true) === 0x06054b50) { eocd = i; break; }
-    if (eocd < 0) throw new Error('Ce fichier n\'est pas un pack RR FX (ZIP illisible).');
+    if (eocd < 0) throw new Error(_T('Ce fichier n\'est pas un pack RR FX (ZIP illisible).'));
     const n = v.getUint16(eocd + 10, true);
     let p = v.getUint32(eocd + 16, true);
     const out = [];
     for (let k = 0; k < n; k++) {
-      if (v.getUint32(p, true) !== 0x02014b50) throw new Error('Pack abîmé (répertoire du ZIP).');
+      if (v.getUint32(p, true) !== 0x02014b50) throw new Error(_T('Pack abîmé (répertoire du ZIP).'));
       const method = v.getUint16(p + 10, true), crc = v.getUint32(p + 16, true), csize = v.getUint32(p + 20, true);
       const nlen = v.getUint16(p + 28, true), xlen = v.getUint16(p + 30, true), clen = v.getUint16(p + 32, true), off = v.getUint32(p + 42, true);
       const name = fromUtf8(bytes.subarray(p + 46, p + 46 + nlen));
@@ -91,10 +92,10 @@
       const start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true);
       let data = bytes.subarray(start, start + csize);
       if (method === 8) {
-        if (!inflate) throw new Error('Pack compressé : décompression indisponible ici.');
+        if (!inflate) throw new Error(_T('Pack compressé : décompression indisponible ici.'));
         data = inflate(data);
-      } else if (method !== 0) throw new Error('Compression non prise en charge dans le pack (' + name + ').');
-      if (crc32(data) !== crc) throw new Error('Pack abîmé : « ' + name + ' » ne correspond pas.');
+      } else if (method !== 0) throw new Error(_T('Compression non prise en charge dans le pack (') + name + ').');
+      if (crc32(data) !== crc) throw new Error(_T('Pack abîmé : « ') + name + _T(' » ne correspond pas.'));
       out.push({ name, data });
     }
     return out;
@@ -116,7 +117,7 @@
       return n;
     };
     const manifest = {
-      rrfxpack: VERSION, name: String(src.name || 'Mon pack'), author: String(src.author || ''), created: new Date().toISOString(),
+      rrfxpack: VERSION, name: String(src.name || _T('Mon pack')), author: String(src.author || ''), created: new Date().toISOString(),
       items: (src.items || []).map(it => ({ type: it.type, name: it.name, cat: it.cat, data: it.data })),
       overlays: (src.overlays || []).map(o => ({ name: o.name, kind: o.kind, file: add('overlays', o.file || o.name, o.data) })),
       titles: src.titles ? Object.assign({}, src.titles, { mogrt: src.mogrt ? add('titres', src.mogrt.file, src.mogrt.data) : '' }) : null,
@@ -129,11 +130,11 @@
   /* Lit un pack : { manifest, files: Map(nom → données) }, après vérification. */
   function read(bytes, inflate) {
     const entries = unzip(bytes, inflate), files = new Map(entries.map(e => [e.name, e.data]));
-    if (!files.has(MANIFEST)) throw new Error('Ce ZIP n\'est pas un pack RR FX (pack.json manquant).');
+    if (!files.has(MANIFEST)) throw new Error(_T('Ce ZIP n\'est pas un pack RR FX (pack.json manquant).'));
     let m;
-    try { m = JSON.parse(fromUtf8(files.get(MANIFEST))); } catch (e) { throw new Error('pack.json illisible.'); }
-    if (!m || !m.rrfxpack) throw new Error('Ce ZIP n\'est pas un pack RR FX.');
-    if (m.rrfxpack > VERSION) throw new Error('Pack créé avec une version plus récente de RR FX : mets le plugin à jour.');
+    try { m = JSON.parse(fromUtf8(files.get(MANIFEST))); } catch (e) { throw new Error(_T('pack.json illisible.')); }
+    if (!m || !m.rrfxpack) throw new Error(_T('Ce ZIP n\'est pas un pack RR FX.'));
+    if (m.rrfxpack > VERSION) throw new Error(_T('Pack créé avec une version plus récente de RR FX : mets le plugin à jour.'));
     m.items = Array.isArray(m.items) ? m.items : [];
     m.overlays = (Array.isArray(m.overlays) ? m.overlays : []).filter(o => o && files.has(o.file));
     if (m.titles && m.titles.mogrt && !files.has(m.titles.mogrt)) m.titles.mogrt = '';
@@ -146,9 +147,9 @@
     const types = t => m.items.filter(i => i.type === t).length;
     return [
       n(types('preset') + types('captured'), 'effet', 'effets'), n(types('ramp'), 'rampe', 'rampes'), n(types('look') + (m.look ? 1 : 0), 'look', 'looks'),
-      n(types('textStyle'), 'style de texte perso', 'styles de texte perso'), n(types('titleAnim'), 'animation de texte', 'animations de texte'),
-      n(types('gradient'), 'dégradé', 'dégradés'), n(types('palette'), 'palette', 'palettes'), n(types('xpStyle'), 'style Express', 'styles Express'), n(types('projectTemplate'), 'modèle de projet', 'modèles de projet'),
-      n(m.overlays.length, 'overlay', 'overlays'), m.titles ? 'style de texte' : '', m.chain && m.chain.length ? 'enchaînement de ' + m.chain.length + ' effets' : ''
+      n(types('textStyle'), _T('style de texte perso'), _T('styles de texte perso')), n(types('titleAnim'), _T('animation de texte'), _T('animations de texte')),
+      n(types('gradient'), _T('dégradé'), _T('dégradés')), n(types('palette'), 'palette', 'palettes'), n(types('xpStyle'), _T('style Express'), _T('styles Express')), n(types('projectTemplate'), _T('modèle de projet'), _T('modèles de projet')),
+      n(m.overlays.length, 'overlay', 'overlays'), m.titles ? _T('style de texte') : '', m.chain && m.chain.length ? _T('enchaînement de ') + m.chain.length + _T(' effets') : ''
     ].filter(Boolean).join(', ') || 'vide';
   }
 

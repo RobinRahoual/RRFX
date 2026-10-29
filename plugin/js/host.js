@@ -2,7 +2,8 @@
    Hors de Premiere (simple navigateur), bascule sur RRFXMock : mode démo. */
 (function (root) {
   'use strict';
-  const VERSION = '2.3.0';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
+  const VERSION = '2.4.0';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 
@@ -34,13 +35,23 @@
     return { demo: false, loaded: now === VERSION, version: now };
   }
 
+  // Messages de Premiere dans la langue du panneau.
+  function translated(r) {
+    const I = root.RRFXI18n;
+    if (!I || I.lang === 'fr' || !r || typeof r !== 'object') return r;
+    if (r.error) r.error = I.host(r.error);
+    if (Array.isArray(r.warnings)) r.warnings = r.warnings.map(w => I.host(w));
+    if (Array.isArray(r.issues)) r.issues.forEach(i => { i.text = I.host(i.text); });
+    return r;
+  }
+
   async function call(fn, arg) {
-    if (!cep) return root.RRFXMock.call(fn, arg);
+    if (!cep) return translated(await root.RRFXMock.call(fn, arg));
     const r = await evalScript('RRFX.' + fn + '(' + literal(arg) + ')');
     try {
-      return JSON.parse(r);
+      return translated(JSON.parse(r));
     } catch (e) {
-      return { ok: false, error: 'Réponse inattendue de Premiere : ' + String(r).slice(0, 200) };
+      return { ok: false, error: _T('Réponse inattendue de Premiere : ') + String(r).slice(0, 200) };
     }
   }
 

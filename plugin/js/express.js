@@ -6,6 +6,7 @@
    la fois, et tes réglages des autres onglets sont rendus tels quels à la fin. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const R = root.RRFXRecipes, D = root.RRFXDevelop, A = root.RRFXAssets, { Host, Pv } = app;
@@ -19,7 +20,7 @@
       return s.express;
     };
     // Tes styles enregistrés (Mes effets) : « u:<id> ».
-    const userRecipes = () => app.S.lib.items.filter(i => i.type === 'xpStyle').map(i => Object.assign({}, i.data.recipe, { id: 'u:' + i.id, name: '★ ' + i.name, desc: i.data.recipe.desc || 'Ton style enregistré.' }));
+    const userRecipes = () => app.S.lib.items.filter(i => i.type === 'xpStyle').map(i => Object.assign({}, i.data.recipe, { id: 'u:' + i.id, name: '★ ' + i.name, desc: i.data.recipe.desc || _T('Ton style enregistré.') }));
     const recipe = () => {
       const id = st().recipe;
       if (id === 'mine') return R.fromSettings(app.settings());
@@ -58,15 +59,15 @@
     // Étape possible ? → '' si oui, sinon la raison.
     function blocker(id, c, r) {
       if (!c) return '';
-      if (R.needsMusic(id, r || recipe()) && !c.music) return 'Pose ta musique sur une piste audio';
-      if (id === 'silences' && !c.speech) return 'Sélectionne dans la timeline les plans où l\'on parle';
-      if (id === 'captions' && !c.captions) return 'Importe ton .srt (onglet Parole)';
-      if (id === 'lower' && !c.lower) return 'Écris le nom et la fonction (onglet Parole)';
-      if ((id === 'captions' || id === 'lower') && !c.mogrt) return 'Choisis un modèle de texte (onglet Textes)';
-      if (id === 'montage' && !c.rushes) return 'Sélectionne tes rushs dans le panneau Projet';
-      if (id === 'convert' && !c.cams) return 'Ajoute ta caméra (onglet Couleur)';
-      if (id === 'titles' && !c.lyrics) return 'Colle tes paroles (onglet Textes)';
-      if (id === 'titles' && !c.mogrt) return 'Choisis un modèle de texte (onglet Textes)';
+      if (R.needsMusic(id, r || recipe()) && !c.music) return _T('Pose ta musique sur une piste audio');
+      if (id === 'silences' && !c.speech) return _T('Sélectionne dans la timeline les plans où l\'on parle');
+      if (id === 'captions' && !c.captions) return _T('Importe ton .srt (onglet Parole)');
+      if (id === 'lower' && !c.lower) return _T('Écris le nom et la fonction (onglet Parole)');
+      if ((id === 'captions' || id === 'lower') && !c.mogrt) return _T('Choisis un modèle de texte (onglet Textes)');
+      if (id === 'montage' && !c.rushes) return _T('Sélectionne tes rushs dans le panneau Projet');
+      if (id === 'convert' && !c.cams) return _T('Ajoute ta caméra (onglet Couleur)');
+      if (id === 'titles' && !c.lyrics) return _T('Colle tes paroles (onglet Textes)');
+      if (id === 'titles' && !c.mogrt) return _T('Choisis un modèle de texte (onglet Textes)');
       return '';
     }
 
@@ -98,13 +99,13 @@
           return app.actions.autoFix();
         case 'look': {
           const p = lookParams(r);
-          if (!p) return { kind: 'warn', title: 'Pas de look dans ce style' };
+          if (!p) return { kind: 'warn', title: _T('Pas de look dans ce style') };
           Object.assign(s.color, { params: D.normalize(JSON.parse(JSON.stringify(p))), name: r.look || r.lookName, target: 'sequence' });
           return app.actions.applyLook();
         }
         case 'effects': {
           const first = app.services.entryByKey(r.chain[0]);
-          if (!first) return { kind: 'error', title: 'Style sans effet', detail: 'Compose ton enchaînement dans l\'onglet Effets (Maj + clic).' };
+          if (!first) return { kind: 'error', title: _T('Style sans effet'), detail: _T('Compose ton enchaînement dans l\'onglet Effets (Maj + clic).') };
           Object.assign(s, { placement: r.place === 'allcuts' ? 'allcuts' : 'markers', side: 'both', vary: 'chain', sfx: on.sfx ? r.sfx : 'none', alternate: false });
           s.chain = { keys: r.chain.slice(), order: r.order };
           app.S.cur = first;
@@ -136,14 +137,14 @@
     async function launch() {
       if (app.S.busy) return;
       const c = await verify();
-      if (!c.sequence) return app.status.finish('error', 'Ouvre une séquence', 'Le montage express travaille sur la séquence active de Premiere.');
-      if (!c.adj) return app.status.finish('error', 'Il manque un calque de réglage', 'Une fois par projet : Fichier > Nouveau > Calque de réglage. RR FX le retrouve tout seul.');
+      if (!c.sequence) return app.status.finish('error', _T('Ouvre une séquence'), _T('Le montage express travaille sur la séquence active de Premiere.'));
+      if (!c.adj) return app.status.finish('error', _T('Il manque un calque de réglage'), _T('Une fois par projet : Fichier > Nouveau > Calque de réglage. RR FX le retrouve tout seul.'));
       const r = recipe(), all = R.stepsOf(r), on = {};
       all.forEach(x => { on[x.id] = wants(r, x) && !blocker(x.id, c, r); });
       const steps = all.filter(x => x.id !== 'sfx' && on[x.id]);
       if (!steps.length) {
         const why = all.filter(x => wants(r, x) && blocker(x.id, c, r)).map(x => blocker(x.id, c, r));
-        return app.status.finish('warn', 'Aucune étape possible', why.length ? Array.from(new Set(why)).join(' · ') + '.' : 'Coche au moins une étape.');
+        return app.status.finish('warn', _T('Aucune étape possible'), why.length ? Array.from(new Set(why)).join(' · ') + '.' : _T('Coche au moins une étape.'));
       }
       const s = app.settings(), saved = {}, cur = app.S.cur, params = app.S.params;
       KEEP.forEach(k => { if (k in s) saved[k] = JSON.parse(JSON.stringify(s[k])); });
@@ -151,13 +152,13 @@
       if (!s.correction.fix) s.correction.fix = {};
       report = [];
       const t0 = Date.now();
-      app.log('Montage express · ' + r.name + ' : ' + steps.map(x => x.label).join(' → '), 'info');
+      app.log(_T('Montage express · ') + r.name + ' : ' + steps.map(x => x.label).join(' → '), 'info');
       try {
         for (const step of steps) {
           const res = await runStep(step.id, r, c, on);
-          report.push({ id: step.id, label: step.label, kind: res ? res.kind : 'error', title: res ? res.title : 'Panneau occupé', detail: res ? res.detail || '' : '' });
+          report.push({ id: step.id, label: step.label, kind: res ? res.kind : 'error', title: res ? res.title : _T('Panneau occupé'), detail: res ? res.detail || '' : '' });
           render();
-          if (app.S.cancel) { report.push({ id: 'stop', label: 'Arrêté', kind: 'warn', title: 'Les étapes suivantes n\'ont pas été faites' }); break; }
+          if (app.S.cancel) { report.push({ id: 'stop', label: _T('Arrêté'), kind: 'warn', title: _T('Les étapes suivantes n\'ont pas été faites') }); break; }
           // Sans temps forts, montage ou coupe des silences, la suite n'a pas de sens.
           if ((!res || res.kind === 'error') && (step.id === 'beats' || step.id === 'montage' || step.id === 'silences')) break;
         }
@@ -172,8 +173,8 @@
       const ok = report.filter(x => x.kind === 'ok').length, bad = report.filter(x => x.kind === 'error').length;
       const secs = Math.round((Date.now() - t0) / 1000);
       app.switchTab('express');
-      app.status.finish(bad ? 'warn' : 'ok', bad ? 'Montage express : ' + app.plural(bad, 'étape à revoir', 'étapes à revoir') : 'Ton montage est prêt · ' + r.name,
-        app.plural(ok, 'étape réussie', 'étapes réussies') + ' en ' + (secs >= 60 ? Math.floor(secs / 60) + ' min ' + (secs % 60) + ' s' : secs + ' s') + '. ↶ Annuler retire une étape à la fois.');
+      app.status.finish(bad ? 'warn' : 'ok', bad ? _T('Montage express : ') + app.plural(bad, _T('étape à revoir'), _T('étapes à revoir')) : _T('Ton montage est prêt · ') + r.name,
+        app.plural(ok, _T('étape réussie'), _T('étapes réussies')) + _T(' en ') + (secs >= 60 ? Math.floor(secs / 60) + ' min ' + (secs % 60) + ' s' : secs + ' s') + _T('. ↶ Annuler retire une étape à la fois.'));
     }
 
     // ---------------------------------------------------------------- interface
@@ -198,8 +199,8 @@
       if (!view || !view.isConnected || app.S.tab !== 'express') return;
       const x = st(), r = recipe(), c = check;
       view.innerHTML = '';
-      view.appendChild(h('div', { class: 'xp-hero' }, h('div', { class: 'xp-hero-title' }, 'Ton montage en un clic'),
-        h('div', { class: 'xp-hero-text' }, 'Choisis un style, RR FX enchaîne ce qu\'il faut : silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, bandeau, version 9:16. Chaque outil reste dispo à part.')));
+      view.appendChild(h('div', { class: 'xp-hero' }, h('div', { class: 'xp-hero-title' }, _T('Ton montage en un clic')),
+        h('div', { class: 'xp-hero-text' }, _T('Choisis un style, RR FX enchaîne ce qu\'il faut : silences coupés, montage sur le rythme, couleur, transitions et sons, sous-titres, bandeau, version 9:16. Chaque outil reste dispo à part.'))));
 
       // 1. Style
       // Six styles affichés (le choisi toujours compris), les autres d'un clic.
@@ -211,14 +212,14 @@
         if (cur && shownStyles.indexOf(cur) < 0) shownStyles.push(cur);
       }
       const cards = h('div', { class: 'xp-styles' }, shownStyles.map(rc => {
-        const card = h('button', { class: 'xp-style' + (rc.id === x.recipe ? ' on' : ''), title: rc.desc }, lookThumb(rc), h('b', null, rc.name), h('span', { class: 'xp-sub' }, rc.chain.slice(0, 4).map(nameOf).join(' · ') || 'Aucun effet'));
+        const card = h('button', { class: 'xp-style' + (rc.id === x.recipe ? ' on' : ''), title: rc.desc }, lookThumb(rc), h('b', null, rc.name), h('span', { class: 'xp-sub' }, rc.chain.slice(0, 4).map(nameOf).join(' · ') || _T('Aucun effet')));
         card.addEventListener('click', () => { x.recipe = rc.id; app.persist(); render(); app.renderCTA(); });
         return card;
       }));
       // Enregistrer le style choisi (avec ses étapes cochées) : réutilisable et partageable.
-      const saveStyle = h('button', { class: 'action', title: 'Le style choisi et ses étapes cochées, dans Mes effets (exportable, partageable)' }, 'Enregistrer ce style…');
+      const saveStyle = h('button', { class: 'action', title: _T('Le style choisi et ses étapes cochées, dans Mes effets (exportable, partageable)') }, _T('Enregistrer ce style…'));
       saveStyle.addEventListener('click', async () => {
-        const name = await app.promptName('Nom du style', r.name.replace(/^★ /, '') + ' perso');
+        const name = await app.promptName(_T('Nom du style'), r.name.replace(/^★ /, '') + _T(' perso'));
         if (!name) return;
         const data = JSON.parse(JSON.stringify(Object.assign({}, r, { id: undefined, name, lookParams: lookParams(r) })));
         data.steps = {};
@@ -227,9 +228,9 @@
         const it = app.S.lib.items.filter(i => i.type === 'xpStyle' && i.name === name).pop();
         if (it) x.recipe = 'u:' + it.id;
         app.persist(); render(); app.renderCTA();
-        app.status.finish('ok', 'Style « ' + name + ' » enregistré', 'En tête des styles, et dans Mes effets pour l\'exporter ou le partager.');
+        app.status.finish('ok', _T('Style « ') + name + _T(' » enregistré'), _T('En tête des styles, et dans Mes effets pour l\'exporter ou le partager.'));
       });
-      const more = every.length > 8 ? h('button', { class: 'action quiet xp-more', 'aria-expanded': String(showAll) }, showAll ? 'Moins de styles' : 'Tous les styles (' + every.length + ')') : null;
+      const more = every.length > 8 ? h('button', { class: 'action quiet xp-more', 'aria-expanded': String(showAll) }, showAll ? _T('Moins de styles') : _T('Tous les styles (') + every.length + ')') : null;
       if (more) more.addEventListener('click', () => { showAll = !showAll; render(); });
       view.appendChild(section('1. Style', [cards, h('div', { class: 'row-buttons' }, more), h('div', { class: 'note' }, r.desc + (r.look ? ' Look ' + r.look + '.' : '')), h('div', { class: 'row-buttons' }, saveStyle)]));
 
@@ -237,36 +238,36 @@
       const all = R.stepsOf(r), has = id => all.some(q => q.id === id && wants(r, q));
       const music = all.some(q => wants(r, q) && R.needsMusic(q.id, r));
       const items = c ? [
-        [c.sequence, 'Séquence ouverte', 'Ouvre ta séquence dans Premiere'],
-        [c.adj, 'Calque de réglage dans le projet', 'Fichier > Nouveau > Calque de réglage (une fois par projet)'],
-        music ? [!!c.music, c.music ? 'Musique : ' + c.music : 'Musique dans la séquence', 'Pose ta musique sur une piste audio'] : null,
-        has('silences') ? [c.speech > 0, c.speech ? app.plural(c.speech, 'plan parlé sélectionné', 'plans parlés sélectionnés') : 'Plans où l\'on parle sélectionnés', 'Sélectionne-les dans la timeline (sinon la coupe des silences est passée)', true] : null,
-        has('montage') ? [c.rushes > 0, c.rushes ? app.plural(c.rushes, 'rush sélectionné', 'rushs sélectionnés') + ' dans Projet' : 'Rushs sélectionnés dans le panneau Projet', 'Pour le montage auto (sinon, il est passé)', true] : null,
-        has('convert') ? [c.cams > 0, c.cams ? app.plural(c.cams, 'caméra enregistrée', 'caméras enregistrées') : 'Caméra enregistrée', 'Pour la conversion LOG (onglet Couleur)', true] : null,
-        has('titles') ? [c.lyrics > 0 && c.mogrt, c.lyrics ? app.plural(c.lyrics, 'ligne de paroles', 'lignes de paroles') : 'Paroles', 'Pour les paroles animées (onglet Textes)', true] : null,
-        has('captions') ? [c.captions > 0 && c.mogrt, c.captions ? app.plural(c.captions, 'sous-titre', 'sous-titres') : 'Sous-titres (.srt)', 'Importe ton .srt dans l\'onglet Parole', true] : null,
-        has('lower') ? [c.lower && c.mogrt, c.lower ? 'Bandeau prêt' : 'Bandeau nom et fonction', 'Écris le nom dans l\'onglet Parole', true] : null
+        [c.sequence, _T('Séquence ouverte'), _T('Ouvre ta séquence dans Premiere')],
+        [c.adj, _T('Calque de réglage dans le projet'), _T('Fichier > Nouveau > Calque de réglage (une fois par projet)')],
+        music ? [!!c.music, c.music ? _T('Musique : ') + c.music : _T('Musique dans la séquence'), _T('Pose ta musique sur une piste audio')] : null,
+        has('silences') ? [c.speech > 0, c.speech ? app.plural(c.speech, _T('plan parlé sélectionné'), _T('plans parlés sélectionnés')) : _T('Plans où l\'on parle sélectionnés'), _T('Sélectionne-les dans la timeline (sinon la coupe des silences est passée)'), true] : null,
+        has('montage') ? [c.rushes > 0, c.rushes ? app.plural(c.rushes, _T('rush sélectionné'), _T('rushs sélectionnés')) + _T(' dans Projet') : _T('Rushs sélectionnés dans le panneau Projet'), _T('Pour le montage auto (sinon, il est passé)'), true] : null,
+        has('convert') ? [c.cams > 0, c.cams ? app.plural(c.cams, _T('caméra enregistrée'), _T('caméras enregistrées')) : _T('Caméra enregistrée'), _T('Pour la conversion LOG (onglet Couleur)'), true] : null,
+        has('titles') ? [c.lyrics > 0 && c.mogrt, c.lyrics ? app.plural(c.lyrics, _T('ligne de paroles'), _T('lignes de paroles')) : _T('Paroles'), _T('Pour les paroles animées (onglet Textes)'), true] : null,
+        has('captions') ? [c.captions > 0 && c.mogrt, c.captions ? app.plural(c.captions, _T('sous-titre'), _T('sous-titres')) : _T('Sous-titres (.srt)'), _T('Importe ton .srt dans l\'onglet Parole'), true] : null,
+        has('lower') ? [c.lower && c.mogrt, c.lower ? _T('Bandeau prêt') : _T('Bandeau nom et fonction'), _T('Écris le nom dans l\'onglet Parole'), true] : null
       ].filter(Boolean) : [];
-      const refresh = h('button', { class: 'action quiet', title: 'Revérifier' }, '↻ Vérifier');
+      const refresh = h('button', { class: 'action quiet', title: _T('Revérifier') }, _T('↻ Vérifier'));
       refresh.addEventListener('click', async () => { refresh.disabled = true; await verify(); render(); });
-      view.appendChild(section('2. Avant de lancer', c ? items.map(([ok, label, hint, optional]) => h('div', { class: 'xp-check' + (ok ? ' ok' : optional ? ' opt' : ' ko') },
+      view.appendChild(section(_T('2. Avant de lancer'), c ? items.map(([ok, label, hint, optional]) => h('div', { class: 'xp-check' + (ok ? ' ok' : optional ? ' opt' : ' ko') },
         h('span', { class: 'xp-dot' }, ok ? '✓' : optional ? '–' : '✕'), h('div', null, h('div', null, label), ok ? null : h('div', { class: 'note' }, hint))))
-        : h('div', { class: 'note' }, 'Vérification…'), refresh));
+        : h('div', { class: 'note' }, _T('Vérification…')), refresh));
 
       // 3. Étapes de ce style
       const list = all.map(step => {
         const why = blocker(step.id, c, r), sub = step.id === 'sfx';
         let desc = step.desc;
-        if (step.id === 'effects') desc += r.place === 'allcuts' ? ' sur toutes les coupes de la séquence' : ' sur les temps forts';
-        if (step.id === 'format' && r.format) desc = 'Copie ' + r.format.id.replace('x', ':') + (r.format.mode === 'blur' ? ' sur fond flou' : ' recadrée automatiquement');
-        if (step.id === 'sfx' && r.sfx === 'none') desc += ' (aucun dans ce style)';
+        if (step.id === 'effects') desc += r.place === 'allcuts' ? _T(' sur toutes les coupes de la séquence') : _T(' sur les temps forts');
+        if (step.id === 'format' && r.format) desc = _T('Copie ') + r.format.id.replace('x', ':') + (r.format.mode === 'blur' ? _T(' sur fond flou') : _T(' recadrée automatiquement'));
+        if (step.id === 'sfx' && r.sfx === 'none') desc += _T(' (aucun dans ce style)');
         const box = checkbox(step.label, wants(r, step) && !why, val => { picks(r)[step.id] = val; app.persist(); });
         return h('div', { class: 'xp-step' + (why ? ' off' : '') + (sub ? ' sub' : '') }, box, h('div', { class: 'note' }, why || desc));
       });
-      view.appendChild(section('3. Étapes', list));
+      view.appendChild(section(_T('3. Étapes'), list));
 
       if (report.length) {
-        view.appendChild(section('Dernier montage express', report.map(it => h('div', { class: 'xp-check ' + (it.kind === 'ok' ? 'ok' : it.kind === 'error' ? 'ko' : 'opt') },
+        view.appendChild(section(_T('Dernier montage express'), report.map(it => h('div', { class: 'xp-check ' + (it.kind === 'ok' ? 'ok' : it.kind === 'error' ? 'ko' : 'opt') },
           h('span', { class: 'xp-dot' }, it.kind === 'ok' ? '✓' : it.kind === 'error' ? '✕' : '!'),
           h('div', null, h('div', null, it.label + ' · ' + (it.title || '')), it.detail ? h('div', { class: 'note' }, it.detail) : null)))));
       }
@@ -275,13 +276,13 @@
 
     app.tabs.express = {
       render,
-      cta: () => ({ label: 'Lancer · ' + recipe().name, run: launch, enabled: true }),
+      cta: () => ({ label: _T('Lancer · ') + recipe().name, run: launch, enabled: true }),
       leave: () => {}
     };
     app.actions.express = launch;
     app.itemTypes.xpStyle = {
-      icon: '⚡', label: 'Style Express', valid: d => !!d.recipe && Array.isArray(d.recipe.chain) && !!d.recipe.beats && !!d.recipe.cut,
-      meta: it => app.plural(it.data.recipe.chain.length, 'effet') + ' · ' + app.plural(Object.keys(it.data.recipe.steps || {}).length, 'étape'),
+      icon: '⚡', label: _T('Style Express'), valid: d => !!d.recipe && Array.isArray(d.recipe.chain) && !!d.recipe.beats && !!d.recipe.cut,
+      meta: it => app.plural(it.data.recipe.chain.length, _T('effet')) + ' · ' + app.plural(Object.keys(it.data.recipe.steps || {}).length, _T('étape')),
       open: it => { st().recipe = 'u:' + it.id; app.persist(); app.switchTab('express'); }
     };
   });

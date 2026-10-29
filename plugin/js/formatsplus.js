@@ -9,6 +9,7 @@
      Express, styles des textes), depuis tes rushs sélectionnés. Les tiens dans Mes effets. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const Mo = root.RRFXMontage, Sp = root.RRFXSpeech, { Host } = app;
@@ -33,7 +34,7 @@
       for (let i = 0; i < clips.length; i++) {
         if (app.S.cancel) break;
         const c = clips[i];
-        app.status.progress(i, clips.length, 'Écoute de ' + c.name);
+        app.status.progress(i, clips.length, _T('Écoute de ') + c.name);
         const a = await app.speech.readClip(c);
         if (!a) continue;
         a0 = Math.min(a0, c.start); b0 = Math.max(b0, c.end);
@@ -50,67 +51,67 @@
 
     function findExtracts(redraw) {
       const x = st();
-      return app.runTask('Recherche des meilleurs passages', async () => {
-        app.status.phase('Écoute de la vidéo');
+      return app.runTask(_T('Recherche des meilleurs passages'), async () => {
+        app.status.phase(_T('Écoute de la vidéo'));
         const an = await analyzeLong();
         const cues = app.speech.cues();
         found = Mo.extracts({ speech: an.speech, energy: an.energy, cues, count: x.count, min: x.min, max: x.max }).map((e, i) => Object.assign(e, { on: true, n: i + 1 }));
         if (redraw) redraw();
-        if (!found.length) return { kind: 'warn', title: 'Aucun passage trouvé', detail: 'Sélectionne les plans où l\'on parle (au moins ' + x.min + ' s de parole), ou baisse la durée minimum.' };
-        return { kind: 'ok', title: app.plural(found.length, 'extrait trouvé', 'extraits trouvés'), detail: (cues.length ? 'Phrases du .srt, ' : 'Sans .srt : coupes sur les blancs, ') + 'à vérifier avant de créer.' };
+        if (!found.length) return { kind: 'warn', title: _T('Aucun passage trouvé'), detail: _T('Sélectionne les plans où l\'on parle (au moins ') + x.min + _T(' s de parole), ou baisse la durée minimum.') };
+        return { kind: 'ok', title: app.plural(found.length, _T('extrait trouvé'), _T('extraits trouvés')), detail: (cues.length ? _T('Phrases du .srt, ') : _T('Sans .srt : coupes sur les blancs, ')) + _T('à vérifier avant de créer.') };
       }, true);
     }
 
     async function makeExtracts() {
       const x = st(), list = found.filter(e => e.on);
       if (app.S.busy) return;
-      if (!list.length) return app.status.finish('warn', 'Aucun extrait choisi', 'Lance d\'abord « Trouver les passages ».');
+      if (!list.length) return app.status.finish('warn', _T('Aucun extrait choisi'), _T('Lance d\'abord « Trouver les passages ».'));
       const ctx = await Host.call('getContext', {});
-      if (!ctx.ok || !ctx.hasSequence) return app.status.finish('error', 'Ouvre la séquence de la vidéo', 'Les extraits sont pris dans la séquence active.');
+      if (!ctx.ok || !ctx.hasSequence) return app.status.finish('error', _T('Ouvre la séquence de la vidéo'), _T('Les extraits sont pris dans la séquence active.'));
       const source = ctx.seqId, base = ctx.name, made = [];
       for (const e of list) {
         if (app.S.cancel) break;
         await Host.call('openSequence', { id: source });
-        const name = base + ' · Extrait ' + e.n + (e.title ? ' · ' + e.title.replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 40) : '');
-        const r = await app.runTask('Extrait ' + e.n + ' (' + mmss(e.a) + ' → ' + mmss(e.b) + ')', async () => {
+        const name = base + _T(' · Extrait ') + e.n + (e.title ? ' · ' + e.title.replace(/[\\/:*?"<>|]+/g, ' ').slice(0, 40) : '');
+        const r = await app.runTask(_T('Extrait ') + e.n + ' (' + mmss(e.a) + ' → ' + mmss(e.b) + ')', async () => {
           const res = await Host.call('extractCopy', { a: e.a, b: e.b, name });
-          if (!res.ok) return { kind: 'error', title: 'Extrait non créé', detail: res.error };
+          if (!res.ok) return { kind: 'error', title: _T('Extrait non créé'), detail: res.error };
           (res.warnings || []).forEach(w => app.log(w, 'warn'));
-          return { kind: 'ok', title: '« ' + res.name + ' » créée', detail: Math.round(res.seconds) + ' s' };
+          return { kind: 'ok', title: _T('« ') + res.name + _T(' » créée'), detail: Math.round(res.seconds) + ' s' };
         });
         if (!r || r.kind === 'error') continue;
         made.push(name);
         if (x.exCaptions && app.speech.cues().length && app.services.mogrt()) await app.speech.captions({ range: { a: e.a, b: e.b } });
-        if (x.exFormat && app.formats) await app.runTask('Extrait ' + e.n + ' · ' + app.formats.fmt().label, app.formats.copyNow);
+        if (x.exFormat && app.formats) await app.runTask(_T('Extrait ') + e.n + ' · ' + app.formats.fmt().label, app.formats.copyNow);
       }
       await Host.call('openSequence', { id: source });
-      app.status.finish(made.length ? 'ok' : 'error', made.length ? app.plural(made.length, 'extrait créé', 'extraits créés') : 'Aucun extrait créé', made.length ? 'Dans le panneau Projet : ' + made.map(n => '« ' + n.split(' · ').slice(1, 2).join('') + ' »').join(', ') + (x.exFormat ? ', avec leur copie ' + app.formats.fmt().label : '') + '. Ta séquence d\'origine est intacte.' : 'Voir le journal.');
+      app.status.finish(made.length ? 'ok' : 'error', made.length ? app.plural(made.length, _T('extrait créé'), _T('extraits créés')) : _T('Aucun extrait créé'), made.length ? _T('Dans le panneau Projet : ') + made.map(n => _T('« ') + n.split(' · ').slice(1, 2).join('') + _T(' »')).join(', ') + (x.exFormat ? _T(', avec leur copie ') + app.formats.fmt().label : '') + _T('. Ta séquence d\'origine est intacte.') : _T('Voir le journal.'));
     }
 
     app.extras.formats.push({
-      id: 'extraits', title: 'Extraits pour les réseaux', nav: 'Extraits',
+      id: 'extraits', title: _T('Extraits pour les réseaux'), nav: _T('Extraits'),
       render: () => {
         const x = st(), box = h('div'), list = h('div', { class: 'ex-list' });
         const redraw = () => {
           list.innerHTML = '';
           found.forEach(e => {
             const cb = checkbox(mmss(e.a) + ' → ' + mmss(e.b) + ' · ' + Math.round(e.b - e.a) + ' s · ' + Math.round(e.score * 100) + ' %', e.on, v => { e.on = v; });
-            const go = h('button', { class: 'action quiet', title: 'Amener la tête de lecture au début' }, '▶');
+            const go = h('button', { class: 'action quiet', title: _T('Amener la tête de lecture au début') }, '▶');
             go.addEventListener('click', () => seek(e.a));
-            list.appendChild(h('div', { class: 'ex-item' }, h('div', { class: 'ex-head' }, cb, go), e.title ? h('div', { class: 'note' }, '« ' + e.title + ' »') : null));
+            list.appendChild(h('div', { class: 'ex-item' }, h('div', { class: 'ex-head' }, cb, go), e.title ? h('div', { class: 'note' }, _T('« ') + e.title + _T(' »')) : null));
           });
         };
-        const scan = h('button', { class: 'action' }, 'Trouver les passages');
+        const scan = h('button', { class: 'action' }, _T('Trouver les passages'));
         scan.addEventListener('click', () => findExtracts(redraw));
-        const make = h('button', { class: 'action go' }, 'Créer les extraits');
+        const make = h('button', { class: 'action go' }, _T('Créer les extraits'));
         make.addEventListener('click', makeExtracts);
         box.append(
-          h('div', { class: 'note' }, 'Sélectionne les plans d\'une longue vidéo (podcast, interview, live) : RR FX écoute la voix et propose ses meilleurs passages, du début d\'une phrase à la fin d\'une autre. Avec un .srt (onglet Parole), il choisit aussi les passages aux mots forts.'),
-          row('Combien', hotText({ value: x.count, min: 1, max: 10, step: 1, unit: '', onChange: v => { x.count = v; app.persist(); } })),
-          row('Durée', h('span', { class: 'row-pair' }, hotText({ value: x.min, min: 10, max: 120, step: 5, unit: 's min', onChange: v => { x.min = v; app.persist(); } }), hotText({ value: x.max, min: 15, max: 180, step: 5, unit: 's max', onChange: v => { x.max = v; app.persist(); } }))),
+          h('div', { class: 'note' }, _T('Sélectionne les plans d\'une longue vidéo (podcast, interview, live) : RR FX écoute la voix et propose ses meilleurs passages, du début d\'une phrase à la fin d\'une autre. Avec un .srt (onglet Parole), il choisit aussi les passages aux mots forts.')),
+          row(_T('Combien'), hotText({ value: x.count, min: 1, max: 10, step: 1, unit: '', onChange: v => { x.count = v; app.persist(); } })),
+          row(_T('Durée'), h('span', { class: 'row-pair' }, hotText({ value: x.min, min: 10, max: 120, step: 5, unit: 's min', onChange: v => { x.min = v; app.persist(); } }), hotText({ value: x.max, min: 15, max: 180, step: 5, unit: 's max', onChange: v => { x.max = v; app.persist(); } }))),
           h('div', { class: 'row-buttons wrap' },
-            checkbox('Copie au format choisi plus haut', x.exFormat, v => { x.exFormat = v; app.persist(); }),
-            checkbox('Sous-titres (si un .srt est chargé)', x.exCaptions, v => { x.exCaptions = v; app.persist(); })),
+            checkbox(_T('Copie au format choisi plus haut'), x.exFormat, v => { x.exFormat = v; app.persist(); }),
+            checkbox(_T('Sous-titres (si un .srt est chargé)'), x.exCaptions, v => { x.exCaptions = v; app.persist(); })),
           h('div', { class: 'row-buttons' }, scan, make), list);
         redraw();
         return [box];
@@ -121,33 +122,33 @@
 
     let lastCheck = null;
     function preflight(redraw) {
-      return app.runTask('Vérification avant export', async () => {
+      return app.runTask(_T('Vérification avant export'), async () => {
         const r = await Host.call('preflight', {});
-        if (!r.ok) return { kind: 'error', title: 'Vérification impossible', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Vérification impossible'), detail: r.error };
         lastCheck = r;
         if (redraw) redraw();
         const err = r.issues.filter(i => i.level === 'error').length, warn = r.issues.length - err;
-        if (!r.issues.length) return { kind: 'ok', title: 'Prêt à exporter', detail: 'Aucun média hors ligne, aucune image noire, rien de coupé ni de poussé trop fort.' };
-        return { kind: err ? 'error' : 'warn', title: [err ? app.plural(err, 'problème') : '', warn ? app.plural(warn, 'remarque') : ''].filter(Boolean).join(' et '), detail: 'Clique sur une ligne pour y amener la tête de lecture.' };
+        if (!r.issues.length) return { kind: 'ok', title: _T('Prêt à exporter'), detail: _T('Aucun média hors ligne, aucune image noire, rien de coupé ni de poussé trop fort.') };
+        return { kind: err ? 'error' : 'warn', title: [err ? app.plural(err, _T('problème')) : '', warn ? app.plural(warn, _T('remarque')) : ''].filter(Boolean).join(_T(' et ')), detail: _T('Clique sur une ligne pour y amener la tête de lecture.') };
       });
     }
     app.extras.formats.push({
-      id: 'verif', title: 'Vérifier avant export', nav: 'Vérifier',
+      id: 'verif', title: _T('Vérifier avant export'), nav: _T('Vérifier'),
       render: () => {
         const box = h('div'), list = h('div', { class: 'pf-list' });
         const redraw = () => {
           list.innerHTML = '';
           if (!lastCheck) return;
-          if (!lastCheck.issues.length) { list.appendChild(h('div', { class: 'note pf-ok' }, '✓ Rien à signaler sur ' + mmss(lastCheck.duration) + ' de séquence.')); return; }
+          if (!lastCheck.issues.length) { list.appendChild(h('div', { class: 'note pf-ok' }, _T('✓ Rien à signaler sur ') + mmss(lastCheck.duration) + _T(' de séquence.'))); return; }
           lastCheck.issues.forEach(i => {
-            const b = h('button', { class: 'pf-item ' + i.level, title: 'Aller à ' + mmss(i.t) }, h('span', { class: 'pf-icon' }, i.level === 'error' ? '✕' : '!'), h('span', { class: 'pf-time' }, mmss(i.t) + ' · ' + i.where), h('span', { class: 'pf-text' }, i.text));
+            const b = h('button', { class: 'pf-item ' + i.level, title: _T('Aller à ') + mmss(i.t) }, h('span', { class: 'pf-icon' }, i.level === 'error' ? '✕' : '!'), h('span', { class: 'pf-time' }, mmss(i.t) + ' · ' + i.where), h('span', { class: 'pf-text' }, i.text));
             b.addEventListener('click', () => seek(i.t));
             list.appendChild(b);
           });
         };
-        const go = h('button', { class: 'action go' }, 'Vérifier la séquence');
+        const go = h('button', { class: 'action go' }, _T('Vérifier la séquence'));
         go.addEventListener('click', () => preflight(redraw));
-        box.append(h('div', { class: 'note' }, 'Avant d\'envoyer à Media Encoder : médias hors ligne, images noires (trous sans plan), clips désactivés, pistes masquées ou coupées, volume poussé au-delà de +6 dB, textes RR FX hors de la zone sûre.'), h('div', { class: 'row-buttons' }, go), list);
+        box.append(h('div', { class: 'note' }, _T('Avant d\'envoyer à Media Encoder : médias hors ligne, images noires (trous sans plan), clips désactivés, pistes masquées ou coupées, volume poussé au-delà de +6 dB, textes RR FX hors de la zone sûre.')), h('div', { class: 'row-buttons' }, go), list);
         redraw();
         return [box];
       }
@@ -156,11 +157,11 @@
     // ---------------------------------------------------------------- plusieurs séquences
 
     const BATCH = [
-      { id: 'applyLook', label: 'Le look en cours (toute la séquence)' },
-      { id: 'convert', label: 'La conversion LOG (toute la séquence)' },
-      { id: 'formatCopy', label: 'Une copie au format choisi' },
-      { id: 'preflight', label: 'La vérification avant export' },
-      { id: 'beats', label: 'Les marqueurs des temps forts' }
+      { id: 'applyLook', label: _T('Le look en cours (toute la séquence)') },
+      { id: 'convert', label: _T('La conversion LOG (toute la séquence)') },
+      { id: 'formatCopy', label: _T('Une copie au format choisi') },
+      { id: 'preflight', label: _T('La vérification avant export') },
+      { id: 'beats', label: _T('Les marqueurs des temps forts') }
     ];
     let seqs = null;
     async function loadSeqs(redraw) {
@@ -171,9 +172,9 @@
     async function runBatch() {
       const x = st(), list = (seqs || []).filter(q => x.picked.indexOf(q.id) >= 0), what = BATCH.find(b => b.id === x.batch);
       if (app.S.busy) return;
-      if (!list.length) return app.status.finish('warn', 'Aucune séquence cochée', 'Coche les séquences à traiter.');
+      if (!list.length) return app.status.finish('warn', _T('Aucune séquence cochée'), _T('Coche les séquences à traiter.'));
       const fn = x.batch === 'preflight' ? () => preflight(null) : app.actions[x.batch];
-      if (!fn) return app.status.finish('error', 'Action indisponible', what.label);
+      if (!fn) return app.status.finish('error', _T('Action indisponible'), what.label);
       const s = app.settings(), keep = { color: s.color && s.color.target, log: s.logconv && s.logconv.scope };
       // Look et conversion sur toute la séquence pendant le lot, comme si tu l'avais choisi.
       if (s.color) s.color.target = 'sequence';
@@ -185,8 +186,8 @@
           const o = await Host.call('openSequence', { id: q.id });
           if (!o.ok) { report.push(q.name + ' : ' + o.error); continue; }
           const r = await fn();
-          report.push(q.name + ' : ' + (r ? r.title : 'occupé'));
-          app.log('Lot · ' + q.name + ' : ' + (r ? r.title + (r.detail ? ' (' + r.detail + ')' : '') : 'panneau occupé'), r && r.kind === 'error' ? 'error' : r && r.kind === 'warn' ? 'warn' : 'ok');
+          report.push(q.name + ' : ' + (r ? r.title : _T('occupé')));
+          app.log(_T('Lot · ') + q.name + ' : ' + (r ? r.title + (r.detail ? ' (' + r.detail + ')' : '') : _T('panneau occupé')), r && r.kind === 'error' ? 'error' : r && r.kind === 'warn' ? 'warn' : 'ok');
         }
       } finally {
         if (s.color) s.color.target = keep.color;
@@ -194,28 +195,28 @@
         app.persist();
         if (back.ok && back.seqId && x.batch !== 'formatCopy') await Host.call('openSequence', { id: back.seqId });
       }
-      app.status.finish('ok', what.label.replace(/ \(.*\)$/, '') + ' · ' + app.plural(report.length, 'séquence'), report.join(' · '));
+      app.status.finish('ok', what.label.replace(/ \(.*\)$/, '') + ' · ' + app.plural(report.length, _T('séquence')), report.join(' · '));
     }
     app.extras.formats.push({
-      id: 'lot', title: 'Sur plusieurs séquences', nav: 'Lot', shut: true,
+      id: 'lot', title: _T('Sur plusieurs séquences'), nav: _T('Lot'), shut: true,
       render: () => {
         const x = st(), box = h('div'), list = h('div', { class: 'seq-list' });
         const redraw = () => {
           list.innerHTML = '';
-          if (!seqs) { list.appendChild(h('div', { class: 'note' }, 'Clique sur « Lister les séquences ».')); return; }
+          if (!seqs) { list.appendChild(h('div', { class: 'note' }, _T('Clique sur « Lister les séquences ».'))); return; }
           seqs.forEach(q => list.appendChild(checkbox(q.name + ' · ' + q.w + '×' + q.h + ' · ' + mmss(q.end), x.picked.indexOf(q.id) >= 0, v => {
             const i = x.picked.indexOf(q.id);
             if (v && i < 0) x.picked.push(q.id); else if (!v && i >= 0) x.picked.splice(i, 1);
             app.persist();
           })));
         };
-        const load = h('button', { class: 'action' }, 'Lister les séquences');
+        const load = h('button', { class: 'action' }, _T('Lister les séquences'));
         load.addEventListener('click', () => loadSeqs(redraw));
-        const go = h('button', { class: 'action go' }, 'Lancer sur les séquences cochées');
+        const go = h('button', { class: 'action go' }, _T('Lancer sur les séquences cochées'));
         go.addEventListener('click', runBatch);
         box.append(
-          h('div', { class: 'note' }, 'La même opération sur plusieurs séquences du projet, l\'une après l\'autre : RR FX ouvre chaque séquence et fait le travail. Chaque opération reste annulable dans l\'historique 🕘.'),
-          row('Appliquer', picker(BATCH.map(b => ({ v: b.id, label: b.label })), x.batch, v => { x.batch = v; app.persist(); })),
+          h('div', { class: 'note' }, _T('La même opération sur plusieurs séquences du projet, l\'une après l\'autre : RR FX ouvre chaque séquence et fait le travail. Chaque opération reste annulable dans l\'historique 🕘.')),
+          row(_T('Appliquer'), picker(BATCH.map(b => ({ v: b.id, label: b.label })), x.batch, v => { x.batch = v; app.persist(); })),
           h('div', { class: 'row-buttons' }, load), list, h('div', { class: 'row-buttons' }, go));
         redraw();
         return [box];
@@ -225,22 +226,22 @@
     // ---------------------------------------------------------------- modèles de projet
 
     const TEMPLATES = [
-      { id: 'interview', name: 'Interview / témoignage', format: '16x9', recipe: 'interview', capStyle: 'b:blanc', lowerStyle: 'b:bloc', icon: '🎙' },
+      { id: 'interview', name: _T('Interview / témoignage'), format: '16x9', recipe: 'interview', capStyle: 'b:blanc', lowerStyle: 'b:bloc', icon: '🎙' },
       { id: 'reels', name: 'Reels / TikTok', format: '9x16', recipe: 'reels', capStyle: 'b:reels', lowerStyle: 'b:reels', icon: '📱' },
       { id: 'youtube', name: 'YouTube face cam', format: '16x9', recipe: 'youtube', capStyle: 'b:reels', lowerStyle: 'b:bloc', icon: '▶' },
-      { id: 'podcast', name: 'Podcast vidéo', format: '16x9', recipe: 'interview', capStyle: 'b:blanc', lowerStyle: 'b:corporate', icon: '🎧' },
-      { id: 'corporate', name: 'Vidéo d\'entreprise', format: '16x9', recipe: 'corporate', capStyle: 'b:corporate', lowerStyle: 'b:corporate', icon: '🏢' },
-      { id: 'aftermovie', name: 'Aftermovie / clip', format: '16x9', recipe: 'aftermovie', capStyle: 'b:blanc', lowerStyle: 'b:blanc', icon: '🎉' }
+      { id: 'podcast', name: _T('Podcast vidéo'), format: '16x9', recipe: 'interview', capStyle: 'b:blanc', lowerStyle: 'b:corporate', icon: '🎧' },
+      { id: 'corporate', name: _T('Vidéo d\'entreprise'), format: '16x9', recipe: 'corporate', capStyle: 'b:corporate', lowerStyle: 'b:corporate', icon: '🏢' },
+      { id: 'aftermovie', name: _T('Aftermovie / clip'), format: '16x9', recipe: 'aftermovie', capStyle: 'b:blanc', lowerStyle: 'b:blanc', icon: '🎉' }
     ];
     const userTemplates = () => app.S.lib.items.filter(i => i.type === 'projectTemplate').map(i => Object.assign({}, i.data, { id: 'u:' + i.id, name: '★ ' + i.name, icon: '★' }));
     const templateById = id => (id && id.indexOf('u:') === 0 ? userTemplates().find(t => t.id === id) : TEMPLATES.find(t => 'b:' + t.id === id)) || TEMPLATES[0];
 
     function createFromTemplate(t) {
-      return app.runTask('Nouveau projet · ' + t.name.replace(/^★ /, ''), async () => {
+      return app.runTask(_T('Nouveau projet · ') + t.name.replace(/^★ /, ''), async () => {
         const F = app.formats ? app.formats.FORMATS.find(f => f.id === t.format) : null, d = new Date();
         const name = t.name.replace(/^★ /, '') + ' · ' + d.toLocaleDateString();
         const r = await Host.call('newFromTemplate', { name, width: F ? F.w : 0, height: F ? F.h : 0, adj: true, adjNodeId: app.settings().adjNodeId });
-        if (!r.ok) return { kind: 'error', title: 'Séquence non créée', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Séquence non créée'), detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));
         // Les réglages du modèle : style Express, styles des textes, format des copies.
         const s = app.settings();
@@ -249,12 +250,12 @@
         if (t.titleStyle !== undefined) { s.titles = s.titles || {}; s.titles.style = t.titleStyle; }
         if (app.formats && t.format) app.formats.settings().id = t.format;
         app.persist();
-        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: '« ' + r.name + ' » créée', detail: (r.clips ? app.plural(r.clips, 'rush placé', 'rushs placés') : 'Séquence vide aux bons réglages') + (r.adjPlaced ? ', calque de réglage posé' : '') + '. Style Express et styles des textes du modèle choisis : onglet Express pour lancer le montage.' };
+        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: _T('« ') + r.name + _T(' » créée'), detail: (r.clips ? app.plural(r.clips, _T('rush placé'), _T('rushs placés')) : _T('Séquence vide aux bons réglages')) + (r.adjPlaced ? _T(', calque de réglage posé') : '') + _T('. Style Express et styles des textes du modèle choisis : onglet Express pour lancer le montage.') };
       });
     }
 
     app.extras.formats.push({
-      id: 'modeles', title: 'Nouveau projet depuis un modèle', nav: 'Modèles',
+      id: 'modeles', title: _T('Nouveau projet depuis un modèle'), nav: _T('Modèles'),
       render: () => {
         const x = st(), box = h('div');
         const draw = () => {
@@ -266,11 +267,11 @@
             c.addEventListener('click', () => { x.template = t.id; app.persist(); draw(); });
             return c;
           }));
-          const go = h('button', { class: 'action go' }, 'Créer la séquence');
+          const go = h('button', { class: 'action go' }, _T('Créer la séquence'));
           go.addEventListener('click', () => createFromTemplate(templateById(x.template)));
-          const save = h('button', { class: 'action', title: 'Format, style Express et styles des textes choisis en ce moment' }, 'Enregistrer mes réglages comme modèle…');
+          const save = h('button', { class: 'action', title: _T('Format, style Express et styles des textes choisis en ce moment') }, _T('Enregistrer mes réglages comme modèle…'));
           save.addEventListener('click', async () => {
-            const name = await app.promptName('Nom du modèle', 'Mon modèle');
+            const name = await app.promptName(_T('Nom du modèle'), _T('Mon modèle'));
             if (!name) return;
             const s = app.settings(), sp = app.speech ? app.speech.settings() : {};
             app.services.addItems([{ type: 'projectTemplate', name, data: { format: app.formats ? app.formats.settings().id : '16x9', recipe: s.express && s.express.recipe ? s.express.recipe : '', capStyle: sp.capStyle || '', lowerStyle: sp.lowerStyle || '', titleStyle: (s.titles && s.titles.style) || '' } }]);
@@ -278,10 +279,10 @@
             if (it) x.template = 'u:' + it.id;
             app.persist();
             draw();
-            app.status.finish('ok', 'Modèle « ' + name + ' » enregistré', 'Dans Mes effets : exportable et partageable.');
+            app.status.finish('ok', _T('Modèle « ') + name + _T(' » enregistré'), _T('Dans Mes effets : exportable et partageable.'));
           });
           box.append(
-            h('div', { class: 'note' }, 'Sélectionne tes rushs dans le panneau Projet : RR FX crée la séquence au bon format avec eux, pose le calque de réglage, et choisit le style Express et les styles des textes du modèle. Sans rushs sélectionnés : une séquence vide aux réglages de la séquence ouverte.'),
+            h('div', { class: 'note' }, _T('Sélectionne tes rushs dans le panneau Projet : RR FX crée la séquence au bon format avec eux, pose le calque de réglage, et choisit le style Express et les styles des textes du modèle. Sans rushs sélectionnés : une séquence vide aux réglages de la séquence ouverte.')),
             cards, h('div', { class: 'row-buttons wrap' }, go, save));
         };
         draw();
@@ -289,7 +290,7 @@
       }
     });
     app.itemTypes.projectTemplate = {
-      icon: '▦', label: 'Modèle de projet', valid: d => !!d && typeof d.format === 'string',
+      icon: '▦', label: _T('Modèle de projet'), valid: d => !!d && typeof d.format === 'string',
       meta: it => [it.data.format.replace('x', ':'), (root.RRFXRecipes.byId(it.data.recipe) || {}).name].filter(Boolean).join(' · '),
       open: it => { st().template = 'u:' + it.id; app.persist(); app.switchTab('formats'); }
     };

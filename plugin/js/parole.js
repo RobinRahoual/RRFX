@@ -13,6 +13,7 @@
    - Chapitres YouTube : depuis les marqueurs ou les blancs du .srt, prêts à coller. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const Sp = root.RRFXSpeech, V = root.RRFXVoix, { Core, Lib, Store, Host } = app;
@@ -27,14 +28,14 @@
       fillerLevel: 'normal', fillerMode: 'copy',
       voiceTarget: -14, denoise: false, duckDepth: 12, chapSrc: 'markers'
     };
-    const NAV = [['silences', '✂ Silences'], ['euh', 'Euh'], ['visage', 'Visage'], ['soustitres', 'Sous-titres'], ['bandeau', 'Bandeau'], ['voix', 'Voix'], ['musique', 'Musique'], ['chapitres', 'Chapitres']];
+    const NAV = [['silences', '✂ Silences'], ['euh', _T('Euh')], ['visage', _T('Visage')], ['soustitres', _T('Sous-titres')], ['bandeau', _T('Bandeau')], ['voix', _T('Voix')], ['musique', _T('Musique')], ['chapitres', _T('Chapitres')]];
     // Outils ajoutés par d'autres modules (respirations, plans de coupe, traduction…).
     const extras = () => app.extras.speech;
     const TOOLS = {
-      silences: ['Couper les silences', () => cutSilences()], euh: ['Couper les « euh »', () => cutFillers()],
-      visage: ['Zoomer sur le visage', () => punchIn()], soustitres: ['Poser les sous-titres', () => captions()],
-      bandeau: ['Poser le bandeau', () => lowerThird()], voix: ['Égaliser la voix', () => levelVoice()],
-      musique: ['Baisser la musique sous la voix', () => duckMusic()], chapitres: ['Créer les chapitres', () => makeChapters(() => app.switchTab('speech'))]
+      silences: [_T('Couper les silences'), () => cutSilences()], euh: [_T('Couper les « euh »'), () => cutFillers()],
+      visage: [_T('Zoomer sur le visage'), () => punchIn()], soustitres: [_T('Poser les sous-titres'), () => captions()],
+      bandeau: [_T('Poser le bandeau'), () => lowerThird()], voix: [_T('Égaliser la voix'), () => levelVoice()],
+      musique: [_T('Baisser la musique sous la voix'), () => duckMusic()], chapitres: [_T('Créer les chapitres'), () => makeChapters(() => app.switchTab('speech'))]
     };
     const DENOISE = ['DeNoise', 'Réduction du bruit', 'Débruitage', 'Rauschunterdrückung', 'Reducción de ruido', 'Riduzione rumore'];
     const KEY_COLORS = ['#ffd21e', '#ff4d4d', '#2ee6a8', '#38b6ff', '#c77dff'];
@@ -55,7 +56,7 @@
     async function speechClips() {
       const info = await Host.call('speechInfo', {});
       if (!info.ok) throw new Error(info.error);
-      if (!info.clips.length) throw new Error('Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul).');
+      if (!info.clips.length) throw new Error(_T('Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul).'));
       return info.clips;
     }
 
@@ -76,13 +77,13 @@
       let mute = 0;
       for (let i = 0; i < clips.length; i++) {
         const c = clips[i];
-        app.status.progress(i, clips.length, 'Écoute de ' + c.name);
+        app.status.progress(i, clips.length, _T('Écoute de ') + c.name);
         const a = await readClip(c);
         if (!a) { mute++; per.push({ start: c.start, end: c.end, silent: [] }); continue; }
         const d = Sp.detect(a.samples, a.sr, { level: x.level, minSilence: x.minSilence, pad: x.pad });
         per.push({ start: c.start, end: c.end, silent: d.ranges.map(r => ({ a: a.toSeq(r.a), b: a.toSeq(r.b) })) });
       }
-      if (mute) app.log(app.plural(mute, 'plan sans fichier son lisible', 'plans sans fichier son lisible') + ' (séquence imbriquée ?) : gardés en entier.', 'warn');
+      if (mute) app.log(app.plural(mute, _T('plan sans fichier son lisible'), _T('plans sans fichier son lisible')) + _T(' (séquence imbriquée ?) : gardés en entier.'), 'warn');
       const ranges = Sp.combine(per);
       last = { ranges, a: Math.min(...per.map(p => p.start)), b: Math.max(...per.map(p => p.end)), clips: clips.length, spans: per.map(p => ({ a: p.start, b: p.end })) };
       return last;
@@ -90,27 +91,27 @@
 
     function cutSilences(opts) {
       const x = st(), mode = (opts && opts.mode) || x.mode;
-      return app.runTask('Couper les silences', async () => {
-        app.status.phase('Écoute du son');
+      return app.runTask(_T('Couper les silences'), async () => {
+        app.status.phase(_T('Écoute du son'));
         const r = await analyze();
         draw();
-        if (!r.ranges.length) return { kind: 'warn', title: 'Aucun silence trouvé', detail: 'Essaie la sensibilité « Forte » ou un silence minimum plus court.' };
+        if (!r.ranges.length) return { kind: 'warn', title: _T('Aucun silence trouvé'), detail: _T('Essaie la sensibilité « Forte » ou un silence minimum plus court.') };
         const sec = Sp.total(r.ranges);
         if (mode === 'markers') {
           const m = await Host.call('addMarkers', { times: r.ranges.map(q => q.a), name: 'RR FX · silence', color: 1 });
-          if (!m.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: m.error };
-          return { kind: 'ok', title: app.plural(r.ranges.length, 'silence marqué', 'silences marqués'), detail: fmtSecs(sec) + ' de blancs. Un marqueur au début de chaque silence : coupe à ton rythme.' };
+          if (!m.ok) return { kind: 'error', title: _T('Marqueurs non posés'), detail: m.error };
+          return { kind: 'ok', title: app.plural(r.ranges.length, _T('silence marqué'), _T('silences marqués')), detail: fmtSecs(sec) + _T(' de blancs. Un marqueur au début de chaque silence : coupe à ton rythme.') };
         }
-        app.status.phase('Coupe et recollage');
-        const res = await Host.call('cutSilences', { ranges: r.ranges, copy: mode === 'copy' });
-        if (!res.ok) return { kind: 'error', title: 'Silences non coupés', detail: res.error };
+        app.status.phase(_T('Coupe et recollage'));
+        const res = await Host.call('cutSilences', { ranges: r.ranges, copy: mode === 'copy', suffix: _T(' (sans silences)') });
+        if (!res.ok) return { kind: 'error', title: _T('Silences non coupés'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
         lastCuts.push({ ranges: r.ranges, name: res.name });
         last = null;
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
-          title: app.plural(res.ranges, 'silence coupé', 'silences coupés') + ' · ' + fmtSecs(res.seconds) + ' en moins',
-          detail: (res.copy ? 'Dans « ' + res.name + ' » : ta séquence d\'origine est intacte.' : 'Ctrl+Z (Cmd+Z) dans Premiere pour revenir en arrière.') + (res.warnings && res.warnings.length ? ' ' + res.warnings[0] : '')
+          title: app.plural(res.ranges, _T('silence coupé'), _T('silences coupés')) + ' · ' + fmtSecs(res.seconds) + _T(' en moins'),
+          detail: (res.copy ? _T('Dans « ') + res.name + _T(' » : ta séquence d\'origine est intacte.') : _T('Ctrl+Z (Cmd+Z) dans Premiere pour revenir en arrière.')) + (res.warnings && res.warnings.length ? ' ' + res.warnings[0] : '')
         };
       }, true);
     }
@@ -122,7 +123,7 @@
     async function findFillers() {
       const x = st(), clips = await speechClips(), fillers = [];
       for (let i = 0; i < clips.length; i++) {
-        app.status.progress(i, clips.length, 'Écoute de ' + clips[i].name);
+        app.status.progress(i, clips.length, _T('Écoute de ') + clips[i].name);
         const a = await readClip(clips[i]);
         if (!a) continue;
         V.fillers(a.samples, a.sr, { level: x.fillerLevel }).forEach(r => fillers.push({ a: Math.max(clips[i].start, a.toSeq(r.a)), b: Math.min(clips[i].end, a.toSeq(r.b)) }));
@@ -138,29 +139,29 @@
 
     function cutFillers() {
       const x = st();
-      return app.runTask('« Euh » et répétitions', async () => {
-        app.status.phase('Écoute du son');
+      return app.runTask(_T('« Euh » et répétitions'), async () => {
+        app.status.phase(_T('Écoute du son'));
         const f = await findFillers();
         const exact = f.repeats.filter(r => r.exact), rough = f.repeats.filter(r => !r.exact);
         const cut = f.fillers.concat(exact.map(r => ({ a: r.a, b: r.b }))).sort((p, q) => p.a - q.a);
-        if (!cut.length && !rough.length) return { kind: 'warn', title: 'Aucun « euh » trouvé', detail: 'Essaie la sensibilité « Forte ». Les répétitions sont lues dans le .srt (onglet Parole > Sous-titres).' };
-        const n = app.plural(f.fillers.length, '« euh »', '« euh »') + (f.repeats.length ? ' et ' + app.plural(f.repeats.length, 'répétition') : '');
+        if (!cut.length && !rough.length) return { kind: 'warn', title: _T('Aucun « euh » trouvé'), detail: _T('Essaie la sensibilité « Forte ». Les répétitions sont lues dans le .srt (onglet Parole > Sous-titres).') };
+        const n = app.plural(f.fillers.length, _T('« euh »'), _T('« euh »')) + (f.repeats.length ? _T(' et ') + app.plural(f.repeats.length, _T('répétition')) : '');
         if (x.fillerMode === 'markers' || !cut.length) {
           const all = cut.concat(rough).sort((p, q) => p.a - q.a);
           const m = await Host.call('addMarkers', { times: all.map(r => r.a), name: 'RR FX · euh / répétition', color: 5 });
-          if (!m.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: m.error };
-          return { kind: 'ok', title: n + ' marqué' + (all.length > 1 ? 's' : ''), detail: 'Un marqueur au début de chacun : vérifie et coupe à ton rythme.' };
+          if (!m.ok) return { kind: 'error', title: _T('Marqueurs non posés'), detail: m.error };
+          return { kind: 'ok', title: n + _T(' marqué') + (all.length > 1 ? 's' : ''), detail: _T('Un marqueur au début de chacun : vérifie et coupe à ton rythme.') };
         }
-        app.status.phase('Coupe et recollage');
-        const res = await Host.call('cutSilences', { ranges: cut, copy: x.fillerMode === 'copy', suffix: ' (sans euh)' });
-        if (!res.ok) return { kind: 'error', title: 'Rien n\'a été coupé', detail: res.error };
+        app.status.phase(_T('Coupe et recollage'));
+        const res = await Host.call('cutSilences', { ranges: cut, copy: x.fillerMode === 'copy', suffix: _T(' (sans euh)') });
+        if (!res.ok) return { kind: 'error', title: _T('Rien n\'a été coupé'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
         lastCuts.push({ ranges: cut, name: res.name });
-        rough.forEach(r => app.log('Répétition à vérifier (temps estimé) : « ' + r.text + ' »', 'warn'));
+        rough.forEach(r => app.log(_T('Répétition à vérifier (temps estimé) : « ') + r.text + _T(' »'), 'warn'));
         return {
           kind: rough.length || (res.warnings && res.warnings.length) ? 'warn' : 'ok',
-          title: n + ' : ' + fmtSecs(res.seconds) + ' en moins',
-          detail: (res.copy ? 'Dans « ' + res.name + ' ».' : 'Ctrl+Z dans Premiere pour revenir.') + (rough.length ? ' ' + app.plural(rough.length, 'répétition') + ' à vérifier (sous-titres non découpés mot par mot) : voir le journal.' : '')
+          title: n + ' : ' + fmtSecs(res.seconds) + _T(' en moins'),
+          detail: (res.copy ? _T('Dans « ') + res.name + _T(' ».') : _T('Ctrl+Z dans Premiere pour revenir.')) + (rough.length ? ' ' + app.plural(rough.length, _T('répétition')) + _T(' à vérifier (sous-titres non découpés mot par mot) : voir le journal.') : '')
         };
       }, true);
     }
@@ -170,7 +171,7 @@
     // Chaque plan parlé amené à la même sonie (et débruité en option).
     function levelVoice() {
       const x = st();
-      return app.runTask('Son de la voix', async () => {
+      return app.runTask(_T('Son de la voix'), async () => {
         const clips = await speechClips(), todo = [], before = [];
         // Un même enregistrement (souvent coupé en morceaux par la coupe des silences) est mesuré
         // en entier et reçoit un seul gain : pas de volume qui saute d'un morceau à l'autre.
@@ -178,7 +179,7 @@
         clips.forEach(c => { const k = c.path || c.name; if (!groups.has(k)) groups.set(k, []); groups.get(k).push(c); });
         let n = 0;
         for (const list of groups.values()) {
-          app.status.progress(n++, groups.size, 'Mesure de ' + list[0].name);
+          app.status.progress(n++, groups.size, _T('Mesure de ') + list[0].name);
           const parts = [];
           let sr = 0;
           for (const c of list) {
@@ -191,16 +192,16 @@
           const m = V.loudness(all, sr), g = V.gainFor(m, x.voiceTarget, -1);
           if (g.silent) continue;
           before.push(m.lufs);
-          if (g.limited) app.log(list[0].name + ' : gain limité à ' + g.gain + ' dB (crêtes déjà hautes)', 'warn');
+          if (g.limited) app.log(list[0].name + _T(' : gain limité à ') + g.gain + _T(' dB (crêtes déjà hautes)'), 'warn');
           list.forEach(c => (c.audio || []).forEach(t => todo.push({ track: t.track, start: t.start, gain: g.gain })));
         }
-        if (!todo.length) return { kind: 'warn', title: 'Aucun son à régler', detail: 'Sélectionne des plans avec leur son (image et son liés, ou le son seul).' };
+        if (!todo.length) return { kind: 'warn', title: _T('Aucun son à régler'), detail: _T('Sélectionne des plans avec leur son (image et son liés, ou le son seul).') };
         const r = await Host.call('voiceLevel', { clips: todo, denoise: x.denoise ? DENOISE : null });
-        if (!r.ok) return { kind: 'error', title: 'Niveau non réglé', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Niveau non réglé'), detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));
-        if (r.created.length) app.pushHistory({ date: Date.now(), label: 'Son de la voix', entries: r.created });
+        if (r.created.length) app.pushHistory({ date: Date.now(), label: _T('Son de la voix'), entries: r.created });
         const lo = Math.round(Math.min(...before)), hi = Math.round(Math.max(...before));
-        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: app.plural(r.done, 'son réglé', 'sons réglés') + ' à ' + x.voiceTarget + ' LUFS', detail: 'Avant : ' + (lo === hi ? lo : 'de ' + lo + ' à ' + hi) + ' LUFS.' + (r.cleaned ? ' Débruitage ajouté (réglable dans Options d\'effet).' : '') + ' ↶ Annuler remet le volume d\'avant.' };
+        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: app.plural(r.done, _T('son réglé'), _T('sons réglés')) + _T(' à ') + x.voiceTarget + ' LUFS', detail: _T('Avant : ') + (lo === hi ? lo : _T('de ') + lo + _T(' à ') + hi) + ' LUFS.' + (r.cleaned ? _T(' Débruitage ajouté (réglable dans Options d\'effet).') : '') + _T(' ↶ Annuler remet le volume d\'avant.') };
       });
     }
 
@@ -208,8 +209,8 @@
 
     function duckMusic() {
       const x = st();
-      return app.runTask('Musique sous la voix', async () => {
-        app.status.phase('Écoute de la voix');
+      return app.runTask(_T('Musique sous la voix'), async () => {
+        app.status.phase(_T('Écoute de la voix'));
         const r = await analyze();
         draw();
         // Voix = les plans choisis moins leurs silences.
@@ -220,14 +221,14 @@
           if (t < sp.b) speech.push({ a: t, b: sp.b });
         });
         const m = await Host.call('musicInfo', { notSelected: true });
-        if (!m.ok) return { kind: 'error', title: 'Pas de musique', detail: m.error || 'Pose ta musique sur une piste audio.' };
+        if (!m.ok) return { kind: 'error', title: _T('Pas de musique'), detail: m.error || _T('Pose ta musique sur une piste audio.') };
         const keys = V.duckKeys(speech, { depth: x.duckDepth, from: m.start, to: m.end });
-        if (!keys.length) return { kind: 'warn', title: 'Rien à baisser', detail: 'La voix ne passe pas pendant la musique.' };
+        if (!keys.length) return { kind: 'warn', title: _T('Rien à baisser'), detail: _T('La voix ne passe pas pendant la musique.') };
         const res = await Host.call('duckMusic', { track: m.track, start: m.start, keys });
-        if (!res.ok) return { kind: 'error', title: 'Volume non réglé', detail: res.error };
+        if (!res.ok) return { kind: 'error', title: _T('Volume non réglé'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        app.pushHistory({ date: Date.now(), label: 'Musique sous la voix', entries: res.created });
-        return { kind: 'ok', title: 'Musique baissée de ' + x.duckDepth + ' dB sous la voix', detail: app.plural(speech.length, 'passage parlé', 'passages parlés') + ' sur « ' + m.name + ' ». ↶ Annuler remet le volume d\'avant.' };
+        app.pushHistory({ date: Date.now(), label: _T('Musique sous la voix'), entries: res.created });
+        return { kind: 'ok', title: _T('Musique baissée de ') + x.duckDepth + _T(' dB sous la voix'), detail: app.plural(speech.length, _T('passage parlé'), _T('passages parlés')) + _T(' sur « ') + m.name + _T(' ». ↶ Annuler remet le volume d\'avant.') };
       });
     }
 
@@ -236,23 +237,23 @@
     let chap = null;
     function makeChapters(refresh) {
       const x = st();
-      return app.runTask('Chapitres YouTube', async () => {
+      return app.runTask(_T('Chapitres YouTube'), async () => {
         let res;
         if (x.chapSrc === 'markers') {
           const m = await Host.call('markerList', {});
-          if (!m.ok) return { kind: 'error', title: 'Marqueurs illisibles', detail: m.error };
+          if (!m.ok) return { kind: 'error', title: _T('Marqueurs illisibles'), detail: m.error };
           // Les marqueurs posés par RR FX (temps forts, silences) ne sont pas des chapitres.
           const mk = m.markers.filter(q => !/^RR FX · /.test(q.name || '') || /chapitre/i.test(q.name || ''));
-          if (!mk.length) return { kind: 'warn', title: 'Aucun marqueur', detail: 'Pose un marqueur nommé au début de chaque partie (touche M, puis double-clic pour le nommer), ou choisis « Sous-titres ».' };
+          if (!mk.length) return { kind: 'warn', title: _T('Aucun marqueur'), detail: _T('Pose un marqueur nommé au début de chaque partie (touche M, puis double-clic pour le nommer), ou choisis « Sous-titres ».') };
           res = Sp.chapters({ markers: mk });
         } else {
           const cues = Sp.parseSubtitles(x.srt);
-          if (!cues.length) return { kind: 'warn', title: 'Pas de sous-titres', detail: 'Importe ton .srt ci-dessus, ou choisis « Marqueurs ».' };
+          if (!cues.length) return { kind: 'warn', title: _T('Pas de sous-titres'), detail: _T('Importe ton .srt ci-dessus, ou choisis « Marqueurs ».') };
           res = Sp.chapters({ cues: cutAware(Sp.offset(cues, await startTime(x.capFrom))) });
         }
         chap = res;
         refresh();
-        return { kind: res.ok ? 'ok' : 'warn', title: app.plural(res.list.length, 'chapitre'), detail: res.ok ? 'Copie-les dans la description YouTube.' : res.why };
+        return { kind: res.ok ? 'ok' : 'warn', title: app.plural(res.list.length, _T('chapitre')), detail: res.ok ? _T('Copie-les dans la description YouTube.') : res.why };
       });
     }
 
@@ -280,7 +281,7 @@
       if (!m.ok) throw new Error(m.error);
       if (from === 'playhead') return m.playhead;
       if (from === 'selection') {
-        if (!m.range) throw new Error('Sélectionne le plan de départ dans la timeline (ou choisis « Début de la séquence »).');
+        if (!m.range) throw new Error(_T('Sélectionne le plan de départ dans la timeline (ou choisis « Début de la séquence »).'));
         return m.range.a;
       }
       return 0;
@@ -306,46 +307,46 @@
        opts.range { a, b } : seulement ce passage, posé à partir de 0 (extraits pour les réseaux). */
     function captions(opts) {
       const x = st(), range = opts && opts.range, remap = range ? false : opts && 'remap' in opts ? opts.remap : x.remap !== false;
-      return app.runTask('Sous-titres', async () => {
+      return app.runTask(_T('Sous-titres'), async () => {
         let cues = Sp.parseSubtitles(x.srt);
         if (range) cues = cues.filter(c => c.end > range.a + 0.05 && c.start < range.b - 0.05).map(c => Object.assign({}, c, { start: Math.max(0, c.start - range.a), end: Math.min(range.b, c.end) - range.a }));
-        if (!cues.length) return { kind: 'error', title: 'Pas de sous-titres', detail: 'Importe ou colle un fichier .srt / .vtt (Premiere : Texte > Sous-titres > Exporter en fichier SRT).' };
-        if (!app.services.mogrt()) return { kind: 'error', title: 'Choisis un modèle de texte', detail: 'Onglet Textes > Modèle de texte.' };
+        if (!cues.length) return { kind: 'error', title: _T('Pas de sous-titres'), detail: _T('Importe ou colle un fichier .srt / .vtt (Premiere : Texte > Sous-titres > Exporter en fichier SRT).') };
+        if (!app.services.mogrt()) return { kind: 'error', title: _T('Choisis un modèle de texte'), detail: _T('Onglet Textes > Modèle de texte.') };
         const t0 = range ? 0 : await startTime(x.capFrom);
         // Mots clés repérés (couleur, emoji) pendant le découpage.
         const marked = x.keys !== 'none' || x.emoji;
         let items = Sp.offset(marked ? Sp.highlight(cues, x.words, { emoji: x.emoji, list: String(x.keyList || '').split(/[,;\n]+/) }) : Sp.splitCues(cues, x.words), t0);
-        if (remap && lastCuts.length) { items = cutAware(items); app.log('Sous-titres recalés sur ' + app.plural(lastCuts.length, 'coupe') + ' (' + lastCuts[lastCuts.length - 1].name + ')', 'info'); }
-        app.status.phase('Pose des sous-titres');
+        if (remap && lastCuts.length) { items = cutAware(items); app.log(_T('Sous-titres recalés sur ') + app.plural(lastCuts.length, _T('coupe')) + ' (' + lastCuts[lastCuts.length - 1].name + ')', 'info'); }
+        app.status.phase(_T('Pose des sous-titres'));
         const keyFx = x.keys === 'color' ? Core.toWire(Core.compileEffect({ params: [], build: () => [{ type: 'tint', props: { black: [0, 0, 0], white: rgb(x.keyColor), amount: 100 } }] }, {}, 'post', 1, app.fps(), app.registry())) : null;
-        const r = await app.services.placeTexts(items, { anim: x.capAnim, label: 'Sous-titres', pos: [0.5, 0.78], keyFx, style: x.capStyle });
-        if (r.error) return { kind: 'error', title: 'Sous-titres non posés', detail: r.error };
+        const r = await app.services.placeTexts(items, { anim: x.capAnim, label: _T('Sous-titres'), pos: [0.5, 0.78], keyFx, style: x.capStyle });
+        if (r.error) return { kind: 'error', title: _T('Sous-titres non posés'), detail: r.error };
         // Bruitages sur les mots clés (et emojis), ou sur chaque sous-titre, calés sur le mot.
         let pops = 0;
         if (x.popSound !== 'none' && r.created.length && !app.S.cancel) {
           const done = [];
           for (const part of accentPlan(items)) {
             const s = root.RRFXSons.byId(part.id), snd = await Host.call('placeAsset', { kind: 'audio', path: app.services.ensureSound(part.id), name: s.name, times: part.times, gain: x.popVol });
-            if (snd.ok) { pops += snd.created.length; done.push(...snd.created); } else app.log('Bruitages : ' + snd.error, 'warn');
+            if (snd.ok) { pops += snd.created.length; done.push(...snd.created); } else app.log(_T('Bruitages : ') + snd.error, 'warn');
           }
-          if (done.length) app.pushHistory({ date: Date.now(), label: 'Bruitages des sous-titres', entries: done });
+          if (done.length) app.pushHistory({ date: Date.now(), label: _T('Bruitages des sous-titres'), entries: done });
         }
         const keyCount = items.filter(it => it.key).length;
-        return { kind: r.warnings.length ? 'warn' : 'ok', title: app.plural(r.created.length, 'sous-titre posé', 'sous-titres posés') + (r.track !== null ? ' sur V' + (r.track + 1) : ''),
-          detail: (marked ? app.plural(keyCount, 'mot clé mis en avant', 'mots clés mis en avant') + (pops ? ', ' + app.plural(pops, 'bruitage') : '') + '. ' : (pops ? app.plural(pops, 'bruitage') + '. ' : '')) + 'Animation « ' + r.anim.name + ' ». Police : modifie le modèle dans Objets graphiques essentiels.' };
+        return { kind: r.warnings.length ? 'warn' : 'ok', title: app.plural(r.created.length, _T('sous-titre posé'), _T('sous-titres posés')) + (r.track !== null ? _T(' sur V') + (r.track + 1) : ''),
+          detail: (marked ? app.plural(keyCount, _T('mot clé mis en avant'), _T('mots clés mis en avant')) + (pops ? ', ' + app.plural(pops, _T('bruitage')) : '') + '. ' : (pops ? app.plural(pops, _T('bruitage')) + '. ' : '')) + _T('Animation « ') + r.anim.name + _T(' ». Police : modifie le modèle dans Objets graphiques essentiels.') };
       }, true);
     }
 
     const rgb = hex => { const m = /^#?([0-9a-f]{6})$/i.exec(hex || '') || [0, 'ffd21e']; const n = parseInt(m[1], 16); return [n >> 16, (n >> 8) & 255, n & 255]; };
 
     function importSrt(refresh) {
-      const files = Store.pickFiles('Choisir des sous-titres (.srt, .vtt)', ['srt', 'vtt']);
-      if (files === null) return app.status.finish('warn', 'Disponible dans Premiere', 'Le choix de fichier passe par Premiere. Ici, colle le texte du .srt.');
+      const files = Store.pickFiles(_T('Choisir des sous-titres (.srt, .vtt)'), ['srt', 'vtt']);
+      if (files === null) return app.status.finish('warn', _T('Disponible dans Premiere'), _T('Le choix de fichier passe par Premiere. Ici, colle le texte du .srt.'));
       if (!files.length) return null;
-      try { st().srt = Store.fs.readFileSync(files[0], 'utf8').replace(/^﻿/, ''); } catch (e) { return app.status.finish('error', 'Fichier illisible', app.errorMessage(e)); }
+      try { st().srt = Store.fs.readFileSync(files[0], 'utf8').replace(/^﻿/, ''); } catch (e) { return app.status.finish('error', _T('Fichier illisible'), app.errorMessage(e)); }
       app.persist();
       refresh();
-      return app.status.finish('ok', app.plural(Sp.parseSubtitles(st().srt).length, 'sous-titre lu', 'sous-titres lus'), Store.path.basename(files[0]));
+      return app.status.finish('ok', app.plural(Sp.parseSubtitles(st().srt).length, _T('sous-titre lu'), _T('sous-titres lus')), Store.path.basename(files[0]));
     }
 
     // ---------------------------------------------------------------- bandeau
@@ -354,14 +355,14 @@
 
     function lowerThird() {
       const x = st();
-      return app.runTask('Bandeau', async () => {
+      return app.runTask(_T('Bandeau'), async () => {
         const text = [x.name, x.role].map(v => String(v || '').trim()).filter(Boolean).join('\r');
-        if (!text) return { kind: 'error', title: 'Écris un nom', detail: 'Le nom (et la fonction) de la personne qui parle.' };
-        if (!app.services.mogrt()) return { kind: 'error', title: 'Choisis un modèle de texte', detail: 'Onglet Textes > Modèle de texte.' };
+        if (!text) return { kind: 'error', title: _T('Écris un nom'), detail: _T('Le nom (et la fonction) de la personne qui parle.') };
+        if (!app.services.mogrt()) return { kind: 'error', title: _T('Choisis un modèle de texte'), detail: _T('Onglet Textes > Modèle de texte.') };
         const t0 = await startTime('playhead');
-        const r = await app.services.placeTexts([{ start: t0, end: t0 + x.lowerDur, text }], { anim: x.lowerAnim, label: 'Bandeau', pos: LOWER_POS[x.lowerPos] || LOWER_POS.left, style: x.lowerStyle });
-        if (r.error) return { kind: 'error', title: 'Bandeau non posé', detail: r.error };
-        return { kind: r.warnings.length ? 'warn' : 'ok', title: 'Bandeau posé · ' + String(x.name || x.role).trim(), detail: x.lowerDur + ' s à la tête de lecture' + (r.track !== null ? ', sur V' + (r.track + 1) : '') + '. Déplace-le comme un clip.' };
+        const r = await app.services.placeTexts([{ start: t0, end: t0 + x.lowerDur, text }], { anim: x.lowerAnim, label: _T('Bandeau'), pos: LOWER_POS[x.lowerPos] || LOWER_POS.left, style: x.lowerStyle });
+        if (r.error) return { kind: 'error', title: _T('Bandeau non posé'), detail: r.error };
+        return { kind: r.warnings.length ? 'warn' : 'ok', title: _T('Bandeau posé · ') + String(x.name || x.role).trim(), detail: x.lowerDur + _T(' s à la tête de lecture') + (r.track !== null ? _T(', sur V') + (r.track + 1) : '') + _T('. Déplace-le comme un clip.') };
       });
     }
 
@@ -371,24 +372,24 @@
     function draw() {
       if (!bar || !bar.isConnected) return;
       bar.innerHTML = '';
-      if (!last) { bar.appendChild(h('div', { class: 'note' }, 'Sélectionne tes plans, puis « Analyser » : les silences s\'affichent ici avant de couper.')); return; }
+      if (!last) { bar.appendChild(h('div', { class: 'note' }, _T('Sélectionne tes plans, puis « Analyser » : les silences s\'affichent ici avant de couper.'))); return; }
       const len = Math.max(1e-6, last.b - last.a), sec = Sp.total(last.ranges);
       const track = h('div', { class: 'sp-track' }, last.ranges.map(r => h('span', { class: 'sp-gap', style: { left: ((r.a - last.a) / len * 100).toFixed(2) + '%', width: Math.max(0.4, (r.b - r.a) / len * 100).toFixed(2) + '%' } })));
       bar.appendChild(track);
       bar.appendChild(h('div', { class: 'note' }, last.ranges.length
-        ? app.plural(last.ranges.length, 'silence', 'silences') + ' · ' + fmtSecs(sec) + ' sur ' + fmtSecs(len) + ' (' + Math.round(sec / len * 100) + ' %). En rouge : ce qui sera retiré.'
-        : 'Aucun silence avec ces réglages.'));
+        ? app.plural(last.ranges.length, 'silence', 'silences') + ' · ' + fmtSecs(sec) + _T(' sur ') + fmtSecs(len) + ' (' + Math.round(sec / len * 100) + _T(' %). En rouge : ce qui sera retiré.')
+        : _T('Aucun silence avec ces réglages.')));
     }
 
     function render(view) {
       const x = st();
       view.innerHTML = '';
       view.appendChild(h('div', { class: 'xp-hero' },
-        h('div', { class: 'xp-hero-title' }, 'Vidéos qui parlent'),
-        h('div', { class: 'xp-hero-text' }, 'YouTube, vlogs, interviews, podcasts, vidéos d\'entreprise : silences et « euh » coupés, zoom visage, sous-titres avec mots clés, son de la voix, musique sous la voix, chapitres.')));
+        h('div', { class: 'xp-hero-title' }, _T('Vidéos qui parlent')),
+        h('div', { class: 'xp-hero-text' }, _T('YouTube, vlogs, interviews, podcasts, vidéos d\'entreprise : silences et « euh » coupés, zoom visage, sous-titres avec mots clés, son de la voix, musique sous la voix, chapitres.'))));
 
       // Sommaire collant : un clic amène à la section (et la déplie).
-      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Sections de l\'onglet Parole' });
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Sections de l\'onglet Parole') });
       NAV.concat(extras().map(e => [e.id, e.nav])).forEach(([k, label]) => {
         const b = h('button', { class: 'action' + (x.lastTool === k ? ' selected' : '') }, label);
         b.addEventListener('click', () => {
@@ -403,84 +404,84 @@
       view.appendChild(nav);
 
       // Silences
-      const analyzeBtn = h('button', { class: 'action' }, 'Analyser');
-      analyzeBtn.addEventListener('click', () => app.runTask('Analyse des silences', async () => {
+      const analyzeBtn = h('button', { class: 'action' }, _T('Analyser'));
+      analyzeBtn.addEventListener('click', () => app.runTask(_T('Analyse des silences'), async () => {
         const r = await analyze();
         draw();
-        return { kind: r.ranges.length ? 'ok' : 'warn', title: r.ranges.length ? app.plural(r.ranges.length, 'silence trouvé', 'silences trouvés') + ' · ' + fmtSecs(Sp.total(r.ranges)) : 'Aucun silence trouvé', detail: r.ranges.length ? 'Rien n\'est coupé tant que tu ne cliques pas sur « Couper les silences ».' : 'Essaie la sensibilité « Forte ».' };
+        return { kind: r.ranges.length ? 'ok' : 'warn', title: r.ranges.length ? app.plural(r.ranges.length, _T('silence trouvé'), _T('silences trouvés')) + ' · ' + fmtSecs(Sp.total(r.ranges)) : _T('Aucun silence trouvé'), detail: r.ranges.length ? _T('Rien n\'est coupé tant que tu ne cliques pas sur « Couper les silences ».') : _T('Essaie la sensibilité « Forte ».') };
       }));
-      const cutBtn = h('button', { class: 'action go' }, 'Couper les silences');
+      const cutBtn = h('button', { class: 'action go' }, _T('Couper les silences'));
       cutBtn.addEventListener('click', use('silences', () => cutSilences()));
       bar = h('div', { class: 'sp-bar' });
       const reset = () => { last = null; draw(); app.persist(); };
-      view.appendChild(sec('silences', 'Couper les silences', [
-        h('div', { class: 'note' }, 'Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul). RR FX écoute le son, trouve les blancs et les retire en recollant la suite.'),
-        row('Sensibilité', actionGroup([{ v: 'soft', label: 'Douce', title: 'Seulement les vrais blancs' }, { v: 'normal', label: 'Normale' }, { v: 'strong', label: 'Forte', title: 'Aussi les respirations et les « euh » faibles' }], x.level, v => { x.level = v; reset(); })),
-        row('Silence min.', hotText({ value: x.minSilence, min: 0.2, max: 3, step: 0.05, unit: 's', onChange: v => { x.minSilence = v; reset(); } }), { title: 'Les pauses plus courtes sont gardées' }),
-        row('Marge gardée', hotText({ value: x.pad, min: 0, max: 0.5, step: 0.01, unit: 's', onChange: v => { x.pad = v; reset(); } }), { title: 'Laissée de chaque côté de la voix, pour ne pas couper les mots' }),
-        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie', title: 'Une copie « (sans silences) » : ta séquence reste intacte' }, { v: 'cut', label: 'Directement', title: 'Dans la séquence ouverte (Ctrl+Z pour revenir)' }, { v: 'markers', label: 'Marqueurs', title: 'Un marqueur sur chaque silence, rien n\'est coupé' }], x.mode, v => { x.mode = v; app.persist(); })),
+      view.appendChild(sec('silences', _T('Couper les silences'), [
+        h('div', { class: 'note' }, _T('Sélectionne dans la timeline les plans où l\'on parle (image et son, ou le son seul). RR FX écoute le son, trouve les blancs et les retire en recollant la suite.')),
+        row(_T('Sensibilité'), actionGroup([{ v: 'soft', label: _T('Douce'), title: _T('Seulement les vrais blancs') }, { v: 'normal', label: _T('Normale') }, { v: 'strong', label: _T('Forte'), title: _T('Aussi les respirations et les « euh » faibles') }], x.level, v => { x.level = v; reset(); })),
+        row(_T('Silence min.'), hotText({ value: x.minSilence, min: 0.2, max: 3, step: 0.05, unit: 's', onChange: v => { x.minSilence = v; reset(); } }), { title: _T('Les pauses plus courtes sont gardées') }),
+        row(_T('Marge gardée'), hotText({ value: x.pad, min: 0, max: 0.5, step: 0.01, unit: 's', onChange: v => { x.pad = v; reset(); } }), { title: _T('Laissée de chaque côté de la voix, pour ne pas couper les mots') }),
+        row(_T('Résultat'), actionGroup([{ v: 'copy', label: _T('Sur une copie'), title: _T('Une copie « (sans silences) » : ta séquence reste intacte') }, { v: 'cut', label: _T('Directement'), title: _T('Dans la séquence ouverte (Ctrl+Z pour revenir)') }, { v: 'markers', label: _T('Marqueurs'), title: _T('Un marqueur sur chaque silence, rien n\'est coupé') }], x.mode, v => { x.mode = v; app.persist(); })),
         bar,
         h('div', { class: 'row-buttons' }, analyzeBtn, cutBtn),
-        h('div', { class: 'note' }, 'À faire avant d\'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées.')
+        h('div', { class: 'note' }, _T('À faire avant d\'ajouter musique, plans de coupe et titres : les autres pistes ne sont pas décalées.'))
       ]));
       draw();
 
       // « Euh » et répétitions
-      const fillBtn = h('button', { class: 'action go' }, 'Couper les « euh »');
+      const fillBtn = h('button', { class: 'action go' }, _T('Couper les « euh »'));
       fillBtn.addEventListener('click', use('euh', cutFillers));
-      view.appendChild(sec('euh', '« Euh » et répétitions', [
-        h('div', { class: 'note' }, 'RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues entre deux mots. Avec un .srt (section Sous-titres), il trouve aussi les répétitions (« on va, on va ») et les faux départs.'),
-        row('Sensibilité', actionGroup([{ v: 'soft', label: 'Douce' }, { v: 'normal', label: 'Normale' }, { v: 'strong', label: 'Forte' }], x.fillerLevel, v => { x.fillerLevel = v; app.persist(); })),
-        row('Résultat', actionGroup([{ v: 'copy', label: 'Sur une copie', title: 'Une copie « (sans euh) » : ta séquence reste intacte' }, { v: 'cut', label: 'Directement' }, { v: 'markers', label: 'Marqueurs', title: 'Conseillé pour un premier essai : un marqueur sur chaque « euh »' }], x.fillerMode, v => { x.fillerMode = v; app.persist(); })),
-        h('div', { class: 'note' }, 'Les répétitions dont le temps n\'est qu\'estimé (sous-titres de plusieurs mots) sont seulement listées dans le journal, ou marquées.'),
+      view.appendChild(sec('euh', _T('« Euh » et répétitions'), [
+        h('div', { class: 'note' }, _T('RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues entre deux mots. Avec un .srt (section Sous-titres), il trouve aussi les répétitions (« on va, on va ») et les faux départs.')),
+        row(_T('Sensibilité'), actionGroup([{ v: 'soft', label: _T('Douce') }, { v: 'normal', label: _T('Normale') }, { v: 'strong', label: _T('Forte') }], x.fillerLevel, v => { x.fillerLevel = v; app.persist(); })),
+        row(_T('Résultat'), actionGroup([{ v: 'copy', label: _T('Sur une copie'), title: _T('Une copie « (sans euh) » : ta séquence reste intacte') }, { v: 'cut', label: _T('Directement') }, { v: 'markers', label: _T('Marqueurs'), title: _T('Conseillé pour un premier essai : un marqueur sur chaque « euh »') }], x.fillerMode, v => { x.fillerMode = v; app.persist(); })),
+        h('div', { class: 'note' }, _T('Les répétitions dont le temps n\'est qu\'estimé (sous-titres de plusieurs mots) sont seulement listées dans le journal, ou marquées.')),
         h('div', { class: 'row-buttons' }, fillBtn)
       ]));
 
       // Zoom visage
-      const punch = h('button', { class: 'action go' }, 'Zoomer sur le visage');
+      const punch = h('button', { class: 'action go' }, _T('Zoomer sur le visage'));
       punch.addEventListener('click', use('visage', punchIn));
-      view.appendChild(sec('visage', 'Zoom visage', [
-        h('div', { class: 'note' }, 'RR FX trouve le visage dans chaque plan et zoome sur les yeux en les suivant : ils restent à leur place à l\'écran pendant que le cadre se resserre. Après la coupe des silences, un plan sur deux : chaque jump cut devient un changement de cadre.'),
+      view.appendChild(sec('visage', _T('Zoom visage'), [
+        h('div', { class: 'note' }, _T('RR FX trouve le visage dans chaque plan et zoome sur les yeux en les suivant : ils restent à leur place à l\'écran pendant que le cadre se resserre. Après la coupe des silences, un plan sur deux : chaque jump cut devient un changement de cadre.')),
         row('Zoom', hotText({ value: x.faceAmount, min: 5, max: 60, step: 1, unit: '%', onChange: v => { x.faceAmount = v; app.persist(); } })),
-        row('Plans', actionGroup([{ v: true, label: 'Un sur deux' }, { v: false, label: 'Tous' }], x.faceAlt, v => { x.faceAlt = v; app.persist(); }), { title: 'Sur tous les plans de la séquence' }),
-        row('Yeux', actionGroup([{ v: 'keep', label: 'À leur place' }, { v: 'center', label: 'Recentrés' }], x.faceFrame, v => { x.faceFrame = v; app.persist(); })),
-        h('div', { class: 'field' }, app.UI.checkbox('Suivre le visage (sinon : zoom fixe vers le haut du cadre)', x.faceTrack, v => { x.faceTrack = v; app.persist(); })),
+        row(_T('Plans'), actionGroup([{ v: true, label: _T('Un sur deux') }, { v: false, label: _T('Tous') }], x.faceAlt, v => { x.faceAlt = v; app.persist(); }), { title: _T('Sur tous les plans de la séquence') }),
+        row(_T('Yeux'), actionGroup([{ v: 'keep', label: _T('À leur place') }, { v: 'center', label: _T('Recentrés') }], x.faceFrame, v => { x.faceFrame = v; app.persist(); })),
+        h('div', { class: 'field' }, app.UI.checkbox(_T('Suivre le visage (sinon : zoom fixe vers le haut du cadre)'), x.faceTrack, v => { x.faceTrack = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, punch)
       ]));
 
       // Sous-titres
-      const ta = h('textarea', { class: 'code lyrics', rows: 5, spellcheck: 'false', placeholder: '1\n00:00:01,000 --> 00:00:03,200\nBonjour à tous…' }, x.srt);
+      const ta = h('textarea', { class: 'code lyrics', rows: 5, spellcheck: 'false', placeholder: _T('1\n00:00:01,000 --> 00:00:03,200\nBonjour à tous…') }, x.srt);
       const count = h('div', { class: 'note' });
       const updateCount = () => {
         const cues = Sp.parseSubtitles(x.srt), n = Sp.splitCues(cues, x.words).length;
-        count.textContent = cues.length ? app.plural(cues.length, 'sous-titre lu', 'sous-titres lus') + (n !== cues.length ? ' → ' + n + ' textes à l\'écran' : '') + '.' : 'Aucun sous-titre lu.';
+        count.textContent = cues.length ? app.plural(cues.length, _T('sous-titre lu'), _T('sous-titres lus')) + (n !== cues.length ? ' → ' + n + _T(' textes à l\'écran') : '') + '.' : _T('Aucun sous-titre lu.');
       };
       ta.addEventListener('input', () => { x.srt = ta.value; updateCount(); app.persist(); });
       updateCount();
-      const imp = h('button', { class: 'action' }, 'Importer un .srt…');
+      const imp = h('button', { class: 'action' }, _T('Importer un .srt…'));
       imp.addEventListener('click', () => importSrt(() => app.switchTab('speech')));
-      const capBtn = h('button', { class: 'action go' }, 'Poser les sous-titres');
+      const capBtn = h('button', { class: 'action go' }, _T('Poser les sous-titres'));
       capBtn.addEventListener('click', use('soustitres', () => captions()));
       const anims = app.services.titleAnimOptions ? app.services.titleAnimOptions() : Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name }));
-      const styles = app.textStyles ? app.textStyles.options() : [{ v: '', label: 'Celui du modèle .mogrt' }];
+      const styles = app.textStyles ? app.textStyles.options() : [{ v: '', label: _T('Celui du modèle .mogrt') }];
       const model = app.services.mogrtName ? app.services.mogrtName() : '';
-      view.appendChild(sec('soustitres', 'Sous-titres', [
-        h('div', { class: 'note' }, 'Un fichier .srt ou .vtt : Premiere le crée (Texte > Transcription, puis Sous-titres > Exporter en fichier SRT), comme la plupart des outils de transcription.'),
+      view.appendChild(sec('soustitres', _T('Sous-titres'), [
+        h('div', { class: 'note' }, _T('Un fichier .srt ou .vtt : Premiere le crée (Texte > Transcription, puis Sous-titres > Exporter en fichier SRT), comme la plupart des outils de transcription.')),
         h('div', { class: 'row-buttons' }, imp),
         ta, count,
-        row('À l\'écran', actionGroup([{ v: 0, label: 'Phrase entière' }, { v: 3, label: '3 mots' }, { v: 1, label: 'Mot par mot', title: 'Le style TikTok / Reels' }], x.words, v => { x.words = v; updateCount(); app.persist(); })),
+        row(_T('À l\'écran'), actionGroup([{ v: 0, label: _T('Phrase entière') }, { v: 3, label: _T('3 mots') }, { v: 1, label: _T('Mot par mot'), title: _T('Le style TikTok / Reels') }], x.words, v => { x.words = v; updateCount(); app.persist(); })),
         row('Animation', picker(anims, x.capAnim, v => { x.capAnim = v; app.persist(); })),
-        row('Style', picker(styles, x.capStyle, v => { x.capStyle = v; app.persist(); }), { title: 'Tes styles se créent dans l\'onglet Textes > Style du texte' }),
-        row('Mots clés', actionGroup([{ v: 'color', label: 'En couleur' }, { v: 'none', label: 'Non' }], x.keys, v => { x.keys = v; app.persist(); app.switchTab('speech'); }), { title: 'Chiffres, mots forts, mots en MAJUSCULES ou suivis de « ! », et ta liste' }),
-        x.keys === 'color' ? row('Couleur', app.services.colorPick ? app.services.colorPick(x.keyColor, v => { x.keyColor = v || '#ffd21e'; app.persist(); }) : swatches()) : null,
-        row('Tes mots', keyListField(), { title: 'Toujours mis en avant (séparés par des virgules)' }),
-        h('div', { class: 'field' }, app.UI.checkbox('Emoji après les mots clés (💰 🔥 💡…)', x.emoji, v => { x.emoji = v; app.persist(); })),
-        row('Bruitage', actionGroup([{ v: 'none', label: 'Aucun' }, { v: 'keys', label: 'Mots clés' }, { v: 'all', label: 'Chaque texte' }], x.popSound, v => { x.popSound = v; app.persist(); })),
-        row('Son', picker([{ v: 'auto', label: 'Auto (pop, ding sur les emojis)' }, { v: 'pop', label: 'Pop' }, { v: 'ding', label: 'Ding' }, { v: 'clic', label: 'Clic' }, { v: 'swish', label: 'Swish court' }, { v: 'swoosh', label: 'Swoosh' }], x.popId, v => { x.popId = v; app.persist(); }), { title: 'Calé sur le mot clé, pas seulement sur le début du sous-titre' }),
+        row('Style', picker(styles, x.capStyle, v => { x.capStyle = v; app.persist(); }), { title: _T('Tes styles se créent dans l\'onglet Textes > Style du texte') }),
+        row(_T('Mots clés'), actionGroup([{ v: 'color', label: _T('En couleur') }, { v: 'none', label: _T('Non') }], x.keys, v => { x.keys = v; app.persist(); app.switchTab('speech'); }), { title: _T('Chiffres, mots forts, mots en MAJUSCULES ou suivis de « ! », et ta liste') }),
+        x.keys === 'color' ? row(_T('Couleur'), app.services.colorPick ? app.services.colorPick(x.keyColor, v => { x.keyColor = v || '#ffd21e'; app.persist(); }) : swatches()) : null,
+        row(_T('Tes mots'), keyListField(), { title: _T('Toujours mis en avant (séparés par des virgules)') }),
+        h('div', { class: 'field' }, app.UI.checkbox(_T('Emoji après les mots clés (💰 🔥 💡…)'), x.emoji, v => { x.emoji = v; app.persist(); })),
+        row(_T('Bruitage'), actionGroup([{ v: 'none', label: _T('Aucun') }, { v: 'keys', label: _T('Mots clés') }, { v: 'all', label: _T('Chaque texte') }], x.popSound, v => { x.popSound = v; app.persist(); })),
+        row(_T('Son'), picker([{ v: 'auto', label: _T('Auto (pop, ding sur les emojis)') }, { v: 'pop', label: 'Pop' }, { v: 'ding', label: 'Ding' }, { v: 'clic', label: _T('Clic') }, { v: 'swish', label: _T('Swish court') }, { v: 'swoosh', label: 'Swoosh' }], x.popId, v => { x.popId = v; app.persist(); }), { title: _T('Calé sur le mot clé, pas seulement sur le début du sous-titre') }),
         row('Volume', hotText({ value: x.popVol, min: -24, max: 6, step: 1, unit: 'dB', onChange: v => { x.popVol = v; app.persist(); } })),
-        row('Départ du .srt', picker([{ v: 'start', label: 'Début de la séquence' }, { v: 'playhead', label: 'Tête de lecture' }, { v: 'selection', label: 'Début des clips sélectionnés' }], x.capFrom, v => { x.capFrom = v; app.persist(); })),
-        lastCuts.length ? h('div', { class: 'field' }, app.UI.checkbox('Recaler sur les coupes (silences, euh) : .srt fait avant', x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
-        h('div', { class: 'note' }, 'Modèle de texte : ' + (model || 'aucun') + ' (onglet Textes).'),
+        row(_T('Départ du .srt'), picker([{ v: 'start', label: _T('Début de la séquence') }, { v: 'playhead', label: _T('Tête de lecture') }, { v: 'selection', label: _T('Début des clips sélectionnés') }], x.capFrom, v => { x.capFrom = v; app.persist(); })),
+        lastCuts.length ? h('div', { class: 'field' }, app.UI.checkbox(_T('Recaler sur les coupes (silences, euh) : .srt fait avant'), x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
+        h('div', { class: 'note' }, _T('Modèle de texte : ') + (model || 'aucun') + _T(' (onglet Textes).')),
         h('div', { class: 'row-buttons' }, capBtn)
       ]));
 
@@ -490,35 +491,35 @@
         inp.addEventListener('input', () => { x[key] = inp.value; app.persist(); });
         return inp;
       };
-      const lowBtn = h('button', { class: 'action go' }, 'Poser le bandeau');
+      const lowBtn = h('button', { class: 'action go' }, _T('Poser le bandeau'));
       lowBtn.addEventListener('click', use('bandeau', lowerThird));
-      view.appendChild(sec('bandeau', 'Bandeau nom et fonction', [
-        h('div', { class: 'note' }, 'Le nom de la personne qui parle, posé à la tête de lecture (interviews, témoignages, conférences).'),
-        row('Nom', field('name', 'Camille Martin')),
-        row('Fonction', field('role', 'Directrice marketing')),
-        row('Durée', hotText({ value: x.lowerDur, min: 1, max: 30, step: 0.5, unit: 's', onChange: v => { x.lowerDur = v; app.persist(); } })),
-        row('Place', actionGroup([{ v: 'left', label: '↙ Bas' }, { v: 'center', label: '↓ Centre' }, { v: 'top', label: '↖ Haut' }], x.lowerPos, v => { x.lowerPos = v; app.persist(); })),
+      view.appendChild(sec('bandeau', _T('Bandeau nom et fonction'), [
+        h('div', { class: 'note' }, _T('Le nom de la personne qui parle, posé à la tête de lecture (interviews, témoignages, conférences).')),
+        row(_T('Nom'), field('name', 'Camille Martin')),
+        row(_T('Fonction'), field('role', _T('Directrice marketing'))),
+        row(_T('Durée'), hotText({ value: x.lowerDur, min: 1, max: 30, step: 0.5, unit: 's', onChange: v => { x.lowerDur = v; app.persist(); } })),
+        row(_T('Place'), actionGroup([{ v: 'left', label: _T('↙ Bas') }, { v: 'center', label: _T('↓ Centre') }, { v: 'top', label: _T('↖ Haut') }], x.lowerPos, v => { x.lowerPos = v; app.persist(); })),
         row('Animation', picker(anims, x.lowerAnim, v => { x.lowerAnim = v; app.persist(); })),
         row('Style', picker(styles, x.lowerStyle, v => { x.lowerStyle = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, lowBtn)
       ]));
 
       // Son de la voix
-      const voiceBtn = h('button', { class: 'action go' }, 'Égaliser la voix');
+      const voiceBtn = h('button', { class: 'action go' }, _T('Égaliser la voix'));
       voiceBtn.addEventListener('click', use('voix', levelVoice));
-      view.appendChild(sec('voix', 'Son de la voix', [
-        h('div', { class: 'note' }, 'Chaque plan parlé est mesuré (sonie en LUFS) et amené au même niveau : plus de plan trop faible ou trop fort. Les crêtes restent sous -1 dB.'),
-        row('Niveau (LUFS)', actionGroup([{ v: -14, label: '-14 · Web', title: 'YouTube, Instagram, TikTok' }, { v: -16, label: '-16 · Podcast' }, { v: -23, label: '-23 · TV' }], x.voiceTarget, v => { x.voiceTarget = v; app.persist(); })),
-        h('div', { class: 'field' }, app.UI.checkbox('Réduire le bruit de fond (effet DeNoise de Premiere)', x.denoise, v => { x.denoise = v; app.persist(); })),
+      view.appendChild(sec('voix', _T('Son de la voix'), [
+        h('div', { class: 'note' }, _T('Chaque plan parlé est mesuré (sonie en LUFS) et amené au même niveau : plus de plan trop faible ou trop fort. Les crêtes restent sous -1 dB.')),
+        row(_T('Niveau (LUFS)'), actionGroup([{ v: -14, label: '-14 · Web', title: 'YouTube, Instagram, TikTok' }, { v: -16, label: '-16 · Podcast' }, { v: -23, label: '-23 · TV' }], x.voiceTarget, v => { x.voiceTarget = v; app.persist(); })),
+        h('div', { class: 'field' }, app.UI.checkbox(_T('Réduire le bruit de fond (effet DeNoise de Premiere)'), x.denoise, v => { x.denoise = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, voiceBtn)
       ]));
 
       // Musique sous la voix
-      const duckBtn = h('button', { class: 'action go' }, 'Baisser la musique sous la voix');
+      const duckBtn = h('button', { class: 'action go' }, _T('Baisser la musique sous la voix'));
       duckBtn.addEventListener('click', use('musique', duckMusic));
-      view.appendChild(sec('musique', 'Musique sous la voix', [
-        h('div', { class: 'note' }, 'Sélectionne les plans où l\'on parle : la musique de la séquence baisse doucement pendant la voix et remonte dans les pauses (images clés de volume, modifiables).'),
-        row('Baisse', hotText({ value: x.duckDepth, min: 3, max: 30, step: 1, unit: 'dB', onChange: v => { x.duckDepth = v; app.persist(); } })),
+      view.appendChild(sec('musique', _T('Musique sous la voix'), [
+        h('div', { class: 'note' }, _T('Sélectionne les plans où l\'on parle : la musique de la séquence baisse doucement pendant la voix et remonte dans les pauses (images clés de volume, modifiables).')),
+        row(_T('Baisse'), hotText({ value: x.duckDepth, min: 3, max: 30, step: 1, unit: 'dB', onChange: v => { x.duckDepth = v; app.persist(); } })),
         h('div', { class: 'row-buttons' }, duckBtn)
       ]));
 
@@ -528,26 +529,26 @@
         chapBox.innerHTML = '';
         if (!chap) return;
         const out = h('textarea', { class: 'code', rows: Math.min(12, chap.list.length + 1), readonly: true }, chap.text);
-        const copy = h('button', { class: 'action' }, 'Copier');
-        copy.addEventListener('click', () => (navigator.clipboard ? navigator.clipboard.writeText(chap.text) : Promise.reject(new Error('presse-papiers indisponible')))
-          .then(() => app.status.finish('ok', 'Chapitres copiés', 'Colle-les dans la description de ta vidéo YouTube.'), e => app.status.finish('warn', 'Copie impossible', app.errorMessage(e))));
-        const mark = h('button', { class: 'action' }, 'Poser les marqueurs');
-        mark.addEventListener('click', () => app.runTask('Marqueurs de chapitre', async () => {
+        const copy = h('button', { class: 'action' }, _T('Copier'));
+        copy.addEventListener('click', () => (navigator.clipboard ? navigator.clipboard.writeText(chap.text) : Promise.reject(new Error(_T('presse-papiers indisponible'))))
+          .then(() => app.status.finish('ok', _T('Chapitres copiés'), _T('Colle-les dans la description de ta vidéo YouTube.')), e => app.status.finish('warn', _T('Copie impossible'), app.errorMessage(e))));
+        const mark = h('button', { class: 'action' }, _T('Poser les marqueurs'));
+        mark.addEventListener('click', () => app.runTask(_T('Marqueurs de chapitre'), async () => {
           for (const c of chap.list) {
             const m = await Host.call('addMarkers', { times: [c.t], name: 'RR FX · Chapitre · ' + c.title, color: 4 });
-            if (!m.ok) return { kind: 'error', title: 'Marqueurs non posés', detail: m.error };
+            if (!m.ok) return { kind: 'error', title: _T('Marqueurs non posés'), detail: m.error };
           }
-          return { kind: 'ok', title: app.plural(chap.list.length, 'marqueur de chapitre', 'marqueurs de chapitre'), detail: 'Renomme-les dans Premiere si besoin : RR FX les relit.' };
+          return { kind: 'ok', title: app.plural(chap.list.length, _T('marqueur de chapitre'), _T('marqueurs de chapitre')), detail: _T('Renomme-les dans Premiere si besoin : RR FX les relit.') };
         }));
         chapBox.appendChild(out);
         if (chap.why) chapBox.appendChild(h('div', { class: 'note' }, chap.why));
         chapBox.appendChild(h('div', { class: 'row-buttons' }, copy, x.chapSrc === 'srt' ? mark : null));
       };
-      const chapBtn = h('button', { class: 'action go' }, 'Créer les chapitres');
+      const chapBtn = h('button', { class: 'action go' }, _T('Créer les chapitres'));
       chapBtn.addEventListener('click', use('chapitres', () => makeChapters(drawChap)));
-      view.appendChild(sec('chapitres', 'Chapitres YouTube', [
-        h('div', { class: 'note' }, 'La liste « 00:00 Titre » à coller dans la description : depuis tes marqueurs nommés, ou depuis les grands blancs du .srt (le début de la phrase suivante sert de titre).'),
-        row('Depuis', actionGroup([{ v: 'markers', label: 'Les marqueurs' }, { v: 'srt', label: 'Les sous-titres' }], x.chapSrc, v => { x.chapSrc = v; app.persist(); })),
+      view.appendChild(sec('chapitres', _T('Chapitres YouTube'), [
+        h('div', { class: 'note' }, _T('La liste « 00:00 Titre » à coller dans la description : depuis tes marqueurs nommés, ou depuis les grands blancs du .srt (le début de la phrase suivante sert de titre).')),
+        row(_T('Depuis'), actionGroup([{ v: 'markers', label: _T('Les marqueurs') }, { v: 'srt', label: _T('Les sous-titres') }], x.chapSrc, v => { x.chapSrc = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, chapBtn),
         chapBox
       ]));
@@ -563,14 +564,14 @@
     function swatches() {
       const x = st(), box = h('div', { class: 'key-colors' });
       KEY_COLORS.forEach(c => {
-        const b = h('button', { class: 'key-color' + (x.keyColor === c ? ' on' : ''), style: { background: c }, title: c, 'aria-label': 'Couleur ' + c });
+        const b = h('button', { class: 'key-color' + (x.keyColor === c ? ' on' : ''), style: { background: c }, title: c, 'aria-label': _T('Couleur ') + c });
         b.addEventListener('click', () => { x.keyColor = c; app.persist(); box.querySelectorAll('.key-color').forEach(q => q.classList.toggle('on', q === b)); });
         box.appendChild(b);
       });
       return box;
     }
     function keyListField() {
-      const x = st(), inp = h('input', { class: 'textfield', value: x.keyList, placeholder: 'formation, gratuit, Robin' });
+      const x = st(), inp = h('input', { class: 'textfield', value: x.keyList, placeholder: _T('formation, gratuit, Robin') });
       inp.addEventListener('input', () => { x.keyList = inp.value; app.persist(); });
       return inp;
     }

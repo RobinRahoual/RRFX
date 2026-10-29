@@ -2,6 +2,7 @@
    « hot text » et éditeurs de courbes façon Options d'effet de Premiere. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
   const Core = root.RRFXCore;
 
   function h(tag, attrs, ...kids) {
@@ -31,8 +32,8 @@
       const d = o.step < 1 ? (String(o.step).split('.')[1] || '').length : 0;
       return Number(v).toFixed(d);
     };
-    const val = h('span', { class: 'hot', tabindex: '0', title: 'Glisser pour régler · Maj = ×10 · clic pour saisir' }, fmt(o.value));
-    const wrap = h('span', { class: 'hot-wrap' }, val, o.unit ? h('span', { class: 'unit' }, o.unit) : null);
+    const val = h('span', { class: 'hot', tabindex: '0', title: _T('Glisser pour régler · Maj = ×10 · clic pour saisir') }, fmt(o.value));
+    const wrap = h('span', { class: 'hot-wrap' }, val, o.unit ? h('span', { class: 'unit' }, _T(o.unit)) : null);
     let value = o.value;
     const set = (v, final) => {
       v = Core.clamp(Math.round(v / o.step) * o.step, o.min, o.max);
@@ -147,7 +148,7 @@
     if (!title) return h('div', { class: 'section' }, body);
     const closed = folded.get(title, !!shut);
     const chev = h('span', { class: 'fold-chev', 'aria-hidden': 'true' }, closed ? '▸' : '▾');
-    const head = h('div', { class: 'section-title foldable', role: 'button', tabindex: '0', 'aria-expanded': String(!closed), title: 'Replier ou déplier' }, h('span', { class: 'detail' }, chev, title), extra || null);
+    const head = h('div', { class: 'section-title foldable', role: 'button', tabindex: '0', 'aria-expanded': String(!closed), title: _T('Replier ou déplier') }, h('span', { class: 'detail' }, chev, title), extra || null);
     const el = h('div', { class: 'section' + (closed ? ' folded' : '') }, head, h('div', { class: 'section-body' }, body));
     const toggle = () => {
       const c = !el.classList.contains('folded');
@@ -366,12 +367,12 @@
       });
       g.fillStyle = css('--text-3');
       g.fillText('0', PAD_L, hh - 5);
-      const lab = N + ' i';
+      const lab = N + _T(' i');
       g.fillText(lab, w - PAD_R - g.measureText(lab).width, hh - 5);
       const tip = drag != null ? drag.i : hover;
       if (tip != null && pts[tip]) {
         const p = pts[tip], x = xOf(p.t, geo), y = yOf(Core.clamp(p.v, VMIN, VMAX), geo);
-        const txt = Math.round(p.t * N) + ' i · ' + Math.round(p.v) + ' %';
+        const txt = Math.round(p.t * N) + _T(' i · ') + Math.round(p.v) + ' %';
         const tw = g.measureText(txt).width + 10;
         const tx = Core.clamp(x - tw / 2, 2, w - tw - 2), ty = y > 30 ? y - 24 : y + 10;
         g.fillStyle = 'rgba(0,0,0,0.75)'; g.fillRect(tx, ty, tw, 16);

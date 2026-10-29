@@ -6,6 +6,7 @@
   else root.RRFXShare = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   // Tout ce que la bibliothèque sait garder (le panneau vérifie ensuite chaque élément).
   const TYPES = ['preset', 'captured', 'ramp', 'look', 'textStyle', 'palette', 'gradient', 'titleAnim', 'xpStyle', 'projectTemplate'];
@@ -40,16 +41,16 @@
   function decode(code, zip) {
     // CUTFX : codes créés avant le changement de nom.
     const m = /(?:RRFX|CUTFX)([01]):([A-Za-z0-9_\-]+)/.exec(String(code || '').replace(/\s+/g, ''));
-    if (!m) throw new Error('Ce n\'est pas un code RR FX (il commence par « RRFX1: »).');
+    if (!m) throw new Error(_T('Ce n\'est pas un code RR FX (il commence par « RRFX1: »).'));
     let bytes = fromB64url(m[2]);
     if (m[1] === '1') {
-      if (!zip) throw new Error('Décompression indisponible ici.');
+      if (!zip) throw new Error(_T('Décompression indisponible ici.'));
       bytes = zip.inflate(bytes);
     }
     let data;
-    try { data = JSON.parse(fromUtf8(bytes)); } catch (e) { throw new Error('Code abîmé : copie-le en entier.'); }
+    try { data = JSON.parse(fromUtf8(bytes)); } catch (e) { throw new Error(_T('Code abîmé : copie-le en entier.')); }
     const items = clean(data && Array.isArray(data.items) ? data.items : []);
-    if (!items.length) throw new Error('Ce code ne contient aucun effet.');
+    if (!items.length) throw new Error(_T('Ce code ne contient aucun effet.'));
     return items;
   }
 

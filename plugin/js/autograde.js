@@ -6,6 +6,7 @@
   else root.RRFXAuto = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
   const lin = v => Math.pow(clamp(v, 0, 1), 2.4); // signal Rec.709 (BT.1886) → lumière
@@ -164,11 +165,11 @@
   // Résumé lisible d'une correction auto (pour le journal).
   function describe(p) {
     const parts = [];
-    if (Math.abs(p.ev) >= 0.05) parts.push((p.ev > 0 ? '+' : '') + p.ev.toFixed(1).replace('.', ',') + ' IL');
+    if (Math.abs(p.ev) >= 0.05) parts.push((p.ev > 0 ? '+' : '') + p.ev.toFixed(1).replace('.', ',') + _T(' IL'));
     const warm = p.gain[0] / p.gain[2];
-    if (Math.abs(warm - 1) > 0.03) parts.push(warm > 1 ? 'réchauffé' : 'refroidi');
+    if (Math.abs(warm - 1) > 0.03) parts.push(warm > 1 ? _T('réchauffé') : 'refroidi');
     if (p.black > 0.005 || p.white < 0.995) parts.push('niveaux');
-    return parts.join(', ') || 'déjà juste';
+    return parts.join(', ') || _T('déjà juste');
   }
 
   return { analyze, merge, percentile, autoParams, correction, matchParams, matcher, lutOf, describe, lin, disp };

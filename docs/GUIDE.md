@@ -296,6 +296,12 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
   relais. Les autres plans sont **désactivés, pas supprimés** : ↶ Annuler ou *Tout effacer* les réactive. Tu peux
   aussi, après la synchro, utiliser *Imbriquer > Activer le multicaméra* de Premiere.
 
+- **Risers avant les drops** : *Trouver les drops* repère les grosses montées d'énergie de la musique ; le bouton
+  principal pose un riser (2,4 s, ou long de 4 s) qui finit pile sur chaque drop, avec un impact dessus si tu veux,
+  sur une piste son libre.
+- **Réverb de fin** : à la fin de la musique ou à la tête de lecture (RR FX y coupe la musique), la résonance du
+  dernier instant joué (petite, salle, grande, cathédrale), sur une piste son libre : la fin ne tombe plus à plat.
+
 ### Onglet Textes
 
 Titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mot par texte), choisis le rythme
@@ -323,6 +329,10 @@ de texte, dégradés). Ajoute une couleur, **Coller des codes…** (`#264653`, `
 Adobe Color), **Importer .ase…** (nuancier Adobe : Photoshop, Illustrator, Adobe Color ; RVB, CMJN, gris et Lab
 lus), **Exporter .ase…**, **Enregistrer comme palette…** (dans Mes effets, partageable). Clic sur une couleur : la
 retirer.
+
+**Barre de progression et compte à rebours** : une barre qui avance du début à la fin de la séquence (en haut ou
+en bas, couleur au choix, fond clair dessous en option), ou un compte à rebours posé à la tête de lecture. Des images
+fabriquées par RR FX, posées au-dessus des plans.
 
 ### Onglet Parole
 
@@ -369,6 +379,19 @@ section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil ut
   les grands blancs du `.srt`. Règles YouTube respectées : 00:00 en premier, au moins 3 chapitres de 10 s.
   *Copier* pour la description ; *Poser les marqueurs* depuis les sous-titres.
 
+- **Bruitages des sous-titres** (section Sous-titres) : un pop sur les mots clés mis en avant et un ding sur les
+  emojis, ou le son choisi sur chaque sous-titre, calé sur l'instant estimé du mot.
+- **Traduire les sous-titres** : le `.srt` chargé est traduit sous-titre par sous-titre (24 langues), les timings
+  ne bougent pas. *MyMemory* est gratuit et sans compte (environ 5 000 caractères par jour, 50 000 avec ton
+  e-mail) ; *DeepL* demande ta clé API (gratuite jusqu'à 500 000 caractères par mois). Le texte part chez le service
+  choisi. *Poser les sous-titres* pose ensuite la version traduite ; *Enregistrer le .srt…* ou *Revenir à
+  l'original*.
+- **Plans de coupe sur les mots clés** : lie le dossier de tes plans de coupe (onglet Ressources). Un mot du `.srt`
+  (4 lettres et plus) qui se retrouve dans le nom d'une vidéo ou d'une image (« cafe_terrasse.mp4 ») la fait
+  apparaître au moment où il est dit, au-dessus des plans. *Voir les correspondances* avant de poser.
+- **Respirations et clics** : les respirations entre deux phrases et les petits clics de bouche des plans
+  sélectionnés sont baissés par des images clés de volume, sans rien couper. ↶ Annuler remet le volume.
+
 ### Onglet Formats
 
 Une **copie de la séquence** au format des réseaux, en un clic : **9:16** (Reels, TikTok, Shorts), **4:5**
@@ -379,6 +402,23 @@ entier, net, au centre ; dessous, le même plan agrandi avec un Flou gaussien : 
 d'entreprise). L'aperçu montre la **zone sûre**
 (ce que cachent les boutons et la légende de l'app). La séquence d'origine n'est pas modifiée ; les titres et calques
 gardent leur place, à vérifier dans le nouveau cadre.
+
+Dans le même onglet :
+
+- **Extraits pour les réseaux** : *Trouver les passages* écoute la séquence et propose les meilleurs extraits (on
+  parle sans blanc, la voix vit, et avec un `.srt` des mots forts : questions, chiffres…), de la durée choisie,
+  chacun du début à la fin d'une phrase. Coche ceux que tu veux, *Créer les extraits* fait une séquence par extrait.
+- **Vérifier avant export** : médias et sons hors ligne, trous dans la timeline (image noire), fin sans image,
+  clips ou pistes désactivés ou coupés, texte hors de la zone sûre, volume poussé au-delà de +6 dB (risque de
+  saturation). Rouge : à corriger ; orange : à regarder. Un clic sur une ligne y amène
+  la tête de lecture.
+- **Sur plusieurs séquences** : *Lister les séquences*, coche celles à traiter, choisis l'action (look en cours,
+  conversion LOG, copie au format choisi, vérification avant export, marqueurs des temps forts) : RR FX ouvre chaque
+  séquence et la traite, l'une après l'autre.
+- **Nouveau projet depuis un modèle** : Reels / TikTok, YouTube face cam, Interview / témoignage, Podcast vidéo, Vidéo d'entreprise,
+  Aftermovie / clip. Sélectionne tes rushs dans le panneau Projet : RR FX crée la séquence au bon format avec eux,
+  pose le calque de réglage et choisit le style Express et les styles des textes. *Enregistrer mes réglages comme
+  modèle* garde ta propre recette (elle se partage comme un effet).
 
 ### Onglet Ressources
 
@@ -464,8 +504,11 @@ Tout est enregistré dans `Documents/RRFX/library.json`.
 ### Annuler la dernière opération
 
 Le bouton **↶ Annuler (n)** de la ligne d'état retire ce que RR FX a posé lors de la dernière opération : les calques
-de réglage, copies du plan et morceaux de rampe `RR FX · …`. Les 10 dernières opérations
+de réglage, copies du plan et morceaux de rampe `RR FX · …`. Les 50 dernières opérations
 sont mémorisées, même après avoir fermé Premiere. Un calque renommé ou un clip modifié entre-temps n'est pas touché.
+
+**🕘 Historique** (à côté d'Annuler, ou touche choisie) : chaque opération avec son heure et sa séquence. *Annuler*
+retire celle-là seulement, *Jusqu'ici* retire toutes les plus récentes jusqu'à elle, *Tout annuler* vide l'historique.
 
 **Tout effacer** (*Réglages > Nettoyage*, ou le menu du panneau) retire d'un coup tout ce que RR FX a posé dans la
 séquence ou dans la zone sélectionnée (calques, copies, overlays, textes, sons `RR FX · …`), réactive les caméras
@@ -504,7 +547,33 @@ Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 | **Échap** | Arrêter l'opération en cours |
 
 Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche puis appuie sur la nouvelle
-(Retour arrière pour n'en mettre aucune).
+(Retour arrière pour n'en mettre aucune). **Toutes les actions** (31 : historique, recherche rapide, risers, barre de
+progression, couper les silences, sous-titres, extraits, vérification…) peuvent recevoir une touche, avec ou sans
+**Maj**.
+
+### Télécommande (Stream Deck, Companion)
+
+*Réglages > Télécommande > Activer* : RR FX ouvre un petit serveur **sur ton ordinateur seulement** (127.0.0.1, port
+47291 par défaut, rien n'est ouvert sur le réseau). Chaque action a son adresse, protégée par un jeton :
+choisis l'action, *Copier l'adresse*, colle-la dans un bouton de **Stream Deck** (plugin gratuit qui envoie une
+requête web, action GET) ou de **Bitfocus Companion** (module *Generic HTTP*). Ça marche même quand le panneau n'a
+pas le focus, tant que Premiere est ouvert. *Nouveau jeton* rend les anciennes adresses inutilisables.
+
+### Synchro entre ordinateurs
+
+*Réglages > Synchro entre ordinateurs > Choisir le dossier de synchro…* : un dossier que Dropbox, iCloud Drive,
+OneDrive ou Google Drive synchronise déjà. Fais pareil sur l'autre ordinateur. RR FX y écrit `RR FX - synchro.json`
+après chaque changement et reprend, au démarrage et toutes les minutes, ce qu'un autre ordinateur y a mis : tes
+effets, looks, styles, couleurs et modèles sont réunis (un élément supprimé d'un côté l'est aussi de l'autre), les
+réglages sont ceux de l'ordinateur modifié en dernier. Restent propres à chaque ordinateur : dossiers liés, calque
+de réglage, télécommande, langue. Aucun compte, aucun serveur RR FX.
+
+### Langue du panneau
+
+Au premier lancement, RR FX demande **Français** ou **English** (la langue de l'ordinateur est proposée). Tout le
+panneau suit, y compris les messages renvoyés par Premiere. *Réglages > Langue · Language* pour changer : le
+panneau se recharge, tes réglages et ta bibliothèque sont gardés. Les calques posés par RR FX gardent leur nom
+`RR FX · …` dans les deux langues.
 
 ### Signal de fin, mode réduit, mises à jour
 

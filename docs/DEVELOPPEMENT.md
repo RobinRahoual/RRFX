@@ -80,6 +80,20 @@ scripts/                 fabrication du pack, test d'interface, ressources de d�
 tests/                   tests Node (sim.js = timeline Premiere simulée)
 ```
 
+## Langues (français / anglais)
+
+Le code est écrit en français. Chaque texte affiché passe par `_T('…')` : la traduction anglaise est cherchée dans
+`plugin/js/i18n-en.js` (clé : le texte français exact, espaces compris). Sous Node, `_T` rend le texte tel quel.
+
+- Un nouveau texte : `_T('Mon texte')` dans le code, et sa traduction dans `i18n-en.js`. `tests/i18n.test.js`
+  échoue s'il en manque une.
+- Garde les espaces de début et de fin des morceaux collés (`_T(' sur ')` → `' on '`), sauf l'espace française
+  avant « : ; ! ? » et autour des guillemets « ».
+- Les messages de Premiere (`host.jsx`, en ASCII) sont traduits par morceaux : la liste `host` de `i18n-en.js`.
+- Les textes de `index.html` (boutons, info-bulles) sont traduits au chargement par `RRFXI18n.translateDom`.
+- Les noms de calques `RR FX · …` et les noms d'effets de Premiere ne se traduisent pas : RR FX les reconnaît par
+  ces noms.
+
 ## Performances
 
 - Les valeurs sont calculées image par image, mais seules les images clés utiles partent vers Premiere (une plage

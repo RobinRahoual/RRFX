@@ -31,6 +31,7 @@ pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.
   propres ressources : un seul panneau dans Premiere.
 - **🧪 Fiable.** Un test de compatibilité vérifie ton Premiere en un clic, et les mises à jour s'installent toutes
   seules.
+- **🌍 En français ou en anglais.** Au choix dès le premier lancement.
 - **🎁 Gratuit.** Pas d'abonnement, pas de compte.
 
 ---
@@ -420,6 +421,90 @@ Publie les tiens en deux clics.
 <tr>
 <td width="56%">
 
+### 📱 Des extraits prêts pour les réseaux
+
+Une interview, un podcast ou un live d'une heure ? RR FX trouve **les meilleurs passages** : on parle sans blanc,
+la voix vit, et avec un `.srt` les mots forts (questions, chiffres…). Chaque extrait commence et finit sur une
+phrase.
+
+- Choisis la durée (Reels, Shorts, TikTok) et le nombre d'extraits.
+- Une séquence par extrait, ta vidéo d'origine ne bouge pas.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/extraits.png" alt="Extraits pour les réseaux" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/verification.png" alt="Vérifier avant export" width="300"></td>
+<td width="56%">
+
+### ✅ Vérifié avant d'exporter
+
+Un clic avant l'export : **médias hors ligne, trous noirs, pistes coupées, texte hors zone sûre, volume trop poussé**. Clique sur une
+ligne, la tête de lecture y va.
+
+- **Sur plusieurs séquences** : coche-les, et la même action passe sur toutes (look, conversion LOG, copie au
+  format, vérification, temps forts).
+- **Nouveau projet depuis un modèle** : Reels, YouTube face cam, interview, podcast, vidéo d'entreprise, aftermovie. La séquence au
+  bon format avec tes rushs, prête pour Express. Enregistre tes modèles.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🎞️ Plans de coupe et sous-titres traduits
+
+- **Plans de coupe sur les mots clés** : quand tu dis « logo » ou « terrasse », la vidéo qui porte ce nom dans
+  tes dossiers apparaît au-dessus de la face cam.
+- **Traduis tes sous-titres** dans 24 langues, mêmes timings (MyMemory gratuit, ou DeepL avec ta clé).
+- **Bruitages** : un pop sur les mots clés, un ding sur les emojis.
+- **Respirations et clics de bouche** baissés, sans rien couper.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/plans-de-coupe.png" alt="Plans de coupe sur les mots clés" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/risers.png" alt="Risers avant les drops" width="300"></td>
+<td width="56%">
+
+### 🎢 Risers, réverb de fin, barre de progression
+
+- **Risers avant les drops** : RR FX trouve les drops de ta musique et pose un riser qui y mène.
+- **Réverb de fin** : la musique s'arrête où tu veux et résonne, au lieu d'être coupée net.
+- **Barre de progression** sur toute la vidéo, ou **compte à rebours** (onglet Textes).
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🎛️ Stream Deck, raccourcis, synchro
+
+- **Un raccourci pour chaque action** (31), à ta façon.
+- **Télécommande** : chaque action sur un bouton de Stream Deck ou de Companion. Rien n'est ouvert sur le réseau.
+- **Synchro entre ordinateurs** : un dossier Dropbox, iCloud Drive, OneDrive ou Google Drive, et tes effets, looks,
+  styles et réglages te suivent. Aucun compte.
+- **Historique détaillé** : annule n'importe quelle opération, ou tout jusqu'à un point.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/telecommande.png" alt="Télécommande Stream Deck" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/anglais.png" alt="RR FX en anglais" width="300"></td>
+<td width="56%">
+
+### 🌍 En français ou en anglais
+
+Au premier lancement, choisis **Français** ou **English** : tout le panneau suit, messages de Premiere compris.
+Ça se change à tout moment dans *Réglages*.
+
+*RR FX is also available in English: pick it on first launch, or anytime in Settings.*
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
 ### 🔍 Tout au clavier
 
 **Ctrl+K** (ou **/**) : tape deux lettres, appuie sur Entrée.
@@ -450,7 +535,7 @@ besoin dans ton Premiere. La copie est supprimée ensuite, ton montage n'est pas
 
 ### 🚀 Pris en main en 30 secondes, à jour en un clic
 
-- À la première ouverture, un **accueil** te montre par où commencer.
+- À la première ouverture, tu choisis ta langue, puis un **accueil** te montre par où commencer.
 - Quand une nouvelle version sort : **Installer la mise à jour**, directement dans le panneau. Le pack est vérifié,
   ta version actuelle est gardée de côté, et rien ne change si quelque chose se passe mal.
 

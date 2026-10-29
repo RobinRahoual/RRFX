@@ -7,6 +7,7 @@
      partageables comme le reste). */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const C = root.RRFXCouleurs, { Store, Pv } = app;
@@ -36,18 +37,18 @@
       const draw = () => {
         box.innerHTML = '';
         if (o.none) {
-          const n = h('button', { class: 'key-color none' + (!cur ? ' on' : ''), title: 'Aucune', 'aria-label': 'Aucune couleur' }, '∅');
+          const n = h('button', { class: 'key-color none' + (!cur ? ' on' : ''), title: _T('Aucune'), 'aria-label': _T('Aucune couleur') }, '∅');
           n.addEventListener('click', () => { cur = ''; onChange(''); draw(); });
           box.appendChild(n);
         }
         const list = myColors().concat(BASE.filter(c => myColors().indexOf(c) < 0)).slice(0, 14);
         if (cur && list.indexOf(cur) < 0) list.unshift(cur);
         list.forEach(c => {
-          const b = h('button', { class: 'key-color' + (c === cur ? ' on' : ''), style: { background: c }, title: c, 'aria-label': 'Couleur ' + c });
+          const b = h('button', { class: 'key-color' + (c === cur ? ' on' : ''), style: { background: c }, title: c, 'aria-label': _T('Couleur ') + c });
           b.addEventListener('click', () => { cur = c; onChange(c); draw(); });
           box.appendChild(b);
         });
-        const input = h('input', { type: 'color', class: 'key-color-input', value: cur || '#ffffff', title: 'Autre couleur' });
+        const input = h('input', { type: 'color', class: 'key-color-input', value: cur || '#ffffff', title: _T('Autre couleur') });
         input.addEventListener('change', () => { cur = C.hex(input.value); addColors([cur]); onChange(cur); draw(); });
         box.appendChild(input);
       };
@@ -58,43 +59,43 @@
     function colorsSection(refresh) {
       const box = h('div', { class: 'key-colors my-colors' });
       myColors().forEach(c => {
-        const b = h('button', { class: 'key-color', style: { background: c }, title: c + ' · clic : retirer', 'aria-label': 'Retirer ' + c });
+        const b = h('button', { class: 'key-color', style: { background: c }, title: c + _T(' · clic : retirer'), 'aria-label': _T('Retirer ') + c });
         b.addEventListener('click', () => { myColors().splice(myColors().indexOf(c), 1); app.persist(); refresh(); });
         box.appendChild(b);
       });
-      const add = h('input', { type: 'color', class: 'key-color-input', title: 'Ajouter une couleur', value: '#ffd21e' });
+      const add = h('input', { type: 'color', class: 'key-color-input', title: _T('Ajouter une couleur'), value: '#ffd21e' });
       add.addEventListener('change', () => { addColors([add.value]); refresh(); });
       box.appendChild(add);
-      const paste = h('button', { class: 'action' }, 'Coller des codes…');
+      const paste = h('button', { class: 'action' }, _T('Coller des codes…'));
       paste.addEventListener('click', async () => {
-        const field = h('textarea', { class: 'code', rows: 3, placeholder: '#264653 #2a9d8f #e9c46a, rgb(244, 162, 97) ou un lien coolors.co/…' });
+        const field = h('textarea', { class: 'code', rows: 3, placeholder: _T('#264653 #2a9d8f #e9c46a, rgb(244, 162, 97) ou un lien coolors.co/…') });
         setTimeout(() => field.focus(), 0);
-        const text = await app.modal('Ajouter des couleurs', h('div', null, field, h('div', { class: 'note' }, 'Codes #hex, rgb(…), ou lien d\'une palette Coolors, Adobe Color…')), [{ label: 'Annuler', value: null }, { label: 'Ajouter', primary: true, value: () => field.value }]);
+        const text = await app.modal(_T('Ajouter des couleurs'), h('div', null, field, h('div', { class: 'note' }, _T('Codes #hex, rgb(…), ou lien d\'une palette Coolors, Adobe Color…'))), [{ label: _T('Annuler'), value: null }, { label: _T('Ajouter'), primary: true, value: () => field.value }]);
         if (!text) return;
         const n = addColors(C.parseColors(text));
         refresh();
-        app.status.finish(n ? 'ok' : 'warn', n ? app.plural(n, 'couleur ajoutée', 'couleurs ajoutées') : 'Aucune couleur reconnue', n ? 'Dans Mes couleurs.' : 'Colle des codes #rrggbb ou rgb(r, g, b).');
+        app.status.finish(n ? 'ok' : 'warn', n ? app.plural(n, _T('couleur ajoutée'), _T('couleurs ajoutées')) : _T('Aucune couleur reconnue'), n ? _T('Dans Mes couleurs.') : _T('Colle des codes #rrggbb ou rgb(r, g, b).'));
       });
-      const imp = h('button', { class: 'action' }, 'Importer .ase…');
+      const imp = h('button', { class: 'action' }, _T('Importer .ase…'));
       imp.addEventListener('click', async () => {
-        const files = await app.services.pickFiles('Importer un nuancier Adobe (.ase)', ['ase']);
+        const files = await app.services.pickFiles(_T('Importer un nuancier Adobe (.ase)'), ['ase']);
         if (!files.length) return;
         const r = importAse(files);
         refresh();
-        app.status.finish(r.n ? 'ok' : 'warn', r.n ? app.plural(r.n, 'couleur ajoutée', 'couleurs ajoutées') : 'Aucune nouvelle couleur', files.map(f => f.name).join(', '));
+        app.status.finish(r.n ? 'ok' : 'warn', r.n ? app.plural(r.n, _T('couleur ajoutée'), _T('couleurs ajoutées')) : _T('Aucune nouvelle couleur'), files.map(f => f.name).join(', '));
       });
-      const exp = h('button', { class: 'action', disabled: !myColors().length }, 'Exporter .ase…');
+      const exp = h('button', { class: 'action', disabled: !myColors().length }, _T('Exporter .ase…'));
       exp.addEventListener('click', () => {
-        const out = Store.saveBinary ? Store.saveBinary([C.writeASE(myColors().map(c => ({ hex: c })))], 'Mes couleurs RR FX.ase', 'ase', 'Exporter Mes couleurs') : null;
-        if (out) app.status.finish('ok', 'Nuancier exporté', out + ' : s\'ouvre dans Photoshop, Illustrator, Premiere (Lumetri : non).');
+        const out = Store.saveBinary ? Store.saveBinary([C.writeASE(myColors().map(c => ({ hex: c })))], _T('Mes couleurs RR FX.ase'), 'ase', _T('Exporter Mes couleurs')) : null;
+        if (out) app.status.finish('ok', _T('Nuancier exporté'), out + _T(' : s\'ouvre dans Photoshop, Illustrator, Premiere (Lumetri : non).'));
       });
-      const save = h('button', { class: 'action', disabled: !myColors().length, title: 'Une palette dans Mes effets : à partager par code ou à publier' }, 'Enregistrer comme palette…');
+      const save = h('button', { class: 'action', disabled: !myColors().length, title: _T('Une palette dans Mes effets : à partager par code ou à publier') }, _T('Enregistrer comme palette…'));
       save.addEventListener('click', async () => {
-        const name = await app.promptName('Nom de la palette', 'Ma palette');
-        if (name) { app.services.addItems([{ type: 'palette', name, data: { colors: myColors().slice() } }]); app.status.finish('ok', 'Palette enregistrée', 'Dans Mes effets.'); }
+        const name = await app.promptName(_T('Nom de la palette'), _T('Ma palette'));
+        if (name) { app.services.addItems([{ type: 'palette', name, data: { colors: myColors().slice() } }]); app.status.finish('ok', _T('Palette enregistrée'), _T('Dans Mes effets.')); }
       });
-      return section('Mes couleurs', [
-        h('div', { class: 'note' }, myColors().length ? 'Proposées partout où tu choisis une couleur. Clic sur une couleur : la retirer.' : 'Ta palette (couleurs de ta marque…), proposée partout où tu choisis une couleur : mots clés, styles de texte, dégradés.'),
+      return section(_T('Mes couleurs'), [
+        h('div', { class: 'note' }, myColors().length ? _T('Proposées partout où tu choisis une couleur. Clic sur une couleur : la retirer.') : _T('Ta palette (couleurs de ta marque…), proposée partout où tu choisis une couleur : mots clés, styles de texte, dégradés.')),
         box,
         h('div', { class: 'row-buttons' }, paste, imp),
         h('div', { class: 'row-buttons' }, exp, save)
@@ -104,14 +105,14 @@
     function importAse(files) {
       let n = 0;
       files.forEach(f => { n += addColors(C.parseASE(f.bytes).map(c => c.hex)); });
-      return { n, what: 'dans Mes couleurs' };
+      return { n, what: _T('dans Mes couleurs') };
     }
 
     // ---------------------------------------------------------------- styles de texte
 
     const userStyles = () => app.S.lib.items.filter(i => i.type === 'textStyle');
     /* Choix possibles : le style du modèle (rien n'est changé), les styles fournis, les tiens. */
-    const options = () => [{ v: '', label: 'Celui du modèle .mogrt' }]
+    const options = () => [{ v: '', label: _T('Celui du modèle .mogrt') }]
       .concat(C.STYLES.map(x => ({ v: 'b:' + x.id, label: x.name })))
       .concat(userStyles().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
     function styleById(v) {
@@ -161,27 +162,27 @@
         const cur = owner[key] || '', st = styleById(cur) || C.normStyle({});
         const cv = h('canvas', { class: 'pv-canvas style-preview', width: 480, height: 200 });
         box.appendChild(row('Style', picker(options(), cur, v => { owner[key] = v; draft = null; app.persist(); refresh(); })));
-        if (own || draft) { box.appendChild(cv); drawStyle(cv, draft || st, sample || 'Ton texte ici'); }
-        const edit = h('button', { class: 'action' }, draft ? 'Fermer l\'éditeur' : (cur ? 'Modifier / dupliquer…' : 'Créer un style…'));
+        if (own || draft) { box.appendChild(cv); drawStyle(cv, draft || st, sample || _T('Ton texte ici')); }
+        const edit = h('button', { class: 'action' }, draft ? _T('Fermer l\'éditeur') : (cur ? _T('Modifier / dupliquer…') : _T('Créer un style…')));
         edit.addEventListener('click', () => { draft = draft ? null : Object.assign({}, st); refresh(); });
         box.appendChild(h('div', { class: 'row-buttons' }, edit));
         if (draft) {
-          const d = draft, redraw = () => drawStyle(cv, C.normStyle(d), sample || 'Ton texte ici');
-          const font = h('input', { class: 'textfield', value: d.font, placeholder: 'Police du modèle (ou ex. Montserrat-Bold)' });
+          const d = draft, redraw = () => drawStyle(cv, C.normStyle(d), sample || _T('Ton texte ici'));
+          const font = h('input', { class: 'textfield', value: d.font, placeholder: _T('Police du modèle (ou ex. Montserrat-Bold)') });
           font.addEventListener('input', () => { d.font = font.value; redraw(); });
-          box.appendChild(row('Police', font, { title: 'Nom PostScript de la police installée (ex. Montserrat-ExtraBold). Vide : celle du modèle.' }));
-          box.appendChild(row('Taille', hotText({ value: d.size, min: 0, max: 400, step: 1, unit: 'pt', onChange: v => { d.size = v; redraw(); } }), { title: '0 : celle du modèle' }));
-          box.appendChild(row('Couleur', colorPick(d.fill, v => { d.fill = v || '#ffffff'; redraw(); })));
-          box.appendChild(row('Contour', colorPick(d.stroke, v => { d.stroke = v; redraw(); }, { none: true })));
-          box.appendChild(row('Épaisseur', hotText({ value: d.strokeWidth, min: 0, max: 40, step: 1, unit: '', onChange: v => { d.strokeWidth = v; redraw(); } })));
-          box.appendChild(row('Fond', colorPick(d.box, v => { d.box = v; redraw(); }, { none: true })));
-          box.appendChild(row('Opacité du fond', hotText({ value: d.boxOpacity, min: 0, max: 100, step: 5, unit: '%', onChange: v => { d.boxOpacity = v; redraw(); } })));
+          box.appendChild(row(_T('Police'), font, { title: _T('Nom PostScript de la police installée (ex. Montserrat-ExtraBold). Vide : celle du modèle.') }));
+          box.appendChild(row(_T('Taille'), hotText({ value: d.size, min: 0, max: 400, step: 1, unit: 'pt', onChange: v => { d.size = v; redraw(); } }), { title: _T('0 : celle du modèle') }));
+          box.appendChild(row(_T('Couleur'), colorPick(d.fill, v => { d.fill = v || '#ffffff'; redraw(); })));
+          box.appendChild(row(_T('Contour'), colorPick(d.stroke, v => { d.stroke = v; redraw(); }, { none: true })));
+          box.appendChild(row(_T('Épaisseur'), hotText({ value: d.strokeWidth, min: 0, max: 40, step: 1, unit: '', onChange: v => { d.strokeWidth = v; redraw(); } })));
+          box.appendChild(row(_T('Fond'), colorPick(d.box, v => { d.box = v; redraw(); }, { none: true })));
+          box.appendChild(row(_T('Opacité du fond'), hotText({ value: d.boxOpacity, min: 0, max: 100, step: 5, unit: '%', onChange: v => { d.boxOpacity = v; redraw(); } })));
           box.appendChild(h('div', { class: 'row-buttons wrap' },
-            checkbox('Ombre', d.shadow, v => { d.shadow = v; redraw(); }),
+            checkbox(_T('Ombre'), d.shadow, v => { d.shadow = v; redraw(); }),
             checkbox('MAJUSCULES', d.caps, v => { d.caps = v; redraw(); })));
-          const saveNew = h('button', { class: 'action go' }, 'Enregistrer comme style…');
+          const saveNew = h('button', { class: 'action go' }, _T('Enregistrer comme style…'));
           saveNew.addEventListener('click', async () => {
-            const name = await app.promptName('Nom du style', 'Mon style de texte');
+            const name = await app.promptName(_T('Nom du style'), _T('Mon style de texte'));
             if (!name) return;
             app.services.addItems([{ type: 'textStyle', name, data: { style: C.normStyle(d) } }]);
             const it = userStyles().filter(i => i.name === name).pop();
@@ -189,30 +190,30 @@
             draft = null;
             app.persist();
             refresh();
-            app.status.finish('ok', 'Style « ' + name + ' » enregistré', 'Dans Mes effets : exportable et partageable.');
+            app.status.finish('ok', _T('Style « ') + name + _T(' » enregistré'), _T('Dans Mes effets : exportable et partageable.'));
           });
           const mine = cur.indexOf('u:') === 0 ? app.S.lib.items.find(i => 'u:' + i.id === cur) : null;
-          const update = mine ? h('button', { class: 'action' }, 'Mettre à jour « ' + mine.name + ' »') : null;
+          const update = mine ? h('button', { class: 'action' }, _T('Mettre à jour « ') + mine.name + _T(' »')) : null;
           if (update) update.addEventListener('click', () => { mine.data.style = C.normStyle(d); draft = null; app.persist(); refresh(); });
           box.appendChild(h('div', { class: 'row-buttons' }, saveNew, update));
-          box.appendChild(h('div', { class: 'note' }, 'Police, taille et majuscules : si le modèle .mogrt les laisse modifier. Couleur et ombre : par ses réglages, sinon par les effets Teinte et Ombre portée. Contour et fond : seulement si le modèle les propose.'));
+          box.appendChild(h('div', { class: 'note' }, _T('Police, taille et majuscules : si le modèle .mogrt les laisse modifier. Couleur et ombre : par ses réglages, sinon par les effets Teinte et Ombre portée. Contour et fond : seulement si le modèle les propose.')));
         }
       };
       refresh();
-      return section(title || 'Style du texte', [box]);
+      return section(title || _T('Style du texte'), [box]);
     }
 
     // ---------------------------------------------------------------- bibliothèque
 
     app.itemTypes.textStyle = {
-      icon: 'Aa', label: 'Style de texte', valid: d => !!d.style && typeof d.style === 'object',
-      meta: it => { const s = C.normStyle(it.data.style); return [s.font || 'police du modèle', s.fill].join(' · '); },
+      icon: 'Aa', label: _T('Style de texte'), valid: d => !!d.style && typeof d.style === 'object',
+      meta: it => { const s = C.normStyle(it.data.style); return [s.font || _T('police du modèle'), s.fill].join(' · '); },
       open: it => { const t = app.settings().titles || (app.settings().titles = {}); t.style = 'u:' + it.id; app.persist(); app.switchTab('titles'); }
     };
     app.itemTypes.palette = {
       icon: '🎨', label: 'Palette', valid: d => Array.isArray(d.colors) && d.colors.some(c => C.hex(c)),
-      meta: it => app.plural(it.data.colors.length, 'couleur'),
-      open: it => { const n = addColors(it.data.colors); app.status.finish('ok', 'Palette « ' + it.name + ' »', n ? app.plural(n, 'couleur ajoutée', 'couleurs ajoutées') + ' à Mes couleurs.' : 'Déjà dans Mes couleurs.'); }
+      meta: it => app.plural(it.data.colors.length, _T('couleur')),
+      open: it => { const n = addColors(it.data.colors); app.status.finish('ok', _T('Palette « ') + it.name + _T(' »'), n ? app.plural(n, _T('couleur ajoutée'), _T('couleurs ajoutées')) + _T(' à Mes couleurs.') : _T('Déjà dans Mes couleurs.')); }
     };
     app.importers.push({ exts: ['ase'], label: 'nuanciers', run: importAse });
 

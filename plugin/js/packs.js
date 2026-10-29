@@ -7,6 +7,7 @@
   else root.RRFXPacks = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const TAU = Math.PI * 2;
   const DURATION = 2; // secondes d'overlay fabriquées
@@ -179,32 +180,32 @@
   const WARM = [[255, 120, 30], [255, 190, 70], [255, 70, 20]];
   const PACKS = [
     { id: 'leaks', name: 'Light leaks', items: [
-      { id: 'leak-warm', name: 'Leak chaud', gen: 'leak', seed: 11, colors: WARM },
-      { id: 'leak-pink', name: 'Leak rose', gen: 'leak', seed: 23, colors: [[255, 60, 140], [255, 140, 60], [170, 50, 255]] },
-      { id: 'leak-teal', name: 'Leak bleu', gen: 'leak', seed: 37, colors: [[40, 190, 255], [110, 255, 200], [70, 90, 255]] },
-      { id: 'leak-gold', name: 'Leak doré', gen: 'leak', seed: 41, colors: [[255, 205, 120], [255, 160, 60], [255, 235, 190]] }
+      { id: 'leak-warm', name: _T('Leak chaud'), gen: 'leak', seed: 11, colors: WARM },
+      { id: 'leak-pink', name: _T('Leak rose'), gen: 'leak', seed: 23, colors: [[255, 60, 140], [255, 140, 60], [170, 50, 255]] },
+      { id: 'leak-teal', name: _T('Leak bleu'), gen: 'leak', seed: 37, colors: [[40, 190, 255], [110, 255, 200], [70, 90, 255]] },
+      { id: 'leak-gold', name: _T('Leak doré'), gen: 'leak', seed: 41, colors: [[255, 205, 120], [255, 160, 60], [255, 235, 190]] }
     ] },
     { id: 'flares', name: 'Flares', items: [
-      { id: 'flare-blue', name: 'Flare anamorphique', gen: 'flare', seed: 5, colors: [[70, 150, 255], [140, 200, 255]] },
-      { id: 'flare-warm', name: 'Flare soleil', gen: 'flare', seed: 9, colors: [[255, 150, 60], [255, 210, 140]] }
+      { id: 'flare-blue', name: _T('Flare anamorphique'), gen: 'flare', seed: 5, colors: [[70, 150, 255], [140, 200, 255]] },
+      { id: 'flare-warm', name: _T('Flare soleil'), gen: 'flare', seed: 9, colors: [[255, 150, 60], [255, 210, 140]] }
     ] },
     { id: 'bokeh', name: 'Bokeh', items: [
-      { id: 'bokeh-warm', name: 'Bokeh chaud', gen: 'bokeh', seed: 3, colors: WARM.concat([[255, 230, 180]]) },
-      { id: 'bokeh-cool', name: 'Bokeh froid', gen: 'bokeh', seed: 8, colors: [[120, 180, 255], [200, 120, 255], [150, 255, 230]] }
+      { id: 'bokeh-warm', name: _T('Bokeh chaud'), gen: 'bokeh', seed: 3, colors: WARM.concat([[255, 230, 180]]) },
+      { id: 'bokeh-cool', name: _T('Bokeh froid'), gen: 'bokeh', seed: 8, colors: [[120, 180, 255], [200, 120, 255], [150, 255, 230]] }
     ] },
-    { id: 'film', name: 'Pellicule', items: [
-      { id: 'dust', name: 'Poussière', gen: 'dust', seed: 2, amount: 40, scratches: 2 },
-      { id: 'dust-heavy', name: 'Vieux film', gen: 'dust', seed: 6, amount: 120, scratches: 5 },
-      { id: 'burn-orange', name: 'Brûlure', gen: 'burn', seed: 4, colors: WARM },
-      { id: 'burn-red', name: 'Brûlure rouge', gen: 'burn', seed: 12, colors: [[255, 40, 20], [255, 110, 30], [200, 20, 60]] }
+    { id: 'film', name: _T('Pellicule'), items: [
+      { id: 'dust', name: _T('Poussière'), gen: 'dust', seed: 2, amount: 40, scratches: 2 },
+      { id: 'dust-heavy', name: _T('Vieux film'), gen: 'dust', seed: 6, amount: 120, scratches: 5 },
+      { id: 'burn-orange', name: _T('Brûlure'), gen: 'burn', seed: 4, colors: WARM },
+      { id: 'burn-red', name: _T('Brûlure rouge'), gen: 'burn', seed: 12, colors: [[255, 40, 20], [255, 110, 30], [200, 20, 60]] }
     ] },
     { id: 'retro', name: 'VHS & glitch', items: [
       { id: 'vhs', name: 'VHS', gen: 'vhs', seed: 1 },
       { id: 'rgb-glitch', name: 'Glitch RGB', gen: 'rgb', seed: 7 }
     ] },
-    { id: 'light', name: 'Lumière', items: [
-      { id: 'sweep-white', name: 'Balayage', gen: 'sweep', angle: -25, colors: [[255, 255, 255]] },
-      { id: 'sweep-warm', name: 'Balayage chaud', gen: 'sweep', angle: 20, colors: [[255, 180, 90]] }
+    { id: 'light', name: _T('Lumière'), items: [
+      { id: 'sweep-white', name: _T('Balayage'), gen: 'sweep', angle: -25, colors: [[255, 255, 255]] },
+      { id: 'sweep-warm', name: _T('Balayage chaud'), gen: 'sweep', angle: 20, colors: [[255, 180, 90]] }
     ] }
   ];
   const ALL = [];

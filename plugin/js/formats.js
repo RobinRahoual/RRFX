@@ -5,6 +5,7 @@
    d'origine n'est jamais touchée. L'aperçu montre les zones cachées par l'interface des apps. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Host, Pv } = app;
@@ -13,9 +14,9 @@
     // safe : marges masquées par l'interface de l'app (haut, droite, bas, gauche ; en part du cadre).
     const FORMATS = [
       { id: '9x16', label: '9:16', sub: 'Reels · TikTok · Shorts', w: 1080, h: 1920, safe: [0.11, 0.13, 0.2, 0.05] },
-      { id: '4x5', label: '4:5', sub: 'Instagram (fil)', w: 1080, h: 1350, safe: [0, 0, 0, 0] },
-      { id: '1x1', label: '1:1', sub: 'Carré', w: 1080, h: 1080, safe: [0, 0, 0, 0] },
-      { id: '16x9', label: '16:9', sub: 'YouTube · horizontal', w: 1920, h: 1080, safe: [0, 0, 0, 0] }
+      { id: '4x5', label: '4:5', sub: _T('Instagram (fil)'), w: 1080, h: 1350, safe: [0, 0, 0, 0] },
+      { id: '1x1', label: '1:1', sub: _T('Carré'), w: 1080, h: 1080, safe: [0, 0, 0, 0] },
+      { id: '16x9', label: '16:9', sub: _T('YouTube · horizontal'), w: 1920, h: 1080, safe: [0, 0, 0, 0] }
     ];
     const REFRAME = ['Recadrage automatique', 'Auto Reframe', 'Automatisch reframen', 'Reencuadre automático', 'Reinquadratura automatica', 'Reenquadramento automático'];
 
@@ -54,7 +55,7 @@
         g.strokeRect(x0 + fw * l + 0.5, fh * t + 0.5, fw * (1 - l - r) - 1, fh * (1 - t - b) - 1);
         g.setLineDash([]);
         g.fillStyle = 'rgba(255,255,255,0.85)'; g.font = '600 10px ' + css('--font'); g.textAlign = 'center';
-        g.fillText('Zone sûre', x0 + fw * (l + (1 - l - r) / 2), fh * t + 14);
+        g.fillText(_T('Zone sûre'), x0 + fw * (l + (1 - l - r) / 2), fh * t + 14);
       }
       g.restore();
       g.strokeStyle = css('--border'); g.strokeRect(x0 + 0.5, 0.5, fw - 1, fh - 1);
@@ -73,7 +74,7 @@
         return c;
       }));
       // Sommaire collant : le format, puis les outils de l'onglet (extraits, vérification…).
-      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': 'Sections de l\'onglet Formats' });
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Sections de l\'onglet Formats') });
       [['format', 'Format']].concat(app.extras.formats.map(e => [e.id, e.nav])).forEach(([k, label]) => {
         const b = h('button', { class: 'action' }, label);
         b.addEventListener('click', () => {
@@ -87,18 +88,18 @@
       });
       view.appendChild(nav);
       const cv = h('canvas', { class: 'fmt-preview' });
-      const formatSec = section('Format', [cards, h('div', { class: 'fmt-stage' }, cv), h('div', { class: 'note' }, f.w + ' × ' + f.h + (f.safe.some(Boolean) ? ' · le cadre pointillé évite les boutons et légendes de l\'app.' : ''))]);
+      const formatSec = section('Format', [cards, h('div', { class: 'fmt-stage' }, cv), h('div', { class: 'note' }, f.w + ' × ' + f.h + (f.safe.some(Boolean) ? _T(' · le cadre pointillé évite les boutons et légendes de l\'app.') : ''))]);
       formatSec.dataset.sec = 'format';
       view.appendChild(formatSec);
-      view.appendChild(section('Cadrage', [
-        row('Rushs', actionGroup([{ v: 'reframe', label: 'Recadrage auto', title: 'Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan' }, { v: 'face', label: 'Suivre le visage', title: 'RR FX trouve le visage dans chaque plan et le garde au centre du cadre' }, { v: 'fill', label: 'Remplir, centré' }, { v: 'blur', label: 'Fond flou', title: 'Le plan entier, net, sur le même plan agrandi et flouté' }], s.mode, v => { s.mode = v; app.persist(); render(); })),
-        row('Aperçu', actionGroup([{ v: true, label: 'Zones sûres' }, { v: false, label: 'Image seule' }], s.safe, v => { s.safe = v; app.persist(); drawPreview(cv); })),
+      view.appendChild(section(_T('Cadrage'), [
+        row(_T('Rushs'), actionGroup([{ v: 'reframe', label: _T('Recadrage auto'), title: _T('Effet Recadrage automatique de Premiere : suit le sujet dans chaque plan') }, { v: 'face', label: _T('Suivre le visage'), title: _T('RR FX trouve le visage dans chaque plan et le garde au centre du cadre') }, { v: 'fill', label: _T('Remplir, centré') }, { v: 'blur', label: _T('Fond flou'), title: _T('Le plan entier, net, sur le même plan agrandi et flouté') }], s.mode, v => { s.mode = v; app.persist(); render(); })),
+        row(_T('Aperçu'), actionGroup([{ v: true, label: _T('Zones sûres') }, { v: false, label: _T('Image seule') }], s.safe, v => { s.safe = v; app.persist(); drawPreview(cv); })),
         h('div', { class: 'note' }, s.mode === 'reframe'
-          ? 'Premiere analyse chaque plan en arrière-plan (barre de progression dans le panneau Effets) : le sujet reste dans le cadre. Réglable ensuite dans Options d\'effet > Recadrage automatique.'
-          : s.mode === 'face' ? 'RR FX cherche le visage dans chaque rush (quelques images par plan) et anime la position pour qu\'il reste au centre du nouveau cadre, sans jamais montrer de bord. Idéal face cam, interview, podcast.'
-          : s.mode === 'blur' ? 'Rien n\'est coupé : chaque plan est posé entier au centre, sur une copie de lui-même agrandie et floutée (effet Flou gaussien). Le classique des interviews, conférences et vidéos d\'entreprise en vertical.'
-          : 'Chaque rush est agrandi pour remplir le cadre et centré. Recadre ensuite avec Trajectoire > Position si besoin.'),
-        h('div', { class: 'note' }, 'RR FX crée une copie de ta séquence et l\'ouvre : l\'originale ne bouge pas. Les titres et calques gardent leur place : vérifie-les dans le nouveau cadre.')
+          ? _T('Premiere analyse chaque plan en arrière-plan (barre de progression dans le panneau Effets) : le sujet reste dans le cadre. Réglable ensuite dans Options d\'effet > Recadrage automatique.')
+          : s.mode === 'face' ? _T('RR FX cherche le visage dans chaque rush (quelques images par plan) et anime la position pour qu\'il reste au centre du nouveau cadre, sans jamais montrer de bord. Idéal face cam, interview, podcast.')
+          : s.mode === 'blur' ? _T('Rien n\'est coupé : chaque plan est posé entier au centre, sur une copie de lui-même agrandie et floutée (effet Flou gaussien). Le classique des interviews, conférences et vidéos d\'entreprise en vertical.')
+          : _T('Chaque rush est agrandi pour remplir le cadre et centré. Recadre ensuite avec Trajectoire > Position si besoin.')),
+        h('div', { class: 'note' }, _T('RR FX crée une copie de ta séquence et l\'ouvre : l\'originale ne bouge pas. Les titres et calques gardent leur place : vérifie-les dans le nouveau cadre.'))
       ]));
       app.renderExtras('formats', view);
       requestAnimationFrame(() => drawPreview(cv));
@@ -112,7 +113,7 @@
     function copyNow() {
       const f = fmt(), s = st();
       return (async () => {
-        app.status.phase('Copie de la séquence');
+        app.status.phase(_T('Copie de la séquence'));
         let names = REFRAME;
         if (s.mode === 'reframe') {
           const r = await Host.call('listEffects', { filter: 'reframe|recadr|reencuadr|reinquadr|reenquadr' });
@@ -126,23 +127,23 @@
         // Suivre le visage : analyse de la séquence d'origine avant d'en faire la copie.
         let faces = null;
         if (s.mode === 'face') {
-          app.status.phase('Recherche du visage dans les plans');
+          app.status.phase(_T('Recherche du visage dans les plans'));
           const fk = await app.services.faceKeysForSequence();
           faces = fk.faces;
-          if (fk.found < fk.total) app.log('Visage introuvable dans ' + (fk.total - fk.found) + ' plan(s) : ils sont simplement centrés.', 'warn');
-          app.status.phase('Copie de la séquence');
+          if (fk.found < fk.total) app.log(_T('Visage introuvable dans ') + (fk.total - fk.found) + _T(' plan(s) : ils sont simplement centrés.'), 'warn');
+          app.status.phase(_T('Copie de la séquence'));
         }
         const res = await Host.call('formatCopy', { width: f.w, height: f.h, label: f.label, mode: s.mode, reframe: s.mode === 'reframe' ? names : [], blur, blurAmount: 60, faces });
-        if (!res.ok) return { kind: 'error', title: 'Copie impossible', detail: res.error };
+        if (!res.ok) return { kind: 'error', title: _T('Copie impossible'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        const how = res.reframed ? app.plural(res.reframed, 'plan recadré', 'plans recadrés') + ' automatiquement' : '';
-        const fill = res.filled ? app.plural(res.filled, 'plan agrandi', 'plans agrandis') + ' et centré' + (res.filled > 1 ? 's' : '') : '';
-        const faced = res.faced ? app.plural(res.faced, 'plan qui suit le visage', 'plans qui suivent le visage') : '';
-        const blurred = res.blurred ? app.plural(res.blurred, 'plan posé', 'plans posés') + ' sur fond flou' : '';
+        const how = res.reframed ? app.plural(res.reframed, _T('plan recadré'), _T('plans recadrés')) + _T(' automatiquement') : '';
+        const fill = res.filled ? app.plural(res.filled, _T('plan agrandi'), _T('plans agrandis')) + _T(' et centré') + (res.filled > 1 ? 's' : '') : '';
+        const faced = res.faced ? app.plural(res.faced, _T('plan qui suit le visage'), _T('plans qui suivent le visage')) : '';
+        const blurred = res.blurred ? app.plural(res.blurred, _T('plan posé'), _T('plans posés')) + _T(' sur fond flou') : '';
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
-          title: '« ' + res.name + ' » créée (' + f.label + ')',
-          detail: [how, faced || fill, blurred].filter(Boolean).join(', ') + '. ' + (res.reframed ? 'Premiere analyse les plans en arrière-plan. ' : '') + 'Vérifie les titres dans le nouveau cadre.'
+          title: _T('« ') + res.name + _T(' » créée (') + f.label + ')',
+          detail: [how, faced || fill, blurred].filter(Boolean).join(', ') + '. ' + (res.reframed ? _T('Premiere analyse les plans en arrière-plan. ') : '') + _T('Vérifie les titres dans le nouveau cadre.')
         };
       })();
     }
@@ -151,7 +152,7 @@
     app.actions.formatCopy = makeCopy;
     app.tabs.formats = {
       render,
-      cta: () => ({ label: 'Créer la copie ' + fmt().label + ' · ' + fmt().sub.split(' · ')[0], run: makeCopy, enabled: true }),
+      cta: () => ({ label: _T('Créer la copie ') + fmt().label + ' · ' + fmt().sub.split(' · ')[0], run: makeCopy, enabled: true }),
       leave: () => {}
     };
   });

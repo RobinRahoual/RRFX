@@ -662,7 +662,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.keyboard.press('Control+k');
     await page.fill('.pal-input', 'depuis un lien');
     await page.keyboard.press('Enter');
-    await page.waitForFunction(() => document.activeElement && document.activeElement.getAttribute('aria-label') === 'Lien à importer', null, { timeout: 2000 });
+    await page.waitForFunction(() => document.activeElement && document.activeElement.classList.contains('link-input'), null, { timeout: 2000 });
     await page.keyboard.press('Control+k');
     await page.keyboard.press('Escape');
     if (await page.isVisible('.pal-input')) throw new Error('Échap ne ferme pas');
@@ -742,6 +742,27 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('#toggle-compact');
     if (!(await page.isHidden('#scroll'))) throw new Error('le contenu devrait être masqué');
     await page.click('#toggle-compact');
+  });
+  await step('langue : passage en anglais', async () => {
+    await page.click('.tab[data-tab=settings]');
+    await page.click('[data-sec=lang] button:has-text("English")');
+    await page.waitForFunction(() => document.documentElement.lang === 'en' && window.RRFXApp, null, { timeout: 8000 });
+    await page.waitForSelector('.tab[data-tab=effects]:has-text("Effects")');
+    for (const t of ['express', 'effects', 'color', 'speech', 'formats', 'settings']) await page.click('.tab[data-tab=' + t + ']');
+    await page.waitForSelector('.section-title:has-text("Remote control")');
+    await page.click('[data-sec=lang] button:has-text("Français")');
+    await page.waitForFunction(() => document.documentElement.lang === 'fr' && window.RRFXApp, null, { timeout: 8000 });
+    await page.waitForSelector('.tab[data-tab=effects]:has-text("Effets")');
+  });
+  await step('langue : choix au premier lancement', async () => {
+    await page.evaluate(() => { localStorage.removeItem('rrfx-lang'); localStorage.removeItem('rrfx-nowelcome'); });
+    const fresh = await browser.newPage({ viewport: { width: 360, height: 820 } });
+    fresh.on('pageerror', e => errors.push('premier lancement : ' + e.message));
+    await fresh.goto(url);
+    await fresh.waitForSelector('.modal-title:has-text("Langue · Language")');
+    await fresh.click('.modal footer button:has-text("English")');
+    await fresh.waitForSelector('.modal-title:has-text("Welcome to RR FX")', { timeout: 8000 });
+    await fresh.close();
   });
 
   await browser.close();

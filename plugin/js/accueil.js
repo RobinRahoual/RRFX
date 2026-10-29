@@ -5,6 +5,7 @@
      styles de clip au même endroit, au clavier. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { h } = app.UI;
@@ -22,27 +23,50 @@
       app.persist();
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
       const body = h('div', { class: 'wl' },
-        h('div', { class: 'wl-lead' }, 'Le couteau suisse gratuit du montage dans Premiere : transitions, silences, sous-titres, couleur, formats, pour toutes tes vidéos.'),
-        card('⚡', 'Express : ton montage en un clic', 'Choisis un style (Reels, interview, aftermovie, YouTube, clip…) : RR FX enchaîne coupe des silences, montage sur le rythme, couleur, transitions, sons, textes et format.'),
-        card('🎙', 'Parole : vidéos qui parlent', 'Silences coupés, zoom visage qui suit les yeux, sous-titres .srt animés, bandeau nom et fonction.'),
-        card('✨', 'Effets et transitions', 'Plus de 30 transitions et mouvements (push, zoom lent, Ken Burns, punch-in…) sur une coupe, toutes les coupes ou les temps forts.'),
-        card('🎨', 'Couleur et formats', 'LOG → Rec.709, expo auto, raccord entre caméras, looks ; copies 9:16, 4:5, 1:1 recadrées ou sur fond flou.'),
-        card('🔍', 'Tout au clavier', 'Ctrl+K (ou /) cherche une action, un effet, un look ou un style.'),
-        h('div', { class: 'note' }, 'Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage. Réglages > Test de compatibilité vérifie ton Premiere en un clic.'));
-      app.modal('Bienvenue dans RR FX ' + MAJOR + '.0', body, [
-        { label: 'Tester mon Premiere', value: 'test' },
-        { label: 'C\'est parti', value: 'go', primary: true }
+        h('div', { class: 'wl-lead' }, _T('Le couteau suisse gratuit du montage dans Premiere : transitions, silences, sous-titres, couleur, formats, pour toutes tes vidéos.')),
+        card('⚡', _T('Express : ton montage en un clic'), _T('Choisis un style (Reels, interview, aftermovie, YouTube, clip…) : RR FX enchaîne coupe des silences, montage sur le rythme, couleur, transitions, sons, textes et format.')),
+        card('🎙', _T('Parole : vidéos qui parlent'), _T('Silences coupés, zoom visage qui suit les yeux, sous-titres .srt animés, bandeau nom et fonction.')),
+        card('✨', _T('Effets et transitions'), _T('Plus de 30 transitions et mouvements (push, zoom lent, Ken Burns, punch-in…) sur une coupe, toutes les coupes ou les temps forts.')),
+        card('🎨', _T('Couleur et formats'), _T('LOG → Rec.709, expo auto, raccord entre caméras, looks ; copies 9:16, 4:5, 1:1 recadrées ou sur fond flou.')),
+        card('🔍', _T('Tout au clavier'), _T('Ctrl+K (ou /) cherche une action, un effet, un look ou un style.')),
+        h('div', { class: 'note' }, _T('Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage. Réglages > Test de compatibilité vérifie ton Premiere en un clic.')));
+      app.modal(_T('Bienvenue dans RR FX ') + MAJOR + '.0', body, [
+        { label: _T('Tester mon Premiere'), value: 'test' },
+        { label: _T('C\'est parti'), value: 'go', primary: true }
       ]).then(v => {
         if (v === 'test') { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); } else if (v === 'go') app.switchTab('express');
       });
     }
-    app.whenReady.push(() => setTimeout(() => welcome(false), 400));
+    /* Premier lancement : la langue d'abord (texte bilingue, celle de l'ordinateur proposée).
+       Si elle change, le panneau se recharge dans cette langue, puis l'accueil s'affiche. */
+    const I18n = root.RRFXI18n;
+    function chooseLanguage() {
+      const sug = I18n.suggest();
+      const body = h('div', { class: 'wl lang-choice' },
+        h('div', { class: 'wl-lead' }, 'Choisis la langue de RR FX.'),
+        h('div', { class: 'wl-lead' }, 'Choose the language of RR FX.'),
+        h('div', { class: 'note' }, 'Modifiable à tout moment dans Réglages · You can change it anytime in Settings.'));
+      return app.modal('Langue · Language', body, [
+        { label: '🇫🇷 Français', value: 'fr', primary: sug === 'fr' },
+        { label: '🇬🇧 English', value: 'en', primary: sug === 'en' }
+      ]).then(v => v || sug);
+    }
+    app.whenReady.push(() => setTimeout(() => {
+      let skip = false;
+      try { skip = localStorage.getItem('rrfx-nowelcome') === '1'; } catch (e) { skip = false; }
+      if (!I18n || I18n.chosen || skip) return welcome(false);
+      chooseLanguage().then(l => {
+        I18n.setLang(l);
+        if (l !== I18n.lang) root.location.reload(); else welcome(false);
+      });
+    }, 400));
     app.services.welcome = () => welcome(true);
+    app.services.chooseLanguage = () => (I18n ? chooseLanguage() : Promise.resolve('fr'));
 
     // ---------------------------------------------------------------- recherche rapide
 
     const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    const TABS = [['express', '⚡ Express'], ['effects', 'Effets'], ['ramp', 'Rampe'], ['color', 'Couleur'], ['music', 'Musique'], ['titles', 'Textes'], ['speech', 'Parole'], ['formats', 'Formats'], ['assets', 'Ressources'], ['mine', 'Mes effets'], ['settings', 'Réglages']];
+    const TABS = [['express', '⚡ Express'], ['effects', _T('Effets')], ['ramp', _T('Rampe')], ['color', _T('Couleur')], ['music', _T('Musique')], ['titles', _T('Textes')], ['speech', _T('Parole')], ['formats', 'Formats'], ['assets', _T('Ressources')], ['mine', _T('Mes effets')], ['settings', _T('Réglages')]];
 
     /* Ouvre l'onglet et amène l'outil en vue (panneau ou section ouverts) : sel, ou la section
        dont le titre contient title ; focus : le champ reçoit le curseur. */
@@ -50,7 +74,7 @@
       app.switchTab(tab);
       setTimeout(() => {
         const view = document.querySelector('.view.on');
-        const el = sel ? view && view.querySelector(sel) : view && Array.from(view.querySelectorAll('.section')).find(x => { const t = x.querySelector('.section-title'); return t && t.textContent.indexOf(title) >= 0; });
+        const el = sel ? view && view.querySelector(sel) : view && Array.from(view.querySelectorAll('.section')).find(x => { const t = x.querySelector('.section-title'); return t && t.textContent.indexOf(_T(title)) >= 0; });
         if (!el) return;
         const box = el.closest('.lr-panel, .section') || el;
         if (box.classList.contains('closed')) box.querySelector('.lr-head').click();
@@ -64,46 +88,47 @@
     function commands() {
       const A = app.actions, out = [];
       const act = (label, kind, run, hint) => out.push({ label, kind, run, hint: hint || '' });
-      act('Lancer le montage express', 'Action', () => A.express && A.express(), 'Express');
-      act('Appliquer l\'effet choisi', 'Action', () => A.applyEffect && A.applyEffect(), 'A');
-      act('Poser les marqueurs des temps forts', 'Action', () => A.beats && A.beats(), 'B');
-      act('Monter les rushs sélectionnés sur le rythme', 'Action', () => A.autoEdit && A.autoEdit());
-      act('Synchroniser la sélection sur la musique', 'Action', () => A.sync && A.sync(), 'S');
-      act('Convertir le LOG en Rec.709', 'Action', () => A.convert && A.convert(), 'L');
-      act('Expo et balance des blancs auto', 'Action', () => A.autoFix && A.autoFix());
-      act('Appliquer le look en cours', 'Action', () => A.applyLook && A.applyLook());
-      act('Poser les paroles', 'Action', () => A.titles && A.titles());
-      act('Couper les silences', 'Action', () => A.cutSilences && A.cutSilences());
-      act('Zoom visage (yeux suivis, un plan sur deux)', 'Action', () => A.punchIn && A.punchIn());
-      act('Poser les sous-titres (.srt)', 'Action', () => A.captions && A.captions());
-      act('Poser un bandeau nom et fonction', 'Action', () => A.lowerThird && A.lowerThird());
-      act('Couper les « euh » et répétitions', 'Action', () => A.cutFillers && A.cutFillers());
-      act('Égaliser le son de la voix (-14 LUFS)', 'Action', () => A.levelVoice && A.levelVoice());
-      act('Baisser la musique sous la voix', 'Action', () => A.duckMusic && A.duckMusic());
-      act('Importer une vidéo ou un son depuis un lien', 'Action', () => reveal('assets', 'input[aria-label="Lien à importer"]', true));
-      act('Importer des presets, LUTs, couleurs…', 'Action', () => { app.switchTab('mine'); const b = Array.from(document.querySelectorAll('#view-mine .action')).find(x => /^Importer…$/.test(x.textContent)); if (b) b.click(); });
-      act('Mes LUTs', 'Action', () => reveal('color', '[data-panel=luts]'));
-      act('Dégradé de couleur', 'Action', () => reveal('color', '[data-panel=gradient]'));
-      act('Style de texte et Mes couleurs', 'Action', () => reveal('titles', null, false, 'Style du texte'));
-      act('Historique des opérations RR FX', 'Action', () => app.services.showHistory());
-      act('Risers avant les drops', 'Action', () => reveal('music', '[data-sec=risers]'));
-      act('Réverb de fin de musique', 'Action', () => reveal('music', '[data-sec=tail]'));
-      act('Atténuer respirations et clics de bouche', 'Action', () => reveal('speech', '[data-sec=souffle]'));
-      act('Traduire les sous-titres', 'Action', () => reveal('speech', '[data-sec=traduire]'));
-      act('Plans de coupe sur les mots clés (b-roll)', 'Action', () => reveal('speech', '[data-sec=broll]'));
-      act('Barre de progression et compte à rebours', 'Action', () => reveal('titles', '[data-sec=barre]'));
-      act('Extraits pour les réseaux (Reels, Shorts)', 'Action', () => reveal('formats', '[data-sec=extraits]'));
-      act('Vérifier avant export', 'Action', () => reveal('formats', '[data-sec=verif]'));
-      act('Appliquer sur plusieurs séquences', 'Action', () => reveal('formats', '[data-sec=lot]'));
-      act('Nouveau projet depuis un modèle', 'Action', () => reveal('formats', '[data-sec=modeles]'));
-      act('Télécommande (Stream Deck, Companion)', 'Action', () => reveal('settings', null, false, 'Télécommande'));
-      act('Synchro entre ordinateurs', 'Action', () => reveal('settings', null, false, 'Synchro entre ordinateurs'));
-      act('Créer les chapitres YouTube', 'Action', () => { app.switchTab('speech'); if (A.chapters) A.chapters(); });
-      act('Créer la copie 9:16', 'Action', () => A.formatCopy && A.formatCopy());
-      act('Tester mon Premiere (compatibilité)', 'Action', () => { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); });
-      act('Afficher l\'accueil', 'Aide', () => welcome(true));
-      TABS.forEach(([id, label]) => act('Aller à ' + label, 'Onglet', () => app.switchTab(id)));
-      (app.services.entries ? app.services.entries() : []).forEach(e => act(e.name, e.kind === 'overlay' ? 'Overlay' : 'Effet', () => app.services.openEffect(e.key)));
+      act(_T('Lancer le montage express'), 'Action', () => A.express && A.express(), 'Express');
+      act(_T('Appliquer l\'effet choisi'), 'Action', () => A.applyEffect && A.applyEffect(), 'A');
+      act(_T('Poser les marqueurs des temps forts'), 'Action', () => A.beats && A.beats(), 'B');
+      act(_T('Monter les rushs sélectionnés sur le rythme'), 'Action', () => A.autoEdit && A.autoEdit());
+      act(_T('Synchroniser la sélection sur la musique'), 'Action', () => A.sync && A.sync(), 'S');
+      act(_T('Convertir le LOG en Rec.709'), 'Action', () => A.convert && A.convert(), 'L');
+      act(_T('Expo et balance des blancs auto'), 'Action', () => A.autoFix && A.autoFix());
+      act(_T('Appliquer le look en cours'), 'Action', () => A.applyLook && A.applyLook());
+      act(_T('Poser les paroles'), 'Action', () => A.titles && A.titles());
+      act(_T('Couper les silences'), 'Action', () => A.cutSilences && A.cutSilences());
+      act(_T('Zoom visage (yeux suivis, un plan sur deux)'), 'Action', () => A.punchIn && A.punchIn());
+      act(_T('Poser les sous-titres (.srt)'), 'Action', () => A.captions && A.captions());
+      act(_T('Poser un bandeau nom et fonction'), 'Action', () => A.lowerThird && A.lowerThird());
+      act(_T('Couper les « euh » et répétitions'), 'Action', () => A.cutFillers && A.cutFillers());
+      act(_T('Égaliser le son de la voix (-14 LUFS)'), 'Action', () => A.levelVoice && A.levelVoice());
+      act(_T('Baisser la musique sous la voix'), 'Action', () => A.duckMusic && A.duckMusic());
+      act(_T('Importer une vidéo ou un son depuis un lien'), 'Action', () => reveal('assets', 'input.link-input', true));
+      act(_T('Importer des presets, LUTs, couleurs…'), 'Action', () => { app.switchTab('mine'); const b = Array.from(document.querySelectorAll('#view-mine .action')).find(x => x.textContent === _T('Importer…')); if (b) b.click(); });
+      act(_T('Mes LUTs'), 'Action', () => reveal('color', '[data-panel=luts]'));
+      act(_T('Dégradé de couleur'), 'Action', () => reveal('color', '[data-panel=gradient]'));
+      act(_T('Style de texte et Mes couleurs'), 'Action', () => reveal('titles', null, false, 'Style du texte'));
+      act(_T('Historique des opérations RR FX'), 'Action', () => app.services.showHistory());
+      act('Langue · Language (Français / English)', 'Action', () => reveal('settings', '[data-sec=lang]'));
+      act(_T('Risers avant les drops'), 'Action', () => reveal('music', '[data-sec=risers]'));
+      act(_T('Réverb de fin de musique'), 'Action', () => reveal('music', '[data-sec=tail]'));
+      act(_T('Atténuer respirations et clics de bouche'), 'Action', () => reveal('speech', '[data-sec=souffle]'));
+      act(_T('Traduire les sous-titres'), 'Action', () => reveal('speech', '[data-sec=traduire]'));
+      act(_T('Plans de coupe sur les mots clés (b-roll)'), 'Action', () => reveal('speech', '[data-sec=broll]'));
+      act(_T('Barre de progression et compte à rebours'), 'Action', () => reveal('titles', '[data-sec=barre]'));
+      act(_T('Extraits pour les réseaux (Reels, Shorts)'), 'Action', () => reveal('formats', '[data-sec=extraits]'));
+      act(_T('Vérifier avant export'), 'Action', () => reveal('formats', '[data-sec=verif]'));
+      act(_T('Appliquer sur plusieurs séquences'), 'Action', () => reveal('formats', '[data-sec=lot]'));
+      act(_T('Nouveau projet depuis un modèle'), 'Action', () => reveal('formats', '[data-sec=modeles]'));
+      act(_T('Télécommande (Stream Deck, Companion)'), 'Action', () => reveal('settings', null, false, _T('Télécommande')));
+      act(_T('Synchro entre ordinateurs'), 'Action', () => reveal('settings', null, false, 'Synchro entre ordinateurs'));
+      act(_T('Créer les chapitres YouTube'), 'Action', () => { app.switchTab('speech'); if (A.chapters) A.chapters(); });
+      act(_T('Créer la copie 9:16'), 'Action', () => A.formatCopy && A.formatCopy());
+      act(_T('Tester mon Premiere (compatibilité)'), 'Action', () => { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); });
+      act(_T('Afficher l\'accueil'), _T('Aide'), () => welcome(true));
+      TABS.forEach(([id, label]) => act(_T('Aller à ') + label, _T('Onglet'), () => app.switchTab(id)));
+      (app.services.entries ? app.services.entries() : []).forEach(e => act(e.name, e.kind === 'overlay' ? 'Overlay' : _T('Effet'), () => app.services.openEffect(e.key)));
       if (D) D.LOOKS.forEach(l => act('Look ' + l.name, 'Look', () => app.services.openLook && app.services.openLook({ name: l.name, data: { params: l.p } })));
       if (R) R.RECIPES.forEach(r => act('Style ' + r.name, 'Express', () => { app.settings().express = Object.assign(app.settings().express || {}, { recipe: r.id }); app.persist(); app.switchTab('express'); }));
       return out;
@@ -124,7 +149,7 @@
     function palette() {
       if (open) return;
       const all = commands();
-      const input = h('input', { class: 'textfield pal-input', placeholder: 'Rechercher une action, un effet, un look…', 'aria-label': 'Recherche rapide' });
+      const input = h('input', { class: 'textfield pal-input', placeholder: _T('Rechercher une action, un effet, un look…'), 'aria-label': _T('Recherche rapide') });
       const list = h('div', { class: 'pal-list', role: 'listbox' });
       let shown = [], idx = 0;
       const close = () => { if (open) { open.remove(); open = null; document.removeEventListener('keydown', key, true); } };
@@ -133,7 +158,7 @@
         shown = search(all, input.value);
         idx = Math.min(idx, Math.max(0, shown.length - 1));
         list.innerHTML = '';
-        if (!shown.length) list.appendChild(h('div', { class: 'note pal-empty' }, 'Rien trouvé.'));
+        if (!shown.length) list.appendChild(h('div', { class: 'note pal-empty' }, _T('Rien trouvé.')));
         shown.forEach((c, i) => {
           const el = h('div', { class: 'pal-item' + (i === idx ? ' on' : ''), role: 'option' }, h('span', { class: 'pal-label' }, c.label), h('span', { class: 'pal-kind' }, c.hint && c.kind === 'Action' ? c.hint : c.kind));
           el.addEventListener('mousemove', () => { if (idx !== i) { idx = i; draw(); } });

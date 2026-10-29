@@ -4,15 +4,16 @@
    copie pour le partager. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Store, Host } = app;
     const { h, section } = app.UI;
     // Ce que chaque fonction permet, pour dire à l'utilisateur ce qui marchera ou pas.
     const USE = {
-      clone: 'Formats 9:16', adj: 'tous les effets', place: 'tous les effets', lumetri: 'looks, conversion LOG', lut: 'LUT chargée toute seule',
-      insert: 'conversion sous les looks', razor: 'montage, découpe', disable: 'multicam', markers: 'temps forts', frame: 'aperçu réel, expo auto, raccord',
-      settings: 'Formats 9:16', reframe: 'recadrage auto (Formats)', mogrt: 'paroles animées', cleanup: 'ménage du test'
+      clone: _T('Formats 9:16'), adj: _T('tous les effets'), place: _T('tous les effets'), lumetri: _T('looks, conversion LOG'), lut: _T('LUT chargée toute seule'),
+      insert: _T('conversion sous les looks'), razor: _T('montage, découpe'), disable: 'multicam', markers: _T('temps forts'), frame: _T('aperçu réel, expo auto, raccord'),
+      settings: _T('Formats 9:16'), reframe: _T('recadrage auto (Formats)'), mogrt: _T('paroles animées'), cleanup: _T('ménage du test')
     };
 
     let last = null;
@@ -24,7 +25,7 @@
     }
 
     function run(refresh) {
-      return app.runTask('Test de compatibilité', async () => {
+      return app.runTask(_T('Test de compatibilité'), async () => {
         const dir = Store.cacheDir();
         let lut = '';
         if (Store.fs && dir) {
@@ -35,10 +36,10 @@
           Store.fs.writeFileSync(lut, lines.join('\n') + '\n');
           Store.listFiles(dir, /^rrfx-test-/, 20, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
         }
-        app.status.phase('Essais sur une copie de ta séquence');
+        app.status.phase(_T('Essais sur une copie de ta séquence'));
         const fx = await app.services.lumetriFx();
         const r = await Host.call('selfTest', { lutPath: lut, folder: dir ? dir.replace(/\\/g, '/') : '', prefix: 'rrfx-test-', fxNames: fx[0].names, adjNodeId: app.settings().adjNodeId });
-        if (!r.ok) return { kind: 'error', title: 'Test impossible', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Test impossible'), detail: r.error };
         // L'image exportée arrive après coup : on l'attend un peu.
         const frame = r.results.find(x => x.id === 'frame');
         if (frame && frame.ok && r.frame && Store.fs) {
@@ -47,7 +48,7 @@
             seen = [r.frame, r.frame + '.png'].some(f => Store.fs.existsSync(f) && Store.fs.statSync(f).size > 0);
             if (!seen) await new Promise(res => setTimeout(res, 200));
           }
-          if (!seen) Object.assign(frame, { ok: false, detail: 'Premiere n\'a pas écrit l\'image' });
+          if (!seen) Object.assign(frame, { ok: false, detail: _T('Premiere n\'a pas écrit l\'image') });
         }
         last = r;
         app.settings().selfTest = { date: Date.now(), results: r.results, app: r.app, version: r.version };
@@ -56,8 +57,8 @@
         const bad = r.results.filter(x => !x.ok);
         app.log(report(r), bad.length ? 'warn' : 'ok');
         return bad.length
-          ? { kind: 'warn', title: app.plural(bad.length, 'fonction à revoir', 'fonctions à revoir') + ' sur ' + r.results.length, detail: bad.map(x => x.label + ' → ' + (USE[x.id] || '')).join(' · ') + '. « Copier le rapport » et envoie-le à @robin.rahoual.' }
-          : { kind: 'ok', title: 'Tout fonctionne avec ton Premiere', detail: r.results.length + ' fonctions vérifiées. La séquence de test a été supprimée.' };
+          ? { kind: 'warn', title: app.plural(bad.length, _T('fonction à revoir'), _T('fonctions à revoir')) + _T(' sur ') + r.results.length, detail: bad.map(x => x.label + ' → ' + (USE[x.id] || '')).join(' · ') + _T('. « Copier le rapport » et envoie-le à @robin.rahoual.') }
+          : { kind: 'ok', title: _T('Tout fonctionne avec ton Premiere'), detail: r.results.length + _T(' fonctions vérifiées. La séquence de test a été supprimée.') };
       });
     }
 
@@ -67,22 +68,22 @@
         box.innerHTML = '';
         const saved = last || app.settings().selfTest;
         if (saved && saved.results) {
-          box.appendChild(h('div', { class: 'note' }, 'Dernier test : ' + new Date(saved.date || Date.now()).toLocaleString('fr-FR') + ' · Premiere ' + (saved.app || '?')));
+          box.appendChild(h('div', { class: 'note' }, _T('Dernier test : ') + new Date(saved.date || Date.now()).toLocaleString('fr-FR') + ' · Premiere ' + (saved.app || '?')));
           saved.results.forEach(x => box.appendChild(h('div', { class: 'xp-check ' + (x.ok ? 'ok' : 'ko') }, h('span', { class: 'xp-dot' }, x.ok ? '✓' : '✕'),
-            h('div', null, h('div', null, x.label), h('div', { class: 'note' }, (USE[x.id] ? 'Sert pour : ' + USE[x.id] : '') + (x.detail ? ' · ' + x.detail : ''))))));
+            h('div', null, h('div', null, x.label), h('div', { class: 'note' }, (USE[x.id] ? _T('Sert pour : ') + USE[x.id] : '') + (x.detail ? ' · ' + x.detail : ''))))));
         }
-        const go = h('button', { class: 'action selected' }, saved ? 'Refaire le test' : 'Tester mon Premiere');
+        const go = h('button', { class: 'action selected' }, saved ? _T('Refaire le test') : _T('Tester mon Premiere'));
         go.addEventListener('click', () => run(refresh));
-        const copy = h('button', { class: 'action', disabled: !saved }, 'Copier le rapport');
+        const copy = h('button', { class: 'action', disabled: !saved }, _T('Copier le rapport'));
         copy.addEventListener('click', () => {
           const txt = report(Object.assign({ version: '', app: '' }, saved));
-          (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject(new Error('presse-papiers indisponible')))
-            .then(() => app.status.finish('ok', 'Rapport copié', 'Colle-le dans un message.'), e => app.status.finish('warn', 'Copie impossible', app.errorMessage(e)));
+          (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject(new Error(_T('presse-papiers indisponible'))))
+            .then(() => app.status.finish('ok', _T('Rapport copié'), _T('Colle-le dans un message.')), e => app.status.finish('warn', _T('Copie impossible'), app.errorMessage(e)));
         });
         box.appendChild(h('div', { class: 'row-buttons' }, go, copy));
       };
       refresh();
-      return section('Test de compatibilité', [h('div', { class: 'note' }, 'Vérifie en un clic que ton Premiere accepte tout ce que RR FX fait : essais sur une copie de ta séquence, supprimée ensuite. Ton montage n\'est pas touché.'), box]);
+      return section(_T('Test de compatibilité'), [h('div', { class: 'note' }, _T('Vérifie en un clic que ton Premiere accepte tout ce que RR FX fait : essais sur une copie de ta séquence, supprimée ensuite. Ton montage n\'est pas touché.')), box]);
     }
 
     app.diagnostic = { section: section_, run };

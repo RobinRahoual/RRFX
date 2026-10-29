@@ -7,6 +7,7 @@
   else root.RRFXLiens = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const VIDEO = ['mp4', 'mov', 'm4v', 'webm', 'mkv'];
   const AUDIO = ['mp3', 'wav', 'm4a', 'aac', 'aif', 'aiff', 'flac', 'ogg'];
@@ -16,8 +17,8 @@
      de partage Dropbox et Google Drive sont convertis en lien de téléchargement direct. */
   function classify(text) {
     let u;
-    try { u = new URL(String(text || '').trim()); } catch (e) { return { ok: false, why: 'Ce n\'est pas un lien (il doit commencer par https://).' }; }
-    if (!/^https?:$/.test(u.protocol)) return { ok: false, why: 'Seuls les liens http(s) sont acceptés.' };
+    try { u = new URL(String(text || '').trim()); } catch (e) { return { ok: false, why: _T('Ce n\'est pas un lien (il doit commencer par https://).') }; }
+    if (!/^https?:$/.test(u.protocol)) return { ok: false, why: _T('Seuls les liens http(s) sont acceptés.') };
     const host = u.hostname.replace(/^www\./, '').toLowerCase();
     if (/(^|\.)dropbox\.com$/.test(host)) {
       u.searchParams.set('dl', '1');
@@ -29,7 +30,7 @@
     if (PLATFORMS.test(host)) return { ok: true, kind: 'platform', url: u.toString(), ext: '', host };
     const ext = extOf(u.pathname);
     if (VIDEO.concat(AUDIO).indexOf(ext) >= 0) return { ok: true, kind: 'direct', url: u.toString(), ext, host };
-    return { ok: false, why: 'Ce lien ne mène pas à une vidéo ou un son (.mp4, .mp3, .wav…) ni à une plateforme reconnue.' };
+    return { ok: false, why: _T('Ce lien ne mène pas à une vidéo ou un son (.mp4, .mp3, .wav…) ni à une plateforme reconnue.') };
   }
 
   function extOf(p) { const m = /\.([a-z0-9]{2,5})$/i.exec(String(p || '')); return m ? m[1].toLowerCase() : ''; }

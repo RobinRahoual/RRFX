@@ -1,6 +1,7 @@
 /* RR FX : panneau : onglets, bloc d'état, application des effets et des rampes. */
 (function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
   const Core = window.RRFXCore, Lib = window.RRFXLibrary, Pv = window.RRFXPreview, Sons = window.RRFXSons;
   const Store = window.RRFXStorage, Host = window.RRFXHost, Keys = window.RRFXShortcuts, Updates = window.RRFXUpdates;
   const Audio = window.RRFXAudio, Media = window.RRFXMedia, Share = window.RRFXShare, Packs = window.RRFXPacks, Community = window.RRFXCommunity;
@@ -12,33 +13,33 @@
   const MAX_HISTORY = 50;
 
   const PLACEMENTS = [
-    { v: 'cut', label: 'Coupe la plus proche' },
-    { v: 'cuts', label: 'Toutes les coupes de la sélection' },
-    { v: 'allcuts', label: 'Toutes les coupes de la séquence' },
-    { v: 'markers', label: 'Marqueurs de la séquence' },
-    { v: 'beats', label: 'Temps forts de la musique (sans marqueurs)' },
-    { v: 'playhead', label: 'Tête de lecture' },
-    { v: 'clipStart', label: 'Début des clips sélectionnés' },
-    { v: 'clipEnd', label: 'Fin des clips sélectionnés' },
-    { v: 'full', label: 'Clips sélectionnés entiers' },
-    { v: 'allclips', label: 'Tous les plans de la séquence' }
+    { v: 'cut', label: _T('Coupe la plus proche') },
+    { v: 'cuts', label: _T('Toutes les coupes de la sélection') },
+    { v: 'allcuts', label: _T('Toutes les coupes de la séquence') },
+    { v: 'markers', label: _T('Marqueurs de la séquence') },
+    { v: 'beats', label: _T('Temps forts de la musique (sans marqueurs)') },
+    { v: 'playhead', label: _T('Tête de lecture') },
+    { v: 'clipStart', label: _T('Début des clips sélectionnés') },
+    { v: 'clipEnd', label: _T('Fin des clips sélectionnés') },
+    { v: 'full', label: _T('Clips sélectionnés entiers') },
+    { v: 'allclips', label: _T('Tous les plans de la séquence') }
   ];
   // Positions à plusieurs coupes, positions « plan entier », et ce que Premiere reçoit.
   const isMulti = pl => pl === 'cuts' || pl === 'allcuts' || pl === 'markers' || pl === 'beats';
   const isFull = pl => pl === 'full' || pl === 'allclips';
   const hostPlacement = pl => ({ beats: 'markers', allcuts: 'cuts', allclips: 'full' }[pl] || pl);
   const VARIATIONS = [
-    { v: 'same', label: 'Identique partout' },
-    { v: 'seed', label: 'Variation aléatoire' },
-    { v: 'category', label: 'Effet au hasard (même catégorie)' },
-    { v: 'favorites', label: 'Effet au hasard (favoris)' },
-    { v: 'chain', label: 'Enchaînement (effets choisis)' }
+    { v: 'same', label: _T('Identique partout') },
+    { v: 'seed', label: _T('Variation aléatoire') },
+    { v: 'category', label: _T('Effet au hasard (même catégorie)') },
+    { v: 'favorites', label: _T('Effet au hasard (favoris)') },
+    { v: 'chain', label: _T('Enchaînement (effets choisis)') }
   ];
   const RAMP_PLACEMENTS = [
-    { v: 'pre', label: 'Avant la coupe' },
-    { v: 'post', label: 'Après la coupe' },
-    { v: 'playhead', label: 'Autour de la tête de lecture' },
-    { v: 'full', label: 'Clip entier' }
+    { v: 'pre', label: _T('Avant la coupe') },
+    { v: 'post', label: _T('Après la coupe') },
+    { v: 'playhead', label: _T('Autour de la tête de lecture') },
+    { v: 'full', label: _T('Clip entier') }
   ];
   const DEFAULT_SETTINGS = {
     target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', registry: {},
@@ -64,12 +65,12 @@
   const registry = () => Core.mergeRegistry(settings().registry, S.resolved);
   const fps = () => (S.ctx && S.ctx.fps) || 25;
   const CATS = Lib.CATEGORIES.concat([{ id: 'overlay', label: 'Overlays' }]);
-  const catLabel = id => (CATS.find(c => c.id === id) || { label: id === 'mine' ? 'Mes effets' : id }).label;
+  const catLabel = id => (CATS.find(c => c.id === id) || { label: id === 'mine' ? _T('Mes effets') : id }).label;
   // Modes de fusion de l'Opacité de Premiere (valeurs de script) et leur équivalent pour l'aperçu.
   const BLENDS = [
-    { v: 8, label: 'Écran', css: 'screen' }, { v: 10, label: 'Densité linéaire - (Ajout)', css: 'lighter' },
-    { v: 7, label: 'Éclaircir', css: 'lighten' }, { v: 12, label: 'Incrustation', css: 'overlay' },
-    { v: 13, label: 'Lumière tamisée', css: 'soft-light' }, { v: 3, label: 'Produit', css: 'multiply' }, { v: 0, label: 'Normal', css: 'source-over' }
+    { v: 8, label: _T('Écran'), css: 'screen' }, { v: 10, label: _T('Densité linéaire - (Ajout)'), css: 'lighter' },
+    { v: 7, label: _T('Éclaircir'), css: 'lighten' }, { v: 12, label: _T('Incrustation'), css: 'overlay' },
+    { v: 13, label: _T('Lumière tamisée'), css: 'soft-light' }, { v: 3, label: _T('Produit'), css: 'multiply' }, { v: 0, label: 'Normal', css: 'source-over' }
   ];
   const plural = (n, one, many) => n + ' ' + (n > 1 ? (many || one + 's') : one);
   const errorMessage = e => (e && e.message ? e.message : String(e));
@@ -87,7 +88,7 @@
   function saveNow() {
     clearTimeout(saveTimer);
     saveTimer = 0;
-    try { if (S.lib) Store.save(S.lib); } catch (e) { log('Sauvegarde impossible : ' + errorMessage(e), 'error'); }
+    try { if (S.lib) Store.save(S.lib); } catch (e) { log(_T('Sauvegarde impossible : ') + errorMessage(e), 'error'); }
     ((window.RRFXApp && window.RRFXApp.afterSave) || []).forEach(fn => { try { fn(); } catch (e) { log(errorMessage(e), 'warn'); } });
   }
   function persist() {
@@ -138,7 +139,7 @@
       show($('status-log'), false);
       show($('progress'), false);
       $('progress-fill').style.width = '0%';
-      $('status-detail').textContent = 'Démarrage…';
+      $('status-detail').textContent = _T('Démarrage…');
       if (ticker) clearInterval(ticker);
       ticker = setInterval(tick, 250);
       tick();
@@ -158,7 +159,7 @@
       if (name) text += ' · ' + name;
       if (done >= 2 && done < total) {
         const remaining = (now - phaseStarted) / done * (total - done);
-        if (remaining > 1500) text += ' · encore ~' + formatDuration(remaining);
+        if (remaining > 1500) text += _T(' · encore ~') + formatDuration(remaining);
       }
       $('status-detail').textContent = text;
     }
@@ -176,7 +177,7 @@
       show($('status-log'), kind === 'warn' || kind === 'error');
       if (kind === 'idle') renderIdleDetail();
     }
-    function reset() { finish('idle', 'Prêt', ''); }
+    function reset() { finish('idle', _T('Prêt'), ''); }
     return { start, phase, progress, finish, reset, get kind() { return kindNow; } };
   })();
 
@@ -184,15 +185,15 @@
     if (status.kind !== 'idle') return;
     const c = S.ctx;
     let text;
-    if (!c) text = 'Connexion à Premiere…';
-    else if (!c.hasSequence) text = 'Ouvre une séquence dans Premiere.';
+    if (!c) text = _T('Connexion à Premiere…');
+    else if (!c.hasSequence) text = _T('Ouvre une séquence dans Premiere.');
     else {
-      const parts = [c.name, (Math.round(c.fps * 100) / 100) + ' i/s'];
-      parts.push(c.selection ? plural(c.selection, 'clip sélectionné', 'clips sélectionnés') : 'aucun clip sélectionné');
-      if (c.markers) parts.push(plural(c.markers, 'marqueur'));
+      const parts = [c.name, (Math.round(c.fps * 100) / 100) + _T(' i/s')];
+      parts.push(c.selection ? plural(c.selection, _T('clip sélectionné'), _T('clips sélectionnés')) : _T('aucun clip sélectionné'));
+      if (c.markers) parts.push(plural(c.markers, _T('marqueur')));
       text = parts.join(' · ');
     }
-    if (S.demo) text = 'Mode démo (hors Premiere) · ' + text;
+    if (S.demo) text = _T('Mode démo (hors Premiere) · ') + text;
     $('status-detail').textContent = text;
   }
 
@@ -211,15 +212,15 @@
     status.start(label, cancellable);
     const started = Date.now();
     try {
-      const result = (await task()) || { kind: 'ok', title: 'Terminé' };
+      const result = (await task()) || { kind: 'ok', title: _T('Terminé') };
       status.finish(result.kind, result.title, result.detail);
       if (Date.now() - started > LONG_TASK_MS && result.kind !== 'idle') signalEnd();
       return result;
     } catch (e) {
-      status.finish('error', 'Échec', errorMessage(e));
+      status.finish('error', _T('Échec'), errorMessage(e));
       log(errorMessage(e), 'error');
       if (Date.now() - started > LONG_TASK_MS) signalEnd();
-      return { kind: 'error', title: 'Échec', detail: errorMessage(e) };
+      return { kind: 'error', title: _T('Échec'), detail: errorMessage(e) };
     } finally {
       setBusy(false);
       refreshContext();
@@ -292,16 +293,16 @@
   function promptName(title, value) {
     const input = h('input', { class: 'textfield', value: value || '' });
     return modal(title, input, [
-      { label: 'Annuler', value: null },
-      { label: 'Enregistrer', primary: true, value: () => input.value.trim() || null }
+      { label: _T('Annuler'), value: null },
+      { label: _T('Enregistrer'), primary: true, value: () => input.value.trim() || null }
     ]);
   }
 
   async function confirmDialog(title, text, okLabel, settingKey) {
     if (settingKey && !settings()[settingKey]) return true;
-    const dont = settingKey ? checkbox('Ne plus demander', false, () => {}) : null;
+    const dont = settingKey ? checkbox(_T('Ne plus demander'), false, () => {}) : null;
     const ok = await modal(title, h('div', null, h('p', null, text), dont), [
-      { label: 'Annuler', value: false },
+      { label: _T('Annuler'), value: false },
       { label: okLabel, primary: true, value: true }
     ]);
     if (ok && dont && dont.querySelector('input').checked) { settings()[settingKey] = false; persist(); }
@@ -463,7 +464,7 @@
     const first = Store.path.join(dir, Packs.fileName(def, 0)).replace(/\\/g, '/');
     if (Store.fs.existsSync(Store.path.join(dir, 'ok.json'))) return { path: first, fps: rate };
     Store.fs.mkdirSync(dir, { recursive: true });
-    status.phase('Fabrication de « ' + def.name + ' » (' + size.W + '×' + size.H + ', une seule fois)');
+    status.phase(_T('Fabrication de « ') + def.name + _T(' » (') + size.W + '×' + size.H + _T(', une seule fois)'));
     const c = document.createElement('canvas');
     c.width = size.W; c.height = size.H;
     const g = c.getContext('2d');
@@ -472,11 +473,11 @@
       status.progress(i, total, '');
       Packs.draw(g, size.W, size.H, i / (total - 1), i, def);
       const blob = await new Promise(res => c.toBlob(res, 'image/jpeg', 0.9));
-      if (!blob) throw new Error('Image de l\'overlay non fabriquée (mémoire ?)');
+      if (!blob) throw new Error(_T('Image de l\'overlay non fabriquée (mémoire ?)'));
       Store.fs.writeFileSync(Store.path.join(dir, Packs.fileName(def, i)), new Uint8Array(await blob.arrayBuffer()));
     }
     Store.fs.writeFileSync(Store.path.join(dir, 'ok.json'), JSON.stringify({ id: def.id, frames: total, fps: rate, W: size.W, H: size.H }));
-    log('Overlay « ' + def.name + ' » fabriqué : ' + dir, 'ok');
+    log(_T('Overlay « ') + def.name + _T(' » fabriqué : ') + dir, 'ok');
     return { path: first, fps: rate };
   }
 
@@ -514,22 +515,22 @@
   function addOverlayList(list) {
     const st = settings(), known = new Set(st.overlays.map(o => o.path));
     const fresh = list.map(overlayFrom).filter(o => OVERLAY_FILES.test(o.path) && !known.has(o.path));
-    if (!fresh.length) { status.finish('warn', 'Aucun overlay ajouté', 'Formats pris en charge : MOV, MP4, WEBM, PNG, JPG (ou déjà dans la liste).'); return; }
+    if (!fresh.length) { status.finish('warn', _T('Aucun overlay ajouté'), _T('Formats pris en charge : MOV, MP4, WEBM, PNG, JPG (ou déjà dans la liste).')); return; }
     st.overlays = st.overlays.concat(fresh);
     persist();
     S.cat = 'overlay';
     S.cur = entryByKey('o:' + fresh[0].id);
     S.params = defaultParams(S.cur);
     renderEffectsView();
-    status.finish('ok', plural(fresh.length, 'overlay ajouté', 'overlays ajoutés'), 'Choisis-en un, règle sa durée et son mode de fusion, puis applique-le sur tes coupes.');
+    status.finish('ok', plural(fresh.length, _T('overlay ajouté'), _T('overlays ajoutés')), _T('Choisis-en un, règle sa durée et son mode de fusion, puis applique-le sur tes coupes.'));
   }
   function addOverlays(fromFolder) {
     if (fromFolder === true) {
-      const dirs = Store.pickFiles('Choisir un dossier d\'overlays', [], true);
+      const dirs = Store.pickFiles(_T('Choisir un dossier d\'overlays'), [], true);
       if (dirs && dirs.length) addOverlayList(Store.listFiles(dirs[0], OVERLAY_FILES, 200, 3));
       return;
     }
-    const picked = Store.pickFiles('Choisir des overlays (vidéos ou images)', ['mov', 'mp4', 'm4v', 'webm', 'png', 'jpg', 'jpeg']);
+    const picked = Store.pickFiles(_T('Choisir des overlays (vidéos ou images)'), ['mov', 'mp4', 'm4v', 'webm', 'png', 'jpg', 'jpeg']);
     if (picked) { if (picked.length) addOverlayList(picked); return; }
     // Hors de Premiere (démo) : sélecteur du navigateur.
     const input = h('input', { type: 'file', class: 'hidden', multiple: true, accept: 'video/*,image/png,image/jpeg' });
@@ -538,13 +539,13 @@
   }
   async function learnBlend() {
     const r = await Host.call('readBlend', {});
-    if (!r.ok) return status.finish('error', 'Mode de fusion illisible', r.error);
+    if (!r.ok) return status.finish('error', _T('Mode de fusion illisible'), r.error);
     settings().overlayBlend = Number(r.value);
     settings().overlayBlendLearned = true;
     persist();
     renderInspector();
     const known = BLENDS.find(b => b.v === Number(r.value));
-    status.finish('ok', 'Mode de fusion appris', (known ? known.label : 'valeur ' + r.value) + ' : utilisé pour tous les overlays.');
+    status.finish('ok', _T('Mode de fusion appris'), (known ? known.label : _T('valeur ') + r.value) + _T(' : utilisé pour tous les overlays.'));
   }
 
   // Aperçu sur la vraie image : 2 images exportées autour de la coupe la plus proche.
@@ -552,18 +553,18 @@
     return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => resolve(img);
-      img.onerror = () => reject(new Error('image illisible'));
+      img.onerror = () => reject(new Error(_T('image illisible')));
       img.src = src;
     });
   }
   function grabRealFrames() {
-    return runTask('Aperçu réel', async () => {
+    return runTask(_T('Aperçu réel'), async () => {
       const dir = Store.cacheDir();
-      if (!dir) return { kind: 'warn', title: 'Disponible dans Premiere', detail: 'L\'aperçu sur ta séquence exporte deux images de la timeline : il faut le panneau dans Premiere.' };
+      if (!dir) return { kind: 'warn', title: _T('Disponible dans Premiere'), detail: _T('L\'aperçu sur ta séquence exporte deux images de la timeline : il faut le panneau dans Premiere.') };
       Store.listFiles(dir, /^rrfx-frame-/, 50, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
-      status.phase('Export de deux images autour de la coupe');
+      status.phase(_T('Export de deux images autour de la coupe'));
       const r = await Host.call('grabFrames', { folder: dir.replace(/\\/g, '/'), prefix: 'rrfx-frame-' + uid() + '-' });
-      if (!r.ok) return { kind: 'error', title: 'Aperçu réel impossible', detail: r.error };
+      if (!r.ok) return { kind: 'error', title: _T('Aperçu réel impossible'), detail: r.error };
       // Premiere écrit les fichiers après coup : on attend qu'ils existent (avec ou sans .png).
       const found = [];
       for (let t = 0; t < 40 && found.length < r.files.length; t++) {
@@ -571,11 +572,11 @@
         r.files.forEach(f => { const g = [f, f + '.png'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0); if (g) found.push(g); });
         if (found.length < r.files.length) await new Promise(res => setTimeout(res, 150));
       }
-      if (found.length < r.files.length) return { kind: 'error', title: 'Aperçu réel impossible', detail: 'Premiere n\'a pas écrit les images (' + dir + ').' };
+      if (found.length < r.files.length) return { kind: 'error', title: _T('Aperçu réel impossible'), detail: _T('Premiere n\'a pas écrit les images (') + dir + ').' };
       const imgs = await Promise.all(found.map(f => loadImage(fileURL(f) + '?' + Date.now())));
       Pv.setShots(imgs[0], imgs[1]);
       renderInspector();
-      return { kind: 'ok', title: 'Aperçu sur ta séquence', detail: 'Images autour de la coupe à ' + r.cut.toFixed(2) + ' s. « Plans de test » pour revenir.' };
+      return { kind: 'ok', title: _T('Aperçu sur ta séquence'), detail: _T('Images autour de la coupe à ') + r.cut.toFixed(2) + _T(' s. « Plans de test » pour revenir.') };
     });
   }
   /* Images « propres » de la timeline aux instants donnés (secondes) : looks, titres et
@@ -611,7 +612,7 @@
     } finally {
       await Host.call('framesEnd', { off: r.off });
     }
-    if (found.some(f => !f)) throw new Error('Premiere n\'a pas écrit toutes les images (' + dir + ').');
+    if (found.some(f => !f)) throw new Error(_T('Premiere n\'a pas écrit toutes les images (') + dir + ').');
     const imgs = await Promise.all(found.map(f => loadImage(fileURL(f) + '?' + Date.now())));
     found.forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
     return imgs.map(toData);
@@ -662,7 +663,7 @@
       Pv.render(canvas.getContext('2d'), Pv.shots()[side === 'pre' ? 'A' : 'B'], Pv.stateAt(spec, i), Pv.stateAt(spec, j));
       return true;
     } catch (e) {
-      log('Vignette « ' + entry.name + ' » : ' + errorMessage(e), 'warn');
+      log(_T('Vignette « ') + entry.name + _T(' » : ') + errorMessage(e), 'warn');
       return false;
     }
   }
@@ -708,14 +709,14 @@
   function renderEffectsView() {
     const view = $('view-effects');
     view.innerHTML = '';
-    const search = h('input', { class: 'textfield', placeholder: 'Rechercher un effet', value: S.search, spellcheck: 'false' });
+    const search = h('input', { class: 'textfield', placeholder: _T('Rechercher un effet'), value: S.search, spellcheck: 'false' });
     search.addEventListener('input', () => { S.search = search.value; renderGrid(); });
-    const fav = h('button', { class: 'action icon' + (S.favOnly ? ' selected on' : ''), title: 'Favoris uniquement' }, '★');
+    const fav = h('button', { class: 'action icon' + (S.favOnly ? ' selected on' : ''), title: _T('Favoris uniquement') }, '★');
     fav.addEventListener('click', () => { S.favOnly = !S.favOnly; fav.classList.toggle('selected', S.favOnly); fav.classList.toggle('on', S.favOnly); renderGrid(); });
     view.appendChild(h('div', { class: 'search' }, search, fav));
 
     const chips = h('div', { class: 'chips' });
-    [{ id: 'all', label: 'Tout' }].concat(CATS, [{ id: 'mine', label: 'Mes effets' }]).forEach(c => {
+    [{ id: 'all', label: _T('Tout') }].concat(CATS, [{ id: 'mine', label: _T('Mes effets') }]).forEach(c => {
       const b = h('button', { class: 'action' + (S.cat === c.id ? ' selected' : '') }, c.label);
       b.addEventListener('click', () => {
         S.cat = c.id;
@@ -750,11 +751,11 @@
     grid.innerHTML = '';
     const list = visibleEntries();
     if (S.cat === 'overlay') {
-      const add = h('div', { class: 'card add-card', title: 'Light leaks, grain, poussière, flares… (vidéos ou images)' }, h('div', { class: 'thumb add-thumb' }, '＋'), h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, 'Ajouter des overlays')));
+      const add = h('div', { class: 'card add-card', title: _T('Light leaks, grain, poussière, flares… (vidéos ou images)') }, h('div', { class: 'thumb add-thumb' }, '＋'), h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, _T('Ajouter des overlays'))));
       add.addEventListener('click', () => addOverlays(false));
       grid.appendChild(add);
       if (Store.onDisk) {
-        const folder = h('div', { class: 'card add-card', title: 'Ajoute toutes les vidéos et images d\'un dossier (pack d\'overlays)' }, h('div', { class: 'thumb add-thumb' }, '▤'), h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, 'Ajouter un dossier')));
+        const folder = h('div', { class: 'card add-card', title: _T('Ajoute toutes les vidéos et images d\'un dossier (pack d\'overlays)') }, h('div', { class: 'thumb add-thumb' }, '▤'), h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, _T('Ajouter un dossier'))));
         folder.addEventListener('click', () => addOverlays(true));
         grid.appendChild(folder);
       }
@@ -762,18 +763,18 @@
     if (!list.length) {
       if (S.cat === 'overlay') return;
       grid.appendChild(h('div', { class: 'empty' }, S.cat === 'mine'
-        ? 'Aucun effet perso : enregistre un preset (« ＋ Preset » sur un effet) ou capture un clip dans « Mes effets ».'
-        : 'Aucun effet ne correspond.'));
+        ? _T('Aucun effet perso : enregistre un preset (« ＋ Preset » sur un effet) ou capture un clip dans « Mes effets ».')
+        : _T('Aucun effet ne correspond.')));
       return;
     }
     list.forEach(e => {
       const cv = h('canvas', { width: 160, height: 90 });
-      const card = h('div', { class: 'card' + (S.cur && S.cur.key === e.key ? ' on' : ''), 'data-key': e.key, title: e.def ? e.def.desc : 'Effet capturé' },
-        h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'overlay' && e.overlay.pack ? Packs.byId[e.overlay.pack].packName : ({ captured: 'capturé', overlay: 'overlay' })[e.kind] || 'preset') : null),
+      const card = h('div', { class: 'card' + (S.cur && S.cur.key === e.key ? ' on' : ''), 'data-key': e.key, title: e.def ? e.def.desc : _T('Effet capturé') },
+        h('div', { class: 'thumb' }, cv, e.kind !== 'builtin' ? h('span', { class: 'user-mark' }, e.kind === 'overlay' && e.overlay.pack ? Packs.byId[e.overlay.pack].packName : ({ captured: _T('capturé'), overlay: 'overlay' })[e.kind] || 'preset') : null),
         h('div', { class: 'card-meta' }, h('span', { class: 'card-name' }, e.name),
-          e.def && e.def.target ? h('span', { class: 'tag', title: 'Posé sur une copie du plan (un calque de réglage ne peut pas mélanger les images)' }, 'CLIP FX') : null,
+          e.def && e.def.target ? h('span', { class: 'tag', title: _T('Posé sur une copie du plan (un calque de réglage ne peut pas mélanger les images)') }, 'CLIP FX') : null,
           isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null,
-          settings().vary === 'chain' && settings().chain.keys.includes(e.key) ? h('span', { class: 'chain-mark', title: 'Dans l\'enchaînement' }, String(settings().chain.keys.indexOf(e.key) + 1)) : null));
+          settings().vary === 'chain' && settings().chain.keys.includes(e.key) ? h('span', { class: 'chain-mark', title: _T('Dans l\'enchaînement') }, String(settings().chain.keys.indexOf(e.key) + 1)) : null));
       card.addEventListener('click', ev => (ev.shiftKey ? toggleChain(e) : selectEntry(e)));
       card.addEventListener('mouseenter', () => animateThumb(cv, e));
       card.addEventListener('mouseleave', () => { stopThumb(); drawThumb(cv, e); });
@@ -790,7 +791,7 @@
     if (e.def && e.def.cat === 'motion' && !isFull(settings().placement)) {
       settings().placement = 'full';
       persist();
-      status.finish('ok', e.name + ' : sur les clips entiers', 'Ce mouvement dure tout le plan. Sélectionne tes clips, puis applique.');
+      status.finish('ok', e.name + _T(' : sur les clips entiers'), _T('Ce mouvement dure tout le plan. Sélectionne tes clips, puis applique.'));
     }
     const grid = $('grid');
     if (grid) grid.querySelectorAll('.card').forEach(c => c.classList.toggle('on', c.dataset.key === e.key));
@@ -824,32 +825,32 @@
     ins.innerHTML = '';
     const e = S.cur;
     if (!e) {
-      ins.appendChild(h('div', { class: 'empty' }, 'Choisis un effet ci-dessus.'));
+      ins.appendChild(h('div', { class: 'empty' }, _T('Choisis un effet ci-dessus.')));
       return;
     }
     const p = S.params, def = e.def, st = settings();
 
-    const star = h('button', { class: 'action quiet icon' + (isFav(e) ? ' on' : ''), title: 'Favori' }, isFav(e) ? '★' : '☆');
+    const star = h('button', { class: 'action quiet icon' + (isFav(e) ? ' on' : ''), title: _T('Favori') }, isFav(e) ? '★' : '☆');
     star.addEventListener('click', () => { toggleFav(e); star.textContent = isFav(e) ? '★' : '☆'; star.classList.toggle('on', isFav(e)); renderGrid(); });
-    const save = h('button', { class: 'action quiet', title: e.kind === 'captured' ? 'Dupliquer avec ces réglages' : 'Enregistrer ces réglages comme preset' }, '＋ Preset');
+    const save = h('button', { class: 'action quiet', title: e.kind === 'captured' ? _T('Dupliquer avec ces réglages') : _T('Enregistrer ces réglages comme preset') }, '＋ Preset');
     save.addEventListener('click', saveAsPreset);
     ins.appendChild(h('div', { class: 'effect-head' },
       h('span', { class: 'effect-name' }, e.name),
-      h('span', { class: 'badge' }, e.kind === 'captured' ? 'capturé' : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
+      h('span', { class: 'badge' }, e.kind === 'captured' ? _T('capturé') : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
       h('div', { class: 'effect-tools' }, star, e.kind === 'overlay' ? null : save)));
     if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
     if (def && def.face) ins.appendChild(h('div', { class: 'hint-box' }, def.track === 'object'
-      ? '🎯 Au moment d\'appliquer, la première image du plan s\'affiche : entoure l\'objet, RR FX le suit dans tout le plan.'
-      : '🙂 Le visage est cherché et suivi automatiquement dans chaque plan au moment d\'appliquer (quelques secondes). L\'aperçu ci-dessous suppose un visage en haut du cadre.'));
+      ? _T('🎯 Au moment d\'appliquer, la première image du plan s\'affiche : entoure l\'objet, RR FX le suit dans tout le plan.')
+      : _T('🙂 Le visage est cherché et suivi automatiquement dans chaque plan au moment d\'appliquer (quelques secondes). L\'aperçu ci-dessous suppose un visage en haut du cadre.')));
     if (e.kind === 'overlay') {
       ins.appendChild(h('div', { class: 'note' }, e.overlay.pack
-        ? 'Pack « ' + Packs.byId[e.overlay.pack].packName + ' », fourni avec RR FX. À la première utilisation, il est fabriqué à la taille de ta séquence (quelques secondes), puis réutilisé.'
+        ? _T('Pack « ') + Packs.byId[e.overlay.pack].packName + _T(' », fourni avec RR FX. À la première utilisation, il est fabriqué à la taille de ta séquence (quelques secondes), puis réutilisé.')
         : e.overlay.path || e.overlay.name));
     }
 
     // Aperçu
     const cv = h('canvas', { class: 'pv-canvas', width: 640, height: 360 });
-    const play = h('button', { class: 'action quiet icon', title: 'Lecture / pause' }, '❚❚');
+    const play = h('button', { class: 'action quiet icon', title: _T('Lecture / pause') }, '❚❚');
     const strip = h('div', { class: 'pv-strip', id: 'pv-strip' });
     const g = cv.getContext('2d');
     pvFrames = previewFrames(e, p, activeSides());
@@ -884,17 +885,17 @@
     buildStrip(strip);
     pauseOverlayVideos(e.kind === 'overlay' ? e.overlay.id : null);
     if (e.kind === 'overlay' && !e.overlay.pack) overlayMedia(e.overlay, m => { if (m.el.play && S.cur === e) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
-    const real = h('button', { class: 'action quiet', title: Pv.isReal() ? 'Revenir aux plans de test' : 'Utiliser les images de ta séquence autour de la coupe la plus proche' }, Pv.isReal() ? 'Plans de test' : '📷 Ma vraie image');
+    const real = h('button', { class: 'action quiet', title: Pv.isReal() ? _T('Revenir aux plans de test') : _T('Utiliser les images de ta séquence autour de la coupe la plus proche') }, Pv.isReal() ? _T('Plans de test') : _T('📷 Ma vraie image'));
     real.addEventListener('click', () => (Pv.isReal() ? useTestShots() : grabRealFrames()));
     ins.appendChild(h('div', { class: 'preview' },
-      h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, Pv.isReal() ? 'Aperçu sur ta séquence' : 'Aperçu simulé')),
+      h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, Pv.isReal() ? _T('Aperçu sur ta séquence') : _T('Aperçu simulé'))),
       h('div', { class: 'pv-bar' }, play, strip, real)));
 
     // Placement
     const pl = st.placement;
     let sideCtl;
     if (pl === 'clipStart' || pl === 'clipEnd') {
-      sideCtl = h('span', { class: 'muted' }, pl === 'clipStart' ? 'POST, depuis le début' : 'PRE, jusqu\'à la fin');
+      sideCtl = h('span', { class: 'muted' }, pl === 'clipStart' ? _T('POST, depuis le début') : _T('PRE, jusqu\'à la fin'));
     } else {
       const opts = [{ v: 'pre', label: 'PRE', cls: 'pre' }, { v: 'post', label: 'POST', cls: 'post' }];
       if (!isFull(pl)) opts.push({ v: 'both', label: 'PRE + POST' });
@@ -902,35 +903,35 @@
     }
     const forced = def && def.target;
     const multi = isMulti(pl);
-    const where = e.kind === 'overlay' ? 'Overlay posé au-dessus du clip'
-      : forced ? 'CLIP FX : copie du plan au-dessus du clip' : 'Calque de réglage au-dessus du clip';
+    const where = e.kind === 'overlay' ? _T('Overlay posé au-dessus du clip')
+      : forced ? _T('CLIP FX : copie du plan au-dessus du clip') : _T('Calque de réglage au-dessus du clip');
     const volRows = [];
     if (e.kind !== 'captured') {
-      volRows.push(h('div', { class: 'field' }, checkbox('Intensité qui suit le volume de la musique', st.volumeFollow, v => { st.volumeFollow = v; persist(); renderInspector(); })));
+      volRows.push(h('div', { class: 'field' }, checkbox(_T('Intensité qui suit le volume de la musique'), st.volumeFollow, v => { st.volumeFollow = v; persist(); renderInspector(); })));
       if (st.volumeFollow) volRows.push(row('Influence', hotText({ value: st.volumeInfluence, min: 0, max: 100, step: 5, unit: '%', onChange: v => { st.volumeInfluence = v; persist(); } })));
     }
     ins.appendChild(section('Placement', [
-      row('Côté', sideCtl),
+      row(_T('Côté'), sideCtl),
       row('Position', picker(PLACEMENTS, pl, v => { st.placement = v; persist(); renderInspector(); renderCTA(); })),
-      multi ? row('Entre les coupes', picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); renderInspector(); renderCTA(); }), { title: 'Varier le résultat à chaque coupe ou marqueur' }) : null,
+      multi ? row(_T('Entre les coupes'), picker(VARIATIONS, st.vary, v => { st.vary = v; persist(); renderInspector(); renderCTA(); }), { title: _T('Varier le résultat à chaque coupe ou marqueur') }) : null,
       multi && st.vary === 'chain' ? chainRow() : null,
-      isFull(pl) ? row('Plans', actionGroup([{ v: false, label: 'Tous' }, { v: true, label: 'Un sur deux' }], !!st.alternate, v => { st.alternate = v; persist(); }), { title: 'Un sur deux : alterne cadrage large et serré, pour masquer les jump cuts' }) : null,
-      row('Posé sur', h('span', { class: 'muted', title: forced ? 'Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.' : 'Le clip d\'origine n\'est jamais modifié' }, where)),
+      isFull(pl) ? row(_T('Plans'), actionGroup([{ v: false, label: _T('Tous') }, { v: true, label: _T('Un sur deux') }], !!st.alternate, v => { st.alternate = v; persist(); }), { title: _T('Un sur deux : alterne cadrage large et serré, pour masquer les jump cuts') }) : null,
+      row(_T('Posé sur'), h('span', { class: 'muted', title: forced ? _T('Un calque de réglage ne peut pas mélanger les images du plan : cet effet se pose sur une copie du passage. Le clip d\'origine n\'est jamais modifié.') : _T('Le clip d\'origine n\'est jamais modifié') }, where)),
       volRows,
-      row('Son',  picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: 'Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)' })
+      row(_T('Son'),  picker(SFX_CHOICES, st.sfx || 'none', v => { st.sfx = v; persist(); }), { title: _T('Sons fournis par RR FX, calés pour que leur moment fort tombe sur la coupe (piste audio libre, ta musique n\'est pas touchée)') })
     ]));
 
     // Paramètres
-    const rows = [row('Durée', hotText({ value: p.frames, min: 1, max: 240, step: 1, unit: 'i', onChange: (v, fin) => { p.frames = v; paramChanged(fin); } }), { title: 'Durée de chaque côté, en images' })];
+    const rows = [row(_T('Durée'), hotText({ value: p.frames, min: 1, max: 240, step: 1, unit: 'i', onChange: (v, fin) => { p.frames = v; paramChanged(fin); } }), { title: _T('Durée de chaque côté, en images') })];
     if (e.kind === 'overlay') {
-      rows.push(row('Opacité', hotText({ value: Math.min(100, p.intensity), min: 0, max: 100, step: 1, unit: '%', onChange: (v, fin) => { p.intensity = v; paramChanged(fin); } })));
-      rows.push(row('Départ dans l\'overlay', actionGroup([{ v: 'random', label: 'Au hasard' }, { v: 'start', label: 'Début' }, { v: 'middle', label: 'Milieu' }], p.start, v => { p.start = v; })));
+      rows.push(row(_T('Opacité'), hotText({ value: Math.min(100, p.intensity), min: 0, max: 100, step: 1, unit: '%', onChange: (v, fin) => { p.intensity = v; paramChanged(fin); } })));
+      rows.push(row(_T('Départ dans l\'overlay'), actionGroup([{ v: 'random', label: _T('Au hasard') }, { v: 'start', label: _T('Début') }, { v: 'middle', label: _T('Milieu') }], p.start, v => { p.start = v; })));
       const blendOpts = BLENDS.map(b => ({ v: String(b.v), label: b.label }));
-      if (!BLENDS.some(b => b.v === Number(st.overlayBlend))) blendOpts.unshift({ v: String(st.overlayBlend), label: 'Mode appris (' + st.overlayBlend + ')' });
-      const learn = h('button', { class: 'action quiet', title: 'Règle le mode de fusion voulu sur un clip dans Premiere, sélectionne-le, puis clique ici' }, 'Apprendre');
+      if (!BLENDS.some(b => b.v === Number(st.overlayBlend))) blendOpts.unshift({ v: String(st.overlayBlend), label: _T('Mode appris (') + st.overlayBlend + ')' });
+      const learn = h('button', { class: 'action quiet', title: _T('Règle le mode de fusion voulu sur un clip dans Premiere, sélectionne-le, puis clique ici') }, _T('Apprendre'));
       learn.addEventListener('click', learnBlend);
-      rows.push(row('Mode de fusion', h('div', { class: 'row-ctl' }, picker(blendOpts, String(st.overlayBlend), v => { st.overlayBlend = Number(v); persist(); paramChanged(true); }), learn)));
-      const remove = h('button', { class: 'action quiet danger' }, 'Retirer de la liste');
+      rows.push(row(_T('Mode de fusion'), h('div', { class: 'row-ctl' }, picker(blendOpts, String(st.overlayBlend), v => { st.overlayBlend = Number(v); persist(); paramChanged(true); }), learn)));
+      const remove = h('button', { class: 'action quiet danger' }, _T('Retirer de la liste'));
       remove.addEventListener('click', () => {
         st.overlays = st.overlays.filter(o => o.id !== e.overlay.id);
         persist();
@@ -941,30 +942,30 @@
       });
       if (!e.overlay.pack) rows.push(h('div', { class: 'row-buttons' }, remove));
     } else if (e.kind === 'captured') {
-      rows.push(h('div', { class: 'field' }, checkbox('Étirer l\'animation à la durée', p.stretch, v => { p.stretch = v; paramChanged(true); })));
-      rows.push(h('div', null, checkbox('Miroir pour l\'autre côté de la coupe', p.mirror, v => { p.mirror = v; paramChanged(true); })));
+      rows.push(h('div', { class: 'field' }, checkbox(_T('Étirer l\'animation à la durée'), p.stretch, v => { p.stretch = v; paramChanged(true); })));
+      rows.push(h('div', null, checkbox(_T('Miroir pour l\'autre côté de la coupe'), p.mirror, v => { p.mirror = v; paramChanged(true); })));
       const d = e.item.data;
-      rows.push(h('div', { class: 'note' }, (d.components || []).map(c => c.displayName).join(' · ') + ' · capturé sur ' + plural(d.frames || 0, 'image')));
+      rows.push(h('div', { class: 'note' }, (d.components || []).map(c => c.displayName).join(' · ') + _T(' · capturé sur ') + plural(d.frames || 0, _T('image'))));
     } else {
-      rows.push(row('Intensité', hotText({ value: p.intensity, min: 0, max: 200, step: 1, unit: '%', onChange: (v, fin) => { p.intensity = v; paramChanged(fin); } })));
+      rows.push(row(_T('Intensité'), hotText({ value: p.intensity, min: 0, max: 200, step: 1, unit: '%', onChange: (v, fin) => { p.intensity = v; paramChanged(fin); } })));
       (def.params || []).forEach(q => {
         if (q.type === 'range') rows.push(row(q.label, hotText({ value: p[q.key], min: q.min, max: q.max, step: q.step, unit: q.unit, onChange: (v, fin) => { p[q.key] = v; paramChanged(fin); } })));
         else if (q.type === 'select') rows.push(row(q.label, actionGroup(q.options.map(o => ({ v: o.v, label: o.label })), p[q.key], v => { p[q.key] = v; paramChanged(true); })));
       });
     }
-    const reset = h('button', { class: 'action quiet', title: 'Revenir aux valeurs par défaut' }, 'Réinitialiser');
+    const reset = h('button', { class: 'action quiet', title: _T('Revenir aux valeurs par défaut') }, _T('Réinitialiser'));
     reset.addEventListener('click', () => { S.params = defaultParams(e); renderInspector(); });
-    ins.appendChild(section('Paramètres', rows, reset));
+    ins.appendChild(section(_T('Paramètres'), rows, reset));
 
     // Courbe
     if ((def && !def.noCurve) || e.kind === 'overlay') {
       const ccv = h('canvas', { class: 'curve-canvas' });
-      const presetPick = picker(Object.keys(Core.CURVE_PRESETS).map(k => ({ v: k, label: Core.CURVE_PRESETS[k].label })).concat([{ v: 'custom', label: 'Personnalisée' }]),
+      const presetPick = picker(Object.keys(Core.CURVE_PRESETS).map(k => ({ v: k, label: Core.CURVE_PRESETS[k].label })).concat([{ v: 'custom', label: _T('Personnalisée') }]),
         curvePresetName(p.curve), v => { if (v !== 'custom') { p.curve = Core.curveValue(v); paramChanged(true); } });
-      ins.appendChild(section('Courbe', [
+      ins.appendChild(section(_T('Courbe'), [
         ccv,
-        row('Préréglage', presetPick),
-        h('div', { class: 'note' }, 'Glisse les poignées. La moitié droite (POST) est le miroir de la gauche (PRE).')
+        row(_T('Préréglage'), presetPick),
+        h('div', { class: 'note' }, _T('Glisse les poignées. La moitié droite (POST) est le miroir de la gauche (PRE).'))
       ]));
       S.curveEd = CurveEditor(ccv, {
         get: () => p.curve,
@@ -987,7 +988,7 @@
     const e = S.cur;
     if (!e || e.kind === 'overlay') return;
     if (e.kind === 'captured') {
-      const name = await promptName('Dupliquer l\'effet capturé', e.name + ' (copie)');
+      const name = await promptName(_T('Dupliquer l\'effet capturé'), e.name + _T(' (copie)'));
       if (!name) return;
       const data = clone(e.item.data);
       if (S.params.frames !== data.frames && data.frames) {
@@ -997,10 +998,10 @@
       S.lib.items.push({ id: uid(), type: 'captured', name, cat: e.item.cat || 'mine', created: Date.now(), data });
       persist();
       renderGrid();
-      status.finish('ok', 'Enregistré : ' + name, 'Dans « Mes effets ».');
+      status.finish('ok', _T('Enregistré : ') + name, _T('Dans « Mes effets ».'));
       return;
     }
-    const name = await promptName('Enregistrer comme preset', e.kind === 'preset' ? e.name : e.name + ' perso');
+    const name = await promptName(_T('Enregistrer comme preset'), e.kind === 'preset' ? e.name : e.name + _T(' perso'));
     if (!name) return;
     const data = { base: e.def.id, params: clone(S.params) };
     let item = S.lib.items.find(i => i.type === 'preset' && i.name === name);
@@ -1012,7 +1013,7 @@
     persist();
     renderGrid();
     selectEntry(entryByKey('u:' + item.id), true);
-    status.finish('ok', 'Preset enregistré : ' + name, 'Retrouve-le dans la catégorie « Mes effets ».');
+    status.finish('ok', _T('Preset enregistré : ') + name, _T('Retrouve-le dans la catégorie « Mes effets ».'));
   }
 
   // ---------------------------------------------------------------- appliquer un effet
@@ -1038,28 +1039,28 @@
     renderInspector();
     renderCTA();
     const multi = isMulti(settings().placement);
-    status.finish('ok', i >= 0 ? e.name + ' retiré de l\'enchaînement' : e.name + ' ajouté à l\'enchaînement', plural(c.keys.length, 'effet') + ' : ' + chainEntries().map(x => x.name).join(' → ') + (multi ? '' : '. Choisis la position Temps forts, Marqueurs ou Toutes les coupes pour l\'appliquer.'));
+    status.finish('ok', i >= 0 ? e.name + _T(' retiré de l\'enchaînement') : e.name + _T(' ajouté à l\'enchaînement'), plural(c.keys.length, _T('effet')) + ' : ' + chainEntries().map(x => x.name).join(' → ') + (multi ? '' : _T('. Choisis la position Temps forts, Marqueurs ou Toutes les coupes pour l\'appliquer.')));
   }
 
   function chainRow() {
     const c = settings().chain, list = chainEntries();
     const box = h('div', { class: 'chain' });
     list.forEach((x, i) => {
-      const chip = h('span', { class: 'chain-chip', title: 'Retirer' }, h('b', null, String(i + 1)), x.name, h('span', { class: 'chain-x' }, '✕'));
+      const chip = h('span', { class: 'chain-chip', title: _T('Retirer') }, h('b', null, String(i + 1)), x.name, h('span', { class: 'chain-x' }, '✕'));
       chip.addEventListener('click', () => toggleChain(x));
       box.appendChild(chip);
     });
-    const add = h('button', { class: 'action quiet', disabled: !S.cur || c.keys.includes(S.cur.key), title: 'Ou Maj + clic sur une carte' }, '+ ' + (S.cur ? S.cur.name : 'effet affiché'));
+    const add = h('button', { class: 'action quiet', disabled: !S.cur || c.keys.includes(S.cur.key), title: _T('Ou Maj + clic sur une carte') }, '+ ' + (S.cur ? S.cur.name : _T('effet affiché')));
     add.addEventListener('click', () => S.cur && toggleChain(S.cur));
     box.appendChild(add);
     return [
-      row('Enchaînement', box, { title: 'Les effets se succèdent sur les coupes, marqueurs ou temps forts. Maj + clic sur une carte pour ajouter ou retirer.' }),
-      list.length ? row('Ordre', actionGroup([{ v: 'cycle', label: 'Dans l\'ordre' }, { v: 'random', label: 'Au hasard' }], c.order, v => { c.order = v; persist(); })) : h('div', { class: 'note' }, 'Ajoute 2 à 4 effets : Maj + clic sur les cartes, ou le bouton ci-dessus.')
+      row(_T('Enchaînement'), box, { title: _T('Les effets se succèdent sur les coupes, marqueurs ou temps forts. Maj + clic sur une carte pour ajouter ou retirer.') }),
+      list.length ? row(_T('Ordre'), actionGroup([{ v: 'cycle', label: _T('Dans l\'ordre') }, { v: 'random', label: _T('Au hasard') }], c.order, v => { c.order = v; persist(); })) : h('div', { class: 'note' }, _T('Ajoute 2 à 4 effets : Maj + clic sur les cartes, ou le bouton ci-dessus.'))
     ];
   }
 
   // Sons fournis : fabriqués une fois dans Documents/RRFX/Sons.
-  const SFX_CHOICES = [{ v: 'none', label: 'Aucun' }, { v: 'mix', label: 'Whooshs variés + impacts sur les temps forts' }, { v: 'whoosh', label: 'Whoosh' }, { v: 'impact', label: 'Hit court' }]
+  const SFX_CHOICES = [{ v: 'none', label: _T('Aucun') }, { v: 'mix', label: _T('Whooshs variés + impacts sur les temps forts') }, { v: 'whoosh', label: 'Whoosh' }, { v: 'impact', label: _T('Hit court') }]
     .concat(Sons.SOUNDS.filter(x => !['whoosh', 'hit'].includes(x.id)).map(x => ({ v: x.id, label: x.name })));
   function ensureSound(id) {
     const snd = Sons.byId(id);
@@ -1077,7 +1078,7 @@
     let pool = null;
     if (vary === 'favorites') {
       pool = entries().filter(isFav);
-      if (!pool.length) log('Aucun favori : effets tirés dans la même catégorie.', 'warn');
+      if (!pool.length) log(_T('Aucun favori : effets tirés dans la même catégorie.'), 'warn');
     }
     if (vary === 'category' || (vary === 'favorites' && !pool.length)) pool = entries().filter(x => x.cat === e.cat);
     const chain = vary === 'chain' ? chainEntries() : null;
@@ -1111,65 +1112,65 @@
 
   function applyEffect() {
     const st = settings(), chained = chainOn();
-    const e = chained ? Object.assign({}, chainEntries()[0], { name: 'Enchaînement' }) : S.cur;
+    const e = chained ? Object.assign({}, chainEntries()[0], { name: _T('Enchaînement') }) : S.cur;
     if (!e) return null;
     const multi = isMulti(st.placement);
-    return runTask('Application · ' + e.name, async () => {
-      status.phase('Analyse de la timeline');
+    return runTask(_T('Application · ') + e.name, async () => {
+      status.phase(_T('Analyse de la timeline'));
       // Temps forts : détectés dans la musique, sans passer par des marqueurs.
       let times;
       if (st.placement === 'beats') {
-        if (!app.services.beatTimes) return { kind: 'error', title: 'Musique indisponible', detail: 'Onglet Musique introuvable.' };
-        status.phase('Temps forts de la musique');
+        if (!app.services.beatTimes) return { kind: 'error', title: _T('Musique indisponible'), detail: _T('Onglet Musique introuvable.') };
+        status.phase(_T('Temps forts de la musique'));
         times = await app.services.beatTimes();
-        if (!times.length) return { kind: 'warn', title: 'Aucun temps fort', detail: 'Règle la détection dans l\'onglet Musique (sensibilité, type).' };
+        if (!times.length) return { kind: 'warn', title: _T('Aucun temps fort'), detail: _T('Règle la détection dans l\'onglet Musique (sensibilité, type).') };
       }
       const r = await Host.call('resolve', { placement: hostPlacement(st.placement), scope: st.placement === 'allcuts' || st.placement === 'allclips' ? 'sequence' : '', times, sides: activeSides(), frames: S.params.frames, target: targetFor(e) });
       if (!r.ok) {
         (r.warnings || []).forEach(w => log(w, 'warn'));
-        return { kind: 'error', title: 'Rien n\'a été appliqué', detail: r.error };
+        return { kind: 'error', title: _T('Rien n\'a été appliqué'), detail: r.error };
       }
       // Intensité selon le volume de la musique à chaque coupe.
       let factors = null;
       if (st.volumeFollow && e.kind !== 'captured' && app.services.volumeFactors) {
-        status.phase('Volume de la musique');
+        status.phase(_T('Volume de la musique'));
         try {
           const cuts = Array.from(new Set(r.targets.map(t => (t.side === 'pre' ? t.end : t.start))));
           const tps = 254016000000, vals = await app.services.volumeFactors(cuts.map(c => c / tps), st.volumeInfluence);
           factors = new Map(cuts.map((c, i) => [c, vals[i]]));
-          log('Intensité selon le volume : ' + vals.map(v => '×' + v.toFixed(2)).join(' '), 'info');
+          log(_T('Intensité selon le volume : ') + vals.map(v => '×' + v.toFixed(2)).join(' '), 'info');
         } catch (err) {
-          log('Volume de la musique indisponible : ' + errorMessage(err), 'warn');
+          log(_T('Volume de la musique indisponible : ') + errorMessage(err), 'warn');
         }
       }
       // « Un plan sur deux » (punch-in sur les jump cuts) : un clip visé sur deux, dans l'ordre.
       if (isFull(st.placement) && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
-      if (!r.targets.length) return { kind: 'warn', title: 'Un seul plan', detail: '« Un plan sur deux » : sélectionne au moins deux clips.' };
+      if (!r.targets.length) return { kind: 'warn', title: _T('Un seul plan'), detail: _T('« Un plan sur deux » : sélectionne au moins deux clips.') };
       // Zoom visage / objet : le visage (ou l'objet entouré) est cherché dans chaque plan visé,
       // puis suivi image par image.
       let faceNote = '';
       const tracked = (chained ? chainEntries() : [e]).find(x => x.def && x.def.face);
       if (tracked && app.services.trackFaces) {
         const object = tracked.def.track === 'object';
-        status.phase(object ? 'Suivi de l\'objet' : 'Recherche du visage');
+        status.phase(object ? _T('Suivi de l\'objet') : _T('Recherche du visage'));
         const follow = S.params.follow || (tracked.def.id === 'face-stab' ? 'tight' : 'smooth');
         const tr = object ? await app.services.trackObject(r.targets, follow) : await app.services.trackFaces(r.targets, follow);
         r.targets.forEach((t, i) => { t.face = tr.faces[i]; });
-        const found = tr.faces.filter(Boolean).length, what = object ? 'Objet suivi' : 'Visage suivi';
-        faceNote = found === r.targets.length ? what + ' dans ' + plural(found, 'plan') + '.' : what + ' dans ' + found + ' plan(s) sur ' + r.targets.length + ' ; ailleurs, zoom vers le haut du cadre.';
-        if (found < r.targets.length) log((object ? 'Objet' : 'Visage') + ' introuvable dans ' + plural(r.targets.length - found, 'plan') + ' : zoom vers le haut du cadre' + (object ? '.' : ' (visage de face, assez grand et éclairé ?).'), 'warn');
+        const found = tr.faces.filter(Boolean).length, what = object ? _T('Objet suivi') : _T('Visage suivi');
+        faceNote = found === r.targets.length ? what + _T(' dans ') + plural(found, _T('plan')) + '.' : what + _T(' dans ') + found + _T(' plan(s) sur ') + r.targets.length + _T(' ; ailleurs, zoom vers le haut du cadre.');
+        if (found < r.targets.length) log((object ? _T('Objet') : _T('Visage')) + _T(' introuvable dans ') + plural(r.targets.length - found, _T('plan')) + _T(' : zoom vers le haut du cadre') + (object ? '.' : _T(' (visage de face, assez grand et éclairé ?).')), 'warn');
       }
       const plan = buildPlan(e, r.targets, multi ? st.vary : 'same', r.fps, factors);
-      if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: 'Rien à appliquer', detail: 'Cet effet ne contient aucun réglage utilisable.' };
+      if (!plan.some(x => x.target.fx.length)) return { kind: 'error', title: _T('Rien à appliquer'), detail: _T('Cet effet ne contient aucun réglage utilisable.') };
       // Overlays de pack : fabriqués une fois à la taille de la séquence.
       const packs = Array.from(new Set(plan.filter(x => x.overlay && x.overlay.pack).map(x => x.overlay.pack)));
       for (const id of packs) {
         const made = await buildPack(Packs.byId[id], r.fps || fps());
-        if (!made) return { kind: 'warn', title: 'Arrêté', detail: 'Overlay « ' + Packs.byId[id].name + ' » pas fabriqué.' };
+        if (!made) return { kind: 'warn', title: _T('Arrêté'), detail: _T('Overlay « ') + Packs.byId[id].name + _T(' » pas fabriqué.') };
         plan.forEach(x => { if (x.overlay && x.overlay.pack === id) Object.assign(x.overlay, { path: made.path, fps: made.fps }); });
       }
 
-      status.phase(plan.length > 1 ? 'Pose des effets' : 'Pose de l\'effet');
+      status.phase(plan.length > 1 ? _T('Pose des effets') : _T('Pose de l\'effet'));
       const created = [], warnings = (r.warnings || []).slice();
       let done = 0, failed = 0, firstError = '';
       for (let i = 0; i < plan.length; i++) {
@@ -1191,28 +1192,28 @@
       // Sons sur les transitions (whooshs, impacts fournis), calés sur chaque coupe.
       let sounds = 0;
       if (st.sfx && st.sfx !== 'none' && done && !S.cancel) {
-        status.phase('Sons sur les transitions');
+        status.phase(_T('Sons sur les transitions'));
         const cuts = Array.from(new Set(plan.map(x => (x.target.side === 'pre' ? x.target.end : x.target.start)))).sort((a, b) => a - b);
         const strong = factors ? cuts.map((c, i) => ((factors.get(c) || 1) > 1.15 ? i : -1)).filter(i => i >= 0) : cuts.map((c, i) => (i % 4 === 3 ? i : -1)).filter(i => i >= 0);
         for (const part of Sons.plan(cuts.map(c => c / 254016000000), st.sfx, strong)) {
           try {
             const snd = Sons.byId(part.id), res = await Host.call('placeAsset', { kind: 'audio', path: ensureSound(part.id), name: snd.name, times: part.times });
-            if (res.ok) { created.push.apply(created, res.created); sounds += res.created.length; warnings.push.apply(warnings, res.warnings || []); } else warnings.push('Sons : ' + res.error);
-          } catch (err) { warnings.push('Sons : ' + errorMessage(err)); }
+            if (res.ok) { created.push.apply(created, res.created); sounds += res.created.length; warnings.push.apply(warnings, res.warnings || []); } else warnings.push(_T('Sons : ') + res.error);
+          } catch (err) { warnings.push(_T('Sons : ') + errorMessage(err)); }
         }
       }
       if (created.length) pushHistory({ date: Date.now(), label: multi ? e.name + ' × ' + done : e.name, entries: created });
       Array.from(new Set(warnings)).forEach(w => log(w, 'warn'));
 
-      const what = plural(done, 'zone') + (sounds ? ' + ' + plural(sounds, 'son') : '');
-      if (!done) return { kind: 'error', title: 'Rien n\'a été appliqué', detail: firstError };
-      log(e.name + ' : ' + what + (failed ? ', ' + plural(failed, 'échec') : ''), failed ? 'warn' : 'ok');
-      if (S.cancel) return { kind: 'warn', title: 'Arrêté · ' + what + ' posée(s)', detail: 'Le reste n\'a pas été appliqué.' };
-      if (failed) return { kind: 'warn', title: e.name + ' · ' + what + ', ' + plural(failed, 'échec'), detail: firstError };
-      if (warnings.length) return { kind: 'warn', title: e.name + ' appliqué · ' + what, detail: (faceNote ? faceNote + ' ' : '') + plural(new Set(warnings).size, 'remarque') + ' dans le journal.' };
-      if (faceNote) return { kind: faceNote.includes('introuvable') || faceNote.includes(' sur ') ? 'warn' : 'ok', title: e.name + ' appliqué · ' + what, detail: faceNote };
-      const on = { copy: 'Sur une copie du plan (CLIP FX) au-dessus du clip.', overlay: 'Overlays posés au-dessus du clip.', adjustment: 'Sur des calques de réglage « RR FX · … ».' };
-      return { kind: 'ok', title: e.name + ' appliqué · ' + what, detail: on[targetFor(e)] || on.adjustment };
+      const what = plural(done, 'zone') + (sounds ? ' + ' + plural(sounds, _T('son')) : '');
+      if (!done) return { kind: 'error', title: _T('Rien n\'a été appliqué'), detail: firstError };
+      log(e.name + ' : ' + what + (failed ? ', ' + plural(failed, _T('échec')) : ''), failed ? 'warn' : 'ok');
+      if (S.cancel) return { kind: 'warn', title: _T('Arrêté · ') + what + _T(' posée(s)'), detail: _T('Le reste n\'a pas été appliqué.') };
+      if (failed) return { kind: 'warn', title: e.name + ' · ' + what + ', ' + plural(failed, _T('échec')), detail: firstError };
+      if (warnings.length) return { kind: 'warn', title: e.name + _T(' appliqué · ') + what, detail: (faceNote ? faceNote + ' ' : '') + plural(new Set(warnings).size, _T('remarque')) + _T(' dans le journal.') };
+      if (faceNote) return { kind: faceNote.includes('introuvable') || faceNote.includes(_T(' sur ')) ? 'warn' : 'ok', title: e.name + _T(' appliqué · ') + what, detail: faceNote };
+      const on = { copy: _T('Sur une copie du plan (CLIP FX) au-dessus du clip.'), overlay: _T('Overlays posés au-dessus du clip.'), adjustment: _T('Sur des calques de réglage « RR FX · … ».') };
+      return { kind: 'ok', title: e.name + _T(' appliqué · ') + what, detail: on[targetFor(e)] || on.adjustment };
     }, true);
   }
 
@@ -1232,8 +1233,8 @@
     const last = S.lib && S.lib.history[S.lib.history.length - 1];
     const b = $('undo');
     setDisabled(b, S.busy || !last);
-    b.textContent = last ? '↶ Annuler (' + last.entries.length + ')' : '↶ Annuler';
-    b.title = last ? 'Retirer : ' + last.label : 'Rien à annuler';
+    b.textContent = last ? _T('↶ Annuler (') + last.entries.length + ')' : _T('↶ Annuler');
+    b.title = last ? _T('Retirer : ') + last.label : _T('Rien à annuler');
     show(b, !S.busy);
     const hb = $('history');
     if (hb) { show(hb, !S.busy); setDisabled(hb, !S.lib || !S.lib.history.length); }
@@ -1247,14 +1248,14 @@
   async function undoLast() {
     const last = S.lib.history[S.lib.history.length - 1];
     if (!last || S.busy) return;
-    if (!(await confirmDialog('Annuler la dernière opération ?', describeOp(last) + ' : les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.', 'Annuler l\'opération', 'confirmUndo'))) return;
+    if (!(await confirmDialog(_T('Annuler la dernière opération ?'), describeOp(last) + _T(' : les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.'), _T('Annuler l\'opération'), 'confirmUndo'))) return;
     await undoOps([last]);
   }
 
   /* Annule des opérations de l'historique, de la plus récente à la plus ancienne. Chaque
      opération rouvre sa séquence si une autre est ouverte. */
   function undoOps(ops) {
-    return runTask(ops.length > 1 ? 'Annulation de ' + plural(ops.length, 'opération') : 'Annulation', async () => {
+    return runTask(ops.length > 1 ? _T('Annulation de ') + plural(ops.length, _T('opération')) : _T('Annulation'), async () => {
       const todo = ops.slice().sort((a, b) => S.lib.history.indexOf(b) - S.lib.history.indexOf(a));
       const sum = { removed: 0, effects: 0, skipped: 0 }, errors = [];
       for (let i = 0; i < todo.length; i++) {
@@ -1265,17 +1266,17 @@
         if (!r.ok) { errors.push(op.label + ' : ' + r.error); continue; }
         S.lib.history = S.lib.history.filter(x => x !== op);
         ['removed', 'effects', 'skipped'].forEach(k => { sum[k] += r[k] || 0; });
-        log('Annulation de ' + op.label + (r.skipped ? ' : ' + r.skipped + ' élément(s) modifié(s) depuis, laissé(s) tel(s) quel(s)' : ''), r.skipped ? 'warn' : 'ok');
+        log(_T('Annulation de ') + op.label + (r.skipped ? ' : ' + r.skipped + _T(' élément(s) modifié(s) depuis, laissé(s) tel(s) quel(s)') : ''), r.skipped ? 'warn' : 'ok');
       }
       persist();
       renderUndo();
       const parts = [];
-      if (sum.removed) parts.push(plural(sum.removed, 'calque retiré', 'calques retirés'));
-      if (sum.effects) parts.push(plural(sum.effects, 'effet retiré', 'effets retirés'));
-      if (sum.skipped) parts.push(sum.skipped + ' laissé(s) tel quel (modifié depuis, ou à annuler avec Ctrl+Z / Cmd+Z)');
+      if (sum.removed) parts.push(plural(sum.removed, _T('calque retiré'), _T('calques retirés')));
+      if (sum.effects) parts.push(plural(sum.effects, _T('effet retiré'), _T('effets retirés')));
+      if (sum.skipped) parts.push(sum.skipped + _T(' laissé(s) tel quel (modifié depuis, ou à annuler avec Ctrl+Z / Cmd+Z)'));
       errors.forEach(e => log(e, 'error'));
-      if (errors.length && errors.length === todo.length) return { kind: 'error', title: 'Annulation impossible', detail: errors[0] };
-      return { kind: sum.skipped || errors.length ? 'warn' : 'ok', title: 'Annulation terminée', detail: parts.concat(errors.length ? [plural(errors.length, 'opération non annulée', 'opérations non annulées') + ' (journal)'] : []).join(' · ') || 'Rien à retirer.' };
+      if (errors.length && errors.length === todo.length) return { kind: 'error', title: _T('Annulation impossible'), detail: errors[0] };
+      return { kind: sum.skipped || errors.length ? 'warn' : 'ok', title: _T('Annulation terminée'), detail: parts.concat(errors.length ? [plural(errors.length, _T('opération non annulée'), _T('opérations non annulées')) + _T(' (journal)')] : []).join(' · ') || _T('Rien à retirer.') };
     });
   }
 
@@ -1287,49 +1288,49 @@
     const draw = () => {
       list.innerHTML = '';
       const ops = S.lib.history.slice().reverse();
-      if (!ops.length) { list.appendChild(h('div', { class: 'note' }, 'Aucune opération RR FX à annuler.')); return; }
+      if (!ops.length) { list.appendChild(h('div', { class: 'note' }, _T('Aucune opération RR FX à annuler.'))); return; }
       ops.forEach((op, i) => {
-        const one = h('button', { class: 'action quiet', title: 'Annuler seulement cette opération' }, 'Annuler');
+        const one = h('button', { class: 'action quiet', title: _T('Annuler seulement cette opération') }, _T('Annuler'));
         one.addEventListener('click', () => { pick = [op]; close(); });
-        const upTo = i ? h('button', { class: 'action quiet', title: 'Annuler celle-ci et les ' + i + ' plus récentes' }, 'Jusqu\'ici') : null;
+        const upTo = i ? h('button', { class: 'action quiet', title: _T('Annuler celle-ci et les ') + i + _T(' plus récentes') }, _T('Jusqu\'ici')) : null;
         if (upTo) upTo.addEventListener('click', () => { pick = ops.slice(0, i + 1); close(); });
         const d = new Date(op.date), time = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
         const other = op.seq && S.ctx && S.ctx.seqId && op.seq !== S.ctx.seqId;
         list.appendChild(h('div', { class: 'list-item hist-item' },
           h('span', { class: 'li-icon' }, String(ops.length - i)),
-          h('div', { class: 'li-text' }, h('div', { class: 'li-name' }, op.label), h('div', { class: 'li-meta' }, time + ' · ' + plural(op.entries.length, 'élément') + (op.seqName ? ' · ' + (other ? '↪ ' : '') + op.seqName : ''))),
+          h('div', { class: 'li-text' }, h('div', { class: 'li-name' }, op.label), h('div', { class: 'li-meta' }, time + ' · ' + plural(op.entries.length, _T('élément')) + (op.seqName ? ' · ' + (other ? '↪ ' : '') + op.seqName : ''))),
           h('div', { class: 'li-actions hist-actions' }, upTo, one)));
       });
     };
     let close = () => {};
     draw();
-    const all = h('button', { class: 'action quiet danger', disabled: !S.lib.history.length }, 'Tout annuler');
+    const all = h('button', { class: 'action quiet danger', disabled: !S.lib.history.length }, _T('Tout annuler'));
     all.addEventListener('click', () => { pick = S.lib.history.slice(); close(); });
-    const p = modal('Historique RR FX', h('div', null, h('div', { class: 'note' }, 'Les ' + MAX_HISTORY + ' dernières opérations, la plus récente en haut. « Annuler » retire seulement celle-là ; « Jusqu\'ici » retire aussi toutes les plus récentes. Une opération d\'une autre séquence la rouvre.'), list, h('div', { class: 'row-buttons' }, all)), [{ label: 'Fermer', value: null }]);
+    const p = modal(_T('Historique RR FX'), h('div', null, h('div', { class: 'note' }, _T('Les ') + MAX_HISTORY + _T(' dernières opérations, la plus récente en haut. « Annuler » retire seulement celle-là ; « Jusqu\'ici » retire aussi toutes les plus récentes. Une opération d\'une autre séquence la rouvre.')), list, h('div', { class: 'row-buttons' }, all)), [{ label: _T('Fermer'), value: null }]);
     close = () => { const b = document.querySelector('#modal-root .modal footer button'); if (b) b.click(); };
     await p;
     if (!pick || !pick.length) return;
-    const ask = pick.length > 1 ? 'Annuler ' + plural(pick.length, 'opération') + ' ?' : 'Annuler « ' + pick[0].label + ' » ?';
-    if (!(await confirmDialog(ask, 'Les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.', 'Annuler'))) return;
+    const ask = pick.length > 1 ? _T('Annuler ') + plural(pick.length, _T('opération')) + ' ?' : _T('Annuler « ') + pick[0].label + _T(' » ?');
+    if (!(await confirmDialog(ask, _T('Les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.'), _T('Annuler')))) return;
     await undoOps(pick);
   }
 
   async function clearAll(o) {
     if (S.busy) return;
-    const where = o.scope === 'selection' ? 'dans la zone sélectionnée' : 'dans toute la séquence';
-    const yes = await modal('Tout effacer ' + where + ' ?', h('p', null, 'Les calques, copies, overlays et textes « RR FX · … »' + (o.markers ? ' et les marqueurs RR FX' : '') + ' seront retirés. Tes clips restent intacts. Ctrl+Z / Cmd+Z dans Premiere pour revenir en arrière.'), [
-      { label: 'Garder', value: false }, { label: 'Tout effacer', primary: true, value: true }]);
+    const where = o.scope === 'selection' ? _T('dans la zone sélectionnée') : _T('dans toute la séquence');
+    const yes = await modal(_T('Tout effacer ') + where + ' ?', h('p', null, _T('Les calques, copies, overlays et textes « RR FX · … »') + (o.markers ? _T(' et les marqueurs RR FX') : '') + _T(' seront retirés. Tes clips restent intacts. Ctrl+Z / Cmd+Z dans Premiere pour revenir en arrière.')), [
+      { label: _T('Garder'), value: false }, { label: _T('Tout effacer'), primary: true, value: true }]);
     if (!yes) return;
-    await runTask('Nettoyage', async () => {
-      status.phase('Retrait des éléments RR FX');
+    await runTask(_T('Nettoyage'), async () => {
+      status.phase(_T('Retrait des éléments RR FX'));
       const r = await Host.call('clearAll', { scope: o.scope, markers: o.markers, multicam: true });
-      if (!r.ok) return { kind: 'error', title: 'Nettoyage impossible', detail: r.error };
+      if (!r.ok) return { kind: 'error', title: _T('Nettoyage impossible'), detail: r.error };
       if (o.scope === 'sequence') { S.lib.history = []; persist(); renderUndo(); }
-      const parts = [plural(r.removed, 'élément retiré', 'éléments retirés')];
-      if (o.markers) parts.push(plural(r.markers, 'marqueur retiré', 'marqueurs retirés'));
-      log('Nettoyage ' + where + ' : ' + parts.join(', '), 'ok');
+      const parts = [plural(r.removed, _T('élément retiré'), _T('éléments retirés'))];
+      if (o.markers) parts.push(plural(r.markers, _T('marqueur retiré'), _T('marqueurs retirés')));
+      log(_T('Nettoyage ') + where + ' : ' + parts.join(', '), 'ok');
       if (app.tabs.music && S.tab === 'music' && app.tabs.music.redraw) app.tabs.music.redraw();
-      return { kind: 'ok', title: r.removed || r.markers ? 'Séquence nettoyée' : 'Rien à effacer', detail: parts.join(' · ') };
+      return { kind: 'ok', title: r.removed || r.markers ? _T('Séquence nettoyée') : _T('Rien à effacer'), detail: parts.join(' · ') };
     });
   }
 
@@ -1362,7 +1363,7 @@
     // Préréglages rangés par usage, puis tes rampes enregistrées ou importées.
     const presets = Object.keys(Core.RAMP_PRESETS).map(k => ({ key: k, label: Core.RAMP_PRESETS[k].label, data: Core.RAMP_PRESETS[k], group: Core.RAMP_PRESETS[k].placement }))
       .concat(S.lib.items.filter(i => i.type === 'ramp').map(i => ({ key: 'u:' + i.id, label: '★ ' + i.name, data: i.data, group: 'mine' })));
-    const GROUPS = [['pre', 'Avant la coupe'], ['post', 'Après la coupe'], ['playhead', 'Sur le temps fort'], ['full', 'Plan entier'], ['mine', 'Mes rampes']];
+    const GROUPS = [['pre', _T('Avant la coupe')], ['post', _T('Après la coupe')], ['playhead', _T('Sur le temps fort')], ['full', _T('Plan entier')], ['mine', _T('Mes rampes')]];
     const chips = h('div', { class: 'ramp-groups' });
     GROUPS.forEach(([g, title]) => {
       const list = presets.filter(pr => pr.group === g);
@@ -1383,22 +1384,22 @@
       });
       chips.appendChild(row_);
     });
-    const impRamp = h('button', { class: 'action', title: 'Rampes reçues (.json, code de partage dans Mes effets)' }, 'Importer des rampes…');
+    const impRamp = h('button', { class: 'action', title: _T('Rampes reçues (.json, code de partage dans Mes effets)') }, _T('Importer des rampes…'));
     impRamp.addEventListener('click', () => importItems().then(() => renderRampView()));
     chips.appendChild(h('div', { class: 'row-buttons' }, impRamp));
-    const saveBtn = h('button', { class: 'action quiet' }, '＋ Enregistrer');
+    const saveBtn = h('button', { class: 'action quiet' }, _T('＋ Enregistrer'));
     saveBtn.addEventListener('click', saveRamp);
-    view.appendChild(section('Préréglages', chips, saveBtn));
+    view.appendChild(section(_T('Préréglages'), chips, saveBtn));
 
     const cv = h('canvas', { class: 'ramp-canvas' });
     const info = h('div', { class: 'ramp-info' });
     const refreshInfo = () => {
       const I = rampInfo();
       info.innerHTML = '';
-      info.appendChild(h('span', null, 'Vitesse ', h('b', null, Math.round(I.min) + '–' + Math.round(I.max) + ' %')));
-      info.appendChild(h('span', null, 'Média utilisé ', h('b', null, (Math.round(I.src * 10) / 10) + ' i'), ' pour ' + R.frames + ' i'));
+      info.appendChild(h('span', null, _T('Vitesse '), h('b', null, Math.round(I.min) + '–' + Math.round(I.max) + ' %')));
+      info.appendChild(h('span', null, _T('Média utilisé '), h('b', null, (Math.round(I.src * 10) / 10) + _T(' i')), _T(' pour ') + R.frames + _T(' i')));
     };
-    view.appendChild(section('Courbe de vitesse', [cv, info, h('div', { class: 'note' }, 'Glisse les points · double-clic pour ajouter ou supprimer · Alt+clic supprime.')]));
+    view.appendChild(section(_T('Courbe de vitesse'), [cv, info, h('div', { class: 'note' }, _T('Glisse les points · double-clic pour ajouter ou supprimer · Alt+clic supprime.'))]));
     const changed = fin => {
       refreshInfo();
       if (S.rampEd) S.rampEd.draw();
@@ -1416,20 +1417,20 @@
     });
     refreshInfo();
 
-    view.appendChild(section('Réglages', [
+    view.appendChild(section(_T('Réglages'), [
       row('Position', picker(RAMP_PLACEMENTS, R.placement, v => { R.placement = v; persist(); if (S.rampPlayer) S.rampPlayer.redraw(); })),
-      row('Durée', hotText({ value: R.frames, min: 2, max: 600, step: 1, unit: 'i', onChange: (v, fin) => { R.frames = v; changed(fin); } })),
-      row('Sur le tempo', actionGroup([0.5, 1, 2, 4].map(n => ({ v: n, label: n === 0.5 ? '½ temps' : n + ' temps' })), null, n => tempoRamp(n)), { title: 'Durée de la rampe = un nombre de temps de la musique de la séquence' }),
-      row('Morceaux', hotText({ value: R.segments, min: 2, max: 32, step: 1, unit: '', onChange: (v, fin) => { R.segments = v; changed(fin); } }), { title: 'Plus de morceaux = rampe plus douce, mais plus de coupes dans la timeline' }),
-      row('Ancre', picker([
-        { v: 'auto', label: 'Auto (coupe fixe)' },
-        { v: 'end', label: 'Garder l\'image de fin' },
-        { v: 'start', label: 'Garder l\'image de début' }
-      ], R.anchor, v => { R.anchor = v; persist(); }), { title: 'Quelle image reste à sa place. La durée dans la timeline ne change jamais.' }),
+      row(_T('Durée'), hotText({ value: R.frames, min: 2, max: 600, step: 1, unit: 'i', onChange: (v, fin) => { R.frames = v; changed(fin); } })),
+      row(_T('Sur le tempo'), actionGroup([0.5, 1, 2, 4].map(n => ({ v: n, label: n === 0.5 ? _T('½ temps') : n + _T(' temps') })), null, n => tempoRamp(n)), { title: _T('Durée de la rampe = un nombre de temps de la musique de la séquence') }),
+      row(_T('Morceaux'), hotText({ value: R.segments, min: 2, max: 32, step: 1, unit: '', onChange: (v, fin) => { R.segments = v; changed(fin); } }), { title: _T('Plus de morceaux = rampe plus douce, mais plus de coupes dans la timeline') }),
+      row(_T('Ancre'), picker([
+        { v: 'auto', label: _T('Auto (coupe fixe)') },
+        { v: 'end', label: _T('Garder l\'image de fin') },
+        { v: 'start', label: _T('Garder l\'image de début') }
+      ], R.anchor, v => { R.anchor = v; persist(); }), { title: _T('Quelle image reste à sa place. La durée dans la timeline ne change jamais.') }),
       row('Interpolation', picker([
-        { v: 'keep', label: 'Ne pas changer' },
-        { v: 'blend', label: 'Fusion d\'images' },
-        { v: 'flow', label: 'Flux optique' }
+        { v: 'keep', label: _T('Ne pas changer') },
+        { v: 'blend', label: _T('Fusion d\'images') },
+        { v: 'flow', label: _T('Flux optique') }
       ], R.interp, v => { R.interp = v; persist(); }))
     ]));
 
@@ -1439,60 +1440,60 @@
     S.rampPlayer = Player({ length: () => frames.length, fps: () => fps(), draw: n => { const f = frames[n]; if (f) Pv.drawRampScene(pg, f.tau, f.speed); } });
     const redraw = S.rampPlayer.redraw;
     S.rampPlayer.redraw = () => { frames = rampPreviewFrames(); redraw(); };
-    view.appendChild(section('Aperçu', h('div', { class: 'pv-frame' }, pcv, h('span', { class: 'pv-label' }, 'Aperçu simulé'))));
-    view.appendChild(h('div', { class: 'note' }, 'La rampe est posée sur une copie du passage, juste au-dessus du clip, en morceaux de vitesse constante (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip d\'origine, son son et la coupe ne bougent pas ; ↶ Annuler retire la copie.'));
+    view.appendChild(section(_T('Aperçu'), h('div', { class: 'pv-frame' }, pcv, h('span', { class: 'pv-label' }, _T('Aperçu simulé')))));
+    view.appendChild(h('div', { class: 'note' }, _T('La rampe est posée sur une copie du passage, juste au-dessus du clip, en morceaux de vitesse constante (Premiere ne laisse pas les scripts piloter le remappage temporel). Le clip d\'origine, son son et la coupe ne bougent pas ; ↶ Annuler retire la copie.')));
     requestAnimationFrame(() => S.rampEd && S.rampEd.draw());
   }
 
   // Durée de la rampe calée sur le tempo de la musique (onglet Musique).
   function tempoRamp(beats) {
     return runTask('Tempo', async () => {
-      if (!app.services.tempo) return { kind: 'error', title: 'Musique indisponible', detail: '' };
-      status.phase('Tempo de la musique');
+      if (!app.services.tempo) return { kind: 'error', title: _T('Musique indisponible'), detail: '' };
+      status.phase(_T('Tempo de la musique'));
       const bpm = await app.services.tempo();
-      if (!bpm) return { kind: 'warn', title: 'Tempo introuvable', detail: 'La musique n\'a pas de pulsation régulière assez nette.' };
+      if (!bpm) return { kind: 'warn', title: _T('Tempo introuvable'), detail: _T('La musique n\'a pas de pulsation régulière assez nette.') };
       const R = ramp();
       R.frames = Math.max(2, Math.round(beats * 60 / bpm * fps()));
       persist();
       renderRampView();
-      return { kind: 'ok', title: 'Rampe de ' + R.frames + ' images', detail: (beats === 0.5 ? '½ temps' : plural(beats, 'temps', 'temps')) + ' à ~' + String(bpm).replace('.', ',') + ' BPM.' };
+      return { kind: 'ok', title: _T('Rampe de ') + R.frames + _T(' images'), detail: (beats === 0.5 ? _T('½ temps') : plural(beats, _T('temps'), _T('temps'))) + _T(' à ~') + String(bpm).replace('.', ',') + ' BPM.' };
     });
   }
 
   async function saveRamp() {
     const R = ramp();
-    const name = await promptName('Enregistrer la rampe', 'Ma rampe');
+    const name = await promptName(_T('Enregistrer la rampe'), _T('Ma rampe'));
     if (!name) return;
     const item = { id: uid(), type: 'ramp', name, created: Date.now(), data: { points: clone(R.points), frames: R.frames, segments: R.segments, placement: R.placement } };
     S.lib.items.push(item);
     R.preset = 'u:' + item.id;
     persist();
     renderRampView();
-    status.finish('ok', 'Rampe enregistrée : ' + name, 'Elle apparaît dans les préréglages.');
+    status.finish('ok', _T('Rampe enregistrée : ') + name, _T('Elle apparaît dans les préréglages.'));
   }
 
   async function applyRamp() {
     const R = ramp();
     if (S.busy) return;
-    if (!(await confirmDialog('Appliquer la rampe ?', 'Une copie du passage, découpée en ' + R.segments + ' morceaux à vitesses différentes, va être posée juste au-dessus du clip. Le clip d\'origine, son son et la coupe ne bougent pas. Le bouton ↶ Annuler la retire.', 'Appliquer', 'confirmRamp'))) return;
+    if (!(await confirmDialog(_T('Appliquer la rampe ?'), _T('Une copie du passage, découpée en ') + R.segments + _T(' morceaux à vitesses différentes, va être posée juste au-dessus du clip. Le clip d\'origine, son son et la coupe ne bougent pas. Le bouton ↶ Annuler la retire.'), _T('Appliquer'), 'confirmRamp'))) return;
     await runTask('Speed ramp', async () => {
-      status.phase('Analyse du clip');
+      status.phase(_T('Analyse du clip'));
       const r = await Host.call('rampResolve', { placement: R.placement, frames: R.frames });
-      if (!r.ok) return { kind: 'error', title: 'Rampe non appliquée', detail: r.error };
-      status.phase('Pose de la copie et des vitesses');
+      if (!r.ok) return { kind: 'error', title: _T('Rampe non appliquée'), detail: r.error };
+      status.phase(_T('Pose de la copie et des vitesses'));
       const pieces = Core.rampPieces(R.points, r.frames, R.segments);
       const anchor = R.anchor === 'auto' ? r.anchor : R.anchor;
       const res = await Host.call('rampApply', { track: r.track, clipStart: r.clipStart, clipName: r.clipName, regionStart: r.regionStart, pieces, anchor, interp: R.interp, copyLook: settings().copyLook });
-      if (res.created && res.created.length) pushHistory({ date: Date.now(), label: 'Rampe · ' + r.clipName, entries: res.created });
+      if (res.created && res.created.length) pushHistory({ date: Date.now(), label: _T('Rampe · ') + r.clipName, entries: res.created });
       if (!res.ok) {
         (res.warnings || []).forEach(w => log(w, 'warn'));
-        return { kind: 'error', title: 'Rampe non appliquée', detail: res.error };
+        return { kind: 'error', title: _T('Rampe non appliquée'), detail: res.error };
       }
       (res.warnings || []).forEach(w => log(w, 'warn'));
-      log('Rampe sur ' + r.clipName + ' : ' + res.pieces + ' morceaux, ' + (Math.round(res.sourceFrames * 10) / 10) + ' i de média', 'ok');
+      log(_T('Rampe sur ') + r.clipName + ' : ' + res.pieces + _T(' morceaux, ') + (Math.round(res.sourceFrames * 10) / 10) + _T(' i de média'), 'ok');
       const bad = (res.warnings || []).some(w => /vérifier/.test(w));
       const notes = (res.warnings || []).length;
-      return { kind: bad ? 'warn' : 'ok', title: 'Rampe appliquée · ' + res.pieces + ' morceaux', detail: 'Copie de ' + r.clipName + ' sur V' + (res.track + 1) + (bad ? ' · certains morceaux sont à vérifier (journal)' : notes ? ' · ' + plural(notes, 'remarque') + ' dans le journal' : '') };
+      return { kind: bad ? 'warn' : 'ok', title: _T('Rampe appliquée · ') + res.pieces + _T(' morceaux'), detail: _T('Copie de ') + r.clipName + _T(' sur V') + (res.track + 1) + (bad ? _T(' · certains morceaux sont à vérifier (journal)') : notes ? ' · ' + plural(notes, _T('remarque')) + _T(' dans le journal') : '') };
     });
   }
 
@@ -1503,35 +1504,35 @@
   function renderMineView() {
     const view = $('view-mine');
     view.innerHTML = '';
-    view.appendChild(h('div', { class: 'mine-switch' }, actionGroup([{ v: 'mine', label: 'Ma bibliothèque' }, { v: 'community', label: '🌐 Communauté' }], S.mineView, v => { S.mineView = v; renderMineView(); renderCTA(); })));
+    view.appendChild(h('div', { class: 'mine-switch' }, actionGroup([{ v: 'mine', label: _T('Ma bibliothèque') }, { v: 'community', label: _T('🌐 Communauté') }], S.mineView, v => { S.mineView = v; renderMineView(); renderCTA(); })));
     if (S.mineView === 'community') { renderCommunity(view); return; }
-    const nameIn = h('input', { class: 'textfield', placeholder: 'Nom (par défaut : nom du clip)', value: captureOpts.name });
+    const nameIn = h('input', { class: 'textfield', placeholder: _T('Nom (par défaut : nom du clip)'), value: captureOpts.name });
     nameIn.addEventListener('input', () => { captureOpts.name = nameIn.value; });
-    view.appendChild(section('Capturer un effet', [
-      h('div', { class: 'note' }, 'Monte ton effet dans Premiere (sur un clip ou un calque de réglage, avec ses images clés, effets tiers compris), sélectionne-le dans la timeline puis clique sur « Capturer la sélection » en haut. Effets, valeurs et animations sont enregistrés et réutilisables comme les effets intégrés.'),
-      row('Nom', nameIn),
-      row('Catégorie', picker([{ v: 'mine', label: 'Mes effets' }].concat(Lib.CATEGORIES.map(c => ({ v: c.id, label: c.label }))), captureOpts.cat, v => { captureOpts.cat = v; })),
-      h('div', { class: 'field' }, checkbox('Inclure Trajectoire et Opacité', captureOpts.intrinsic, v => { captureOpts.intrinsic = v; }))
+    view.appendChild(section(_T('Capturer un effet'), [
+      h('div', { class: 'note' }, _T('Monte ton effet dans Premiere (sur un clip ou un calque de réglage, avec ses images clés, effets tiers compris), sélectionne-le dans la timeline puis clique sur « Capturer la sélection » en haut. Effets, valeurs et animations sont enregistrés et réutilisables comme les effets intégrés.')),
+      row(_T('Nom'), nameIn),
+      row(_T('Catégorie'), picker([{ v: 'mine', label: _T('Mes effets') }].concat(Lib.CATEGORIES.map(c => ({ v: c.id, label: c.label }))), captureOpts.cat, v => { captureOpts.cat = v; })),
+      h('div', { class: 'field' }, checkbox(_T('Inclure Trajectoire et Opacité'), captureOpts.intrinsic, v => { captureOpts.intrinsic = v; }))
     ]));
 
-    const imp = h('button', { class: 'action go', title: 'Presets (.json), packs (.rrfxpack), LUTs (.cube), couleurs (.ase), modèles de texte (.mogrt)…' }, 'Importer…');
+    const imp = h('button', { class: 'action go', title: _T('Presets (.json), packs (.rrfxpack), LUTs (.cube), couleurs (.ase), modèles de texte (.mogrt)…') }, _T('Importer…'));
     imp.addEventListener('click', importItems);
-    const exp = h('button', { class: 'action' }, 'Tout exporter…');
+    const exp = h('button', { class: 'action' }, _T('Tout exporter…'));
     exp.addEventListener('click', () => exportItems(S.lib.items, 'RRFX-bibliotheque.json'));
-    const shareAll = h('button', { class: 'action' }, 'Tout partager');
-    shareAll.addEventListener('click', () => shareItems(S.lib.items, 'Ma bibliothèque'));
-    const paste = h('button', { class: 'action' }, 'Coller un code…');
+    const shareAll = h('button', { class: 'action' }, _T('Tout partager'));
+    shareAll.addEventListener('click', () => shareItems(S.lib.items, _T('Ma bibliothèque')));
+    const paste = h('button', { class: 'action' }, _T('Coller un code…'));
     paste.addEventListener('click', pasteCode);
-    view.appendChild(section('Ma bibliothèque', [h('div', { id: 'mine-filter' }), h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, '« Importer… » reconnaît tout seul ce que tu lui donnes : presets et exports RR FX (.json), packs (.rrfxpack), LUTs (.cube, .3dl…), nuanciers (.ase), modèles de texte (.mogrt). « Tout partager » donne un code à envoyer en message. Bibliothèque enregistrée dans : ' + Store.location)]));
+    view.appendChild(section(_T('Ma bibliothèque'), [h('div', { id: 'mine-filter' }), h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, _T('« Importer… » reconnaît tout seul ce que tu lui donnes : presets et exports RR FX (.json), packs (.rrfxpack), LUTs (.cube, .3dl…), nuanciers (.ase), modèles de texte (.mogrt). « Tout partager » donne un code à envoyer en message. Bibliothèque enregistrée dans : ') + Store.location)]));
     if (app.stylePacks) view.appendChild(app.stylePacks.section());
     renderMineList();
   }
 
   function capture() {
     return runTask('Capture', async () => {
-      status.phase('Lecture des effets du clip sélectionné');
+      status.phase(_T('Lecture des effets du clip sélectionné'));
       const r = await Host.call('capture', { includeIntrinsic: captureOpts.intrinsic });
-      if (!r.ok) return { kind: 'error', title: 'Capture impossible', detail: r.error };
+      if (!r.ok) return { kind: 'error', title: _T('Capture impossible'), detail: r.error };
       const data = Object.assign({}, r);
       delete data.ok;
       const item = { id: uid(), type: 'captured', name: captureOpts.name.trim() || r.name, cat: captureOpts.cat, created: Date.now(), data };
@@ -1540,8 +1541,8 @@
       captureOpts.name = '';
       if (S.tab === 'mine') renderMineView();
       const n = r.components.length;
-      log('Capturé : ' + item.name + ' · ' + plural(n, 'effet') + (r.frames ? ' · ' + r.frames + ' images animées' : '') + (r.skipped ? ' · ' + r.skipped + ' paramètre(s) illisible(s) ignoré(s)' : ''), r.skipped ? 'warn' : 'ok');
-      return { kind: 'ok', title: 'Capturé : ' + item.name, detail: plural(n, 'effet') + (r.frames ? ' · ' + plural(r.frames, 'image animée', 'images animées') : ' · sans animation') + ' · catégorie « ' + catLabel(item.cat) + ' »' };
+      log(_T('Capturé : ') + item.name + ' · ' + plural(n, _T('effet')) + (r.frames ? ' · ' + r.frames + _T(' images animées') : '') + (r.skipped ? ' · ' + r.skipped + _T(' paramètre(s) illisible(s) ignoré(s)') : ''), r.skipped ? 'warn' : 'ok');
+      return { kind: 'ok', title: _T('Capturé : ') + item.name, detail: plural(n, _T('effet')) + (r.frames ? ' · ' + plural(r.frames, _T('image animée'), _T('images animées')) : _T(' · sans animation')) + _T(' · catégorie « ') + catLabel(item.cat) + _T(' »') };
     });
   }
 
@@ -1551,8 +1552,8 @@
      icon, label ; valid(data) : contenu acceptable ; meta(item) : détail ; open(item). */
   const ITEM_TYPES = {
     preset: { icon: '≡', label: 'Preset', valid: d => !!Lib.byId[d.base], meta: it => (Lib.byId[it.data.base] || {}).name || '?' },
-    captured: { icon: '◎', label: 'Capturé', valid: d => Array.isArray(d.components), meta: it => plural((it.data.components || []).length, 'effet') + ' · ' + (it.data.frames || 0) + ' i' },
-    ramp: { icon: '⤳', label: 'Rampe', valid: d => Array.isArray(d.points), meta: it => it.data.frames + ' i' },
+    captured: { icon: '◎', label: _T('Capturé'), valid: d => Array.isArray(d.components), meta: it => plural((it.data.components || []).length, _T('effet')) + ' · ' + (it.data.frames || 0) + _T(' i') },
+    ramp: { icon: '⤳', label: _T('Rampe'), valid: d => Array.isArray(d.points), meta: it => it.data.frames + _T(' i') },
     look: { icon: '◐', label: 'Look', valid: d => !!d.params && typeof d.params === 'object', open: it => app.services.openLook && app.services.openLook(it) }
   };
 
@@ -1569,15 +1570,15 @@
     if (mineFilter.type !== 'all' && !counts[mineFilter.type]) mineFilter.type = 'all';
     let input = box.querySelector('input');
     if (!input) {
-      input = h('input', { class: 'textfield', placeholder: 'Rechercher dans ' + plural(items.length, 'élément'), value: mineFilter.q, 'aria-label': 'Rechercher dans la bibliothèque' });
+      input = h('input', { class: 'textfield', placeholder: _T('Rechercher dans ') + plural(items.length, _T('élément')), value: mineFilter.q, 'aria-label': _T('Rechercher dans la bibliothèque') });
       input.addEventListener('input', () => { mineFilter.q = input.value; renderMineItems(); });
       box.appendChild(h('div', { class: 'search-row' }, input));
       box.appendChild(h('div', { class: 'chips mine-chips' }));
     }
-    input.placeholder = 'Rechercher dans ' + plural(items.length, 'élément');
+    input.placeholder = _T('Rechercher dans ') + plural(items.length, _T('élément'));
     const chips = box.querySelector('.mine-chips');
     chips.innerHTML = '';
-    [['all', 'Tout', items.length]].concat(types.map(t => [t, (ITEM_TYPES[t] || { label: t }).label, counts[t]])).forEach(([v, label, n]) => {
+    [['all', _T('Tout'), items.length]].concat(types.map(t => [t, (ITEM_TYPES[t] || { label: t }).label, counts[t]])).forEach(([v, label, n]) => {
       const b = h('button', { class: 'action' + (mineFilter.type === v ? ' selected' : '') }, label + ' ', h('span', { class: 'count' }, String(n)));
       b.addEventListener('click', () => { mineFilter.type = v; renderMineList(); });
       chips.appendChild(b);
@@ -1594,12 +1595,12 @@
     if (!list) return;
     list.innerHTML = '';
     if (!S.lib.items.length) {
-      list.appendChild(h('div', { class: 'note' }, 'Rien pour l\'instant : enregistre un preset (« ＋ Preset » sur un effet), une rampe, un look, un style de texte… ou capture un clip. « Importer… » ajoute ce qu\'on t\'a envoyé.'));
+      list.appendChild(h('div', { class: 'note' }, _T('Rien pour l\'instant : enregistre un preset (« ＋ Preset » sur un effet), une rampe, un look, un style de texte… ou capture un clip. « Importer… » ajoute ce qu\'on t\'a envoyé.')));
       return;
     }
     const q = mineFilter.q.trim().toLowerCase();
     const shown = S.lib.items.filter(i => (mineFilter.type === 'all' || i.type === mineFilter.type) && (!q || i.name.toLowerCase().includes(q)));
-    if (!shown.length) { list.appendChild(h('div', { class: 'note' }, 'Rien ne correspond.')); return; }
+    if (!shown.length) { list.appendChild(h('div', { class: 'note' }, _T('Rien ne correspond.'))); return; }
     shown.sort((a, b) => b.created - a.created).forEach(item => {
       const T = ITEM_TYPES[item.type] || { icon: '•', label: item.type }, ic = T.icon;
       let meta = T.label;
@@ -1609,20 +1610,20 @@
         h('span', { class: 'li-icon' }, ic),
         h('div', { class: 'li-text' }, h('div', { class: 'li-name' }, item.name), h('div', { class: 'li-meta' }, meta)),
         h('div', { class: 'li-actions' },
-          btn('Ouvrir', 'Ouvrir (ou double-clic)', () => openItem(item), 'li-main'),
-          btn('✎', 'Renommer', async () => { const n = await promptName('Renommer', item.name); if (n) { item.name = n; persist(); renderMineList(); } }),
-          btn('⤓', 'Exporter', () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.rrfx.json')),
-          btn('⇪', 'Partager (code à copier-coller)', () => shareItems([item], item.name)),
-          btn('🌐', 'Publier dans la bibliothèque en ligne', () => publishItems([item], item.name)),
-          btn('✕', 'Supprimer', () => deleteItem(item), 'danger')));
+          btn(_T('Ouvrir'), _T('Ouvrir (ou double-clic)'), () => openItem(item), 'li-main'),
+          btn('✎', _T('Renommer'), async () => { const n = await promptName(_T('Renommer'), item.name); if (n) { item.name = n; persist(); renderMineList(); } }),
+          btn('⤓', _T('Exporter'), () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.rrfx.json')),
+          btn('⇪', _T('Partager (code à copier-coller)'), () => shareItems([item], item.name)),
+          btn('🌐', _T('Publier dans la bibliothèque en ligne'), () => publishItems([item], item.name)),
+          btn('✕', _T('Supprimer'), () => deleteItem(item), 'danger')));
       li.addEventListener('dblclick', () => openItem(item));
       list.appendChild(li);
     });
   }
 
   async function deleteItem(item) {
-    const yes = await modal('Supprimer « ' + item.name + ' » ?', h('p', null, 'C\'est définitif. Exporte-le d\'abord pour le garder.'), [
-      { label: 'Garder', value: false }, { label: 'Supprimer', primary: true, value: true }]);
+    const yes = await modal(_T('Supprimer « ') + item.name + _T(' » ?'), h('p', null, _T('C\'est définitif. Exporte-le d\'abord pour le garder.')), [
+      { label: _T('Garder'), value: false }, { label: _T('Supprimer'), primary: true, value: true }]);
     if (!yes) return;
     S.lib.items = S.lib.items.filter(i => i !== item);
     S.lib.favorites = S.lib.favorites.filter(k => k !== 'u:' + item.id);
@@ -1656,12 +1657,12 @@
   }
 
   function exportItems(items, name) {
-    if (!items.length) { status.finish('warn', 'Rien à exporter', 'La bibliothèque est vide.'); return; }
+    if (!items.length) { status.finish('warn', _T('Rien à exporter'), _T('La bibliothèque est vide.')); return; }
     try {
       const out = Store.exportJSON({ rrfx: 1, exported: new Date().toISOString(), items }, name);
-      if (out) { status.finish('ok', plural(items.length, 'élément exporté', 'éléments exportés'), out); log('Exporté : ' + out, 'ok'); }
+      if (out) { status.finish('ok', plural(items.length, _T('élément exporté'), _T('éléments exportés')), out); log(_T('Exporté : ') + out, 'ok'); }
     } catch (e) {
-      status.finish('error', 'Export impossible', errorMessage(e));
+      status.finish('error', _T('Export impossible'), errorMessage(e));
     }
   }
 
@@ -1697,16 +1698,16 @@
   /* Importeurs par type de fichier : chaque module ajoute les siens ({ exts, label, run(files) }
      → { n, what }, ou { handled } quand l'importeur a déjà affiché son propre résultat). « Importer… » de Mes effets reconnaît tout seul ce qu'on lui donne. */
   const importers = [{
-    exts: ['json'], label: 'presets RR FX (.json)',
+    exts: ['json'], label: _T('presets RR FX (.json)'),
     run: files => {
       const items = [].concat(...files.map(f => { const j = JSON.parse(new TextDecoder().decode(f.bytes)); return Array.isArray(j.items) ? j.items : Array.isArray(j) ? j : [j]; }));
-      return { n: addItems(items), what: 'dans Mes effets' };
+      return { n: addItems(items), what: _T('dans Mes effets') };
     }
   }];
 
   async function importItems() {
     const exts = Array.from(new Set([].concat(...importers.map(i => i.exts))));
-    const files = await pickFiles('Importer des presets, packs, LUTs, couleurs ou modèles', exts);
+    const files = await pickFiles(_T('Importer des presets, packs, LUTs, couleurs ou modèles'), exts);
     if (!files.length) return;
     const done = [], bad = [];
     let handled = false;
@@ -1715,15 +1716,15 @@
       if (!mine.length) continue;
       try {
         const r = await imp.run(mine);
-        if (r && r.n) done.push(plural(r.n, 'élément') + ' ' + (r.what || ''));
+        if (r && r.n) done.push(plural(r.n, _T('élément')) + ' ' + (r.what || ''));
         if (r && r.handled) handled = true;
       } catch (e) { bad.push(mine.map(f => f.name).join(', ') + ' : ' + errorMessage(e)); }
     }
-    files.filter(f => !importers.some(i => i.exts.indexOf(f.ext) >= 0)).forEach(f => bad.push(f.name + ' : type non reconnu'));
+    files.filter(f => !importers.some(i => i.exts.indexOf(f.ext) >= 0)).forEach(f => bad.push(f.name + _T(' : type non reconnu')));
     bad.forEach(b => log(b, 'warn'));
     renderMineList();
-    if (done.length) status.finish(bad.length ? 'warn' : 'ok', 'Importé', done.join(' · ') + (bad.length ? ' · ' + plural(bad.length, 'fichier') + ' ignoré(s) (journal)' : ''));
-    else if (!handled) status.finish('warn', 'Rien d\'importé', bad[0] || 'Aucun élément valide dans ces fichiers.');
+    if (done.length) status.finish(bad.length ? 'warn' : 'ok', _T('Importé'), done.join(' · ') + (bad.length ? ' · ' + plural(bad.length, _T('fichier')) + _T(' ignoré(s) (journal)') : ''));
+    else if (!handled) status.finish('warn', _T('Rien d\'importé'), bad[0] || _T('Aucun élément valide dans ces fichiers.'));
   }
 
   function copyText(text, field) {
@@ -1735,28 +1736,28 @@
   }
 
   function shareItems(items, label) {
-    if (!items.length) { status.finish('warn', 'Rien à partager', 'La bibliothèque est vide.'); return; }
+    if (!items.length) { status.finish('warn', _T('Rien à partager'), _T('La bibliothèque est vide.')); return; }
     const code = Share.encode(items, Store.zip);
     const field = h('textarea', { class: 'code share-code', readonly: true, rows: 4, spellcheck: 'false' }, code);
-    const msg = h('div', { class: 'note' }, plural(items.length, 'élément', 'éléments') + ' · ' + code.length + ' caractères. Envoie ce code : il se colle dans RR FX > Mes effets > « Coller un code… ».');
-    const copy = h('button', { class: 'action' }, 'Copier');
-    copy.addEventListener('click', () => copyText(code, field).then(ok => { copy.textContent = ok ? 'Copié ✓' : 'Sélectionne et copie (Ctrl/Cmd+C)'; field.select(); }));
-    modal('Partager · ' + label, h('div', null, field, msg, h('div', { class: 'row-buttons' }, copy)), [{ label: 'Fermer', primary: true, value: true }]);
+    const msg = h('div', { class: 'note' }, plural(items.length, _T('élément'), _T('éléments')) + ' · ' + code.length + _T(' caractères. Envoie ce code : il se colle dans RR FX > Mes effets > « Coller un code… ».'));
+    const copy = h('button', { class: 'action' }, _T('Copier'));
+    copy.addEventListener('click', () => copyText(code, field).then(ok => { copy.textContent = ok ? _T('Copié ✓') : _T('Sélectionne et copie (Ctrl/Cmd+C)'); field.select(); }));
+    modal(_T('Partager · ') + label, h('div', null, field, msg, h('div', { class: 'row-buttons' }, copy)), [{ label: _T('Fermer'), primary: true, value: true }]);
     setTimeout(() => { field.focus(); field.select(); }, 0);
-    log('Code de partage créé : ' + label + ' (' + plural(items.length, 'élément', 'éléments') + ')', 'info');
+    log(_T('Code de partage créé : ') + label + ' (' + plural(items.length, _T('élément'), _T('éléments')) + ')', 'info');
   }
 
   async function pasteCode() {
     const field = h('textarea', { class: 'code share-code', rows: 4, spellcheck: 'false', placeholder: 'RRFX1:…' });
     setTimeout(() => field.focus(), 0);
-    const code = await modal('Coller un code RR FX', h('div', null, field, h('div', { class: 'note' }, 'Colle ici un code reçu (il commence par « RRFX1: »).')), [
-      { label: 'Annuler', value: null }, { label: 'Ajouter', primary: true, value: () => field.value }]);
+    const code = await modal(_T('Coller un code RR FX'), h('div', null, field, h('div', { class: 'note' }, _T('Colle ici un code reçu (il commence par « RRFX1: »).'))), [
+      { label: _T('Annuler'), value: null }, { label: _T('Ajouter'), primary: true, value: () => field.value }]);
     if (!code) return;
     let items;
-    try { items = Share.decode(code, Store.zip); } catch (e) { status.finish('error', 'Code invalide', errorMessage(e)); return; }
+    try { items = Share.decode(code, Store.zip); } catch (e) { status.finish('error', _T('Code invalide'), errorMessage(e)); return; }
     const n = addItems(items);
-    if (n) status.finish('ok', plural(n, 'élément ajouté', 'éléments ajoutés'), items.map(i => i.name).slice(0, 4).join(', ') + (items.length > 4 ? '…' : ''));
-    else status.finish('warn', 'Rien d\'ajouté', 'Ce code ne contient pas d\'effet compatible avec cette version.');
+    if (n) status.finish('ok', plural(n, _T('élément ajouté'), _T('éléments ajoutés')), items.map(i => i.name).slice(0, 4).join(', ') + (items.length > 4 ? '…' : ''));
+    else status.finish('warn', _T('Rien d\'ajouté'), _T('Ce code ne contient pas d\'effet compatible avec cette version.'));
   }
 
   // ---------------------------------------------------------------- bibliothèque en ligne
@@ -1776,7 +1777,7 @@
       C.list = r.list;
       C.error = r.error || '';
       C.at = Date.now();
-      if (r.error) log('Bibliothèque en ligne : ' + r.error, 'warn');
+      if (r.error) log(_T('Bibliothèque en ligne : ') + r.error, 'warn');
     } finally {
       C.loading = false;
       renderCommunityList();
@@ -1785,19 +1786,19 @@
 
   function renderCommunity(view) {
     const C = S.comm;
-    const search = h('input', { class: 'textfield', placeholder: 'Rechercher (nom, auteur, style…)', value: C.search, spellcheck: 'false' });
+    const search = h('input', { class: 'textfield', placeholder: _T('Rechercher (nom, auteur, style…)'), value: C.search, spellcheck: 'false' });
     search.addEventListener('input', () => { C.search = search.value; renderCommunityList(); });
-    const refresh = h('button', { class: 'action quiet', title: 'Relire la bibliothèque sur GitHub' }, '↻');
+    const refresh = h('button', { class: 'action quiet', title: _T('Relire la bibliothèque sur GitHub') }, '↻');
     refresh.addEventListener('click', () => loadCommunity(true));
-    view.appendChild(section('Bibliothèque en ligne', [
-      h('div', { class: 'note' }, 'Les effets publiés par les utilisateurs de RR FX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.'),
+    view.appendChild(section(_T('Bibliothèque en ligne'), [
+      h('div', { class: 'note' }, _T('Les effets publiés par les utilisateurs de RR FX. « Ajouter » les range dans ta bibliothèque, comme les tiens. Pour aimer un effet : ❤ ouvre sa page, ajoute la réaction 👍.')),
       h('div', { class: 'search' }, search, refresh),
-      row('Trier', actionGroup([{ v: 'popular', label: 'Les plus aimés' }, { v: 'recent', label: 'Les plus récents' }], C.sort, v => { C.sort = v; renderCommunityList(); })),
-      row('Type', picker([{ v: 'all', label: 'Tout' }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: 'Effets capturés' }, { v: 'ramp', label: 'Rampes' }, { v: 'look', label: 'Looks (couleur)' }, { v: 'textStyle', label: 'Styles de texte' }, { v: 'titleAnim', label: 'Animations de texte' }, { v: 'gradient', label: 'Dégradés' }, { v: 'palette', label: 'Palettes' }, { v: 'xpStyle', label: 'Styles Express' }, { v: 'projectTemplate', label: 'Modèles de projet' }], C.type, v => { C.type = v; renderCommunityList(); })),
+      row(_T('Trier'), actionGroup([{ v: 'popular', label: _T('Les plus aimés') }, { v: 'recent', label: _T('Les plus récents') }], C.sort, v => { C.sort = v; renderCommunityList(); })),
+      row('Type', picker([{ v: 'all', label: _T('Tout') }, { v: 'preset', label: 'Presets' }, { v: 'captured', label: _T('Effets capturés') }, { v: 'ramp', label: _T('Rampes') }, { v: 'look', label: _T('Looks (couleur)') }, { v: 'textStyle', label: _T('Styles de texte') }, { v: 'titleAnim', label: _T('Animations de texte') }, { v: 'gradient', label: _T('Dégradés') }, { v: 'palette', label: 'Palettes' }, { v: 'xpStyle', label: _T('Styles Express') }, { v: 'projectTemplate', label: _T('Modèles de projet') }], C.type, v => { C.type = v; renderCommunityList(); })),
       h('div', { id: 'comm-list' })
     ]));
-    view.appendChild(section('Publier', [
-      h('div', { class: 'note' }, 'Le bouton du haut (ou 🌐 sur un effet de ta bibliothèque) ouvre le formulaire de publication dans ton navigateur, déjà rempli : il reste à cliquer sur « Submit new issue » (compte GitHub gratuit). Ton effet apparaît ensuite ici pour tout le monde.')
+    view.appendChild(section(_T('Publier'), [
+      h('div', { class: 'note' }, _T('Le bouton du haut (ou 🌐 sur un effet de ta bibliothèque) ouvre le formulaire de publication dans ton navigateur, déjà rempli : il reste à cliquer sur « Submit new issue » (compte GitHub gratuit). Ton effet apparaît ensuite ici pour tout le monde.'))
     ]));
     if (!C.list || Date.now() - C.at > Community.CACHE_MS) loadCommunity(false);
     else renderCommunityList();
@@ -1836,24 +1837,24 @@
     const box = $('comm-list'), C = S.comm;
     if (!box) return;
     box.innerHTML = '';
-    if (C.loading && !C.list) { box.appendChild(h('div', { class: 'note' }, 'Chargement de la bibliothèque…')); return; }
+    if (C.loading && !C.list) { box.appendChild(h('div', { class: 'note' }, _T('Chargement de la bibliothèque…'))); return; }
     if (C.error) box.appendChild(h('div', { class: 'note warn' }, '⚠ ' + C.error));
     const list = Community.filter(C.list || [], C);
     if (!list.length) {
-      box.appendChild(h('div', { class: 'note' }, (C.list && C.list.length) ? 'Aucun effet ne correspond.' : 'Personne n\'a encore publié d\'effet : sois le premier !'));
+      box.appendChild(h('div', { class: 'note' }, (C.list && C.list.length) ? _T('Aucun effet ne correspond.') : _T('Personne n\'a encore publié d\'effet : sois le premier !')));
       return;
     }
     list.slice(0, 120).forEach(e => {
       const mine = fromCommunity(e), date = new Date(e.created);
-      const add = h('button', { class: 'action' }, mine.length ? 'Ouvrir' : 'Ajouter');
+      const add = h('button', { class: 'action' }, mine.length ? _T('Ouvrir') : _T('Ajouter'));
       add.addEventListener('click', () => {
         if (mine.length) return openItem(mine[0]);
         const n = addItems(e.items.map(it => Object.assign({}, it, { from: { number: e.number, author: e.author } })));
-        if (n) status.finish('ok', 'Ajouté : ' + e.name, 'Par @' + e.author + (n > 1 ? ' · ' + plural(n, 'effet') : '') + ' · dans « Mes effets ».');
-        else status.finish('warn', 'Rien d\'ajouté', 'Cet effet n\'est pas compatible avec ta version de RR FX.');
+        if (n) status.finish('ok', _T('Ajouté : ') + e.name, _T('Par @') + e.author + (n > 1 ? ' · ' + plural(n, _T('effet')) : '') + _T(' · dans « Mes effets ».'));
+        else status.finish('warn', _T('Rien d\'ajouté'), _T('Cet effet n\'est pas compatible avec ta version de RR FX.'));
         renderCommunityList();
       });
-      const like = h('button', { class: 'action quiet', title: 'Ouvrir sa page pour l\'aimer (réaction 👍) ou commenter' }, '❤ ' + e.likes);
+      const like = h('button', { class: 'action quiet', title: _T('Ouvrir sa page pour l\'aimer (réaction 👍) ou commenter') }, '❤ ' + e.likes);
       like.addEventListener('click', () => Host.openURL(e.url));
       const types = e.types.map(t => Community.TYPES[t] || t).join(', ') + (e.items.length > 1 ? ' × ' + e.items.length : '');
       box.appendChild(h('div', { class: 'comm-item' },
@@ -1868,30 +1869,30 @@
 
   // Ouvre le formulaire de publication pré-rempli (le code va dans l'adresse s'il n'est pas trop long).
   async function publishItems(items, defaultName) {
-    if (!items.length) { status.finish('warn', 'Rien à publier', 'Ta bibliothèque est vide : enregistre un preset ou capture un effet.'); return; }
+    if (!items.length) { status.finish('warn', _T('Rien à publier'), _T('Ta bibliothèque est vide : enregistre un preset ou capture un effet.')); return; }
     const name = h('input', { class: 'textfield', value: defaultName || items[0].name });
-    const desc = h('textarea', { class: 'code lyrics', rows: 4, placeholder: 'Pour quel genre de montage, sur quelle musique…' });
-    const ok = await modal('Publier dans la bibliothèque en ligne', h('div', null,
-      row('Nom', name), desc,
-      h('div', { class: 'note' }, (items.length > 1 ? plural(items.length, 'effet') + ', publiés ensemble. ' : '') + 'Le formulaire s\'ouvre dans ton navigateur : vérifie, puis « Submit new issue ». Publié sous ton nom GitHub, visible par tous.')), [
-      { label: 'Annuler', value: false }, { label: 'Ouvrir le formulaire', primary: true, value: true }]);
+    const desc = h('textarea', { class: 'code lyrics', rows: 4, placeholder: _T('Pour quel genre de montage, sur quelle musique…') });
+    const ok = await modal(_T('Publier dans la bibliothèque en ligne'), h('div', null,
+      row(_T('Nom'), name), desc,
+      h('div', { class: 'note' }, (items.length > 1 ? plural(items.length, _T('effet')) + _T(', publiés ensemble. ') : '') + _T('Le formulaire s\'ouvre dans ton navigateur : vérifie, puis « Submit new issue ». Publié sous ton nom GitHub, visible par tous.'))), [
+      { label: _T('Annuler'), value: false }, { label: _T('Ouvrir le formulaire'), primary: true, value: true }]);
     if (!ok || !name.value.trim()) return;
     const code = Share.encode(items, Store.zip);
     const p = Community.publishURL({ name: name.value.trim(), desc: desc.value.trim(), code });
     if (!p.withCode) await copyText(code, null);
     Host.openURL(p.url);
-    log('Publication ouverte dans le navigateur : ' + name.value.trim(), 'info');
-    status.finish('ok', 'Formulaire ouvert dans ton navigateur', p.withCode
-      ? 'Clique sur « Submit new issue » : ton effet apparaîtra dans la bibliothèque en ligne.'
-      : 'Le code était trop long pour l\'adresse : il est copié, colle-le dans « Code RR FX », puis « Submit new issue ».');
+    log(_T('Publication ouverte dans le navigateur : ') + name.value.trim(), 'info');
+    status.finish('ok', _T('Formulaire ouvert dans ton navigateur'), p.withCode
+      ? _T('Clique sur « Submit new issue » : ton effet apparaîtra dans la bibliothèque en ligne.')
+      : _T('Le code était trop long pour l\'adresse : il est copié, colle-le dans « Code RR FX », puis « Submit new issue ».'));
   }
 
   async function publishPicker() {
-    if (!S.lib.items.length) { status.finish('warn', 'Rien à publier', 'Enregistre un preset (＋ Preset), une rampe, ou capture un effet d\'abord.'); return; }
+    if (!S.lib.items.length) { status.finish('warn', _T('Rien à publier'), _T('Enregistre un preset (＋ Preset), une rampe, ou capture un effet d\'abord.')); return; }
     const opts = S.lib.items.slice().sort((a, b) => b.created - a.created).map(i => ({ v: i.id, label: i.name }));
     let pick = opts[0].v;
-    const ok = await modal('Quel effet publier ?', picker(opts, pick, v => { pick = v; }), [
-      { label: 'Annuler', value: false }, { label: 'Continuer', primary: true, value: true }]);
+    const ok = await modal(_T('Quel effet publier ?'), picker(opts, pick, v => { pick = v; }), [
+      { label: _T('Annuler'), value: false }, { label: _T('Continuer'), primary: true, value: true }]);
     if (!ok) return;
     const item = S.lib.items.find(i => i.id === pick);
     if (item) publishItems([item], item.name);
@@ -1904,39 +1905,50 @@
     view.innerHTML = '';
     const st = settings();
 
-    const find = h('button', { class: 'action' }, 'Rechercher');
+    // Langue, en texte bilingue pour qu'on la trouve quelle que soit la langue. Le panneau se recharge.
+    const I = window.RRFXI18n;
+    if (I) {
+      const langSec = section('Langue · Language', [
+        actionGroup([{ v: 'fr', label: '🇫🇷 Français' }, { v: 'en', label: '🇬🇧 English' }], I.lang, v => { if (v === I.lang) return; I.setLang(v); location.reload(); }),
+        h('div', { class: 'note' }, _T('Le panneau se recharge dans la langue choisie. Tes réglages et ta bibliothèque sont gardés.'))
+      ]);
+      langSec.dataset.sec = 'lang';
+      view.appendChild(langSec);
+    }
+
+    const find = h('button', { class: 'action' }, _T('Rechercher'));
     find.addEventListener('click', async () => {
       const r = await Host.call('adjustmentInfo', { nodeId: st.adjNodeId });
-      if (!r.ok) return status.finish('error', 'Recherche impossible', r.error);
-      if (!r.found) return status.finish('warn', 'Aucun calque de réglage', 'Crée-en un : Fichier > Nouveau > Calque de réglage.');
+      if (!r.ok) return status.finish('error', _T('Recherche impossible'), r.error);
+      if (!r.found) return status.finish('warn', _T('Aucun calque de réglage'), _T('Crée-en un : Fichier > Nouveau > Calque de réglage.'));
       st.adjNodeId = r.nodeId; st.adjName = r.name; persist();
       renderSettingsView();
-      status.finish('ok', 'Calque de réglage trouvé', r.name);
+      status.finish('ok', _T('Calque de réglage trouvé'), r.name);
     });
-    const fromSel = h('button', { class: 'action' }, 'Utiliser la sélection du Projet');
+    const fromSel = h('button', { class: 'action' }, _T('Utiliser la sélection du Projet'));
     fromSel.addEventListener('click', async () => {
       const r = await Host.call('adjustmentFromSelection', {});
-      if (!r.ok) return status.finish('error', 'Aucun élément sélectionné', r.error);
+      if (!r.ok) return status.finish('error', _T('Aucun élément sélectionné'), r.error);
       st.adjNodeId = r.nodeId; st.adjName = r.name; persist();
       renderSettingsView();
-      status.finish('ok', 'Calque de réglage défini', r.name);
+      status.finish('ok', _T('Calque de réglage défini'), r.name);
     });
-    view.appendChild(section('Calques', [
-      h('div', { class: 'note' }, 'RR FX pose les effets sur des calques de réglage « RR FX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « RR FX ») : tes pistes audio ne sont jamais touchées.'),
-      h('div', { class: 'field' }, checkbox('Recopier le cadrage et l\'étalonnage du clip sur les copies CLIP FX', st.copyLook, v => { st.copyLook = v; persist(); })),
-      h('div', { class: 'note' }, 'Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.'),
-      h('div', { class: 'note' }, 'Calque de réglage utilisé : ' + (st.adjName || 'recherche automatique dans le projet') + '. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.'),
+    view.appendChild(section(_T('Calques'), [
+      h('div', { class: 'note' }, _T('RR FX pose les effets sur des calques de réglage « RR FX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « RR FX ») : tes pistes audio ne sont jamais touchées.')),
+      h('div', { class: 'field' }, checkbox(_T('Recopier le cadrage et l\'étalonnage du clip sur les copies CLIP FX'), st.copyLook, v => { st.copyLook = v; persist(); })),
+      h('div', { class: 'note' }, _T('Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.')),
+      h('div', { class: 'note' }, _T('Calque de réglage utilisé : ') + (st.adjName || _T('recherche automatique dans le projet')) + _T('. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.')),
       h('div', { class: 'row-buttons' }, find, fromSel)
     ]));
 
     // Nettoyage
     const clean = { scope: 'sequence', markers: true };
-    const wipe = h('button', { class: 'action danger' }, 'Tout effacer');
+    const wipe = h('button', { class: 'action danger' }, _T('Tout effacer'));
     wipe.addEventListener('click', () => clearAll(clean));
-    view.appendChild(section('Nettoyage', [
-      h('div', { class: 'note' }, 'Retire tout ce que RR FX a posé : calques de réglage, copies CLIP FX, overlays, textes et sons « RR FX · … », et réactive les caméras éteintes par le montage multicam. Tes clips ne sont pas supprimés.'),
-      row('Zone', actionGroup([{ v: 'sequence', label: 'Toute la séquence' }, { v: 'selection', label: 'Zone sélectionnée' }], clean.scope, v => { clean.scope = v; })),
-      h('div', { class: 'field' }, checkbox('Retirer aussi les marqueurs RR FX (temps forts)', clean.markers, v => { clean.markers = v; })),
+    view.appendChild(section(_T('Nettoyage'), [
+      h('div', { class: 'note' }, _T('Retire tout ce que RR FX a posé : calques de réglage, copies CLIP FX, overlays, textes et sons « RR FX · … », et réactive les caméras éteintes par le montage multicam. Tes clips ne sont pas supprimés.')),
+      row(_T('Zone'), actionGroup([{ v: 'sequence', label: _T('Toute la séquence') }, { v: 'selection', label: _T('Zone sélectionnée') }], clean.scope, v => { clean.scope = v; })),
+      h('div', { class: 'field' }, checkbox(_T('Retirer aussi les marqueurs RR FX (temps forts)'), clean.markers, v => { clean.markers = v; })),
       h('div', { class: 'row-buttons' }, wipe)
     ]));
 
@@ -1947,11 +1959,11 @@
       const found = S.resolved ? S.resolved[type] : undefined;
       fx.appendChild(h('div', { class: 'fx-status' },
         h('span', { class: found ? 'ok' : (S.resolved ? 'missing' : 'muted') }, found ? '✓' : (S.resolved ? '✕' : '…')),
-        h('span', null, found || (S.resolved ? reg[type].names[0] + ' introuvable' : reg[type].names[0]))));
+        h('span', null, found || (S.resolved ? reg[type].names[0] + _T(' introuvable') : reg[type].names[0]))));
     });
-    const detect = h('button', { class: 'action quiet' }, 'Détecter à nouveau');
+    const detect = h('button', { class: 'action quiet' }, _T('Détecter à nouveau'));
     detect.addEventListener('click', async () => { await detectEffects(true); renderSettingsView(); });
-    view.appendChild(section('Effets Premiere utilisés', [fx, h('div', { class: 'note' }, 'Noms détectés dans la langue de ton Premiere. Un effet introuvable ? Voir « Avancé » plus bas.')], detect));
+    view.appendChild(section(_T('Effets Premiere utilisés'), [fx, h('div', { class: 'note' }, _T('Noms détectés dans la langue de ton Premiere. Un effet introuvable ? Voir « Avancé » plus bas.'))], detect));
 
     // Raccourcis : toutes les actions, une touche (ou Maj+touche) chacune.
     const sc = h('div');
@@ -1960,72 +1972,72 @@
       b.addEventListener('click', () => { S.capturing = S.capturing === action ? null : action; renderShortcuts(); });
       sc.appendChild(h('div', { class: 'shortcut-row' }, h('span', null, Keys.ACTIONS[action]), b));
     });
-    view.appendChild(section('Raccourcis clavier', [h('div', { class: 'note' }, 'Actifs quand le panneau RR FX est sélectionné (clique dedans, puis appuie sur la touche). Une lettre ou un chiffre, seul ou avec Maj. Clique sur une touche pour la changer, Retour arrière pour la retirer. Échap arrête une opération en cours.'), sc], null, true));
+    view.appendChild(section(_T('Raccourcis clavier'), [h('div', { class: 'note' }, _T('Actifs quand le panneau RR FX est sélectionné (clique dedans, puis appuie sur la touche). Une lettre ou un chiffre, seul ou avec Maj. Clique sur une touche pour la changer, Retour arrière pour la retirer. Échap arrête une opération en cours.')), sc], null, true));
     renderShortcuts();
     // Sections des autres modules (télécommande, synchro…).
     (app.settingsExtras || []).forEach(fn => { const el = fn(); if (el) view.appendChild(el); });
 
     // Signal de fin
-    const test = h('button', { class: 'action quiet' }, 'Tester le signal');
-    test.addEventListener('click', () => { status.finish('ok', 'Test du signal de fin', 'Le bilan clignote et le son est joué (si activé).'); signalEnd(); });
-    view.appendChild(section('Signal de fin', [
-      checkbox('Jouer un son à la fin', st.endSound, v => { st.endSound = v; persist(); }),
-      h('div', { class: 'note' }, 'Pour les opérations de plus de 8 s (beaucoup de coupes, rampes) : le bilan clignote.'),
+    const test = h('button', { class: 'action quiet' }, _T('Tester le signal'));
+    test.addEventListener('click', () => { status.finish('ok', _T('Test du signal de fin'), _T('Le bilan clignote et le son est joué (si activé).')); signalEnd(); });
+    view.appendChild(section(_T('Signal de fin'), [
+      checkbox(_T('Jouer un son à la fin'), st.endSound, v => { st.endSound = v; persist(); }),
+      h('div', { class: 'note' }, _T('Pour les opérations de plus de 8 s (beaucoup de coupes, rampes) : le bilan clignote.')),
       h('div', { class: 'row-buttons' }, test)
     ]));
 
     // Confirmations
     view.appendChild(section('Confirmations', [
-      h('div', null, checkbox('Demander avant d\'appliquer une rampe', st.confirmRamp, v => { st.confirmRamp = v; persist(); })),
-      h('div', null, checkbox('Demander avant d\'annuler', st.confirmUndo, v => { st.confirmUndo = v; persist(); }))
+      h('div', null, checkbox(_T('Demander avant d\'appliquer une rampe'), st.confirmRamp, v => { st.confirmRamp = v; persist(); })),
+      h('div', null, checkbox(_T('Demander avant d\'annuler'), st.confirmUndo, v => { st.confirmUndo = v; persist(); }))
     ]));
 
     // Mises à jour
-    const check = h('button', { class: 'action' }, 'Vérifier maintenant');
+    const check = h('button', { class: 'action' }, _T('Vérifier maintenant'));
     check.addEventListener('click', () => checkUpdates(true));
     if (app.diagnostic) view.appendChild(app.diagnostic.section());
-    view.appendChild(section('Mises à jour', [
-      h('div', { class: 'note' }, 'Version installée : ' + Host.VERSION + (S.ctx && S.ctx.app ? ' · Premiere ' + S.ctx.app : '')),
-      checkbox('Vérifier les mises à jour au démarrage', st.checkUpdates, v => { st.checkUpdates = v; persist(); }),
+    view.appendChild(section(_T('Mises à jour'), [
+      h('div', { class: 'note' }, _T('Version installée : ') + Host.VERSION + (S.ctx && S.ctx.app ? ' · Premiere ' + S.ctx.app : '')),
+      checkbox(_T('Vérifier les mises à jour au démarrage'), st.checkUpdates, v => { st.checkUpdates = v; persist(); }),
       h('div', { class: 'row-buttons' }, check)
     ]));
 
     // Avancé
     const ta = h('textarea', { class: 'code', spellcheck: 'false', rows: 6 }, JSON.stringify(st.registry || {}, null, 2));
-    const saveReg = h('button', { class: 'action' }, 'Enregistrer');
+    const saveReg = h('button', { class: 'action' }, _T('Enregistrer'));
     saveReg.addEventListener('click', () => {
       try {
         const v = JSON.parse(ta.value || '{}');
-        if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error('il faut un objet { … }');
+        if (!v || typeof v !== 'object' || Array.isArray(v)) throw new Error(_T('il faut un objet { … }'));
         st.registry = v; persist();
-        status.finish('ok', 'Correspondance enregistrée', '');
+        status.finish('ok', _T('Correspondance enregistrée'), '');
         renderGrid();
-      } catch (e) { status.finish('error', 'JSON invalide', errorMessage(e)); }
+      } catch (e) { status.finish('error', _T('JSON invalide'), errorMessage(e)); }
     });
     const out = h('pre', { class: 'code hidden' });
     const showOut = text => { out.textContent = text; out.classList.remove('hidden'); };
-    const diag = h('button', { class: 'action' }, 'Analyser le clip sélectionné');
+    const diag = h('button', { class: 'action' }, _T('Analyser le clip sélectionné'));
     diag.addEventListener('click', async () => { const r = await Host.call('diagnose', {}); showOut(r.ok ? r.text : r.error); });
-    const listFx = h('button', { class: 'action' }, 'Lister les effets vidéo');
+    const listFx = h('button', { class: 'action' }, _T('Lister les effets vidéo'));
     listFx.addEventListener('click', async () => { const r = await Host.call('listEffects', {}); showOut(r.ok ? (r.names.join('\n') || '(aucun)') : r.error); });
-    const defaults = h('button', { class: 'action quiet' }, 'Valeurs par défaut');
+    const defaults = h('button', { class: 'action quiet' }, _T('Valeurs par défaut'));
     defaults.addEventListener('click', () => showOut(JSON.stringify(Core.REGISTRY, null, 2)));
-    view.appendChild(section('Avancé', [
-      h('div', { class: 'note' }, 'Correspondance des effets : nom exact d\'un effet ou numéro d\'un paramètre, si la détection automatique se trompe. Exemple : ', h('code', null, '{"wave": {"names": ["Déformation de la vague"]}}')),
+    view.appendChild(section(_T('Avancé'), [
+      h('div', { class: 'note' }, _T('Correspondance des effets : nom exact d\'un effet ou numéro d\'un paramètre, si la détection automatique se trompe. Exemple : '), h('code', null, '{"wave": {"names": ["Déformation de la vague"]}}')),
       ta, h('div', { class: 'row-buttons' }, saveReg, defaults),
       h('div', { class: 'row-buttons' }, diag, listFx), out
     ]));
 
     // Bibliothèque
-    const openDir = h('button', { class: 'action', disabled: !Store.onDisk }, 'Ouvrir le dossier');
+    const openDir = h('button', { class: 'action', disabled: !Store.onDisk }, _T('Ouvrir le dossier'));
     openDir.addEventListener('click', () => Store.openFolder());
-    view.appendChild(section('Bibliothèque', [h('div', { class: 'note' }, Store.location), h('div', { class: 'row-buttons' }, openDir)]));
+    view.appendChild(section(_T('Bibliothèque'), [h('div', { class: 'note' }, Store.location), h('div', { class: 'row-buttons' }, openDir)]));
 
     // Journal
-    const clear = h('button', { class: 'action quiet' }, 'Effacer');
+    const clear = h('button', { class: 'action quiet' }, _T('Effacer'));
     const box = h('div', { class: 'log', id: 'log' }, S.logLines.map(l => h('div', { class: l.level }, l.message)));
     clear.addEventListener('click', () => { S.logLines = []; box.innerHTML = ''; });
-    view.appendChild(section('Journal', box, clear));
+    view.appendChild(section(_T('Journal'), box, clear));
   }
 
   // ---------------------------------------------------------------- raccourcis clavier
@@ -2050,7 +2062,7 @@
   function renderShortcuts() {
     document.querySelectorAll('[data-shortcut]').forEach(b => {
       const a = b.getAttribute('data-shortcut');
-      b.textContent = S.capturing === a ? 'Appuie sur une touche…' : Keys.label(S.shortcuts[a], 'Maj') || 'Aucune';
+      b.textContent = S.capturing === a ? _T('Appuie sur une touche…') : Keys.label(S.shortcuts[a], _T('Maj')) || _T('Aucune');
     });
   }
 
@@ -2088,14 +2100,14 @@
     S.cancel = true;
     // Tâche qui tourne hors de Premiere (téléchargement…) : arrêtée aussi.
     if (S.onCancel) { try { S.onCancel(); } catch (e) { /* déjà finie */ } }
-    $('status-detail').textContent = 'Arrêt après la zone en cours…';
+    $('status-detail').textContent = _T('Arrêt après la zone en cours…');
   }
 
   // ---------------------------------------------------------------- mode réduit, menu, CTA
 
   function applyCompact(compact) {
     $('panel').classList.toggle('compact', compact);
-    $('toggle-compact').textContent = compact ? '▾ Réglages' : '▴ Réduire';
+    $('toggle-compact').textContent = compact ? _T('▾ Réglages') : _T('▴ Réduire');
   }
   function toggleCompact() {
     settings().compact = !settings().compact;
@@ -2106,23 +2118,23 @@
 
   function setMenu() {
     Host.setMenu([
-      { id: 'express', label: 'Lancer le montage express' },
-      { id: 'palette', label: 'Recherche rapide (Ctrl+K)' },
+      { id: 'express', label: _T('Lancer le montage express') },
+      { id: 'palette', label: _T('Recherche rapide (Ctrl+K)') },
       { separator: true },
-      { id: 'apply', label: 'Appliquer l\'effet choisi' },
-      { id: 'ramp', label: 'Appliquer la rampe' },
-      { id: 'capture', label: 'Capturer la sélection' },
-      { id: 'beats', label: 'Poser les marqueurs des temps forts' },
-      { id: 'sync', label: 'Synchroniser la sélection sur la musique' },
-      { id: 'convert', label: 'Convertir le LOG en Rec.709 (caméra enregistrée)' },
-      { id: 'autoFix', label: 'Expo et balance des blancs auto' },
-      { id: 'silences', label: 'Couper les silences (plans sélectionnés)' },
-      { id: 'undo', label: 'Annuler la dernière opération RR FX' },
-      { id: 'history', label: 'Historique des opérations…' },
-      { id: 'clear', label: 'Tout effacer (séquence)…' },
+      { id: 'apply', label: _T('Appliquer l\'effet choisi') },
+      { id: 'ramp', label: _T('Appliquer la rampe') },
+      { id: 'capture', label: _T('Capturer la sélection') },
+      { id: 'beats', label: _T('Poser les marqueurs des temps forts') },
+      { id: 'sync', label: _T('Synchroniser la sélection sur la musique') },
+      { id: 'convert', label: _T('Convertir le LOG en Rec.709 (caméra enregistrée)') },
+      { id: 'autoFix', label: _T('Expo et balance des blancs auto') },
+      { id: 'silences', label: _T('Couper les silences (plans sélectionnés)') },
+      { id: 'undo', label: _T('Annuler la dernière opération RR FX') },
+      { id: 'history', label: _T('Historique des opérations…') },
+      { id: 'clear', label: _T('Tout effacer (séquence)…') },
       { separator: true },
-      { id: 'compact', label: 'Mode réduit', checked: settings().compact },
-      { id: 'instagram', label: '@robin.rahoual sur Instagram' }
+      { id: 'compact', label: _T('Mode réduit'), checked: settings().compact },
+      { id: 'instagram', label: _T('@robin.rahoual sur Instagram') }
     ], id => {
       if (id === 'compact') return toggleCompact();
       if (id === 'instagram') return Host.openURL(INSTAGRAM_URL);
@@ -2137,11 +2149,11 @@
 
   function ctaAction() {
     if (app.tabs[S.tab]) return app.tabs[S.tab].cta();
-    if (S.tab === 'ramp') return { label: 'Appliquer la rampe', run: applyRamp, enabled: true };
-    if (S.tab === 'mine' && S.mineView === 'community') return { label: 'Publier un de mes effets…', run: publishPicker, enabled: true };
-    if (S.tab === 'mine') return { label: 'Capturer la sélection', run: capture, enabled: true };
-    if (S.tab === 'effects' && chainOn()) return { label: 'Appliquer l\'enchaînement · ' + plural(chainEntries().length, 'effet'), run: applyEffect, enabled: true };
-    return { label: S.cur ? 'Appliquer · ' + S.cur.name : 'Appliquer', run: applyEffect, enabled: !!S.cur };
+    if (S.tab === 'ramp') return { label: _T('Appliquer la rampe'), run: applyRamp, enabled: true };
+    if (S.tab === 'mine' && S.mineView === 'community') return { label: _T('Publier un de mes effets…'), run: publishPicker, enabled: true };
+    if (S.tab === 'mine') return { label: _T('Capturer la sélection'), run: capture, enabled: true };
+    if (S.tab === 'effects' && chainOn()) return { label: _T('Appliquer l\'enchaînement · ') + plural(chainEntries().length, _T('effet')), run: applyEffect, enabled: true };
+    return { label: S.cur ? _T('Appliquer · ') + S.cur.name : _T('Appliquer'), run: applyEffect, enabled: !!S.cur };
   }
   function renderCTA() {
     const a = ctaAction(), b = $('cta');
@@ -2193,8 +2205,8 @@
     S.update = update;
     if (!update) { show($('update-banner'), false); return; }
     const auto = canSelfUpdate();
-    $('update-text').textContent = '⬆ RR FX ' + update.version + ' est disponible (tu as la ' + Host.VERSION + ').' + (auto ? ' Installe-la en un clic, puis redémarre Premiere.' : ' Télécharge le pack, puis lance le script d\'installation.');
-    $('update-download').textContent = auto ? 'Installer la mise à jour' : 'Télécharger';
+    $('update-text').textContent = '⬆ RR FX ' + update.version + _T(' est disponible (tu as la ') + Host.VERSION + ').' + (auto ? _T(' Installe-la en un clic, puis redémarre Premiere.') : _T(' Télécharge le pack, puis lance le script d\'installation.'));
+    $('update-download').textContent = auto ? _T('Installer la mise à jour') : _T('Télécharger');
     show($('update-banner'), true);
   }
 
@@ -2205,17 +2217,17 @@
     const up = S.update;
     if (!up) return;
     if (!canSelfUpdate()) return Host.openURL(up.downloadUrl);
-    return runTask('Mise à jour ' + up.version, async () => {
-      status.phase('Téléchargement');
-      const bytes = await Installer.download(Store.nodeRequire('https'), up.downloadUrl, p => status.progress(Math.round(p * 100), 100, 'Téléchargement'));
-      status.phase('Vérification du pack');
+    return runTask(_T('Mise à jour ') + up.version, async () => {
+      status.phase(_T('Téléchargement'));
+      const bytes = await Installer.download(Store.nodeRequire('https'), up.downloadUrl, p => status.progress(Math.round(p * 100), 100, _T('Téléchargement')));
+      status.phase(_T('Vérification du pack'));
       const files = Installer.filesOf(bytes, Store.zip && Store.zip.inflate, up.version);
-      status.phase('Installation');
+      status.phase(_T('Installation'));
       const dir = Installer.extensionDir(location.href), backup = Store.path.join(Store.dir, 'Sauvegarde du panneau');
       const n = Installer.install(Store.fs, Store.path, dir, files, backup);
-      log('Mise à jour ' + up.version + ' installée (' + n + ' fichiers) dans ' + dir + '. Ancienne version gardée dans ' + backup, 'ok');
+      log(_T('Mise à jour ') + up.version + _T(' installée (') + n + _T(' fichiers) dans ') + dir + _T('. Ancienne version gardée dans ') + backup, 'ok');
       show($('update-banner'), false);
-      return { kind: 'ok', title: 'RR FX ' + up.version + ' installé', detail: 'Redémarre Premiere pour l\'utiliser. Ta bibliothèque et tes réglages sont gardés.' };
+      return { kind: 'ok', title: 'RR FX ' + up.version + _T(' installé'), detail: _T('Redémarre Premiere pour l\'utiliser. Ta bibliothèque et tes réglages sont gardés.') };
     });
   }
 
@@ -2223,9 +2235,9 @@
     const update = await Updates.checkForUpdate({ fetch: (u, o) => fetch(u, o), storage, currentVersion: Host.VERSION, force });
     showUpdate(update);
     if (force) {
-      if (update) log('Nouvelle version disponible : ' + update.version, 'ok');
-      else log('RR FX ' + Host.VERSION + ' est à jour (ou GitHub est injoignable).', 'info');
-      status.finish(update ? 'ok' : 'idle', update ? 'Mise à jour disponible' : 'Prêt', update ? 'RR FX ' + update.version : '');
+      if (update) log(_T('Nouvelle version disponible : ') + update.version, 'ok');
+      else log('RR FX ' + Host.VERSION + _T(' est à jour (ou GitHub est injoignable).'), 'info');
+      status.finish(update ? 'ok' : 'idle', update ? _T('Mise à jour disponible') : _T('Prêt'), update ? 'RR FX ' + update.version : '');
     }
   }
 
@@ -2234,13 +2246,13 @@
   async function detectEffects(force) {
     const r = await Host.call('listEffects', {});
     if (!r.ok || !Array.isArray(r.names) || !r.names.length) {
-      if (force) log('Liste des effets Premiere indisponible' + (r.error ? ' : ' + r.error : ''), 'warn');
+      if (force) log(_T('Liste des effets Premiere indisponible') + (r.error ? ' : ' + r.error : ''), 'warn');
       return;
     }
     S.resolved = Core.resolveEffectNames(r.names, Core.mergeRegistry(settings().registry));
     const missing = Object.keys(S.resolved).filter(t => !S.resolved[t]);
-    if (missing.length) log('Effets Premiere introuvables : ' + missing.map(t => Core.REGISTRY[t].names[0]).join(', ') + ' (Réglages > Avancé)', 'warn');
-    else if (force) log('Tous les effets Premiere utilisés sont trouvés.', 'ok');
+    if (missing.length) log(_T('Effets Premiere introuvables : ') + missing.map(t => Core.REGISTRY[t].names[0]).join(', ') + _T(' (Réglages > Avancé)'), 'warn');
+    else if (force) log(_T('Tous les effets Premiere utilisés sont trouvés.'), 'ok');
   }
 
   function bindHeader() {
@@ -2323,9 +2335,9 @@
   app.services.adjustmentLayer = async (name, fx, o) => {
     const scope = (o && o.scope) || 'clip';
     const r = await Host.call('resolve', { placement: scope === 'sequence' ? 'sequence' : 'full', sides: ['post'], frames: 1, target: 'adjustment' });
-    if (!r.ok) return { fail: { kind: 'error', title: 'Aucun clip visé', detail: r.error + (scope === 'clip' ? ' (ou choisis « Toute la séquence »)' : '') } };
+    if (!r.ok) return { fail: { kind: 'error', title: _T('Aucun clip visé'), detail: r.error + (scope === 'clip' ? _T(' (ou choisis « Toute la séquence »)') : '') } };
     const res = await Host.call('apply', { target: 'adjustment', name, targets: r.targets.map(t => Object.assign({}, t, { name, fx })), adjNodeId: settings().adjNodeId, refreshAdj: true });
-    if (!res.ok) return { fail: { kind: 'error', title: 'Calque non posé', detail: res.error } };
+    if (!res.ok) return { fail: { kind: 'error', title: _T('Calque non posé'), detail: res.error } };
     if (res.created && res.created.length) pushHistory({ date: Date.now(), label: (o && o.history) || name.replace(/^RR FX · /, ''), entries: res.created });
     (res.warnings || []).forEach(w => log(w, 'warn'));
     res.kind = res.warnings && res.warnings.length ? 'warn' : 'ok';
@@ -2334,7 +2346,7 @@
   app.fileURL = fileURL;
   function loadFeatures() {
     (window.RRFXFeatures || []).forEach(feature => {
-      try { feature(app); } catch (e) { log('Module du panneau indisponible : ' + errorMessage(e), 'error'); }
+      try { feature(app); } catch (e) { log(_T('Module du panneau indisponible : ') + errorMessage(e), 'error'); }
     });
   }
 
@@ -2343,7 +2355,7 @@
       S.lib = Store.load();
     } catch (e) {
       S.lib = { version: 1, favorites: [], items: [], history: [], settings: {} };
-      log('Bibliothèque illisible : ' + errorMessage(e), 'error');
+      log(_T('Bibliothèque illisible : ') + errorMessage(e), 'error');
     }
     S.lib.settings = Object.assign(clone(DEFAULT_SETTINGS), S.lib.settings);
     S.lib.settings.ramp = Object.assign(clone(DEFAULT_SETTINGS.ramp), S.lib.settings.ramp);
@@ -2351,6 +2363,8 @@
     // 1.3 : tout se pose sur un calque de réglage (sauf CLIP FX, imposé par l'effet).
     S.lib.settings.target = 'adjustment';
     if (!Array.isArray(S.lib.settings.overlays)) S.lib.settings.overlays = [];
+    // Overlays ajoutés en mode démo (fichier lu par le navigateur, blob:) : perdus au rechargement.
+    S.lib.settings.overlays = S.lib.settings.overlays.filter(o => !/^blob:/.test(o.url || ''));
     S.shortcuts = Keys.withDefaults(S.lib.settings.shortcuts);
 
     applyTheme();
@@ -2366,19 +2380,19 @@
 
     const init = await Host.init();
     S.demo = init.demo;
-    log('RR FX ' + Host.VERSION + ' · plugin par @robin.rahoual sur Instagram' + (S.demo ? ' · mode démo' : ''), 'info');
+    log('RR FX ' + Host.VERSION + _T(' · plugin par @robin.rahoual sur Instagram') + (S.demo ? _T(' · mode démo') : ''), 'info');
     if (!init.demo && !init.loaded) {
-      status.finish('error', 'Script Premiere non chargé', 'Redémarre Premiere. Si ça persiste, réinstalle RR FX.');
-      log('Version du script chargé : « ' + (init.version || 'aucune') + ' », attendue ' + Host.VERSION, 'error');
+      status.finish('error', _T('Script Premiere non chargé'), _T('Redémarre Premiere. Si ça persiste, réinstalle RR FX.'));
+      log(_T('Version du script chargé : « ') + (init.version || 'aucune') + _T(' », attendue ') + Host.VERSION, 'error');
     }
     const c = await Host.call('compat', {});
     if (c.ok) {
       S.compat = c;
       if (c.missing.length) {
-        status.finish('error', 'Plugin à mettre à jour', 'Cette version de Premiere ne fournit plus : ' + c.missing.join(', ') + '.');
-        log('Fonctions Premiere manquantes : ' + c.missing.join(', '), 'error');
+        status.finish('error', _T('Plugin à mettre à jour'), _T('Cette version de Premiere ne fournit plus : ') + c.missing.join(', ') + '.');
+        log(_T('Fonctions Premiere manquantes : ') + c.missing.join(', '), 'error');
       }
-      if (c.optional.length) log('Fonctions optionnelles absentes : ' + c.optional.join(', '), 'warn');
+      if (c.optional.length) log(_T('Fonctions optionnelles absentes : ') + c.optional.join(', '), 'warn');
       if (c.app) log('Premiere ' + c.app, 'info');
     }
     await detectEffects(false);
@@ -2391,12 +2405,12 @@
     (app.whenReady || []).forEach(fn => { try { fn(); } catch (e) { log(errorMessage(e), 'warn'); } });
   }
 
-  window.addEventListener('error', e => log('Erreur du panneau : ' + e.message, 'error'));
-  window.addEventListener('unhandledrejection', e => log('Erreur du panneau : ' + errorMessage(e.reason), 'error'));
+  window.addEventListener('error', e => log(_T('Erreur du panneau : ') + e.message, 'error'));
+  window.addEventListener('unhandledrejection', e => log(_T('Erreur du panneau : ') + errorMessage(e.reason), 'error'));
   document.addEventListener('DOMContentLoaded', () => {
     boot().catch(e => {
-      try { status.finish('error', 'Initialisation incomplète', errorMessage(e)); } catch (ignored) { /* panneau indisponible */ }
-      log('Initialisation incomplète du panneau : ' + errorMessage(e), 'error');
+      try { status.finish('error', _T('Initialisation incomplète'), errorMessage(e)); } catch (ignored) { /* panneau indisponible */ }
+      log(_T('Initialisation incomplète du panneau : ') + errorMessage(e), 'error');
     });
   });
 })();

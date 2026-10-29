@@ -6,6 +6,7 @@
   else root.RRFXSpeech = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   // Sensibilité : part de l'écart bruit de fond → voix sous laquelle on parle de silence.
   const LEVELS = { soft: 0.22, normal: 0.32, strong: 0.45 };
@@ -282,10 +283,10 @@
     const merged = [];
     list.forEach(c => { if (!merged.length || c.t - merged[merged.length - 1].t >= o.minLen) merged.push(c); });
     if (o.duration && merged.length > 1 && o.duration - merged[merged.length - 1].t < o.minLen) merged.pop();
-    merged.forEach((c, i) => { if (!c.title) c.title = 'Partie ' + (i + 1); });
+    merged.forEach((c, i) => { if (!c.title) c.title = _T('Partie ') + (i + 1); });
     const text = merged.map(c => stampOf(c.t) + ' ' + c.title).join('\n');
     const ok = merged.length >= 3;
-    return { list: merged, text, ok, why: ok ? '' : 'YouTube demande au moins 3 chapitres de 10 s ou plus.' };
+    return { list: merged, text, ok, why: ok ? '' : _T('YouTube demande au moins 3 chapitres de 10 s ou plus.') };
   }
 
   /* Son de démonstration : phrases (bruit modulé) séparées de pauses, bruit de fond léger. */

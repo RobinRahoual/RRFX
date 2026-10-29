@@ -6,6 +6,7 @@
   else root.RRFXCam = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   // Codes modèle Sony → noms commerciaux (ceux de la liste des caméras).
   const SONY = {
@@ -56,7 +57,7 @@
     if (!out.brand) {
       const base = String(fileName || '').split(/[\\/]/).pop();
       const hit = NAMES.find(([, re]) => re.test(base));
-      if (hit) { out.brand = hit[0]; out.source = 'nom du fichier'; }
+      if (hit) { out.brand = hit[0]; out.source = _T('nom du fichier'); }
       return out;
     }
     let m;

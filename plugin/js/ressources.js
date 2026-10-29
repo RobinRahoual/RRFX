@@ -2,6 +2,7 @@
    LUTs, titres, overlays…), indexés, classés, avec aperçus et actions directes vers Premiere. */
 (function (root) {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const A = root.RRFXAssets, { Store, Host, Media, Pv, Share } = app;
@@ -38,7 +39,7 @@
     function saveIndex() {
       const roots = {};
       Object.keys(R.index).forEach(r => { if (!R.index[r].browser) roots[r] = { files: R.index[r].files, truncated: R.index[r].truncated, scanned: R.index[r].scanned }; });
-      try { Store.writeJSON(INDEX_FILE, { version: 1, roots }); } catch (e) { app.log('Index des ressources non enregistré : ' + app.errorMessage(e), 'warn'); }
+      try { Store.writeJSON(INDEX_FILE, { version: 1, roots }); } catch (e) { app.log(_T('Index des ressources non enregistré : ') + app.errorMessage(e), 'warn'); }
     }
     function rebuild() {
       R.list = A.entries(R.index, sep());
@@ -55,20 +56,20 @@
     // ---------------------------------------------------------------- dossiers liés
 
     function scanRoots(roots, label) {
-      return app.runTask(label || 'Indexation des ressources', async () => {
+      return app.runTask(label || _T('Indexation des ressources'), async () => {
         let total = 0, cut = 0;
         for (let i = 0; i < roots.length; i++) {
           if (app.S.cancel) break;
           const r = roots[i];
-          app.status.phase('Lecture de « ' + r.split(/[\\/]/).filter(Boolean).pop() + ' »');
+          app.status.phase(_T('Lecture de « ') + r.split(/[\\/]/).filter(Boolean).pop() + _T(' »'));
           if (!Store.fs.existsSync(r)) {
             // Disque débranché : on garde l'ancien index, signalé dans la liste.
-            app.log('Dossier introuvable (disque débranché ?) : ' + r, 'warn');
+            app.log(_T('Dossier introuvable (disque débranché ?) : ') + r, 'warn');
             if (R.index[r]) R.index[r].missing = true;
             continue;
           }
           const res = await A.scanFolder(Store.fs, Store.path, r, {
-            onProgress: n => app.status.progress(0, 1, n + ' fichiers'),
+            onProgress: n => app.status.progress(0, 1, n + _T(' fichiers')),
             shouldStop: () => app.S.cancel
           });
           if (app.S.cancel) break;
@@ -81,21 +82,21 @@
         render();
         const c = A.counts(R.list);
         const detail = A.TYPES.filter(t => c[t.id]).map(t => c[t.id] + ' ' + t.label.toLowerCase()).join(' · ');
-        app.log('Ressources : ' + total + ' fichiers indexés' + (cut ? ' (limite de 50 000 atteinte)' : ''), cut ? 'warn' : 'ok');
-        if (app.S.cancel) return { kind: 'warn', title: 'Indexation arrêtée', detail: 'Clique sur « Actualiser » pour la reprendre.' };
-        return { kind: cut ? 'warn' : 'ok', title: app.plural(total, 'ressource') + ' indexée' + (total > 1 ? 's' : ''), detail: detail || 'Aucun fichier reconnu (vidéos, images, sons, LUTs, polices, .mogrt, presets).' };
+        app.log(_T('Ressources : ') + total + _T(' fichiers indexés') + (cut ? _T(' (limite de 50 000 atteinte)') : ''), cut ? 'warn' : 'ok');
+        if (app.S.cancel) return { kind: 'warn', title: _T('Indexation arrêtée'), detail: _T('Clique sur « Actualiser » pour la reprendre.') };
+        return { kind: cut ? 'warn' : 'ok', title: app.plural(total, _T('ressource')) + _T(' indexée') + (total > 1 ? 's' : ''), detail: detail || _T('Aucun fichier reconnu (vidéos, images, sons, LUTs, polices, .mogrt, presets).') };
       }, true);
     }
 
     function linkFolder() {
       if (!Store.fs) return linkBrowserFolder();
-      const dirs = Store.pickFiles('Lier un dossier de ressources (effets, SFX, polices, LUTs…)', [], true);
+      const dirs = Store.pickFiles(_T('Lier un dossier de ressources (effets, SFX, polices, LUTs…)'), [], true);
       if (!dirs || !dirs.length) return;
       const s = st(), fresh = dirs.filter(d => s.roots.indexOf(d) < 0);
-      if (!fresh.length) return app.status.finish('warn', 'Déjà lié', dirs[0]);
+      if (!fresh.length) return app.status.finish('warn', _T('Déjà lié'), dirs[0]);
       s.roots = s.roots.concat(fresh);
       app.persist();
-      scanRoots(fresh, 'Indexation de « ' + fresh[0].split(/[\\/]/).filter(Boolean).pop() + ' »');
+      scanRoots(fresh, _T('Indexation de « ') + fresh[0].split(/[\\/]/).filter(Boolean).pop() + _T(' »'));
     }
 
     // Hors de Premiere (démo) : un dossier choisi dans le navigateur, le temps de la session.
@@ -118,7 +119,7 @@
       Object.keys(idx).forEach(k => { idx[k].browser = true; R.index[k] = idx[k]; if (st().roots.indexOf(k) < 0) st().roots.push(k); });
       rebuild();
       render();
-      app.status.finish('ok', app.plural(R.list.length, 'ressource') + ' trouvée' + (R.list.length > 1 ? 's' : ''), 'Mode démo : le dossier est lu par le navigateur, le temps de la session.');
+      app.status.finish('ok', app.plural(R.list.length, _T('ressource')) + _T(' trouvée') + (R.list.length > 1 ? 's' : ''), _T('Mode démo : le dossier est lu par le navigateur, le temps de la session.'));
     }
 
     function unlink(r) {
@@ -209,13 +210,13 @@
     }
 
     function loadImage(src) {
-      return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error('image illisible')); i.src = src; });
+      return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error(_T('image illisible'))); i.src = src; });
     }
     function videoFrame(src) {
       return new Promise((res, rej) => {
         const v = document.createElement('video');
         const done = (ok, val) => { clearTimeout(timer); v.removeAttribute('src'); v.load(); (ok ? res : rej)(val); };
-        const timer = setTimeout(() => done(false, new Error('lecture trop longue')), 5000);
+        const timer = setTimeout(() => done(false, new Error(_T('lecture trop longue'))), 5000);
         v.muted = true; v.preload = 'auto';
         v.addEventListener('loadedmetadata', () => { try { v.currentTime = Math.min(1, (v.duration || 2) * 0.3); } catch (err) { done(false, err); } }, { once: true });
         v.addEventListener('seeked', () => {
@@ -224,7 +225,7 @@
           c.getContext('2d').drawImage(v, 0, 0, c.width, c.height);
           done(true, { canvas: c, duration: v.duration, w: v.videoWidth, h: v.videoHeight });
         }, { once: true });
-        v.addEventListener('error', () => done(false, new Error('format non lu par le panneau')), { once: true });
+        v.addEventListener('error', () => done(false, new Error(_T('format non lu par le panneau'))), { once: true });
         v.src = src;
       });
     }
@@ -289,7 +290,7 @@
           e.duration = f.duration;
         } else if (e.type === 'audio') {
           const p = await soundPeaks(e, 80, 8 * 1024 * 1024);
-          if (!p) throw new Error('trop gros');
+          if (!p) throw new Error(_T('trop gros'));
           drawPeaks(cv, p);
           e.duration = p.duration;
         } else if (e.type === 'lut' && e.ext === 'cube') {
@@ -338,41 +339,41 @@
       if (where === 'playhead') return [m.playhead];
       let t = m.markers.map(x => x.t);
       if (m.range) t = t.filter(x => x >= m.range.a - 1e-6 && x <= m.range.b + 1e-6);
-      if (!t.length) throw new Error(m.range ? 'Aucun marqueur dans les clips sélectionnés.' : 'Aucun marqueur dans la séquence : pose les temps forts (onglet Musique) ou des marqueurs (touche M).');
+      if (!t.length) throw new Error(m.range ? _T('Aucun marqueur dans les clips sélectionnés.') : _T('Aucun marqueur dans la séquence : pose les temps forts (onglet Musique) ou des marqueurs (touche M).'));
       return t;
     }
 
     function place(e, where) {
-      return app.runTask('Pose · ' + e.name, async () => {
+      return app.runTask(_T('Pose · ') + e.name, async () => {
         app.status.phase('Position');
         const t = await times(where);
-        app.status.phase(t.length > 1 ? 'Pose sur ' + t.length + ' marqueurs' : 'Pose');
+        app.status.phase(t.length > 1 ? _T('Pose sur ') + t.length + _T(' marqueurs') : _T('Pose'));
         const r = await Host.call('placeAsset', { path: e.path || e.fileName, kind: e.type, name: e.name, times: t, imageDur: st().imageDur });
-        if (!r.ok) return { kind: 'error', title: 'Rien n\'a été posé', detail: r.error };
+        if (!r.ok) return { kind: 'error', title: _T('Rien n\'a été posé'), detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));
         app.pushHistory({ date: Date.now(), label: e.name + (t.length > 1 ? ' × ' + r.created.length : ''), entries: r.created });
-        const where2 = e.type === 'audio' ? 'sur une piste audio libre' : 'au-dessus de tes plans';
-        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: e.name + (r.created.length > 1 ? ' posé ' + r.created.length + ' fois' : ' posé'), detail: where2 + ' · ↶ Annuler le retire.' };
+        const where2 = e.type === 'audio' ? _T('sur une piste audio libre') : _T('au-dessus de tes plans');
+        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: e.name + (r.created.length > 1 ? _T(' posé ') + r.created.length + _T(' fois') : _T(' posé')), detail: where2 + _T(' · ↶ Annuler le retire.') };
       }, true);
     }
 
     function importOne(e) {
       return app.runTask('Import · ' + e.name, async () => {
         const r = await Host.call('importAssets', { paths: [e.path || e.fileName] });
-        if (!r.ok) return { kind: 'error', title: 'Import impossible', detail: r.error };
-        if (r.failed.length) return { kind: 'error', title: 'Import impossible', detail: 'Premiere n\'a pas importé « ' + e.fileName + ' ».' };
-        return { kind: 'ok', title: e.name + ' importé', detail: 'Dans le chutier « RR FX Ressources » du panneau Projet.' };
+        if (!r.ok) return { kind: 'error', title: _T('Import impossible'), detail: r.error };
+        if (r.failed.length) return { kind: 'error', title: _T('Import impossible'), detail: _T('Premiere n\'a pas importé « ') + e.fileName + _T(' ».') };
+        return { kind: 'ok', title: e.name + _T(' importé'), detail: _T('Dans le chutier « RR FX Ressources » du panneau Projet.') };
       });
     }
 
     // Calque de réglage avec Lumetri sur le clip visé, la LUT chargée en LUT d'entrée.
     function lumetriLayer(e) {
-      return app.runTask('Calque Lumetri · ' + e.name, async () => {
+      return app.runTask(_T('Calque Lumetri · ') + e.name, async () => {
         const { res, fail } = await app.services.adjustmentLayer('RR FX · LUT ' + e.name, await app.services.lumetriFx(e.path), { history: 'LUT · ' + e.name });
         if (fail) return fail;
-        if (res.lutSet) return { kind: res.kind, title: 'Calque Lumetri posé', detail: 'LUT « ' + e.fileName + ' » chargée dans Lumetri (Correction de base > LUT d\'entrée).' };
+        if (res.lutSet) return { kind: res.kind, title: _T('Calque Lumetri posé'), detail: _T('LUT « ') + e.fileName + _T(' » chargée dans Lumetri (Correction de base > LUT d\'entrée).') };
         const copied = e.path ? await copy(e.path) : false;
-        return { kind: res.kind, title: 'Calque Lumetri posé', detail: 'Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ' + e.fileName + ' »' + (copied ? ' (chemin copié : colle-le dans la fenêtre).' : '.') };
+        return { kind: res.kind, title: _T('Calque Lumetri posé'), detail: _T('Lumetri > Correction de base > LUT d\'entrée (ou Créatif > Look) > Parcourir… et choisis « ') + e.fileName + _T(' »') + (copied ? _T(' (chemin copié : colle-le dans la fenêtre).') : '.') };
       });
     }
 
@@ -383,21 +384,21 @@
 
     async function installLut(e) {
       const dirs = Store.systemDirs();
-      if (!dirs) return app.status.finish('warn', 'Disponible dans Premiere', 'L\'installation copie la LUT dans le dossier Adobe de ton ordinateur.');
+      if (!dirs) return app.status.finish('warn', _T('Disponible dans Premiere'), _T('L\'installation copie la LUT dans le dossier Adobe de ton ordinateur.'));
       try {
         Store.fs.mkdirSync(dirs.luts, { recursive: true });
         Store.fs.copyFileSync(e.path, Store.path.join(dirs.luts, e.fileName));
-        app.log('LUT installée : ' + Store.path.join(dirs.luts, e.fileName), 'ok');
-        app.status.finish('ok', 'LUT installée : ' + e.name, 'Redémarre Premiere : elle apparaît dans Lumetri > Créatif > Look.');
+        app.log(_T('LUT installée : ') + Store.path.join(dirs.luts, e.fileName), 'ok');
+        app.status.finish('ok', _T('LUT installée : ') + e.name, _T('Redémarre Premiere : elle apparaît dans Lumetri > Créatif > Look.'));
       } catch (err) {
-        app.status.finish('error', 'LUT non installée', app.errorMessage(err));
+        app.status.finish('error', _T('LUT non installée'), app.errorMessage(err));
       }
     }
 
     async function installFont(e) {
       const dirs = Store.systemDirs();
-      if (!dirs) return app.status.finish('warn', 'Disponible dans Premiere', 'L\'installation copie la police dans le dossier des polices de ton ordinateur.');
-      const ok = await app.confirmDialog('Installer « ' + e.name + ' » ?', 'La police est copiée dans tes polices (' + dirs.fonts + '). Redémarre Premiere pour la voir dans l\'outil Texte.', 'Installer');
+      if (!dirs) return app.status.finish('warn', _T('Disponible dans Premiere'), _T('L\'installation copie la police dans le dossier des polices de ton ordinateur.'));
+      const ok = await app.confirmDialog(_T('Installer « ') + e.name + _T(' » ?'), _T('La police est copiée dans tes polices (') + dirs.fonts + _T('). Redémarre Premiere pour la voir dans l\'outil Texte.'), _T('Installer'));
       if (!ok) return;
       try {
         const to = Store.path.join(dirs.fonts, e.fileName);
@@ -406,12 +407,12 @@
         if (dirs.win) {
           // Windows : une police d'utilisateur doit aussi être déclarée dans le registre.
           const r = await Store.execFile('reg', ['add', 'HKCU\\Software\\Microsoft\\Windows NT\\CurrentVersion\\Fonts', '/v', e.name + (e.ext === 'otf' ? ' (OpenType)' : ' (TrueType)'), '/t', 'REG_SZ', '/d', to, '/f']);
-          if (!r.ok) throw new Error('registre : ' + r.out);
+          if (!r.ok) throw new Error(_T('registre : ') + r.out);
         }
-        app.log('Police installée : ' + to, 'ok');
-        app.status.finish('ok', 'Police installée : ' + e.name, 'Redémarre Premiere pour l\'utiliser.');
+        app.log(_T('Police installée : ') + to, 'ok');
+        app.status.finish('ok', _T('Police installée : ') + e.name, _T('Redémarre Premiere pour l\'utiliser.'));
       } catch (err) {
-        app.status.finish('error', 'Police non installée', app.errorMessage(err));
+        app.status.finish('error', _T('Police non installée'), app.errorMessage(err));
       }
     }
 
@@ -424,10 +425,10 @@
 
     async function addPresetFile(e) {
       let data;
-      try { data = JSON.parse(await textOf(e)); } catch (err) { return app.status.finish('error', 'Fichier illisible', app.errorMessage(err)); }
+      try { data = JSON.parse(await textOf(e)); } catch (err) { return app.status.finish('error', _T('Fichier illisible'), app.errorMessage(err)); }
       const n = app.services.addItems(data && Array.isArray(data.items) ? Share.clean(data.items) : []);
-      if (n) app.status.finish('ok', app.plural(n, 'effet ajouté', 'effets ajoutés'), 'Dans « Mes effets ».');
-      else app.status.finish('warn', 'Rien d\'ajouté', 'Aucun effet RR FX dans ce fichier.');
+      if (n) app.status.finish('ok', app.plural(n, _T('effet ajouté'), _T('effets ajoutés')), _T('Dans « Mes effets ».'));
+      else app.status.finish('warn', _T('Rien d\'ajouté'), _T('Aucun effet RR FX dans ce fichier.'));
     }
 
     function useAsTitle(e) {
@@ -435,11 +436,11 @@
       t.mogrt = e.path || e.fileName;
       app.persist();
       app.switchTab('titles');
-      app.status.finish('ok', 'Modèle choisi : ' + e.name, 'Écris tes paroles, puis « Poser les textes ».');
+      app.status.finish('ok', _T('Modèle choisi : ') + e.name, _T('Écris tes paroles, puis « Poser les textes ».'));
     }
 
     function reveal(e) {
-      if (!e.path || !Store.reveal(e.path)) app.status.finish('warn', 'Disponible dans Premiere', e.rel);
+      if (!e.path || !Store.reveal(e.path)) app.status.finish('warn', _T('Disponible dans Premiere'), e.rel);
     }
 
     function stopSound() {
@@ -447,25 +448,25 @@
       R.playing = null;
     }
     function playSound(e, btn) {
-      if (R.playing === e.id) { stopSound(); if (btn) btn.textContent = '▶ Écouter'; return; }
+      if (R.playing === e.id) { stopSound(); if (btn) btn.textContent = _T('▶ Écouter'); return; }
       stopSound();
       R.audio = new Audio(urlOf(e));
       R.playing = e.id;
-      R.audio.addEventListener('ended', () => { stopSound(); if (btn && btn.isConnected) btn.textContent = '▶ Écouter'; });
+      R.audio.addEventListener('ended', () => { stopSound(); if (btn && btn.isConnected) btn.textContent = _T('▶ Écouter'); });
       const p = R.audio.play();
-      if (p && p.catch) p.catch(() => { app.status.finish('warn', 'Lecture impossible', 'Ce format n\'est pas lu par le panneau.'); stopSound(); });
+      if (p && p.catch) p.catch(() => { app.status.finish('warn', _T('Lecture impossible'), _T('Ce format n\'est pas lu par le panneau.')); stopSound(); });
       if (btn) btn.textContent = '■ Stop';
     }
 
     // Action du bouton principal pour l'élément choisi.
     function mainAction(e) {
       switch (e.type) {
-        case 'audio': return { label: 'Poser le son à la tête de lecture', run: () => place(e, 'playhead') };
-        case 'video': case 'image': return { label: 'Poser à la tête de lecture', run: () => place(e, 'playhead') };
-        case 'mogrt': return { label: 'Poser le titre à la tête de lecture', run: () => place(e, 'playhead') };
-        case 'lut': return { label: 'Calque de réglage Lumetri', run: () => lumetriLayer(e) };
-        case 'font': return { label: 'Installer la police', run: () => installFont(e) };
-        default: return e.ext === 'rrfxpack' ? { label: 'Importer le pack de style', run: () => importPackFile(e) } : /\.(rrfx|cutfx)\.json$/i.test(e.fileName) ? { label: 'Ajouter à Mes effets', run: () => addPresetFile(e) } : { label: 'Afficher dans le dossier', run: () => reveal(e) };
+        case 'audio': return { label: _T('Poser le son à la tête de lecture'), run: () => place(e, 'playhead') };
+        case 'video': case 'image': return { label: _T('Poser à la tête de lecture'), run: () => place(e, 'playhead') };
+        case 'mogrt': return { label: _T('Poser le titre à la tête de lecture'), run: () => place(e, 'playhead') };
+        case 'lut': return { label: _T('Calque de réglage Lumetri'), run: () => lumetriLayer(e) };
+        case 'font': return { label: _T('Installer la police'), run: () => installFont(e) };
+        default: return e.ext === 'rrfxpack' ? { label: _T('Importer le pack de style'), run: () => importPackFile(e) } : /\.(rrfx|cutfx)\.json$/i.test(e.fileName) ? { label: _T('Ajouter à Mes effets'), run: () => addPresetFile(e) } : { label: _T('Afficher dans le dossier'), run: () => reveal(e) };
       }
     }
 
@@ -481,32 +482,32 @@
       const s = st(), box = h('div', { class: 'res-roots' });
       s.roots.forEach(r => {
         const idx = R.index[r], name = r.split(/[\\/]/).filter(Boolean).pop() || r;
-        const meta = idx && idx.missing ? '⚠ introuvable : disque débranché ? (index gardé)' : idx ? app.plural(idx.files.length, 'fichier') + (idx.truncated ? ' (limite atteinte)' : '') + (idx.browser ? ' · session' : ' · ' + new Date(idx.scanned).toLocaleDateString('fr-FR')) : 'pas encore indexé';
+        const meta = idx && idx.missing ? _T('⚠ introuvable : disque débranché ? (index gardé)') : idx ? app.plural(idx.files.length, _T('fichier')) + (idx.truncated ? _T(' (limite atteinte)') : '') + (idx.browser ? ' · session' : ' · ' + new Date(idx.scanned).toLocaleDateString('fr-FR')) : _T('pas encore indexé');
         box.appendChild(h('div', { class: 'list-item' },
           h('span', { class: 'li-icon' }, '▤'),
           h('div', { class: 'li-text', title: r }, h('div', { class: 'li-name' }, name), h('div', { class: 'li-meta' }, meta)),
-          h('div', { class: 'li-actions' }, btn('✕', () => unlink(r), 'quiet danger', 'Délier (les fichiers ne sont pas touchés)'))));
+          h('div', { class: 'li-actions' }, btn('✕', () => unlink(r), 'quiet danger', _T('Délier (les fichiers ne sont pas touchés)')))));
       });
       return box;
     }
 
     function renderFilters() {
       const s = st(), c = A.counts(R.list);
-      const search = h('input', { class: 'textfield', placeholder: 'Rechercher (nom, dossier, type…)', value: s.search, spellcheck: 'false' });
+      const search = h('input', { class: 'textfield', placeholder: _T('Rechercher (nom, dossier, type…)'), value: s.search, spellcheck: 'false' });
       let timer = 0;
       search.addEventListener('input', () => { clearTimeout(timer); timer = setTimeout(() => { s.search = search.value; app.persist(); refilter(); renderGrid(); }, 120); });
-      const fav = btn('★', () => { s.favOnly = !s.favOnly; app.persist(); refilter(); render(); }, 'icon' + (s.favOnly ? ' selected on' : ''), 'Favoris uniquement');
+      const fav = btn('★', () => { s.favOnly = !s.favOnly; app.persist(); refilter(); render(); }, 'icon' + (s.favOnly ? ' selected on' : ''), _T('Favoris uniquement'));
       const chips = h('div', { class: 'chips' });
-      [{ id: 'all', label: 'Tout' }].concat(A.TYPES).forEach(t => {
+      [{ id: 'all', label: _T('Tout') }].concat(A.TYPES).forEach(t => {
         if (t.id !== 'all' && !c[t.id]) return;
         const b = h('button', { class: 'action' + (s.type === t.id ? ' selected' : '') }, t.label + ' ', h('span', { class: 'count' }, String(c[t.id])));
         b.addEventListener('click', () => { s.type = t.id; app.persist(); refilter(); render(); });
         chips.appendChild(b);
       });
       const fl = A.folders(R.list).filter(f => f.depth <= 4).slice(0, 600);
-      const folderPick = picker([{ v: '', label: 'Tous les dossiers' }].concat(fl.map(f => ({ v: f.key, label: '  '.repeat(f.depth) + f.label.split(' / ').pop() + ' (' + f.n + ')' }))), s.folder, v => { s.folder = v; app.persist(); refilter(); renderGrid(); });
-      const sortPick = picker([{ v: 'name', label: 'Par dossier et nom' }, { v: 'recent', label: 'Les plus récents' }, { v: 'size', label: 'Les plus gros' }], s.sort, v => { s.sort = v; app.persist(); refilter(); renderGrid(); });
-      return [h('div', { class: 'search' }, search, fav), chips, row('Dossier', folderPick), row('Trier', sortPick)];
+      const folderPick = picker([{ v: '', label: _T('Tous les dossiers') }].concat(fl.map(f => ({ v: f.key, label: '  '.repeat(f.depth) + f.label.split(' / ').pop() + ' (' + f.n + ')' }))), s.folder, v => { s.folder = v; app.persist(); refilter(); renderGrid(); });
+      const sortPick = picker([{ v: 'name', label: _T('Par dossier et nom') }, { v: 'recent', label: _T('Les plus récents') }, { v: 'size', label: _T('Les plus gros') }], s.sort, v => { s.sort = v; app.persist(); refilter(); renderGrid(); });
+      return [h('div', { class: 'search' }, search, fav), chips, row(_T('Dossier'), folderPick), row(_T('Trier'), sortPick)];
     }
 
     function renderGrid() {
@@ -517,7 +518,7 @@
       queue = [];
       const list = R.filtered;
       if (!list.length) {
-        grid.appendChild(h('div', { class: 'empty' }, R.list.length ? 'Aucune ressource ne correspond.' : 'Rien dans les dossiers liés (ou pas encore indexés).'));
+        grid.appendChild(h('div', { class: 'empty' }, R.list.length ? _T('Aucune ressource ne correspond.') : _T('Rien dans les dossiers liés (ou pas encore indexés).')));
       }
       const favs = new Set(st().favs);
       list.slice(0, R.shown).forEach(e => {
@@ -535,8 +536,8 @@
       if (more) {
         more.innerHTML = '';
         const left = list.length - R.shown;
-        if (left > 0) more.appendChild(btn('Afficher plus (' + left + ')', () => { R.shown += PAGE * 2; renderGrid(); }, 'quiet'));
-        if (list.length) more.appendChild(h('span', { class: 'muted' }, ' ' + app.plural(list.length, 'ressource')));
+        if (left > 0) more.appendChild(btn(_T('Afficher plus (') + left + ')', () => { R.shown += PAGE * 2; renderGrid(); }, 'quiet'));
+        if (list.length) more.appendChild(h('span', { class: 'muted' }, ' ' + app.plural(list.length, _T('ressource'))));
       }
     }
 
@@ -565,7 +566,7 @@
       ins.appendChild(h('div', { class: 'effect-head' },
         h('span', { class: 'effect-name' }, e.name),
         h('span', { class: 'badge' }, t.label + ' · .' + e.ext),
-        h('div', { class: 'effect-tools' }, btn(fav ? '★' : '☆', () => toggleFav(e), 'quiet icon' + (fav ? ' on' : ''), 'Favori'))));
+        h('div', { class: 'effect-tools' }, btn(fav ? '★' : '☆', () => toggleFav(e), 'quiet icon' + (fav ? ' on' : ''), _T('Favori')))));
       ins.appendChild(h('div', { class: 'note res-path', title: e.path || e.rel }, (e.folder ? e.rootName + ' / ' + e.folder.split('/').join(' / ') : e.rootName) + ' · ' + A.formatSize(e.size)));
 
       const pv = h('div', { class: 'res-preview' });
@@ -576,15 +577,15 @@
         if (e.type === 'video') {
           const v = h('video', { class: 'res-video', src: urlOf(e), muted: true, loop: true, playsinline: true, controls: true });
           v.muted = true;
-          v.addEventListener('error', () => { pv.innerHTML = ''; pv.appendChild(h('div', { class: 'note' }, 'Aperçu impossible dans le panneau (codec). Le fichier reste utilisable dans Premiere.')); }, { once: true });
+          v.addEventListener('error', () => { pv.innerHTML = ''; pv.appendChild(h('div', { class: 'note' }, _T('Aperçu impossible dans le panneau (codec). Le fichier reste utilisable dans Premiere.'))); }, { once: true });
           pv.appendChild(v);
           const p = v.play();
           if (p && p.catch) p.catch(() => {});
         } else if (BROWSER_IMAGES.test(e.ext)) pv.appendChild(h('img', { class: 'res-image', src: urlOf(e), alt: e.name }));
-        else pv.appendChild(h('div', { class: 'note' }, 'Aperçu non disponible pour .' + e.ext + ' : le fichier reste utilisable dans Premiere.'));
-        actions.push(btn('Poser à la tête de lecture', here), btn('Poser sur chaque marqueur', markers));
-        actions.push(btn('Utiliser comme overlay', () => app.services.addOverlay(e.file ? { name: e.fileName, url: urlOf(e) } : e.path), '', 'L\'ajoute aux overlays de l\'onglet Effets : fondu, mode de fusion, posé sur les coupes'));
-        if (e.type === 'image') actions.push(row('Durée d\'une image', hotText({ value: st().imageDur, min: 0.2, max: 60, step: 0.1, unit: 's', onChange: v => { st().imageDur = v; app.persist(); } })));
+        else pv.appendChild(h('div', { class: 'note' }, _T('Aperçu non disponible pour .') + e.ext + _T(' : le fichier reste utilisable dans Premiere.')));
+        actions.push(btn(_T('Poser à la tête de lecture'), here), btn(_T('Poser sur chaque marqueur'), markers));
+        actions.push(btn(_T('Utiliser comme overlay'), () => app.services.addOverlay(e.file ? { name: e.fileName, url: urlOf(e) } : e.path), '', _T('L\'ajoute aux overlays de l\'onglet Effets : fondu, mode de fusion, posé sur les coupes')));
+        if (e.type === 'image') actions.push(row(_T('Durée d\'une image'), hotText({ value: st().imageDur, min: 0.2, max: 60, step: 0.1, unit: 's', onChange: v => { st().imageDur = v; app.persist(); } })));
       } else if (e.type === 'audio') {
         const cv = h('canvas', { class: 'wave-canvas' });
         pv.appendChild(cv);
@@ -598,52 +599,52 @@
             drawPeaks(tmp, p, css('--accent'));
             cv.getContext('2d').setTransform(1, 0, 0, 1, 0, 0);
             cv.getContext('2d').drawImage(tmp, 0, 0);
-            pv.appendChild(h('div', { class: 'note' }, (Math.round(p.duration * 10) / 10).toString().replace('.', ',') + ' s' + (p.duration >= 11.9 ? ' et plus' : '')));
+            pv.appendChild(h('div', { class: 'note' }, (Math.round(p.duration * 10) / 10).toString().replace('.', ',') + ' s' + (p.duration >= 11.9 ? _T(' et plus') : '')));
           } catch (err) { /* forme d'onde indisponible */ }
         });
-        const play = btn(R.playing === e.id ? '■ Stop' : '▶ Écouter', () => playSound(e, play));
-        actions.push(play, btn('Poser à la tête de lecture', here), btn('Poser sur chaque marqueur', markers, '', 'Un son sur chaque marqueur (ceux des clips sélectionnés s\'il y en a) : whooshs et impacts sur les coupes'));
+        const play = btn(R.playing === e.id ? '■ Stop' : _T('▶ Écouter'), () => playSound(e, play));
+        actions.push(play, btn(_T('Poser à la tête de lecture'), here), btn(_T('Poser sur chaque marqueur'), markers, '', _T('Un son sur chaque marqueur (ceux des clips sélectionnés s\'il y en a) : whooshs et impacts sur les coupes')));
       } else if (e.type === 'lut') {
         if (e.ext === 'cube') {
           const cv = h('canvas', { class: 'pv-canvas', width: 640, height: 360 });
-          const label = h('span', { class: 'pv-label' }, 'Après · ' + (Pv.isReal() ? 'ta séquence' : 'plan de test'));
+          const label = h('span', { class: 'pv-label' }, _T('Après · ') + (Pv.isReal() ? _T('ta séquence') : _T('plan de test')));
           const frame = h('div', { class: 'pv-frame' }, cv, label);
           pv.appendChild(frame);
           let lut = null, before = false;
           const draw = () => gradeOnto(cv, Pv.shots()[(Pv.isReal() ? 'B' : 'A')], before ? null : lut);
-          lutOf(e).then(l => { lut = l; draw(); }).catch(err => { pv.innerHTML = ''; pv.appendChild(h('div', { class: 'note' }, 'LUT illisible : ' + app.errorMessage(err))); });
+          lutOf(e).then(l => { lut = l; draw(); }).catch(err => { pv.innerHTML = ''; pv.appendChild(h('div', { class: 'note' }, _T('LUT illisible : ') + app.errorMessage(err))); });
           // Maintenir pour voir l'image d'origine.
-          frame.addEventListener('pointerdown', () => { before = true; label.textContent = 'Avant'; draw(); });
-          const up = () => { if (!before) return; before = false; label.textContent = 'Après · ' + (Pv.isReal() ? 'ta séquence' : 'plan de test'); draw(); };
+          frame.addEventListener('pointerdown', () => { before = true; label.textContent = _T('Avant'); draw(); });
+          const up = () => { if (!before) return; before = false; label.textContent = _T('Après · ') + (Pv.isReal() ? _T('ta séquence') : _T('plan de test')); draw(); };
           frame.addEventListener('pointerup', up);
           frame.addEventListener('pointerleave', up);
-          pv.appendChild(h('div', { class: 'note' }, 'Maintiens le clic sur l\'image pour voir l\'avant. « 📷 Ma vraie image » (onglet Effets) montre la LUT sur ta séquence.'));
-        } else pv.appendChild(h('div', { class: 'note' }, 'Aperçu disponible pour les LUT .cube.'));
-        actions.push(btn('Calque de réglage Lumetri', () => lumetriLayer(e), '', 'Calque de réglage Lumetri sur le clip visé, la LUT chargée dedans'), btn('Installer dans Lumetri', () => installLut(e), '', 'Copie la LUT dans le dossier Adobe : elle apparaît dans Lumetri > Créatif > Look après redémarrage'));
+          pv.appendChild(h('div', { class: 'note' }, _T('Maintiens le clic sur l\'image pour voir l\'avant. « 📷 Ma vraie image » (onglet Effets) montre la LUT sur ta séquence.')));
+        } else pv.appendChild(h('div', { class: 'note' }, _T('Aperçu disponible pour les LUT .cube.')));
+        actions.push(btn(_T('Calque de réglage Lumetri'), () => lumetriLayer(e), '', _T('Calque de réglage Lumetri sur le clip visé, la LUT chargée dedans')), btn(_T('Installer dans Lumetri'), () => installLut(e), '', _T('Copie la LUT dans le dossier Adobe : elle apparaît dans Lumetri > Créatif > Look après redémarrage')));
       } else if (e.type === 'font') {
-        const sample = h('input', { class: 'textfield', value: app.settings().titles && app.settings().titles.text ? app.settings().titles.text.split('\n')[0].slice(0, 40) : 'Le son de la nuit 2026' });
+        const sample = h('input', { class: 'textfield', value: app.settings().titles && app.settings().titles.text ? app.settings().titles.text.split('\n')[0].slice(0, 40) : _T('Le son de la nuit 2026') });
         const box = h('div', { class: 'res-font' });
         const show = fam => {
           box.innerHTML = '';
           [44, 26, 15].forEach(px => box.appendChild(h('div', { style: { fontFamily: '"' + fam + '"', fontSize: px + 'px' } }, sample.value || 'Aa')));
         };
-        fontFamily(e).then(fam => { show(fam); sample.addEventListener('input', () => show(fam)); }).catch(() => { box.textContent = 'Police illisible dans le panneau.'; });
+        fontFamily(e).then(fam => { show(fam); sample.addEventListener('input', () => show(fam)); }).catch(() => { box.textContent = _T('Police illisible dans le panneau.'); });
         pv.appendChild(sample);
         pv.appendChild(box);
-        actions.push(btn('Installer la police', () => installFont(e)));
+        actions.push(btn(_T('Installer la police'), () => installFont(e)));
       } else if (e.type === 'mogrt') {
-        pv.appendChild(h('div', { class: 'note' }, 'Modèle d\'animations graphiques (titre, lower third…). Il garde ses réglages dans « Objets graphiques essentiels ».'));
-        actions.push(btn('Poser à la tête de lecture', here), btn('Utiliser dans l\'onglet Textes', () => useAsTitle(e), '', 'Paroles et titres animés avec ce modèle'));
+        pv.appendChild(h('div', { class: 'note' }, _T('Modèle d\'animations graphiques (titre, lower third…). Il garde ses réglages dans « Objets graphiques essentiels ».')));
+        actions.push(btn(_T('Poser à la tête de lecture'), here), btn(_T('Utiliser dans l\'onglet Textes'), () => useAsTitle(e), '', _T('Paroles et titres animés avec ce modèle')));
       } else {
         const rr = /\.(rrfx|cutfx)\.json$/i.test(e.fileName);
-        pv.appendChild(h('div', { class: 'note' }, rr ? 'Effets exportés depuis RR FX.' : e.ext === 'rrfxpack' ? 'Pack de style RR FX : effets, looks, textes, overlays.'
-          : e.ext === 'prfpset' ? 'Préréglage d\'effets Premiere : panneau Effets > clic droit sur « Préréglages » > Importer les préréglages…, puis choisis ce fichier.'
-            : e.ext === 'epr' ? 'Préréglage d\'export (Media Encoder / Exporter).' : 'Fichier de projet ou de préréglage.'));
-        if (rr) actions.push(btn('Ajouter à Mes effets', () => addPresetFile(e)));
-        if (e.ext === 'rrfxpack') actions.push(btn('Importer le pack de style', () => importPackFile(e)));
+        pv.appendChild(h('div', { class: 'note' }, rr ? _T('Effets exportés depuis RR FX.') : e.ext === 'rrfxpack' ? _T('Pack de style RR FX : effets, looks, textes, overlays.')
+          : e.ext === 'prfpset' ? _T('Préréglage d\'effets Premiere : panneau Effets > clic droit sur « Préréglages » > Importer les préréglages…, puis choisis ce fichier.')
+            : e.ext === 'epr' ? _T('Préréglage d\'export (Media Encoder / Exporter).') : _T('Fichier de projet ou de préréglage.')));
+        if (rr) actions.push(btn(_T('Ajouter à Mes effets'), () => addPresetFile(e)));
+        if (e.ext === 'rrfxpack') actions.push(btn(_T('Importer le pack de style'), () => importPackFile(e)));
       }
-      if (e.type !== 'font' && e.type !== 'lut' && e.type !== 'preset' && e.type !== 'mogrt') actions.push(btn('Importer dans le projet', () => importOne(e), 'quiet'));
-      if (e.path) actions.push(btn(Store.isWin() ? 'Afficher dans l\'Explorateur' : 'Afficher dans le Finder', () => reveal(e), 'quiet'));
+      if (e.type !== 'font' && e.type !== 'lut' && e.type !== 'preset' && e.type !== 'mogrt') actions.push(btn(_T('Importer dans le projet'), () => importOne(e), 'quiet'));
+      if (e.path) actions.push(btn(Store.isWin() ? _T('Afficher dans l\'Explorateur') : _T('Afficher dans le Finder'), () => reveal(e), 'quiet'));
       const buttons = actions.filter(a => a.tagName === 'BUTTON'), others = actions.filter(a => a.tagName !== 'BUTTON');
       ins.appendChild(section('Actions', [h('div', { class: 'row-buttons wrap' }, buttons)].concat(others)));
     }
@@ -657,14 +658,14 @@
       view.innerHTML = '';
       const s = st();
       if (app.linkImport) view.appendChild(app.linkImport.section());
-      const linkBtn = btn('＋ Lier un dossier…', linkFolder);
-      const refresh = btn('↻ Actualiser', () => scanRoots(s.roots.filter(r => !(R.index[r] && R.index[r].browser))), 'quiet', 'Relire les dossiers (nouveaux fichiers, fichiers supprimés)');
-      view.appendChild(section('Dossiers liés', [
-        s.roots.length ? renderRoots() : h('div', { class: 'note' }, 'Lie le dossier où tu ranges tes effets, SFX, polices, LUTs, titres et overlays : RR FX les classe et tu les retrouves ici, avec aperçu, prêts à poser dans la timeline. Les fichiers restent où ils sont.'),
+      const linkBtn = btn(_T('＋ Lier un dossier…'), linkFolder);
+      const refresh = btn(_T('↻ Actualiser'), () => scanRoots(s.roots.filter(r => !(R.index[r] && R.index[r].browser))), 'quiet', _T('Relire les dossiers (nouveaux fichiers, fichiers supprimés)'));
+      view.appendChild(section(_T('Dossiers liés'), [
+        s.roots.length ? renderRoots() : h('div', { class: 'note' }, _T('Lie le dossier où tu ranges tes effets, SFX, polices, LUTs, titres et overlays : RR FX les classe et tu les retrouves ici, avec aperçu, prêts à poser dans la timeline. Les fichiers restent où ils sont.')),
         h('div', { class: 'row-buttons' }, linkBtn, s.roots.length && Store.fs ? refresh : null)
       ]));
       if (!s.roots.length) return;
-      view.appendChild(section('Parcourir', renderFilters()));
+      view.appendChild(section(_T('Parcourir'), renderFilters()));
       view.appendChild(h('div', { class: 'grid', id: 'res-grid' }));
       view.appendChild(h('div', { class: 'res-more', id: 'res-more' }));
       view.appendChild(h('div', { id: 'res-inspector' }));
@@ -672,16 +673,16 @@
       renderInspector();
       // Index jamais fait ou ancien : relu en arrière-plan.
       const stale = s.roots.filter(r => Store.fs && (!R.index[r] || Date.now() - R.index[r].scanned > STALE_MS));
-      if (stale.length && !app.S.busy) setTimeout(() => { if (!app.S.busy && app.S.tab === 'assets') scanRoots(stale, 'Mise à jour des ressources'); }, 300);
+      if (stale.length && !app.S.busy) setTimeout(() => { if (!app.S.busy && app.S.tab === 'assets') scanRoots(stale, _T('Mise à jour des ressources')); }, 300);
     }
 
     app.tabs.assets = {
       render,
       addFiles: addBrowserFiles,
       cta: () => {
-        if (!st().roots.length) return { label: 'Lier un dossier…', run: linkFolder, enabled: true };
+        if (!st().roots.length) return { label: _T('Lier un dossier…'), run: linkFolder, enabled: true };
         if (R.sel) { const a = mainAction(R.sel); return { label: a.label, run: a.run, enabled: true }; }
-        return { label: 'Choisis une ressource', run: () => {}, enabled: false };
+        return { label: _T('Choisis une ressource'), run: () => {}, enabled: false };
       },
       leave: () => { stopSound(); if (R.observer) R.observer.disconnect(); queue = []; }
     };

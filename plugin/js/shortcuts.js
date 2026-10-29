@@ -6,40 +6,41 @@
   else root.RRFXShortcuts = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   // Actions dans l'ordre de la liste des Réglages, rangées par onglet.
   const ACTIONS = {
-    express: 'Lancer le montage express',
-    apply: 'Appliquer l\'effet choisi',
-    ramp: 'Appliquer la rampe',
-    capture: 'Capturer la sélection',
-    undo: 'Annuler la dernière opération',
-    history: 'Historique des opérations',
-    palette: 'Recherche rapide',
-    convert: 'Convertir le LOG en Rec.709',
-    autoFix: 'Expo et balance des blancs auto',
-    applyLook: 'Appliquer le look en cours',
-    beats: 'Poser les temps forts',
-    sync: 'Synchroniser la sélection',
-    autoEdit: 'Monter les rushs sur le rythme',
-    risers: 'Risers avant les drops',
-    reverbTail: 'Réverb de fin de musique',
-    titles: 'Poser les textes',
-    progressBar: 'Barre de progression',
-    countdown: 'Compte à rebours',
-    cutSilences: 'Couper les silences',
-    cutFillers: 'Couper les « euh »',
-    breaths: 'Atténuer respirations et clics',
-    captions: 'Poser les sous-titres',
-    lowerThird: 'Poser le bandeau',
-    broll: 'Plans de coupe sur les mots clés',
-    punchIn: 'Zoom visage',
-    levelVoice: 'Égaliser la voix',
-    duckMusic: 'Baisser la musique sous la voix',
-    formatCopy: 'Copie au format réseau',
-    extracts: 'Créer les extraits pour les réseaux',
-    preflight: 'Vérifier avant export',
-    importLink: 'Importer depuis un lien'
+    express: _T('Lancer le montage express'),
+    apply: _T('Appliquer l\'effet choisi'),
+    ramp: _T('Appliquer la rampe'),
+    capture: _T('Capturer la sélection'),
+    undo: _T('Annuler la dernière opération'),
+    history: _T('Historique des opérations'),
+    palette: _T('Recherche rapide'),
+    convert: _T('Convertir le LOG en Rec.709'),
+    autoFix: _T('Expo et balance des blancs auto'),
+    applyLook: _T('Appliquer le look en cours'),
+    beats: _T('Poser les temps forts'),
+    sync: _T('Synchroniser la sélection'),
+    autoEdit: _T('Monter les rushs sur le rythme'),
+    risers: _T('Risers avant les drops'),
+    reverbTail: _T('Réverb de fin de musique'),
+    titles: _T('Poser les textes'),
+    progressBar: _T('Barre de progression'),
+    countdown: _T('Compte à rebours'),
+    cutSilences: _T('Couper les silences'),
+    cutFillers: _T('Couper les « euh »'),
+    breaths: _T('Atténuer respirations et clics'),
+    captions: _T('Poser les sous-titres'),
+    lowerThird: _T('Poser le bandeau'),
+    broll: _T('Plans de coupe sur les mots clés'),
+    punchIn: _T('Zoom visage'),
+    levelVoice: _T('Égaliser la voix'),
+    duckMusic: _T('Baisser la musique sous la voix'),
+    formatCopy: _T('Copie au format réseau'),
+    extracts: _T('Créer les extraits pour les réseaux'),
+    preflight: _T('Vérifier avant export'),
+    importLink: _T('Importer depuis un lien')
   };
 
   const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L', express: 'E' };
@@ -59,7 +60,7 @@
   }
 
   /* Touche à afficher : « Maj+A » (« Shift+A » en anglais). */
-  const label = (k, shiftName) => (k ? k.replace('Shift+', (shiftName || 'Maj') + '+') : '');
+  const label = (k, shiftName) => (k ? k.replace('Shift+', (shiftName || _T('Maj')) + '+') : '');
 
   /* Complète une configuration enregistrée avec les valeurs par défaut. */
   function withDefaults(saved) {

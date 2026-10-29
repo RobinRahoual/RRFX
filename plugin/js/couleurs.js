@@ -6,6 +6,7 @@
   else root.RRFXCouleurs = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const h2 = n => Math.max(0, Math.min(255, Math.round(n))).toString(16).padStart(2, '0');
   const toHex = (r, g, b) => '#' + h2(r) + h2(g) + h2(b);
@@ -40,7 +41,7 @@
   function parseASE(bytes) {
     const b = bytes instanceof Uint8Array ? bytes : new Uint8Array(bytes);
     const dv = new DataView(b.buffer, b.byteOffset, b.byteLength);
-    if (String.fromCharCode(b[0], b[1], b[2], b[3]) !== 'ASEF') throw new Error('Ce fichier n\'est pas un nuancier Adobe (.ase).');
+    if (String.fromCharCode(b[0], b[1], b[2], b[3]) !== 'ASEF') throw new Error(_T('Ce fichier n\'est pas un nuancier Adobe (.ase).'));
     const n = dv.getUint32(8), out = [];
     let p = 12;
     for (let k = 0; k < n && p + 6 <= b.length; k++) {
@@ -142,21 +143,21 @@
 
   // Styles proposés d'emblée (copiables en « Mes styles »).
   const STYLES = [
-    { id: 'blanc', name: 'Blanc propre', style: { fill: '#ffffff', shadow: true } },
-    { id: 'reels', name: 'Reels jaune', style: { fill: '#ffd21e', stroke: '#000000', strokeWidth: 6, caps: true } },
-    { id: 'bloc', name: 'Bloc noir', style: { fill: '#ffffff', box: '#000000', boxOpacity: 75 } },
-    { id: 'pastel', name: 'Pastel rose', style: { fill: '#ffd1e8', shadow: true } },
-    { id: 'neon', name: 'Néon bleu', style: { fill: '#7df9ff', stroke: '#0047ff', strokeWidth: 3 } },
-    { id: 'corporate', name: 'Entreprise', style: { fill: '#ffffff', box: '#1473e6', boxOpacity: 90 } }
+    { id: 'blanc', name: _T('Blanc propre'), style: { fill: '#ffffff', shadow: true } },
+    { id: 'reels', name: _T('Reels jaune'), style: { fill: '#ffd21e', stroke: '#000000', strokeWidth: 6, caps: true } },
+    { id: 'bloc', name: _T('Bloc noir'), style: { fill: '#ffffff', box: '#000000', boxOpacity: 75 } },
+    { id: 'pastel', name: _T('Pastel rose'), style: { fill: '#ffd1e8', shadow: true } },
+    { id: 'neon', name: _T('Néon bleu'), style: { fill: '#7df9ff', stroke: '#0047ff', strokeWidth: 3 } },
+    { id: 'corporate', name: _T('Entreprise'), style: { fill: '#ffffff', box: '#1473e6', boxOpacity: 90 } }
   ];
 
   const GRADIENTS = [
-    { id: 'sunset', name: 'Coucher de soleil', g: { type: 'linear', angle: 180, colors: ['#ff7e5f', '#feb47b'] } },
+    { id: 'sunset', name: _T('Coucher de soleil'), g: { type: 'linear', angle: 180, colors: ['#ff7e5f', '#feb47b'] } },
     { id: 'teal-orange', name: 'Teal & orange', g: { type: 'linear', angle: 135, colors: ['#008080', '#ff8c00'] } },
-    { id: 'sky', name: 'Ciel bleu', g: { type: 'linear', angle: 180, colors: ['#4facfe', '#00f2fe'] } },
-    { id: 'rose-gold', name: 'Rose doré', g: { type: 'linear', angle: 90, colors: ['#f6d365', '#fda085'] } },
-    { id: 'night', name: 'Nuit violette', g: { type: 'linear', angle: 160, colors: ['#4b1248', '#1c1b4b'] } },
-    { id: 'vignette', name: 'Vignette chaude', g: { type: 'radial', angle: 0, colors: ['#ffe8c2', '#2b1200'] } }
+    { id: 'sky', name: _T('Ciel bleu'), g: { type: 'linear', angle: 180, colors: ['#4facfe', '#00f2fe'] } },
+    { id: 'rose-gold', name: _T('Rose doré'), g: { type: 'linear', angle: 90, colors: ['#f6d365', '#fda085'] } },
+    { id: 'night', name: _T('Nuit violette'), g: { type: 'linear', angle: 160, colors: ['#4b1248', '#1c1b4b'] } },
+    { id: 'vignette', name: _T('Vignette chaude'), g: { type: 'radial', angle: 0, colors: ['#ffe8c2', '#2b1200'] } }
   ];
 
   return { hex, rgb, toHex, parseColors, parseASE, writeASE, parseGradient, gradientCss, rampOf, normStyle, STYLE_DEFAULTS, STYLES, GRADIENTS };

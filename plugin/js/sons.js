@@ -6,6 +6,7 @@
   else root.RRFXSons = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
+  const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   const SR = 48000, TAU = Math.PI * 2;
 
@@ -41,7 +42,7 @@
       }
     },
     {
-      id: 'whoosh-grave', name: 'Whoosh grave', kind: 'whoosh', dur: 1.3, peak: 0.8,
+      id: 'whoosh-grave', name: _T('Whoosh grave'), kind: 'whoosh', dur: 1.3, peak: 0.8,
       make(n) {
         const r = noise(5), f = svf(), x = new Float32Array(n), P = 0.8 * SR;
         for (let i = 0; i < n; i++) {
@@ -52,7 +53,7 @@
       }
     },
     {
-      id: 'swoosh', name: 'Swoosh aigu', kind: 'whoosh', dur: 0.5, peak: 0.3,
+      id: 'swoosh', name: _T('Swoosh aigu'), kind: 'whoosh', dur: 0.5, peak: 0.3,
       make(n) {
         const r = noise(7), f = svf(), x = new Float32Array(n), P = 0.3 * SR;
         for (let i = 0; i < n; i++) {
@@ -76,7 +77,7 @@
       }
     },
     {
-      id: 'hit', name: 'Hit court', kind: 'impact', dur: 0.6, peak: 0,
+      id: 'hit', name: _T('Hit court'), kind: 'impact', dur: 0.6, peak: 0,
       make(n) {
         const r = noise(13), f = svf(), x = new Float32Array(n);
         let ph = 0;
@@ -129,7 +130,7 @@
     },
     {
       // Riser long (4 s) : pour les grosses montées avant un drop.
-      id: 'riser-long', name: 'Riser long', kind: 'riser', dur: 4.2, peak: 4,
+      id: 'riser-long', name: _T('Riser long'), kind: 'riser', dur: 4.2, peak: 4,
       make(n) {
         const r = noise(23), f = svf(), x = new Float32Array(n), P = 4 * SR;
         let ph = 0, ph2 = 0;
@@ -155,7 +156,7 @@
       }
     },
     {
-      id: 'clic', name: 'Clic', kind: 'accent', dur: 0.08, peak: 0.002,
+      id: 'clic', name: _T('Clic'), kind: 'accent', dur: 0.08, peak: 0.002,
       make(n) {
         const r = noise(29), f = svf(), x = new Float32Array(n);
         for (let i = 0; i < n; i++) { const t = i / SR; x[i] = (f(r(), 3200, 3) * 1.5 + Math.sin(TAU * 1800 * t)) * Math.exp(-t / 0.006); }
@@ -163,7 +164,7 @@
       }
     },
     {
-      id: 'swish', name: 'Swish court', kind: 'accent', dur: 0.32, peak: 0.16,
+      id: 'swish', name: _T('Swish court'), kind: 'accent', dur: 0.32, peak: 0.16,
       make(n) {
         const r = noise(31), f = svf(), x = new Float32Array(n), P = 0.16 * SR;
         for (let i = 0; i < n; i++) {
@@ -179,7 +180,7 @@
   // Échantillons d'un son, crête ramenée à -3 dBFS, petits fondus aux bords.
   function render(id) {
     const s = byId(id);
-    if (!s) throw new Error('Son inconnu : ' + id);
+    if (!s) throw new Error(_T('Son inconnu : ') + id);
     const n = Math.round(s.dur * SR), x = s.make(n), fade = Math.round(0.004 * SR), hard = s.kind === 'impact';
     // Fondus aux bords (pas de clic), sauf l'attaque des impacts ; puis crête à -3 dBFS.
     for (let i = 0; i < n; i++) x[i] *= Math.min(1, hard ? Infinity : i / fade, (n - 1 - i) / fade);
