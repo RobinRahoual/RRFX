@@ -40,7 +40,12 @@
     formatCopy: _T('Copie au format réseau'),
     extracts: _T('Créer les extraits pour les réseaux'),
     preflight: _T('Vérifier avant export'),
-    importLink: _T('Importer depuis un lien')
+    importLink: _T('Importer depuis un lien'),
+    textCut: _T('Couper les phrases barrées (montage par le texte)'),
+    fitMusic: _T('Ajuster la musique à la vidéo'),
+    keepVersion: _T('Garder une version de la séquence'),
+    tidyProject: _T('Ranger le projet'),
+    proxies: _T('Créer les proxies')
   };
 
   const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L', express: 'E' };

@@ -325,6 +325,52 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('telecommande', '[data-shot=tel]', 400);
   await page.click('label:has-text("Activer la télécommande")');
 
+  // 2.5 : montage par le texte, musique à la durée, versions, projet, macros, temps.
+  await tab('speech');
+  await page.fill('.section:has(textarea.lyrics) textarea', '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2\n00:00:03,300 --> 00:00:05,000\neuh non je recommence\n\n3\n00:00:05,200 --> 00:00:08,000\nAujourd\'hui je vous montre notre nouveau café\n\n4\n00:00:08,200 --> 00:00:10,500\nOn a tout refait de A à Z\n\n5\n00:00:10,700 --> 00:00:12,000\nattends je reprends\n\n6\n00:00:12,200 --> 00:00:15,000\nEt le plus beau, c\'est la terrasse\n');
+  await sec('speech', 'texte', 'Texte');
+  await page.waitForTimeout(900);
+  await page.locator('.tx-row').nth(1).locator('.tx-cut').click();
+  await page.locator('.tx-row').nth(4).locator('.tx-cut').click();
+  await shot('montage-texte', '[data-sec=texte]', 400);
+  await sec('music', 'duree');
+  await page.click('.section:has-text("Musique à la durée de la vidéo") .action:text-is("Comparer les durées")');
+  await page.waitForSelector('.section:has-text("Musique à la durée de la vidéo") .note:has-text("à retirer")', { timeout: 5000 });
+  await shot('musique-duree', '[data-sec=duree]', 400);
+  await sec('formats', 'versions', 'Versions');
+  await page.fill('.section:has-text("Versions de la séquence") input', 'avant retours client');
+  await page.click('.section:has-text("Versions de la séquence") .action.go');
+  await page.waitForSelector('.ver-item', { timeout: 5000 });
+  await idle(); await close();
+  await shot('versions', '[data-sec=versions]', 400);
+  await sec('assets', 'rangement');
+  await page.click('.section:has-text("Ranger le projet") .action:text-is("Voir ce qui sera rangé")');
+  await page.waitForSelector('.section:has-text("Ranger le projet") .note:has-text("Vidéos")', { timeout: 5000 });
+  await idle(); await close();
+  await sec('assets', 'renommer');
+  await page.fill('.section:has-text("Renommer en série") input[aria-label="Modèle de nom"]', 'Interview_###');
+  await page.click('.section:has-text("Renommer en série") .action:text-is("Aperçu")');
+  await page.waitForSelector('.section:has-text("Renommer en série") .note:has-text("→ Interview_001")', { timeout: 5000 });
+  await shot('ranger-projet', '[data-sec=rangement]', 400);
+  await sec('assets', 'proxies');
+  await page.waitForSelector('.section:has-text("Proxies") select', { timeout: 5000 });
+  await shot('proxies', '[data-sec=proxies]', 400);
+  await page.evaluate(() => {
+    const s = window.RRFXApp.settings(), now = new Date(), m = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+    s.saved = { total: 1745, months: { [m]: 382 } };
+    const day = m + '-' + String(now.getDate()).padStart(2, '0');
+    s.timeTrack = { on: true, rate: 45, projects: {
+      a: { name: 'Mariage Léa & Hugo', path: '/a.prproj', minutes: 754, lastDay: day, days: { [day]: 96 } },
+      b: { name: 'Aftermovie Festival', path: '/b.prproj', minutes: 431, lastDay: m + '-01', days: {} },
+      c: { name: 'Interview client', path: '/c.prproj', minutes: 128, lastDay: m + '-01', days: {} } } };
+  });
+  await tab('settings');
+  await page.click('[data-sec=macros] .section-title');
+  await page.click('[data-sec=macros] .action:has-text("Interview prête")');
+  await page.evaluate(() => { const t = document.querySelector('[data-sec=temps]'); if (t && t.classList.contains('folded')) t.querySelector('.section-title').click(); const m = document.querySelector('[data-sec=macros]'); if (m && m.classList.contains('folded')) m.querySelector('.section-title').click(); });
+  await shot('macros', '[data-sec=macros]', 400);
+  await shot('temps-gagne', '[data-sec=gagne]', 400);
+
   // Test de compatibilité (Réglages) et accueil.
   await tab('settings');
   await page.evaluate(() => window.RRFXApp.diagnostic.run());

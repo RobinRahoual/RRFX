@@ -69,7 +69,13 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/preview.js          aperçus simulés
   js/widgets.js          composants façon Spectrum, valeurs glissables, éditeurs de courbes
   js/storage.js          bibliothèque perso sur disque
-  js/shortcuts.js        raccourcis clavier
+  js/shortcuts.js        raccourcis clavier (toutes les actions)
+  js/outils.js           calculs de la 2.5 : montage par le texte, musique à la durée, versions, temps (testé)
+  js/texte.js            montage par le texte (onglet Parole)
+  js/duree.js            musique à la durée de la vidéo (onglet Musique)
+  js/projet.js           dossiers surveillés, rangement, renommage, proxies (Ressources) ; versions (Formats)
+  js/macros.js           macros : enchaînements d'actions sur un bouton, une touche, la télécommande
+  js/temps.js            temps passé par projet, temps gagné et carte à partager (Réglages)
   js/updates.js          vérification des nouvelles versions sur GitHub
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)

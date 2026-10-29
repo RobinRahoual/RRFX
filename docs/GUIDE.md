@@ -304,6 +304,14 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
 - **Réverb de fin** : à la fin de la musique ou à la tête de lecture (RR FX y coupe la musique), la résonance du
   dernier instant joué (salle petite, grande ou cathédrale), sur une piste son libre : la fin ne tombe plus à plat.
 
+- **Musique à la durée de la vidéo** : *Comparer les durées* donne la longueur de la musique et la fin de la
+  vidéo (dernier plan, toutes pistes vidéo). *Ajuster la musique* retire un passage au milieu du morceau (ni dans
+  le premier cinquième, ni dans le dernier quart), entre deux temps forts, de préférence un nombre entier de
+  mesures, et recolle la suite : la vraie fin du morceau tombe avec la dernière image. Si la coupe ne peut pas être
+  exacte, la fin est coupée au dernier plan. Seuls les morceaux de la musique bougent (les autres sons de la piste
+  restent). Une version de la séquence est gardée avant (option). Une musique plus courte que la vidéo n'est pas
+  rallongée.
+
 ### Onglet Textes
 
 Titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mot par texte), choisis le rythme
@@ -394,6 +402,12 @@ section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil ut
 - **Respirations et clics** : les respirations entre deux phrases et les petits clics de bouche des plans
   sélectionnés sont baissés par des images clés de volume, sans rien couper. ↶ Annuler remet le volume.
 
+- **Montage par le texte** : le `.srt` chargé s'affiche phrase par phrase. Un clic sur une phrase amène la tête
+  de lecture (en tenant compte du *Départ du .srt*) ; ✕ la barre, ↺ la rétablit ; la recherche filtre les phrases
+  qui contiennent un mot (sans tenir compte des accents). *Couper les phrases barrées* retire chaque phrase avec la
+  moitié des blancs qui l'entourent (au plus 0,2 s), sur les plans sélectionnés, comme la coupe des silences (sur
+  une copie de la séquence par défaut). Le `.srt` est ensuite recalé sur le nouveau montage.
+
 ### Onglet Formats
 
 Une **copie de la séquence** au format des réseaux, en un clic : **9:16** (Reels, TikTok, Shorts), **4:5**
@@ -421,6 +435,10 @@ Dans le même onglet :
   Aftermovie / clip. Sélectionne tes rushs dans le panneau Projet : RR FX crée la séquence au bon format avec eux,
   pose le calque de réglage et choisit le style Express et les styles des textes. *Enregistrer mes réglages comme
   modèle* garde ta propre recette (elle se partage comme un effet).
+
+- **Versions de la séquence** : *Garder une version maintenant* duplique la séquence active sous le nom
+  « Nom v02 » (puis v03…), avec ta note entre parenthèses, et la range dans le chutier *Versions*. Tu continues sur
+  la séquence d'origine ; la liste montre ses versions, *Ouvrir* en rouvre une.
 
 ### Onglet Ressources
 
@@ -459,6 +477,25 @@ Ressources » et posé **à la tête de lecture** sur une piste libre (la vidéo
 *Calque de réglage Lumetri* charge la LUT directement dans *Correction de base > LUT d'entrée* (si ta version de
 Premiere refuse, le chemin est copié : *LUT d'entrée > Parcourir…*). Les LUT et polices **installées** apparaissent
 dans les listes de Premiere après un redémarrage.
+
+Dans le même onglet, pour tenir le projet :
+
+- **Dossiers surveillés** : *Surveiller un dossier…* lie un dossier du disque à un chutier (« Rushs/Nom du
+  dossier » par défaut, modifiable, sous-chutiers avec « / »). Toutes les minutes, les nouveaux fichiers vidéo, son
+  et image (4 niveaux de sous-dossiers) sont importés dans ce chutier ; ceux déjà dans le projet sont passés. Rien
+  n'est déplacé sur le disque. Propre à chaque ordinateur.
+- **Ranger le projet** : les éléments posés à la racine du panneau Projet partent dans des chutiers Vidéos, Sons,
+  Images, Séquences, Graphiques (tes chutiers ne bougent pas). En option, les médias qui ne servent dans aucune
+  séquence vont dans *Non utilisés*. *Voir ce qui sera rangé* fait l'inventaire sans rien bouger. Rien n'est
+  supprimé.
+- **Renommer en série** : sur la sélection du panneau Projet, dans l'ordre de la sélection. `#` devient le numéro
+  (autant de chiffres que de `#`), `{nom}` le nom actuel ; *Aperçu* avant. ↶ Annuler remet les anciens noms. Les
+  fichiers sur le disque ne changent pas.
+- **Proxies** : choisis un préréglage de proxy (ceux fournis avec Premiere sont trouvés tout seuls, ou un `.epr`)
+  et le dossier des proxies (`Documents/RRFX/Proxies` par défaut). RR FX envoie les rushs vidéo (sélection du
+  Projet ou tous) à Media Encoder et attache chaque proxy à la fin de son encodage. Moniteur de programme >
+  *Activer les proxies* pour monter avec ; l'export utilise toujours les originaux. Media Encoder doit être
+  installé.
 
 ### Onglet Mes effets
 
@@ -552,6 +589,25 @@ Pour changer une touche : *Réglages > Raccourcis clavier*, clique sur la touche
 (Retour arrière pour n'en mettre aucune). **Toutes les actions** (31 : historique, recherche rapide, risers, barre de
 progression, couper les silences, sous-titres, extraits, vérification…) peuvent recevoir une touche, avec ou sans
 **Maj**.
+
+### Macros
+
+*Réglages > Macros* : *Nouvelle macro*, un nom, puis les étapes dans l'ordre (toutes les actions RR FX sauf
+annuler, historique, recherche rapide et capture). *▶ Lancer* les exécute l'une après l'autre ; une étape qui
+échoue (ou *Arrêter*) arrête la macro. Chaque macro devient une action : une touche dans *Raccourcis clavier*, une
+adresse dans la *Télécommande* (Stream Deck), une ligne « ▶ Nom » dans la recherche rapide. Deux exemples à
+ajouter d'un clic : *Interview prête* (silences, « euh », voix, sous-titres, vérification) et *Reels en un clic*
+(Express, copie au format, barre de progression).
+
+### Temps gagné, temps passé
+
+- **Temps gagné avec RR FX** : chaque opération réussie ajoute le temps qu'elle aurait pris à la main : une
+  demi-minute pour s'y mettre et 20 s par élément posé (coupe, calque, image clé, sous-titre…), 45 min au plus.
+  *Créer la carte à partager* enregistre une image 1080 × 1920 pour une story ; *Copier le texte* donne la légende.
+- **Temps passé par projet** : toutes les minutes, RR FX regarde si quelque chose a bougé dans Premiere (tête de
+  lecture, nombre de plans, séquence ouverte). Une minute compte s'il y a eu du mouvement dans les 5 dernières
+  minutes. Indique ton tarif horaire pour voir le montant ; *Exporter en CSV…* donne un tableau (projet, fichier,
+  heures, dernier jour, montant) pour Excel ou Numbers. Propre à chaque ordinateur, rien ne quitte ton ordinateur.
 
 ### Télécommande (Stream Deck, Companion)
 

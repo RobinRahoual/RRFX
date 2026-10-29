@@ -664,13 +664,14 @@
         s.roots.length ? renderRoots() : h('div', { class: 'note' }, _T('Lie le dossier où tu ranges tes effets, SFX, polices, LUTs, titres et overlays : RR FX les classe et tu les retrouves ici, avec aperçu, prêts à poser dans la timeline. Les fichiers restent où ils sont.')),
         h('div', { class: 'row-buttons' }, linkBtn, s.roots.length && Store.fs ? refresh : null)
       ]));
-      if (!s.roots.length) return;
+      if (!s.roots.length) { app.renderExtras('assets', view); return; }
       view.appendChild(section(_T('Parcourir'), renderFilters()));
       view.appendChild(h('div', { class: 'grid', id: 'res-grid' }));
       view.appendChild(h('div', { class: 'res-more', id: 'res-more' }));
       view.appendChild(h('div', { id: 'res-inspector' }));
       renderGrid();
       renderInspector();
+      app.renderExtras('assets', view);
       // Index jamais fait ou ancien : relu en arrière-plan.
       const stale = s.roots.filter(r => Store.fs && (!R.index[r] || Date.now() - R.index[r].scanned > STALE_MS));
       if (stale.length && !app.S.busy) setTimeout(() => { if (!app.S.busy && app.S.tab === 'assets') scanRoots(stale, _T('Mise à jour des ressources')); }, 300);

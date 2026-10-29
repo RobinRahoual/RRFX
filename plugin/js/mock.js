@@ -82,9 +82,25 @@
     formatCopy: async a => { await wait(300); return { ok: true, name: _T('Clip démo (') + a.label + ')', reframed: a.mode === 'reframe' ? 6 : 0, filled: a.mode === 'fill' || a.mode === 'face' ? 6 : 0, faced: a.mode === 'face' ? (a.faces || []).length : 0, blurred: a.mode === 'blur' ? 6 : 0, width: a.width, height: a.height, warnings: [] }; },
     duckMusic: a => ({ ok: true, keys: a.keys.length, created: [{ kind: 'level', track: a.track, start: a.start * TICKS, value: 0.17, name: _T('Musique (démo)') }], warnings: [] }),
     gainKeys: a => ({ ok: true, keys: a.keys.length, created: [{ kind: 'level', track: a.track, start: a.start * TICKS, value: 0.17, name: a.label || _T('Voix (démo)') }], warnings: [] }),
-    listSequences: () => ({ ok: true, active: 'demo-1', sequences: [
-      { id: 'demo-1', name: _T('Clip démo'), w: 1920, h: 1080, end: 60 }, { id: 'demo-2', name: _T('Interview client'), w: 1920, h: 1080, end: 312 },
-      { id: 'demo-3', name: 'Teaser 9:16', w: 1080, h: 1920, end: 28 }] }),
+    listSequences: () => ({ ok: true, active: 'demo-1', sequences: seqs.slice() }),
+    versionSequence: async a => { await wait(150); const q = { id: 'demo-v' + seqs.length, name: a.name, w: 1920, h: 1080, end: 60 }; seqs.push(q); return { ok: true, id: q.id, name: q.name, of: _T('Clip démo'), ofId: 'demo-1' }; },
+    fitMusic: async a => {
+      if (a.plan) return { ok: true, music: { name: _T('Musique (démo)'), track: 1, start: 0, end: 60, path: '' }, videoEnd: 45 };
+      await wait(250);
+      return { ok: true, removed: a.b > a.a ? 1 : 0, moved: a.b > a.a ? 1 : 0, refused: 0, end: 60 - (a.b - a.a || 0), name: _T('Musique (démo)'), warnings: [] };
+    },
+    importToBin: async a => { await wait(100); const fresh = a.paths.filter(p => !imported.has(p)); fresh.forEach(p => imported.add(p)); return { ok: true, imported: fresh.map(p => p.split(/[\\/]/).pop()), skipped: a.paths.length - fresh.length }; },
+    tidyProject: async a => {
+      await wait(150);
+      const counts = { video: 6, audio: 2, image: 3, sequence: 2 }, unused = ['C0007.MP4', 'C0008.MP4', 'IMG_4519.MOV'];
+      return a.dry ? { ok: true, counts, loose: 13, unused, unusedCount: unused.length } : { ok: true, counts, moved: 13, parked: a.unused ? unused.length : 0 };
+    },
+    renameItems: a => (a.dry ? { ok: true, items: [{ id: 'p1', name: 'C0001.MP4' }, { id: 'p2', name: 'C0002.MP4' }, { id: 'p3', name: 'IMG_4512.MOV' }] }
+      : { ok: true, renamed: a.ids.map((id, i) => ({ id, old: ['C0001.MP4', 'C0002.MP4', 'IMG_4512.MOV'][i] || id, name: a.names[i] })) }),
+    activityPing: () => ({ ok: true, project: _T('Projet démo.prproj'), path: '/demo/Projet démo.prproj', sig: 'demo|' + Math.floor(Date.now() / 90000) }),
+    proxyPresets: () => ({ ok: true, presets: [{ path: '/demo/H.264 Low Resolution Proxy.epr', name: 'H.264 Low Resolution Proxy' }, { path: '/demo/ProRes Low Resolution Proxy.epr', name: 'ProRes Low Resolution Proxy' }] }),
+    makeProxies: async a => { await wait(200); proxies.total = 4; proxies.started = Date.now(); return { ok: true, queued: ['C0001.MP4', 'IMG_4512.MOV', 'C0002.MP4', 'DJI_0042.MP4'].map((name, i) => ({ job: String(i + 1), id: 'p' + i, name })), skipped: 0 }; },
+    proxyStatus: () => { const n = Math.min(proxies.total, Math.floor((Date.now() - proxies.started) / 700)); return { ok: true, total: proxies.total, finished: n, attached: n }; },
     openSequence: a => ({ ok: true, id: a.id, name: a.id }),
     extractCopy: async a => { await wait(200); return { ok: true, name: a.name, id: 'demo-x' + Math.round(a.a), seconds: a.b - a.a, kept: 6, warnings: [] }; },
     preflight: async () => {
@@ -106,6 +122,9 @@
     multicamSwitch: a => ({ ok: true, segments: a.times.length + 1, switches: a.times.length, cams: 2, disabled: a.times.length + 1, plan: [], entry: { kind: 'mc', tracks: [0, 1], a: 0, b: 0 } })
   };
   const markers = [];
+  const seqs = [{ id: 'demo-1', name: _T('Clip démo'), w: 1920, h: 1080, end: 60 }, { id: 'demo-2', name: _T('Interview client'), w: 1920, h: 1080, end: 312 },
+    { id: 'demo-3', name: 'Teaser 9:16', w: 1080, h: 1920, end: 28 }];
+  const imported = new Set(), proxies = { total: 0, started: 0 };
 
   root.RRFXMock = {
     async call(fn, arg) {

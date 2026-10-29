@@ -32,20 +32,22 @@ pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.
 - **🧪 Fiable.** Un test de compatibilité vérifie ton Premiere en un clic, et les mises à jour s'installent toutes
   seules.
 - **🌍 En français ou en anglais.** Au choix dès le premier lancement.
+- **⏱️ Tu vois le temps gagné.** RR FX compte ce qu'il t'a fait gagner, et le temps passé sur chaque projet.
 - **🎁 Gratuit.** Pas d'abonnement, pas de compte.
 
 ---
 
-## Nouveau dans la 2.4
+## Nouveau dans la 2.5
 
-- 🌍 **RR FX parle anglais** : choisis ta langue au premier lancement.
-- 📱 **Extraits pour les réseaux** trouvés tout seuls dans tes longues vidéos.
-- ✅ **Vérification avant export**, et une action **sur plusieurs séquences** d'un coup.
-- 🗂️ **Nouveau projet depuis un modèle** (Reels, YouTube, interview, podcast…).
-- 🎞️ **Plans de coupe sur les mots clés** et 🌐 **sous-titres traduits** dans 24 langues.
-- 🫁 **Respirations et clics de bouche** baissés, 🎢 **risers avant les drops** et **réverb de fin**.
-- ⏳ **Barre de progression** et **compte à rebours**.
-- 🎛️ **Stream Deck**, un raccourci pour chaque action, **synchro entre ordinateurs** et 🕘 **historique détaillé**.
+- 📝 **Montage par le texte** : barre des phrases dans ton `.srt`, RR FX les coupe dans la timeline.
+- 🎵 **Musique à la durée de la vidéo**, coupée sur un temps fort pour finir avec la dernière image.
+- ▶ **Macros** : une chaîne d'actions sur un bouton, une touche ou un bouton de Stream Deck.
+- 🕓 **Versions de la séquence** en un clic, rangées dans un chutier.
+- 📂 **Dossiers surveillés**, 🧹 **projet rangé**, 🏷️ **renommage en série** et ⚡ **proxies en un clic**.
+- ⏱️ **Temps passé par projet** (pour facturer) et 🏆 **temps gagné avec RR FX**, en carte à partager.
+
+La 2.4 avait apporté : RR FX en anglais, extraits pour les réseaux, vérification avant export, modèles de projet,
+plans de coupe sur les mots clés, sous-titres traduits, risers, Stream Deck, synchro entre ordinateurs.
 
 Tout est détaillé plus bas, avec une capture par outil.
 
@@ -596,6 +598,108 @@ panneau suit, messages de Premiere compris. Ça se change à tout moment dans *R
 <tr>
 <td width="56%">
 
+### 📝 Monter en barrant du texte
+
+Ton `.srt` s'affiche comme un texte, phrase par phrase.
+
+- **Un clic sur une phrase** : la tête de lecture y va.
+- **✕ pour barrer** les phrases ratées, les redites, les hors-sujet : RR FX les coupe dans la timeline et recolle
+  la suite (sur une copie de la séquence si tu veux).
+- Les sous-titres restants sont **recalés** sur le nouveau montage.
+- **Cherche un mot** dans tout le texte pour retrouver un passage.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/montage-texte.png" alt="Montage par le texte" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/musique-duree.png" alt="Musique à la durée de la vidéo" width="300"></td>
+<td width="56%">
+
+### 🎵 La musique finit avec ta vidéo
+
+Ta musique fait 3 min et ta vidéo 1 min 05 ? RR FX retire un passage **au milieu, entre deux temps forts** (des
+mesures entières si possible).
+
+- Le morceau garde son intro et **sa vraie fin**, qui tombe pile avec la dernière image.
+- Pas de fondu bricolé, pas de coupe sèche.
+- Une version de la séquence est gardée avant, au cas où.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🕓 Des versions de ta séquence
+
+Avant un gros changement ou les retours du client : **une copie figée** en un clic (« Clip v02 (avant retours
+client) »), rangée dans le chutier *Versions*.
+
+- Tu continues sur l'originale.
+- La liste des versions est là, **rouvre-en une** quand tu veux.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/versions.png" alt="Versions de la séquence" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/macros.png" alt="Macros" width="300"></td>
+<td width="56%">
+
+### ▶ Tes macros
+
+Enchaîne plusieurs actions RR FX et lance-les **d'un seul clic** : par exemple couper les silences, couper les
+« euh », égaliser la voix, poser les sous-titres, vérifier avant export.
+
+- Sur **une touche**, dans la **recherche rapide** ou sur un bouton de **Stream Deck**.
+- Deux exemples prêts : *Interview prête* et *Reels en un clic*.
+- Une étape qui échoue arrête la macro et te dit laquelle.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🧹 Un projet propre sans y penser
+
+- **Dossiers surveillés** : les nouveaux fichiers d'un dossier (carte mémoire copiée, dossier partagé avec un
+  client) arrivent **tout seuls dans un chutier**, toutes les minutes.
+- **Ranger le projet** : ce qui traîne part dans des chutiers par type, les médias jamais utilisés à part.
+  Rien n'est supprimé.
+- **Renommer en série** : `Interview_###` → Interview_001, Interview_002… avec aperçu, et **↶ Annuler**.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/ranger-projet.png" alt="Ranger le projet et renommer en série" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/proxies.png" alt="Proxies en un clic" width="300"></td>
+<td width="56%">
+
+### ⚡ Des proxies en un clic
+
+Rushs 4K, 6K ou LOG trop lourds ? RR FX fait fabriquer **des proxies légers par Media Encoder** et les attache
+tout seul, au fur et à mesure.
+
+- Sur la sélection du panneau Projet, ou tous les rushs vidéo.
+- Le montage est fluide, **l'export garde les originaux**.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🏆 Le temps gagné, le temps passé
+
+- **Temps gagné avec RR FX** : chaque opération ajoute ce qu'elle aurait pris à la main (estimation prudente).
+  **Crée une carte** à partager en story.
+- **Temps passé par projet** : une minute compte quand quelque chose bouge dans Premiere. Ton tarif horaire, et
+  un **export CSV** pour facturer. Rien ne quitte ton ordinateur.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/temps-gagne.png" alt="Temps gagné et temps passé" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/recherche.png" alt="Recherche rapide" width="300"></td>
+<td width="56%">
+
 ### 🔍 Tout au clavier
 
 **Ctrl+K** (ou **/**) : tape deux lettres, appuie sur Entrée.
@@ -605,10 +709,8 @@ panneau suit, messages de Premiere compris. Ça se change à tout moment dans *R
   conversion LOG…
 
 </td>
-<td width="44%"><img src="docs/captures/outils/recherche.png" alt="Recherche rapide" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/test-compatibilite.png" alt="Test de compatibilité" width="300"></td>
 <td width="56%">
 
 ### 🧪 Tu sais que ça marche chez toi
@@ -620,8 +722,10 @@ besoin dans ton Premiere. La copie est supprimée ensuite, ton montage n'est pas
 - **Copier le rapport** si quelque chose coince.
 
 </td>
+<td width="44%"><img src="docs/captures/outils/test-compatibilite.png" alt="Test de compatibilité" width="300"></td>
 </tr>
 <tr>
+<td width="44%"><img src="docs/captures/outils/accueil.png" alt="Accueil de RR FX" width="300"></td>
 <td width="56%">
 
 ### 🚀 Pris en main en 30 secondes, à jour en un clic
@@ -632,7 +736,6 @@ besoin dans ton Premiere. La copie est supprimée ensuite, ton montage n'est pas
   ta version actuelle est gardée de côté, et rien ne change si quelque chose se passe mal.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/accueil.png" alt="Accueil de RR FX" width="300"></td>
 </tr>
 </table>
 

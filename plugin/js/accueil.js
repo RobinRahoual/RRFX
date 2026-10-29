@@ -119,6 +119,17 @@
       act(_T('Style de texte et Mes couleurs'), 'Action', () => reveal('titles', null, false, 'Style du texte'));
       act(_T('Historique des opérations RR FX'), 'Action', () => app.services.showHistory());
       act('Langue · Language (Français / English)', 'Action', () => reveal('settings', '[data-sec=lang]'));
+      act(_T('Montage par le texte (.srt)'), 'Action', () => reveal('speech', '[data-sec=texte]'));
+      act(_T('Musique à la durée de la vidéo'), 'Action', () => reveal('music', '[data-sec=duree]'));
+      act(_T('Versions de la séquence'), 'Action', () => reveal('formats', '[data-sec=versions]'));
+      act(_T('Dossiers surveillés (import automatique)'), 'Action', () => reveal('assets', '[data-sec=surveilles]'));
+      act(_T('Ranger le projet'), 'Action', () => reveal('assets', '[data-sec=rangement]'));
+      act(_T('Renommer en série'), 'Action', () => reveal('assets', '[data-sec=renommer]'));
+      act(_T('Créer les proxies'), 'Action', () => reveal('assets', '[data-sec=proxies]'));
+      act(_T('Macros'), 'Action', () => reveal('settings', '[data-sec=macros]'));
+      act(_T('Temps gagné avec RR FX'), 'Action', () => reveal('settings', '[data-sec=gagne]'));
+      act(_T('Temps passé par projet'), 'Action', () => reveal('settings', '[data-sec=temps]'));
+      (app.macros ? app.macros.list() : []).forEach(m => act('▶ ' + m.name, 'Macro', () => app.macros.run(m.id)));
       act(_T('Risers avant les drops'), 'Action', () => reveal('music', '[data-sec=risers]'));
       act(_T('Réverb de fin de musique'), 'Action', () => reveal('music', '[data-sec=tail]'));
       act(_T('Atténuer respirations et clics de bouche'), 'Action', () => reveal('speech', '[data-sec=souffle]'));

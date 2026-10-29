@@ -143,12 +143,15 @@ function makeEnv(fps) {
         return sub;
       },
       moveBin(b) {
-        const parent = parents.get(me);
+        const parent = parents.get(me) || (root.children.includes(me) ? root : null);
         if (parent) parent.children.splice(parent.children.indexOf(me), 1);
         b.children.push(me); parents.set(me, b);
       },
       createBin(n) { const b = projItem(n, 2, 0); me.children.push(b); parents.set(b, me); return b; },
       getMediaPath() { return me.path || ''; },
+      canProxy() { return me.type === 1 && /\.(mov|mp4)$/i.test(me.path || ''); },
+      hasProxy() { return !!me.proxy; },
+      attachProxy(p) { me.proxy = p; return true; },
       setInPoint(s) { this._inP = s * TICKS; }, setOutPoint(s) { this._outP = s * TICKS; },
       getInPoint() { return T(this._inP); }, getOutPoint() { return T(this._outP); },
       clearInPoint() { this._inP = 0; }, clearOutPoint() { this._outP = this._dur; }
@@ -177,10 +180,12 @@ function makeEnv(fps) {
     getSettings() { return { videoFrameRate: T(F), videoDisplayFormat: 101, videoFrameWidth: this.frameSizeHorizontal, videoFrameHeight: this.frameSizeVertical }; },
     setSettings(st) { this.frameSizeHorizontal = st.videoFrameWidth; this.frameSizeVertical = st.videoFrameHeight; },
     sequenceID: 'seq-1',
+    projectItem: null,
     // Copie de la séquence (pistes, plans, effets), ajoutée au projet.
     clone() {
       const ns = Object.defineProperties({}, Object.getOwnPropertyDescriptors(this));
       ns.name = this.name + ' Copy'; ns.sequenceID = 'seq-' + nid(); ns._markers = this._markers.slice();
+      ns.projectItem = seqItem(ns);
       const copyTracks = list => { const out = coll(list.map((t, i) => { const nt = new Track(ns, i); t.items.forEach(it => { const c = Object.assign(Object.create(Object.getPrototypeOf(it)), it); c.nodeId = nid(); c.seq = ns; c.components = coll(it.components.map(cm => comp(cm.matchName, cm.displayName, cm.properties.map(p => JSON.parse(JSON.stringify(p.v))), c))); nt.add(c); }); return nt; })); Object.defineProperty(out, 'numTracks', { get: () => out.length }); return out; };
       ns.videoTracks = copyTracks(this.videoTracks); ns.audioTracks = copyTracks(this.audioTracks);
       sequences.push(ns);
@@ -212,6 +217,15 @@ function makeEnv(fps) {
     },
     unlinkSelection() { this._unlinked = true; }
   };
+  // Élément du panneau Projet d'une séquence (même nom qu'elle, rangé à la racine).
+  function seqItem(sq) {
+    const pi = projItem(sq.name, 1, 0);
+    pi.isSequence = () => true;
+    Object.defineProperty(pi, 'name', { get: () => sq.name, set: v => { sq.name = v; } });
+    root.children.push(pi); parents.set(pi, root);
+    return pi;
+  }
+  seq.projectItem = seqItem(seq);
   seq.videoTracks = coll([new Track(seq, 0), new Track(seq, 1), new Track(seq, 2)]);
   seq.audioTracks = coll([new Track(seq, 0), new Track(seq, 1)]);
   Object.defineProperty(seq.audioTracks, 'numTracks', { get: () => seq.audioTracks.length });
@@ -314,9 +328,29 @@ function makeEnv(fps) {
     });
     return true;
   };
-  const app = { project, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
+  // Media Encoder : les jobs restent en file jusqu'à encoder.finish() (fin de chaque job).
+  const encoder = {
+    jobs: [], started: false, cb: null,
+    launchEncoder() { return true; },
+    bind(ev, fn) { if (ev === 'onEncoderJobComplete') this.cb = fn; },
+    encodeProjectItem(pi, out, preset) { const id = String(this.jobs.length + 1); this.jobs.push({ id, pi, out, preset }); return id; },
+    startBatch() { this.started = true; },
+    finish() { this.jobs.forEach(j => this.cb && this.cb(j.id, j.out)); }
+  };
+  // Dossiers (ExtendScript Folder) : ceux créés par le test, et les préréglages de proxy.
+  const folders = new Set(['/Applications/Adobe Premiere Pro 2025/Contents/Settings/IngestPresets/Proxy']);
+  const folderFiles = { '/Applications/Adobe Premiere Pro 2025/Contents/Settings/IngestPresets/Proxy': ['H.264%20Low%20Resolution%20Proxy.epr', 'ProRes%20Low%20Resolution%20Proxy.epr'] };
+  class Folder {
+    constructor(p) { this.fsName = p; }
+    get exists() { return folders.has(this.fsName); }
+    create() { folders.add(this.fsName); return true; }
+    getFiles() { return (folderFiles[this.fsName] || []).map(n => ({ name: n, fsName: this.fsName + '/' + decodeURI(n) })); }
+  }
+  project.name = 'Projet test.prproj';
+  project.path = '/projets/Projet test.prproj';
+  const app = { project, encoder, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
 
-  const ctx = vm.createContext({ app, qe, Time });
+  const ctx = vm.createContext({ app, qe, Time, Folder });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
   // Élément audio avec son réglage de volume (Niveau 0,1778 = 0 dB).
   const audioItem = (sq, pi, a, b, inP, name) => {
@@ -325,7 +359,7 @@ function makeEnv(fps) {
     it.components = coll([comp('Internal Volume Stereo', 'Volume', [false, Math.pow(10, -15 / 20)], it)]);
     return it;
   };
-  return { ctx, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, encoder, folders, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };

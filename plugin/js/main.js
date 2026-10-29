@@ -210,10 +210,13 @@
     S.cancel = false;
     setBusy(true);
     status.start(label, cancellable);
-    const started = Date.now();
+    const started = Date.now(), placed = S.placed || 0;
     try {
       const result = (await task()) || { kind: 'ok', title: _T('Terminé') };
       status.finish(result.kind, result.title, result.detail);
+      // Ce que la tâche a posé (historique), pour le temps gagné et autres suivis.
+      const added = (S.placed || 0) - placed;
+      (app.taskHooks || []).forEach(fn => { try { fn(label, result, added); } catch (e) { /* suivi : jamais bloquant */ } });
       if (Date.now() - started > LONG_TASK_MS && result.kind !== 'idle') signalEnd();
       return result;
     } catch (e) {
@@ -1224,6 +1227,7 @@
     // Séquence de l'opération : l'annuler plus tard la rouvre si besoin.
     if (S.ctx && S.ctx.seqId && !op.seq) { op.seq = S.ctx.seqId; op.seqName = S.ctx.name; }
     list.push(op);
+    S.placed = (S.placed || 0) + (op.entries ? op.entries.length : 0);
     while (list.length > MAX_HISTORY) list.shift();
     persist();
     renderUndo();
@@ -2292,12 +2296,15 @@
   app.services.addOverlay = file => { addOverlayList([file]); if (S.tab !== 'effects') switchTab('effects'); };
   app.services.addItems = list => addItems(list);
   app.services.runAction = runAction;
+  // Même chose, en attendant la fin de l'action (macros) : → son résultat { kind, title, detail }.
+  app.services.runActionAsync = id => { const fn = actionFn(id); return fn ? Promise.resolve(fn()) : Promise.reject(new Error(_T('Action indisponible'))); };
+  app.taskHooks = [];
   app.services.actionAvailable = id => !!actionFn(id);
   app.services.showHistory = () => showHistory();
   app.settingsExtras = [];
   /* Outils ajoutés aux onglets par d'autres modules : { id, title, nav, tool: [libellé du bouton
      du haut, action], render: () => contenu de la section }. */
-  app.extras = { speech: [], music: [], titles: [], formats: [] };
+  app.extras = { speech: [], music: [], titles: [], formats: [], assets: [] };
   app.renderExtras = (tab, view, use) => app.extras[tab].forEach(e => {
     const el = window.RRFXUI.section(e.title, e.render(use || ((k, fn) => fn)), null, e.shut);
     el.dataset.sec = e.id;
