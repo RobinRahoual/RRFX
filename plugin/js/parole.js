@@ -466,6 +466,9 @@
       const imp = h('button', { class: 'action' }, _T('Importer un .srt…'));
       imp.addEventListener('click', () => importSrt(() => app.switchTab('speech')));
       const capBtn = h('button', { class: 'action go' }, _T('Poser les sous-titres'));
+      // Ou une piste de sous-titres de Premiere (styles et retouches dans le panneau Texte).
+      const capNative = h('button', { class: 'action quiet', title: _T('Une piste de sous-titres de Premiere, modifiable dans son panneau Texte') }, _T('En sous-titres de Premiere'));
+      capNative.addEventListener('click', () => app.actions.nativeCaptions && app.actions.nativeCaptions());
       capBtn.addEventListener('click', use('soustitres', () => captions()));
       const anims = app.services.titleAnimOptions ? app.services.titleAnimOptions() : Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name }));
       const styles = app.textStyles ? app.textStyles.options() : [{ v: '', label: _T('Celui du modèle .mogrt') }];
@@ -487,7 +490,7 @@
         row(_T('Départ du .srt'), picker([{ v: 'start', label: _T('Début de la séquence') }, { v: 'playhead', label: _T('Tête de lecture') }, { v: 'selection', label: _T('Début des clips sélectionnés') }], x.capFrom, v => { x.capFrom = v; app.persist(); })),
         lastCuts.length ? h('div', { class: 'field' }, app.UI.checkbox(_T('Recaler sur les coupes (silences, euh) : .srt fait avant'), x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
         h('div', { class: 'note' }, _T('Modèle de texte : ') + (model || 'aucun') + _T(' (onglet Textes).')),
-        h('div', { class: 'row-buttons' }, capBtn)
+        h('div', { class: 'row-buttons' }, capBtn, capNative)
       ]));
 
       // Bandeau
@@ -597,6 +600,8 @@
       cta: () => { const e = extras().find(q => q.id === st().lastTool && q.tool), t = e ? e.tool : TOOLS[st().lastTool] || TOOLS.silences; return { label: t[0], run: t[1], enabled: true }; }
     };
     // Pour les outils ajoutés à l'onglet.
-    app.speech = { clips: speechClips, readClip, settings: st, cues: () => Sp.parseSubtitles(st().srt), lastCuts: () => lastCuts, captions, analyzeSilences: analyze, startTime };
+    // Les sous-titres à leur place dans la séquence (départ choisi, recalés sur les coupes faites).
+    const timedCues = async () => cutAware(Sp.offset(Sp.parseSubtitles(st().srt), await startTime(st().capFrom)));
+    app.speech = { clips: speechClips, readClip, settings: st, cues: () => Sp.parseSubtitles(st().srt), timedCues, lastCuts: () => lastCuts, captions, analyzeSilences: analyze, startTime };
   });
 })(typeof self !== 'undefined' ? self : this);

@@ -50,6 +50,10 @@
     cleanCuts: _T('Recaler les coupes sur les blancs'),
     rhythm: _T('Analyser le rythme du montage'),
     exportBatch: _T('Exporter les séquences cochées (Media Encoder)'),
+    nativeTransitions: _T('Poser les transitions de Premiere sur les coupes'),
+    audioFades: _T('Fondus audio anti-clic sur toutes les coupes'),
+    sceneEdits: _T('Détecter les changements de plan (Premiere)'),
+    nativeCaptions: _T('Créer la piste de sous-titres de Premiere'),
     archive: _T('Archiver le projet')
   };
 

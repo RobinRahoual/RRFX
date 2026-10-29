@@ -955,6 +955,26 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const space = await page.evaluate(() => window.RRFXApp.settings().layout.space);
     if (space !== 'all') throw new Error('espace : ' + space);
   });
+  await step('2.7 : outils de Premiere (transitions, changements de plan, sous-titres)', async () => {
+    await goTab('native');
+    await page.waitForSelector('.tab.on[data-tab=native]');
+    await page.click('[data-sec=transitions] .action.go');
+    await page.waitForSelector('#status.ok:has-text("transitions")', { timeout: 5000 });
+    await idle();
+    const h = await page.evaluate(() => window.RRFXApp.S.lib.history.slice(-1)[0]);
+    if (!h || !h.entries.some(e => e.kind === 'trans')) throw new Error('historique sans transitions');
+    await page.click('[data-sec=transitions] .action:text-is("Fondus audio anti-clic")');
+    await page.waitForSelector('#status.ok:has-text("fondus audio")', { timeout: 5000 });
+    await idle();
+    await page.click('[data-sec=scenes] .action.go');
+    await page.waitForSelector('#status.ok:has-text("6 marqueurs")', { timeout: 5000 });
+    await idle();
+    await page.evaluate(() => { window.RRFXApp.speech.settings().srt = '1\n00:00:01,000 --> 00:00:03,000\nBonjour\n'; });
+    await page.click('[data-sec=captions] .action.go');
+    await page.waitForSelector('#status.ok:has-text("Piste de sous-titres")', { timeout: 5000 });
+    await idle();
+    if ((await page.textContent('#cta')) !== 'Poser les transitions de Premiere') throw new Error('CTA : ' + await page.textContent('#cta'));
+  });
   await step('langue : passage en anglais', async () => {
     await goTab('settings');
     await page.click('[data-sec=lang] button:has-text("English")');

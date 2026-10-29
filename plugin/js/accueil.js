@@ -97,6 +97,10 @@
       const act = (label, kind, run, hint) => out.push({ label, kind, run, hint: hint || '' });
       act(_T('Lancer le montage express'), 'Action', () => A.express && A.express(), 'Express');
       act(_T('Fenêtres et espaces de travail'), 'Action', () => app.services.windows && app.services.windows());
+      act(_T('Transitions de Premiere sur toutes les coupes'), 'Action', () => A.nativeTransitions && A.nativeTransitions());
+      act(_T('Fondus audio anti-clic sur toutes les coupes'), 'Action', () => A.audioFades && A.audioFades());
+      act(_T('Détecter les changements de plan (Premiere)'), 'Action', () => reveal('native', '[data-sec=scenes]'));
+      act(_T('Créer la piste de sous-titres de Premiere'), 'Action', () => A.nativeCaptions && A.nativeCaptions());
       (root.RRFXLayout ? root.RRFXLayout.SPACES : []).forEach(sp => act(_T('Espace de travail : ') + _T(sp.label), 'Action', () => app.services.applySpace && app.services.applySpace(sp.id)));
       act(_T('Appliquer l\'effet choisi'), 'Action', () => A.applyEffect && A.applyEffect(), 'A');
       act(_T('Poser les marqueurs des temps forts'), 'Action', () => A.beats && A.beats(), 'B');

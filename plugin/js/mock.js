@@ -104,6 +104,9 @@
     makeProxies: async a => { await wait(200); proxies.total = 4; proxies.started = Date.now(); return { ok: true, queued: ['C0001.MP4', 'IMG_4512.MOV', 'C0002.MP4', 'DJI_0042.MP4'].map((name, i) => ({ job: String(i + 1), id: 'p' + i, name })), skipped: 0 }; },
     proxyStatus: () => { const n = Math.min(proxies.total, Math.floor((Date.now() - proxies.started) / 700)); return { ok: true, total: proxies.total, finished: n, attached: n, enabled: proxies.on }; },
     splitEdits: async a => { await wait(150); const n = 3; return { ok: true, cuts: n, done: n, passed: 0, created: Array.from({ length: n * 2 }, (x, i) => ({ kind: 'atrim', track: 0, start: i, s0: i, e0: i + 1, name: 'Interview_A.mp4' })) }; },
+    nativeTransitions: async a => { await wait(200); const n = a.scope === 'selection' ? 1 : 4, created = []; for (let i = 0; i < n; i++) { if (a.video) created.push({ kind: 'trans', video: true, track: 0, start: i }); if (a.audio) created.push({ kind: 'trans', video: false, track: 0, start: i }); } return { ok: true, video: a.video ? n : 0, audio: a.audio ? n : 0, cuts: n, created, warnings: [] }; },
+    sceneEdits: async a => { await wait(250); return { ok: true, found: 6, action: a.action === 'cuts' ? 'cuts' : 'markers' }; },
+    nativeCaptions: async a => { await wait(150); return { ok: true, name: a.path.split(/[\\/]/).pop() }; },
     cutList: () => ({ ok: true, fps: FPS, cuts: [3.2, 6.1, 10.7, 14.9].map((t, i) => ({ t, track: 0, a: { path: '', out: t, speed: 1, room: 2, len: 3 }, b: { path: '', inP: t, speed: 1, room: 2, len: 3 } })) }),
     rollEdits: async a => { await wait(120); return { ok: true, moved: a.moves.length, created: a.moves.map(m => ({ kind: 'roll', at: m.to, back: m.t, name: 'Coupe' })) }; },
     audioCredits: () => ({ ok: true, sequence: _T('Clip démo'), items: [

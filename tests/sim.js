@@ -112,6 +112,10 @@ function makeEnv(fps) {
     constructor(seq, i) { this.seq = seq; this.i = i; this.items = []; }
     get clips() { const c = coll(this.items.slice().sort((a, b) => a._s - b._s)); return c; }
     isLocked() { return false; }
+    get transitions() {
+      const self = this;
+      return coll((self._trans || []).map(t => ({ name: t.name, start: T(t.start), end: T(t.end), remove() { self._trans.splice(self._trans.indexOf(t), 1); } })));
+    }
     add(it) { it.track = this; this.items.push(it); return it; }
     overwriteClip(pi, t) {
       // secondsOnly : un Premiere qui n'accepte que des secondes et lit un objet Time comme 0.
@@ -181,6 +185,17 @@ function makeEnv(fps) {
     setSettings(st) { this.frameSizeHorizontal = st.videoFrameWidth; this.frameSizeVertical = st.videoFrameHeight; },
     sequenceID: 'seq-1',
     getExportFileExtension(p) { return /prores/i.test(p) ? 'mov' : 'mp4'; },
+    sceneCalls: [], captionCalls: [],
+    performSceneEditDetectionOnSelection(action, audio, sens) {
+      this.sceneCalls.push([action, audio, sens]);
+      if (action === 'CreateMarkers') { this._markers.push(2 * TICKS, 5 * TICKS); return true; }
+      const it = this.getSelection().find(x => x.mediaType !== 'Audio' && this.videoTracks.some(t => t.items.indexOf(x) >= 0));
+      if (!it) return false;
+      const m = Math.round((it._s + it._e) / 2), b = new Item(this, it.projectItem, m, it._e, it._in + (m - it._s) * it._speed, it.name);
+      b._out = it._out; it._out = it._in + (m - it._s) * it._speed; it._e = m; it.track.add(b);
+      return true;
+    },
+    createCaptionTrack(pi, start, fmt) { this.captionCalls.push([pi.name, start, fmt]); return true; },
     projectItem: null,
     // Copie de la séquence (pistes, plans, effets), ajoutée au projet.
     clone() {
@@ -244,6 +259,12 @@ function makeEnv(fps) {
       type: 'Clip', start: { ticks: String(it._s) }, name: it.name,
       addVideoEffect(eff) { const [mn, vals] = EFFECTS[eff.name]; it.components.push(comp(mn, eff.name, JSON.parse(JSON.stringify(vals)), it)); },
       addAudioEffect(eff) { it.components.push(comp('AE.ADBE ' + eff.name, eff.name, [0], it)); },
+      // Transition posée au début de l'élément (addToStart), centrée selon align.
+      addTransition(tr, addToStart, dur, offset, align, single, alignToVideo) {
+        if (!tr) throw new Error('sim: transition manquante');
+        const d = Number(String(dur).slice(1)), at = addToStart ? it._s : it._e;
+        (it.track._trans = it.track._trans || []).push({ name: tr.name, at, dur: d, align, start: at - d * align, end: at + d * (1 - align) });
+      },
       setSpeed(v) {
         if (speedPercent) v = v / 100;
         // factor semantics; non-ripple: keep start, clamp end to next clip
@@ -314,7 +335,9 @@ function makeEnv(fps) {
       },
       getVideoEffectByName(n) { return EFFECTS[n] ? { name: n } : null; },
       getAudioEffectByName(n) { return n === 'DeNoise' ? { name: n } : null; },
-      getVideoEffectList() { return Object.keys(EFFECTS); }
+      getVideoEffectList() { return Object.keys(EFFECTS); },
+      getVideoTransitionByName(n) { return ['Cross Dissolve', 'Dip to Black', 'Dip to White', 'Film Dissolve', 'Morph Cut'].indexOf(n) >= 0 ? { name: n } : null; },
+      getAudioTransitionByName(n) { return ['Constant Power', 'Constant Gain', 'Exponential Fade'].indexOf(n) >= 0 ? { name: n } : null; }
     }
   };
   const imports = [];

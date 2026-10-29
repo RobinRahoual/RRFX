@@ -21,6 +21,7 @@
     effects: ['Effets', 'Transitions et effets sur les coupes, marqueurs et temps forts'],
     ramp: ['Rampe', 'Rampes de vitesse'],
     music: ['Musique', 'Temps forts, montage auto, synchro, multicam'],
+    native: ['Premiere', 'Les outils de Premiere en un clic : transitions et fondus audio sur toutes les coupes, changements de plan, sous-titres'],
     speech: ['Parole', 'YouTube, interviews, vidéos d\'entreprise : silences, jump cuts, sous-titres, bandeaux'],
     color: ['Couleur', 'Conversion LOG, expo auto, raccord, looks façon Lightroom'],
     titles: ['Textes', 'Titres et paroles animés'],
@@ -31,7 +32,7 @@
   };
   const GROUPS = [
     { id: 'express', tabs: ['express'] },
-    { id: 'montage', label: 'Montage', title: 'Effets, rampes de vitesse et musique', tabs: ['effects', 'ramp', 'music'] },
+    { id: 'montage', label: 'Montage', title: 'Effets, rampes de vitesse, musique et outils de Premiere', tabs: ['effects', 'ramp', 'music', 'native'] },
     { id: 'speech', tabs: ['speech'] },
     { id: 'color', tabs: ['color'] },
     { id: 'titles', tabs: ['titles'] },
@@ -57,7 +58,7 @@
   const SPACES = [
     { id: 'all', label: 'Tout', desc: 'Tous les onglets et tous les outils.' },
     { id: 'essential', label: 'Essentiel', desc: 'Les outils dont on se sert tous les jours, rien d\'autre.',
-      tabs: ['express', 'effects', 'music', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
+      tabs: ['express', 'effects', 'music', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
         music: ['musique', 'tempsforts', 'montageauto', 'duree'],
         speech: ['silences', 'euh', 'visage', 'soustitres', 'bandeau', 'voix', 'texte'],
@@ -66,20 +67,20 @@
         assets: ['lien', 'dossiers', 'parcourir', 'rangement']
       } },
     { id: 'interview', label: 'Interview et YouTube', desc: 'Parole, sous-titres, son de la voix, versions et export.',
-      tabs: ['express', 'effects', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
+      tabs: ['express', 'effects', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
         color: ['looks', 'basic', 'out', 'log', 'fix', 'luts'],
         formats: ['format', 'cadrage', 'extraits', 'verif', 'versions', 'rythme', 'export']
       } },
     { id: 'social', label: 'Réseaux sociaux', desc: 'Reels, TikTok, Shorts : rythme, sous-titres, 9:16, extraits.',
-      tabs: ['express', 'effects', 'music', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
+      tabs: ['express', 'effects', 'music', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
         speech: ['silences', 'euh', 'visage', 'soustitres', 'correcteur', 'traduire', 'broll', 'texte'],
         color: ['looks', 'basic', 'out', 'luts', 'gradient'],
         formats: ['format', 'cadrage', 'extraits', 'verif', 'rythme', 'export']
       } },
     { id: 'clip', label: 'Clip et événement', desc: 'Musique, effets, rampes, couleur : clips, aftermovies, mariages.',
-      tabs: ['express', 'effects', 'ramp', 'music', 'color', 'titles', 'formats', 'assets', 'mine', 'settings'],
+      tabs: ['express', 'effects', 'ramp', 'music', 'native', 'color', 'titles', 'formats', 'assets', 'mine', 'settings'],
       sections: { formats: ['format', 'cadrage', 'verif', 'export', 'versions'] } }
   ];
 

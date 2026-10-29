@@ -33,6 +33,10 @@
         }
         if (!app.getCurrentProjectViewSelection) optional.push('app.getCurrentProjectViewSelection');
         if (s && !s.importMGT) optional.push('Sequence.importMGT');
+        // Outils de Premiere pilotes par RR FX (onglet Montage > Premiere).
+        if (s && !s.createCaptionTrack) optional.push('Sequence.createCaptionTrack');
+        if (s && !s.performSceneEditDetectionOnSelection) optional.push('Sequence.performSceneEditDetectionOnSelection');
+        try { if (qe && qe.project && !qe.project.getVideoTransitionByName) optional.push('qe.project.getVideoTransitionByName'); } catch (e3) {}
         try { if (qe && qe.project && !qeSeq().exportFramePNG) optional.push('QE exportFramePNG'); } catch (e2) {}
         var appPath = '';
         try { appPath = String(app.path || ''); } catch (e3) {}
@@ -256,6 +260,11 @@
             if (e.kind === 'atrim') {
                 // J-cut / L-cut : le son revient a son debut et sa fin d'origine.
                 if (undoTrim(s, e)) removed++; else skipped++;
+                continue;
+            }
+            if (e.kind === 'trans') {
+                // Transition de Premiere posee sur une coupe.
+                if (removeTransitionAt(s, e)) removed++; else skipped++;
                 continue;
             }
             if (e.kind === 'roll') {

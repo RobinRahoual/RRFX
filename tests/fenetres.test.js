@@ -27,7 +27,7 @@ test('onglet visible et repli', () => {
   const hidden = ['tab:express', 'tab:effects', 'tab:ramp'];
   assert.ok(!Ly.tabVisible(hidden, 'effects'));
   assert.ok(Ly.tabVisible(hidden, 'settings'));
-  assert.deepStrictEqual(Ly.visibleTabs(hidden, Ly.groupOf('music')), ['music']);
+  assert.deepStrictEqual(Ly.visibleTabs(hidden, Ly.groupOf('music')), ['music', 'native']);
   assert.strictEqual(Ly.fallbackTab(hidden), 'music');
   assert.strictEqual(Ly.fallbackTab(['tab:ramp'], 'ramp'), 'effects');
   assert.strictEqual(Ly.fallbackTab(Object.keys(Ly.TABS).map(Ly.tabKey)), 'settings');
