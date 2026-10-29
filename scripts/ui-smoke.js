@@ -50,6 +50,13 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
 (async () => {
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: 360, height: 820 }, deviceScaleFactor: 2 });
+  // Onglet : un clic sur son groupe (Montage, Bibliothèque) puis sur le sous-onglet, comme à la main.
+  const goTab = async (t, p) => {
+    p = p || page;
+    const g = await p.evaluate(x => { const gr = window.RRFXLayout.groupOf(x); return gr && gr.tabs.length > 1 ? gr.id : ''; }, t);
+    if (g && !(await p.isVisible('#subtabs .tab[data-tab=' + t + ']'))) await p.click('.tab-group[data-group=' + g + ']');
+    if (await p.isVisible('.tab[data-tab=' + t + ']')) await p.click('.tab[data-tab=' + t + ']');
+  };
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   page.on('console', m => { if (m.type() === 'error') errors.push(m.text()); });
@@ -87,7 +94,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
   await page.waitForTimeout(800);
-  await page.click('.tab[data-tab=effects]');
+  await goTab('effects');
   await page.waitForTimeout(300);
   await snap('1-effets');
 
@@ -120,7 +127,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.badge:has-text("preset")', { timeout: 3000 });
   });
   await step('speed ramp', async () => {
-    await page.click('.tab[data-tab=ramp]');
+    await goTab('ramp');
     const c = await page.locator('.ramp-canvas').boundingBox();
     await page.mouse.dblclick(c.x + c.width * 0.3, c.y + c.height * 0.8);
     await page.click('#cta');
@@ -129,13 +136,13 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('3-rampe');
   });
   await step('capture', async () => {
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.click('#cta');
     await page.waitForSelector('.list-item', { timeout: 3000 });
     await snap('4-mes-effets');
   });
   await step('overlay', async () => {
-    await page.click('.tab[data-tab=effects]');
+    await goTab('effects');
     await page.click('.chips .action:has-text("Overlays")');
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.add-card:has-text("Ajouter des overlays")')]);
     await chooser.setFiles(png);
@@ -146,7 +153,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('6-overlay');
   });
   await step('musique : analyse et marqueurs', async () => {
-    await page.click('.tab[data-tab=music]');
+    await goTab('music');
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.action:has-text("Choisir un fichier")')]);
     await chooser.setFiles(wav);
     await page.waitForSelector('#status.ok:has-text("Musique analysée")', { timeout: 10000 });
@@ -164,7 +171,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("caméras")', { timeout: 5000 });
   });
   await step('pack d\'overlays', async () => {
-    await page.click('.tab[data-tab=effects]');
+    await goTab('effects');
     await page.click('.chips .action:has-text("Overlays")');
     await page.hover('.card:has-text("Bokeh chaud")');
     await page.click('.card:has-text("VHS")');
@@ -175,7 +182,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await step('ressources', async () => {
     const pack = path.join(tmp, 'Pack démo');
     require('./demo-assets.js').make(pack);
-    await page.click('.tab[data-tab=assets]');
+    await goTab('assets');
     if ((await page.textContent('#cta')) !== 'Lier un dossier…') throw new Error('bouton principal inattendu');
     await require('./demo-files.js').addFolder(page, pack);
     await page.waitForSelector('#res-grid .card', { timeout: 3000 });
@@ -202,7 +209,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.badge:has-text("overlay")', { timeout: 3000 });
   });
   await step('effets sur les temps forts (sans marqueurs)', async () => {
-    await page.click('.tab[data-tab=effects]');
+    await goTab('effects');
     await page.click('.chips .action:text-is("Tout")');
     await page.click('.card:has-text("Flash blanc")');
     await page.selectOption('.section:has-text("Placement") select >> nth=0', 'beats');
@@ -211,14 +218,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.selectOption('.section:has-text("Placement") select >> nth=0', 'markers');
   });
   await step('rampe calée sur le tempo', async () => {
-    await page.click('.tab[data-tab=ramp]');
+    await goTab('ramp');
     await page.click('.row:has-text("Sur le tempo") .action:text-is("1 temps")');
     await page.waitForSelector('#status.ok:has-text("Rampe de")', { timeout: 5000 });
     const t = await page.textContent('#status-title');
     if (!/Rampe de 1[23] images/.test(t)) throw new Error('1 temps à 120 BPM, 25 i/s ≈ 12,5 images : ' + t);
   });
   await step('couleur', async () => {
-    await page.click('.tab[data-tab=color]');
+    await goTab('color');
     await page.waitForSelector('.lr-look');
     await page.click('.lr-look:has-text("Nuit bleue")');
     const t = page.locator('.lr-row:has(.lr-label:text-is("Exposition")) .lr-track'), bx = await t.boundingBox();
@@ -236,12 +243,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.lr-look:has-text("Nuit perso")', { timeout: 3000 });
     await page.click('#cta');
     await page.waitForSelector('#status.ok:has-text("Look posé")', { timeout: 5000 });
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.click('.list-item:has-text("Nuit perso") .action:text-is("Ouvrir")');
     await page.waitForSelector('.tab.on[data-tab=color]', { timeout: 3000 });
   });
   await step('conversion log', async () => {
-    await page.click('.tab[data-tab=color]');
+    await goTab('color');
     // Caméra 1 : Sony A7 III, S-Log3, LUT du fabricant importée.
     await page.click('.action:has-text("+ Ajouter une caméra")');
     await page.selectOption('.conv-form .row:has-text("Marque") select', 'sony');
@@ -276,7 +283,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (saved.cams.length !== 2 || saved.cams[0].lutName !== 'SLog3SGamut3Cine-to-709.cube' || saved.cams[1].ev !== 1) throw new Error('caméras mal enregistrées : ' + JSON.stringify(saved));
   });
   await step('conversion par caméra et correction auto', async () => {
-    await page.click('.tab[data-tab=color]');
+    await goTab('color');
     await page.click('.lr-panel:has-text("Conversion LOG") .action:text-is("Reconnue par plan")');
     await page.click('.lr-panel:has-text("Conversion LOG") label.checkbox:has-text("expo et balance")');
     await page.click('.conv-go');
@@ -296,7 +303,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.lr-head:has-text("Expo, balance et raccord")');
   });
   await step('enchaînement d\'effets', async () => {
-    await page.click('.tab[data-tab=effects]');
+    await goTab('effects');
     await page.click('.chips .action:text-is("Tout")');
     await page.selectOption('.section:has-text("Placement") .row:has-text("Position") select', 'markers');
     await page.selectOption('.section:has-text("Placement") .row:has-text("Entre les coupes") select', 'chain');
@@ -312,7 +319,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.selectOption('.section:has-text("Placement") .row:has-text("Position") select', 'cut');
   });
   await step('packs de style', async () => {
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.click('.mine-switch .action:has-text("Ma bibliothèque")').catch(() => {});
     await page.click('.action:text-is("Créer un pack…")');
     await page.fill('.modal input.textfield', 'Style été');
@@ -329,7 +336,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (after <= before) throw new Error('rien d\'ajouté (' + before + ' → ' + after + ')');
   });
   await step('intensité selon le volume', async () => {
-    await page.click('.tab[data-tab=effects]');
+    await goTab('effects');
     await page.click('.chips .action:text-is("Tout")');
     await page.click('.card:has-text("Zoom rotation")');
     await page.click('.section:has-text("Placement") label:has-text("suit le volume")');
@@ -339,14 +346,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/Intensité selon le volume/.test(log)) throw new Error('le volume n\'a pas été lu');
   });
   await step('textes', async () => {
-    await page.click('.tab[data-tab=titles]');
+    await goTab('titles');
     await page.fill('textarea.lyrics', 'Premier\nDeuxième\nTroisième');
     await page.click('#cta');
     await page.waitForSelector('#status.ok:has-text("texte")', { timeout: 8000 });
     await snap('8-textes');
   });
   await step('style de texte et Mes couleurs', async () => {
-    await page.click('.tab[data-tab=titles]');
+    await goTab('titles');
     await page.click('.section:has-text("Style du texte") .action:text-is("Créer un style…")');
     await page.waitForSelector('.style-preview');
     await page.click('.section:has-text("Style du texte") .action:text-is("Enregistrer comme style…")');
@@ -365,7 +372,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('8b-style-texte');
   });
   await step('rampes prédéfinies par usage', async () => {
-    await page.click('.tab[data-tab=ramp]');
+    await goTab('ramp');
     const groups = await page.locator('.ramp-groups .chips-group').allTextContents();
     if (groups.length < 4) throw new Error('groupes : ' + groups.join(', '));
     await page.click('.ramp-groups .action:has-text("Coup de fouet vers la coupe")');
@@ -375,7 +382,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok', { timeout: 5000 });
   });
   await step('Mes LUTs et dégradé', async () => {
-    await page.click('.tab[data-tab=color]');
+    await goTab('color');
     await page.waitForSelector('.lut-card', { timeout: 5000 });
     await page.click('.lut-card >> nth=1');
     await page.waitForSelector('.lut-card.on >> nth=0');
@@ -398,7 +405,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('9c-degrade');
   });
   await step('import depuis un lien', async () => {
-    await page.click('.tab[data-tab=assets]');
+    await goTab('assets');
     const f = '.section:has-text("Importer depuis un lien")';
     await page.fill(f + ' input[aria-label="Lien à importer"]', 'https://www.youtube.com/watch?v=abc123');
     await page.waitForSelector(f + ' .note:has-text("yt-dlp")', { timeout: 2000 });
@@ -411,7 +418,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const json = path.join(tmp, 'presets.json'), ase = path.join(tmp, 'Marque.ase');
     fs.writeFileSync(json, JSON.stringify({ rrfx: 1, items: [{ type: 'textStyle', name: 'Style reçu', data: { style: { fill: '#00ff88', shadow: true } } }, { type: 'gradient', name: 'Dégradé reçu', data: { g: { type: 'linear', angle: 45, colors: ['#000000', '#ff0000'] } } }, { type: 'nope', name: 'x', data: {} }] }));
     fs.writeFileSync(ase, Buffer.from(require('../plugin/js/couleurs.js').writeASE([{ name: 'Rouge', hex: '#e63946' }, { hex: '#1d3557' }])));
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.click('.mine-switch .action:has-text("Ma bibliothèque")').catch(() => {});
     const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.action.go:text-is("Importer…")')]);
     await chooser.setFiles([json, ase]);
@@ -423,7 +430,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.tab.on[data-tab=color]', { timeout: 3000 });
   });
   await step('clip express', async () => {
-    await page.click('.tab[data-tab=express]');
+    await goTab('express');
     await page.waitForSelector('.xp-check');
     await page.waitForTimeout(600);
     if ((await page.locator('.xp-style').count()) > 8) throw new Error('les styles devraient être repliés');
@@ -439,7 +446,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (kept === 'chain') throw new Error('réglages de l\'onglet Effets non rendus');
   });
   await step('Mes effets : recherche et filtres', async () => {
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.waitForSelector('.mine-chips .action', { timeout: 2000 });
     await page.click('.mine-chips .action:has-text("Style de texte")');
     const metas = await page.locator('#mine-list .li-meta').allTextContents();
@@ -451,13 +458,13 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.fill('#mine-filter input', '');
   });
   await step('couleur : sommaire', async () => {
-    await page.click('.tab[data-tab=color]');
+    await goTab('color');
     await page.click('.view.on .sec-nav .action:text-is("Mes LUTs")');
     const top = await page.evaluate(() => { const el = document.querySelector('.view.on [data-panel=luts]'), sc = document.getElementById('scroll'); return el.getBoundingClientRect().top - sc.getBoundingClientRect().top; });
     if (top < 0 || top > 80) throw new Error('panneau Mes LUTs à ' + top + ' px du haut');
   });
   await step('express : enregistrer ce style', async () => {
-    await page.click('.tab[data-tab=express]');
+    await goTab('express');
     await page.click('.action:text-is("Enregistrer ce style…")');
     await page.fill('.modal input', 'Mon chill');
     await page.click('.modal .cta');
@@ -474,7 +481,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/Couper les silences · \d+ silences coupés/.test(rep) || !/Zoom visage/.test(rep)) throw new Error('rapport : ' + rep);
   });
   await step('parole : silences, sous-titres, bandeau', async () => {
-    await page.click('.tab[data-tab=speech]');
+    await goTab('speech');
     await page.click('button:has-text("Analyser")');
     await page.waitForSelector('#status.ok:has-text("silences trouvés")', { timeout: 10000 });
     if (await page.locator('.sp-gap').count() < 3) throw new Error('silences non affichés');
@@ -494,7 +501,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("Bandeau posé")', { timeout: 10000 });
   });
   await step('parole : euh, voix, musique, chapitres, mots clés', async () => {
-    await page.click('.tab[data-tab=speech]');
+    await goTab('speech');
     const idle = () => page.waitForFunction(() => !window.RRFXApp.S.busy, null, { timeout: 20000 });
     await page.click('button:has-text("Couper les « euh »")');
     await page.waitForTimeout(100);
@@ -524,7 +531,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/3 mots clés|2 mots clés/.test(await page.textContent('#status-detail'))) throw new Error('mots clés : ' + await page.textContent('#status-detail'));
   });
   await step('zoom suivi (objet) et 9:16 qui suit le visage', async () => {
-    await page.click('.tab[data-tab=effects]');
+    await goTab('effects');
     await page.click('#grid .card:has-text("Zoom suivi")');
     await page.click('#cta');
     await page.waitForSelector('.modal:has-text("Entoure l\'objet")', { timeout: 15000 });
@@ -536,7 +543,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.modal .cta');
     await page.waitForSelector('#status:has-text("Zoom suivi (objet) appliqué")', { timeout: 15000 });
     if (!/Objet suivi dans 1 plan/.test(await page.textContent('#status-detail'))) throw new Error('objet : ' + await page.textContent('#status-detail'));
-    await page.click('.tab[data-tab=formats]');
+    await goTab('formats');
     await page.click('.section:has-text("Cadrage") .action:has-text("Suivre le visage")');
     await page.click('#cta');
     await page.waitForSelector('#status:has-text("créée")', { timeout: 20000 });
@@ -544,7 +551,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   const idle = () => page.waitForFunction(() => !window.RRFXApp.S.busy, null, { timeout: 30000 });
   await step('musique : risers et réverb de fin', async () => {
-    await page.click('.tab[data-tab=music]');
+    await goTab('music');
     await page.click('.section:has-text("Risers avant les drops") .action:text-is("Trouver les drops")');
     await page.waitForSelector('#status:has-text("drop")', { timeout: 10000 });
     await idle();
@@ -556,7 +563,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await idle();
   });
   await step('parole : respirations, traduction, plans de coupe', async () => {
-    await page.click('.tab[data-tab=speech]');
+    await goTab('speech');
     await page.click('.view.on .sec-nav .action:text-is("Souffle")');
     await page.click('.section:has-text("Respirations et clics") .action.go');
     await page.waitForSelector('#status.ok:has-text("baissé"), #status.warn:has-text("Rien à baisser")', { timeout: 15000 });
@@ -581,7 +588,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('formats : vérifier, extraits, lot, modèles', async () => {
     await page.evaluate(() => { window.RRFXApp.settings().formatsPlus.pfImage = false; });
-    await page.click('.tab[data-tab=formats]');
+    await goTab('formats');
     await page.click('.view.on .sec-nav .action:text-is("Vérifier")');
     await page.click('.section:has-text("Vérifier avant export") .action.go');
     await page.waitForSelector('#status.error:has-text("2 problèmes et 2 remarques")', { timeout: 10000 });
@@ -591,7 +598,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('formats-verif');
     // La vidéo de démo dure 18 s : extraits de 5 à 12 s.
     await page.evaluate(() => { const f = window.RRFXApp.settings().formatsPlus; f.min = 5; f.max = 12; f.count = 2; });
-    await page.click('.tab[data-tab=formats]');
+    await goTab('formats');
     await page.click('.view.on .sec-nav .action:text-is("Extraits")');
     await page.click('.section:has-text("Extraits pour les réseaux") .action:text-is("Trouver les passages")');
     await page.waitForSelector('#status.ok:has-text("extrait")', { timeout: 15000 });
@@ -603,12 +610,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await idle();
     const log = await page.evaluate(() => window.RRFXApp.S.logLines.map(l => l.message).join('\n'));
     if (!/Extrait 1/.test(await page.textContent('#status-detail') + log)) throw new Error('extrait : ' + await page.textContent('#status-detail'));
-    await page.click('.view.on .sec-nav .action:text-is("Lot")');
-    await page.click('.section:has-text("Sur plusieurs séquences") .action:text-is("Lister les séquences")');
-    await page.waitForSelector('.seq-list label', { timeout: 5000 });
-    await page.click('.seq-list label >> nth=1');
-    await page.selectOption('.section:has-text("Sur plusieurs séquences") select', 'preflight');
-    await page.click('.section:has-text("Sur plusieurs séquences") .action.go');
+    // Plusieurs séquences : la même action sur chacune (ici la vérification).
+    await page.click('.view.on .sec-nav .action:text-is("Export")');
+    await page.evaluate(() => { const t = document.querySelector('[data-sec=export] .section-title'); if (t && t.closest('.section').classList.contains('folded')) t.click(); });
+    await page.selectOption('[data-sec=export] select >> nth=0', 'preflight');
+    await page.click('[data-sec=export] .action:text-is("Lister les séquences")');
+    await page.waitForSelector('[data-sec=export] .seq-list label', { timeout: 5000 });
+    await page.click('[data-sec=export] .seq-list label >> nth=1');
+    await page.click('[data-sec=export] .action.go');
     await page.waitForSelector('#status.ok:has-text("1 séquence")', { timeout: 15000 });
     await idle();
     await page.click('.view.on .sec-nav .action:text-is("Modèles")');
@@ -624,7 +633,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.tpl-card.on:has-text("Mon modèle shorts")', { timeout: 3000 });
   });
   await step('textes : barre de progression et compte à rebours', async () => {
-    await page.click('.tab[data-tab=titles]');
+    await goTab('titles');
     await page.click('.section:has-text("Barre de progression et compte à rebours") .action:text-is("Poser la barre")');
     await page.waitForSelector('#status.ok:has-text("Barre de progression posée")', { timeout: 10000 });
     await idle();
@@ -676,7 +685,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.section:has-text("Test de compatibilité") .xp-check.ok');
   });
   await step('partage', async () => {
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.hover("#mine-list .list-item >> nth=0");
     await page.click("#mine-list .list-item .action[title^=\"Partager\"] >> nth=0");
     const code = await page.inputValue('.modal textarea');
@@ -690,7 +699,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if ((await page.locator('.list-item').count()) !== before + 1) throw new Error('l\'effet partagé n\'a pas été ajouté');
   });
   await step('bibliothèque en ligne', async () => {
-    await page.click('.tab[data-tab=mine]');
+    await goTab('mine');
     await page.click('.mine-switch .action:has-text("Communauté")');
     await page.waitForSelector('.comm-item', { timeout: 5000 });
     const names = await page.$$eval('.comm-item .li-name', els => els.map(e => e.textContent));
@@ -716,13 +725,13 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("Formulaire ouvert")', { timeout: 3000 });
   });
   await step('tout effacer', async () => {
-    await page.click('.tab[data-tab=settings]');
+    await goTab('settings');
     await page.click('.action:has-text("Tout effacer")');
     await page.click('.modal .cta');
     await page.waitForSelector('#status.ok:has-text("nettoyée")', { timeout: 5000 });
   });
   await step('réglages + raccourci', async () => {
-    await page.click('.tab[data-tab=settings]');
+    await goTab('settings');
     await page.click('.section-title:has-text("Raccourcis clavier")');
     await page.click('[data-shortcut=apply]');
     await page.keyboard.press('KeyZ');
@@ -740,7 +749,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await snap('5-reglages');
   });
   await step('2.5 : montage par le texte', async () => {
-    await page.click('.tab[data-tab=speech]');
+    await goTab('speech');
     await page.fill('.section:has(textarea.lyrics) textarea', '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous\n\n2\n00:00:03,400 --> 00:00:05,000\neuh je recommence\n\n3\n00:00:05,200 --> 00:00:08,000\nAujourd\'hui on parle café\n');
     await page.click('.view.on .sec-nav .action:text-is("Texte")');
     await page.waitForSelector('.tx-row >> nth=2');
@@ -762,14 +771,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if ((await page.locator('.tx-row.cut').count()) !== 2) throw new Error('2 phrases barrées attendues');
   });
   await step('2.5 : musique à la durée, versions', async () => {
-    await page.click('.tab[data-tab=music]');
+    await goTab('music');
     await page.click('.section:has-text("Musique à la durée de la vidéo") .action:text-is("Comparer les durées")');
     await page.waitForSelector('.section:has-text("Musique à la durée de la vidéo") .note:has-text("à retirer")', { timeout: 5000 });
     await page.click('.section:has-text("Musique à la durée de la vidéo") .action.go');
     await page.waitForSelector('#status.ok:has-text("Musique ajustée")', { timeout: 20000 });
     await idle();
     if (!/Version d'avant gardée/.test(await page.textContent('#status-detail'))) throw new Error('version avant musique : ' + await page.textContent('#status-detail'));
-    await page.click('.tab[data-tab=formats]');
+    await goTab('formats');
     await page.click('.view.on .sec-nav .action:text-is("Versions")');
     await page.fill('.section:has-text("Versions de la séquence") input', 'avant retours');
     await page.click('.section:has-text("Versions de la séquence") .action.go');
@@ -782,7 +791,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForFunction(() => !Array.from(document.querySelectorAll('.ver-item')).some(e => /v02 \(avant musique\)/.test(e.textContent)), null, { timeout: 3000 });
   });
   await step('2.5 : projet (ranger, renommer, proxies)', async () => {
-    await page.click('.tab[data-tab=assets]');
+    await goTab('assets');
     for (const t of ['Ranger le projet', 'Renommer en série', 'Proxies', 'Dossiers surveillés']) {
       await page.evaluate(t => { const x = Array.from(document.querySelectorAll('.view.on .section-title')).find(e => e.textContent.indexOf(t) >= 0); if (x && x.closest('.section').classList.contains('folded')) x.click(); }, t);
     }
@@ -809,7 +818,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#status.ok:has-text("Proxies activés")', { timeout: 3000 });
   });
   await step('2.5 : macros, temps gagné, temps passé', async () => {
-    await page.click('.tab[data-tab=settings]');
+    await goTab('settings');
     await page.evaluate(() => { const x = Array.from(document.querySelectorAll('.view.on .section-title')).find(e => /Macros$/.test(e.textContent.trim())); if (x && x.closest('.section').classList.contains('folded')) x.click(); });
     await page.click('[data-sec=macros] .action:text-is("＋ Nouvelle macro")');
     await page.fill('.modal input.textfield', 'Livraison');
@@ -830,7 +839,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.fill('.pal-input', 'livraison');
     await page.waitForSelector('.pal-item:has-text("▶ Livraison")');
     await page.keyboard.press('Escape');
-    await page.click('.tab[data-tab=settings]');
+    await goTab('settings');
     const big = await page.textContent('[data-sec=gagne] .saved-big');
     if (/^0 min$/.test(big)) throw new Error('temps gagné à 0');
     const dl = page.waitForEvent('download', { timeout: 5000 });
@@ -839,7 +848,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('[data-sec=temps]');
   });
   await step('2.6 : raccords, coupes propres, correcteur', async () => {
-    await page.click('.tab[data-tab=speech]');
+    await goTab('speech');
     await page.click('.view.on .sec-nav .action:text-is("Raccords")');
     await page.click('.section:has-text("Raccords J-cut / L-cut") .action.go');
     await page.waitForSelector('#status.ok:has-text("3 J-cut")', { timeout: 5000 });
@@ -858,7 +867,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/Bonjour à tous !/.test(srt)) throw new Error('srt corrigé : ' + srt);
   });
   await step('2.6 : rythme, export en lot, vérification de l\'image', async () => {
-    await page.click('.tab[data-tab=formats]');
+    await goTab('formats');
     await page.click('.view.on .sec-nav .action:text-is("Rythme")');
     await page.click('.section:has-text("Rythme du montage") .action.go');
     await page.waitForSelector('#status:has-text("plans · moyenne")', { timeout: 5000 });
@@ -866,12 +875,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.section:has-text("Rythme du montage") .note:has-text("médiane")');
     await page.click('.view.on .sec-nav .action:text-is("Export")');
     await page.evaluate(() => { const t = document.querySelector('[data-sec=export] .section-title'); if (t && t.closest('.section').classList.contains('folded')) t.click(); });
-    await page.click('.section:has-text("Export en lot") .action:text-is("Lister les séquences")');
+    await page.selectOption('[data-sec=export] select >> nth=0', 'export');
+    await page.evaluate(() => { window.RRFXApp.settings().livraison.picked = []; });
+    await page.click('[data-sec=export] .action:text-is("Lister les séquences")');
     await page.waitForSelector('[data-sec=export] .seq-list label');
     await page.click('[data-sec=export] .seq-list label >> nth=0');
     await page.fill('[data-sec=export] input[aria-label="Client"]', 'Nike');
     await page.waitForSelector('[data-sec=export] .note:has-text("→ Nike_")');
-    await page.click('.section:has-text("Export en lot") .action.go');
+    await page.click('[data-sec=export] .action.go');
     await page.waitForSelector('#status.ok:has-text("1 export en file")', { timeout: 5000 });
     await idle();
     await page.evaluate(() => { window.RRFXApp.settings().formatsPlus.pfImage = true; });
@@ -881,16 +892,16 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await idle();
   });
   await step('2.6 : crédits, archive, image de référence, astuce, badges', async () => {
-    await page.click('.tab[data-tab=music]');
+    await goTab('music');
     await page.evaluate(() => { const t = document.querySelector('[data-sec=credits] .section-title'); if (t && t.closest('.section').classList.contains('folded')) t.click(); });
     await page.click('.section:has-text("Crédits musique et sons") .action:text-is("Lister les sons")');
     await page.waitForSelector('[data-sec=credits] .pf-item >> nth=2', { timeout: 5000 });
     await idle();
-    await page.click('.tab[data-tab=assets]');
+    await goTab('assets');
     await page.evaluate(() => { const t = document.querySelector('[data-sec=archive] .section-title'); if (t && t.closest('.section').classList.contains('folded')) t.click(); });
     await page.click('.section:has-text("Archiver le projet") .action:text-is("Voir la taille")');
     await page.waitForSelector('[data-sec=archive] .note:has-text("4 médias utilisés")', { timeout: 3000 });
-    await page.click('.tab[data-tab=color]');
+    await goTab('color');
     await page.evaluate(() => { const p = document.querySelector('[data-panel=fix]'); if (p && p.classList.contains('closed')) p.querySelector('.lr-head').click(); });
     const chooser = page.waitForEvent('filechooser', { timeout: 5000 });
     await page.click('[data-panel=fix] .action:has-text("ou une image")');
@@ -901,7 +912,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.tip-bar .action:text-is("Voir")');
     await page.waitForSelector('.tab.on[data-tab=speech]');
     if (await page.isVisible('.tip-bar')) throw new Error('astuce restée affichée');
-    await page.click('.tab[data-tab=settings]');
+    await goTab('settings');
     if ((await page.locator('[data-sec=gagne] .badge').count()) !== 10) throw new Error('10 badges attendus');
     if ((await page.locator('[data-sec=gagne] .badge.on').count()) < 1) throw new Error('au moins un badge débloqué');
   });
@@ -910,16 +921,50 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!(await page.isHidden('#scroll'))) throw new Error('le contenu devrait être masqué');
     await page.click('#toggle-compact');
   });
+  await step('2.7 : onglets regroupés et menu Fenêtres', async () => {
+    // Montage : un clic sur le groupe ouvre ses sous-onglets.
+    await page.click('.tab-group[data-group=montage]');
+    await page.waitForSelector('#subtabs:not(.hidden) .tab[data-tab=ramp]');
+    await page.click('#subtabs .tab[data-tab=ramp]');
+    await page.waitForSelector('.tab.on[data-tab=ramp]');
+    await page.waitForSelector('.tab-group.on[data-group=montage]');
+    // Espace « Essentiel » : Rampe et Mes effets masqués, Chapitres et Respirations aussi.
+    await page.click('#open-windows');
+    await page.click('.modal .win-spaces .action:text-is("Essentiel")');
+    await page.click('.modal footer .cta');
+    if (await page.isVisible('.tab[data-tab=ramp]')) throw new Error('Rampe devrait être masquée');
+    if (!(await page.isVisible('.tab.on[data-tab=effects]')) && !(await page.isVisible('.tab.on[data-tab=music]'))) throw new Error('onglet de repli attendu dans Montage');
+    await goTab('speech');
+    if (await page.isVisible('[data-sec=chapitres]')) throw new Error('Chapitres devrait être masqué');
+    if (await page.isVisible('.sec-nav [data-target=chapitres]')) throw new Error('bouton du sommaire masqué attendu');
+    if (!(await page.isVisible('[data-sec=silences]'))) throw new Error('Silences devrait rester');
+    // La recherche rapide réaffiche un outil masqué.
+    await page.keyboard.press('Control+k');
+    await page.fill('.pal-input', 'respirations et clics');
+    await page.keyboard.press('Enter');
+    await page.waitForSelector('[data-sec=souffle]', { state: 'visible', timeout: 3000 });
+    // Un outil masqué depuis le menu, puis tout réaffiché.
+    await page.click('#open-windows');
+    await page.click('.modal .win-group:has-text("Parole") label:has-text("Couper les silences")');
+    await page.click('.modal footer .cta');
+    if (await page.isVisible('[data-sec=silences]')) throw new Error('Silences devrait être masqué');
+    await page.click('#open-windows');
+    await page.click('.modal footer button:has-text("Tout afficher")');
+    await page.waitForSelector('[data-sec=silences]', { state: 'visible' });
+    if (!(await page.isVisible('.tab-group[data-group=montage]'))) throw new Error('Montage');
+    const space = await page.evaluate(() => window.RRFXApp.settings().layout.space);
+    if (space !== 'all') throw new Error('espace : ' + space);
+  });
   await step('langue : passage en anglais', async () => {
-    await page.click('.tab[data-tab=settings]');
+    await goTab('settings');
     await page.click('[data-sec=lang] button:has-text("English")');
     await page.waitForFunction(() => document.documentElement.lang === 'en' && window.RRFXApp, null, { timeout: 8000 });
-    await page.waitForSelector('.tab[data-tab=effects]:has-text("Effects")');
-    for (const t of ['express', 'effects', 'color', 'speech', 'formats', 'settings']) await page.click('.tab[data-tab=' + t + ']');
+    await page.waitForSelector('.tab[data-tab=speech]:has-text("Speech")');
+    for (const t of ['express', 'effects', 'color', 'speech', 'formats', 'settings']) await goTab(t);
     await page.waitForSelector('.section-title:has-text("Remote control")');
     await page.click('[data-sec=lang] button:has-text("Français")');
     await page.waitForFunction(() => document.documentElement.lang === 'fr' && window.RRFXApp, null, { timeout: 8000 });
-    await page.waitForSelector('.tab[data-tab=effects]:has-text("Effets")');
+    await page.waitForSelector('.tab[data-tab=speech]:has-text("Parole")');
   });
   await step('langue : choix au premier lancement', async () => {
     await page.evaluate(() => { localStorage.removeItem('rrfx-lang'); localStorage.removeItem('rrfx-nowelcome'); });
@@ -930,13 +975,17 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await fresh.waitForSelector('.modal-title:has-text("Langue · Language")');
     await fresh.click('.modal footer button:has-text("English")');
     await fresh.waitForSelector('.modal-title:has-text("Welcome to RR FX")', { timeout: 8000 });
-    if (!/My Instagram page/.test(await fresh.textContent('.modal'))) throw new Error('accueil : la page Instagram n\'est pas annoncée');
-    // La page Instagram s'ouvre en fermant l'accueil, une seule fois.
+    // Instagram : seulement si on clique sur « Suivre », jamais tout seul.
+    let early = false;
+    fresh.once('popup', () => { early = true; });
+    await fresh.waitForTimeout(300);
+    if (early) throw new Error('Instagram ouvert sans clic');
     const insta = fresh.waitForEvent('popup', { timeout: 5000 });
-    await fresh.click('.modal .cta');
+    await fresh.click('.modal .wl-follow:has-text("Follow @robin.rahoual")');
     const pop = await insta;
     if (!/instagram\.com\/robin\.rahoual/.test(pop.url())) throw new Error('Instagram : ' + pop.url());
     await pop.close();
+    await fresh.click('.modal .cta');
     await fresh.evaluate(() => window.RRFXApp.services.welcome());
     let again = false;
     fresh.once('popup', () => { again = true; });

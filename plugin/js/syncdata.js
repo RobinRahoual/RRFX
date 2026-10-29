@@ -13,7 +13,7 @@
 
   const FILE = 'RR FX - synchro.json';
   // Propres à chaque ordinateur : jamais envoyés, jamais remplacés.
-  const LOCAL = ['sync', 'remote', 'adjNodeId', 'welcomed', 'instagramOpened', 'lang', 'watch', 'projet', 'timeTrack', 'saved', 'tips', 'livraison', 'tab', 'compact', 'folded', 'assets'];
+  const LOCAL = ['sync', 'remote', 'adjNodeId', 'welcomed', 'instagramOpened', 'lang', 'watch', 'projet', 'timeTrack', 'saved', 'tips', 'livraison', 'tab', 'groupTab', 'compact', 'folded', 'assets'];
   const MAX_REMOVED = 300;
 
   const clone = o => JSON.parse(JSON.stringify(o));

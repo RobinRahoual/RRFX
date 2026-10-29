@@ -29,18 +29,25 @@ const SRT = '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2
 
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 });
+  // Onglet : un clic sur son groupe (Montage, Bibliothèque) puis sur le sous-onglet, comme à la main.
+  const goTab = async (t, p) => {
+    p = p || page;
+    const g = await p.evaluate(x => { const gr = window.RRFXLayout.groupOf(x); return gr && gr.tabs.length > 1 ? gr.id : ''; }, t);
+    if (g && !(await p.isVisible('#subtabs .tab[data-tab=' + t + ']'))) await p.click('.tab-group[data-group=' + g + ']');
+    if (await p.isVisible('.tab[data-tab=' + t + ']')) await p.click('.tab[data-tab=' + t + ']');
+  };
   const errors = [], failed = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.route('https://api.github.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/issues\?/.test(r.request().url()) ? JSON.stringify(demo.ISSUES) : '{}' }));
   await page.route('https://github.com/**', r => r.fulfill({ status: 200, body: 'GitHub' }));
   await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
-  await page.click('.tab[data-tab=effects]');
+  await goTab('effects');
   await page.waitForSelector('#grid .card');
   await page.waitForTimeout(400);
 
   const close = async () => { if (await page.isVisible('#status-close')) await page.click('#status-close', { timeout: 2000 }).catch(() => {}); };
-  const tab = async t => { await page.click('.tab[data-tab=' + t + ']'); await page.waitForTimeout(250); };
+  const tab = async t => { await goTab(t); await page.waitForTimeout(250); };
   const idle = () => page.waitForFunction(() => !window.RRFXApp.S.busy, null, { timeout: 30000 });
   const sec = async (t, id, nav) => {
     await tab(t);
@@ -341,13 +348,15 @@ const SRT = '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2
     await shot('extraits-crees', '[data-sec=extraits]');
   });
   await step('lot', async () => {
-    await sec('formats', 'lot', 'Lot');
-    await page.click('[data-sec=lot] .action:text-is("Lister les séquences")');
+    await sec('formats', 'export', 'Export');
+    await page.selectOption('[data-sec=export] select >> nth=0', 'applyLook');
+    await page.click('[data-sec=export] .action:text-is("Lister les séquences")');
     await page.waitForTimeout(400);
-    await page.click('[data-sec=lot] label >> nth=0').catch(() => {});
-    await page.click('[data-sec=lot] label >> nth=2').catch(() => {});
+    await page.click('[data-sec=export] .seq-list label >> nth=0').catch(() => {});
+    await page.click('[data-sec=export] .seq-list label >> nth=2').catch(() => {});
     await close();
-    await shot('plusieurs-sequences', '[data-sec=lot]');
+    await shot('plusieurs-sequences', '[data-sec=export]');
+    await page.selectOption('[data-sec=export] select >> nth=0', 'export');
   });
   await step('rythme', async () => {
     await sec('formats', 'rythme', 'Rythme');

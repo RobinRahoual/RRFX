@@ -28,6 +28,8 @@
       if (!('ops' in s.saved)) s.saved.ops = 0;
       if (!Array.isArray(s.saved.tools)) s.saved.tools = [];
       if (!Array.isArray(s.saved.badges)) s.saved.badges = [];
+      // Les badges s'affichent dans Réglages ; l'annonce à l'écran est à demander.
+      if (!('toasts' in s.saved)) s.saved.toasts = false;
       return s.saved;
     };
 
@@ -114,7 +116,7 @@
       const fresh = O.badges({ minutes: s.total, ops: s.ops, tools: s.tools.length }).filter(b => b.done && s.badges.indexOf(b.id) < 0);
       fresh.forEach(b => s.badges.push(b.id));
       app.persist();
-      if (fresh.length) setTimeout(() => toast(fresh[fresh.length - 1]), 400);
+      if (fresh.length && s.toasts) setTimeout(() => toast(fresh[fresh.length - 1]), 400);
     });
 
     // ---------------------------------------------------------------- badges
@@ -200,6 +202,7 @@
           h('div', { class: 'saved-big' }, dur(month)), h('div', { class: 'note' }, _T('ce mois-ci · ') + dur(s.total) + _T(' au total'))),
         top.length ? h('div', { class: 'note' }, _T('Ce qui t\'a fait gagner le plus : ') + top.map(([k, v]) => k + ' (' + dur(v) + ')').join(', ') + '.') : null,
         badgeGrid(s),
+        checkbox(_T('M\'annoncer les badges quand je les débloque'), s.toasts, v => { s.toasts = v; app.persist(); }),
         h('div', { class: 'note' }, _T('Estimation prudente : ce qu\'auraient pris à la main les coupes, calques, sous-titres et réglages posés par RR FX.')),
         h('div', { class: 'row-buttons' }, share, copy)
       ]);

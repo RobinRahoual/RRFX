@@ -17,24 +17,16 @@
             <circle cx="12" cy="12" r="4.3" fill="none" stroke="currentColor" stroke-width="2"></circle>
             <circle cx="17.6" cy="6.4" r="1.3" fill="currentColor"></circle>
           </svg></span>
-          @robin.rahoual sur Instagram
+          @robin.rahoual
         </button>
         <button class="action quiet" id="open-palette" title="Rechercher une action, un effet, un look… (Ctrl+K ou /)">🔍</button>
+        <button class="action quiet" id="open-windows" title="Fenêtres : afficher ou masquer des onglets et des outils, espaces de travail">▦</button>
+        <span id="brand-tabs"></span>
         <button class="action quiet" id="toggle-compact">▴ Réduire</button>
       </div>
-      <nav class="tabs" id="tabs">
-        <button class="tab tab-express" data-tab="express" title="Ton montage en un clic : clip, Reels, entreprise, événement, YouTube">⚡ Express</button>
-        <button class="tab" data-tab="effects" title="Transitions et effets sur les coupes, marqueurs et temps forts">Effets</button>
-        <button class="tab" data-tab="ramp" title="Rampes de vitesse">Rampe</button>
-        <button class="tab" data-tab="color" title="Conversion LOG, expo auto, raccord, looks façon Lightroom">Couleur</button>
-        <button class="tab" data-tab="music" title="Temps forts, montage auto, synchro, multicam">Musique</button>
-        <button class="tab" data-tab="titles" title="Titres et paroles animés">Textes</button>
-        <button class="tab" data-tab="speech" title="YouTube, interviews, vidéos d&#39;entreprise : silences, jump cuts, sous-titres, bandeaux">Parole</button>
-        <button class="tab" data-tab="formats" title="Copie 9:16, 4:5, 1:1 pour les réseaux">Formats</button>
-        <button class="tab" data-tab="assets" title="Tes dossiers d&#39;effets, sons, LUTs, polices">Ressources</button>
-        <button class="tab" data-tab="mine" title="Effets perso, packs de style, communauté">Mes effets</button>
-        <button class="tab" data-tab="settings" title="Réglages">⚙</button>
-      </nav>
+      <!-- Onglets regroupés (Montage, Bibliothèque…) et leurs sous-onglets : dessinés par main.js. -->
+      <nav class="tabs" id="tabs"></nav>
+      <nav class="tabs subtabs hidden" id="subtabs"></nav>
       <button class="cta" id="cta">Appliquer</button>
       <div id="status" class="status idle">
         <div class="status-top">
@@ -144,6 +136,11 @@
   <script src="js/temps.js"></script>
   <script src="js/macros.js"></script>
   <script src="js/astuces.js"></script>
+  <script src="js/effets.js"></script>
+  <script src="js/rampe.js"></script>
+  <script src="js/bibliotheque.js"></script>
+  <script src="js/reglages.js"></script>
+  <script src="js/fenetres.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

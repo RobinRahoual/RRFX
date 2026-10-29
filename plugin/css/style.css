@@ -611,3 +611,25 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .badge-bar span { display: block; height: 100%; background: var(--accent); }
 .rr-toast { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 24px); padding: 8px 10px; border-radius: 8px; background: var(--status-bg); backdrop-filter: blur(6px); border: 1px solid var(--accent); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); font-size: 12px; }
 .rr-toast-icon { font-size: 18px; }
+
+/* ---------- 2.7 : onglets regroupés, fenêtres ---------- */
+/* Montage et Bibliothèque ouvrent leurs sous-onglets sur une petite ligne en dessous. */
+.subtabs { border-bottom: 0; gap: 4px; margin: 6px 0 0; }
+.tab.sub { height: 22px; padding: 0 10px; border-radius: 11px; background: var(--btn); font-size: 12px; }
+.tab.sub:hover { background: var(--btn-hover); }
+.tab.sub.on { background: var(--btn-selected); }
+.tab.sub.on::after { display: none; }
+.win-menu { max-height: 62vh; overflow-y: auto; margin-right: -6px; padding-right: 6px; }
+.win-title { margin: 10px 0 4px; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--text-muted); }
+.win-title:first-child { margin-top: 0; }
+.win-spaces { display: flex; flex-wrap: wrap; gap: 4px; }
+.win-group { border-top: 1px solid var(--border); padding: 4px 0; }
+.win-tab { font-weight: 600; }
+.win-tab.off { opacity: .6; }
+.win-secs { padding-left: 22px; }
+.win-secs label { font-size: 12px; }
+#brand-tabs .tab { height: 24px; padding: 0 6px; font-size: 14px; }
+#brand-tabs .tab.on::after { bottom: 0; }
+.win-secs { display: flex; flex-direction: column; }
+.wl-follow { align-self: stretch; white-space: normal; height: auto; min-height: 28px; padding: 4px 10px; }
+.set-group { margin: 16px 0 0; padding-bottom: 2px; font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--accent); }

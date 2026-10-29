@@ -18,7 +18,7 @@
     const st = () => {
       const s = app.settings();
       if (!s.formatsPlus || typeof s.formatsPlus !== 'object') s.formatsPlus = {};
-      const d = { count: 3, min: 25, max: 50, exFormat: true, exCaptions: true, batch: 'applyLook', template: 'b:interview', picked: [], pfImage: true };
+      const d = { count: 3, min: 25, max: 50, exFormat: true, exCaptions: true, template: 'b:interview', pfImage: true };
       Object.keys(d).forEach(k => { if (!(k in s.formatsPlus)) s.formatsPlus[k] = JSON.parse(JSON.stringify(d[k])); });
       return s.formatsPlus;
     };
@@ -191,17 +191,13 @@
       { id: 'preflight', label: _T('La vérification avant export') },
       { id: 'beats', label: _T('Les marqueurs des temps forts') }
     ];
-    let seqs = null;
-    async function loadSeqs(redraw) {
-      const r = await Host.call('listSequences', {});
-      seqs = r.ok ? r.sequences : [];
-      if (redraw) redraw();
-    }
-    async function runBatch() {
-      const x = st(), list = (seqs || []).filter(q => x.picked.indexOf(q.id) >= 0), what = BATCH.find(b => b.id === x.batch);
-      if (app.S.busy) return;
+    /* La même action sur plusieurs séquences (list : séquences cochées, { id, name }), l'une après
+       l'autre. La section « Plusieurs séquences » (livraison.js) s'en sert, avec l'export en lot. */
+    async function runBatch(list, batchId) {
+      const what = BATCH.find(b => b.id === batchId);
+      if (app.S.busy || !what) return;
       if (!list.length) return app.status.finish('warn', _T('Aucune séquence cochée'), _T('Coche les séquences à traiter.'));
-      const fn = x.batch === 'preflight' ? () => preflight(null) : app.actions[x.batch];
+      const fn = batchId === 'preflight' ? () => preflight(null) : app.actions[batchId];
       if (!fn) return app.status.finish('error', _T('Action indisponible'), what.label);
       const s = app.settings(), keep = { color: s.color && s.color.target, log: s.logconv && s.logconv.scope };
       // Look et conversion sur toute la séquence pendant le lot, comme si tu l'avais choisi.
@@ -221,35 +217,11 @@
         if (s.color) s.color.target = keep.color;
         if (s.logconv) s.logconv.scope = keep.log;
         app.persist();
-        if (back.ok && back.seqId && x.batch !== 'formatCopy') await Host.call('openSequence', { id: back.seqId });
+        if (back.ok && back.seqId && batchId !== 'formatCopy') await Host.call('openSequence', { id: back.seqId });
       }
       app.status.finish('ok', what.label.replace(/ \(.*\)$/, '') + ' · ' + app.plural(report.length, _T('séquence')), report.join(' · '));
     }
-    app.extras.formats.push({
-      id: 'lot', title: _T('Sur plusieurs séquences'), nav: _T('Lot'), shut: true,
-      render: () => {
-        const x = st(), box = h('div'), list = h('div', { class: 'seq-list' });
-        const redraw = () => {
-          list.innerHTML = '';
-          if (!seqs) { list.appendChild(h('div', { class: 'note' }, _T('Clique sur « Lister les séquences ».'))); return; }
-          seqs.forEach(q => list.appendChild(checkbox(q.name + ' · ' + q.w + '×' + q.h + ' · ' + mmss(q.end), x.picked.indexOf(q.id) >= 0, v => {
-            const i = x.picked.indexOf(q.id);
-            if (v && i < 0) x.picked.push(q.id); else if (!v && i >= 0) x.picked.splice(i, 1);
-            app.persist();
-          })));
-        };
-        const load = h('button', { class: 'action' }, _T('Lister les séquences'));
-        load.addEventListener('click', () => loadSeqs(redraw));
-        const go = h('button', { class: 'action go' }, _T('Lancer sur les séquences cochées'));
-        go.addEventListener('click', runBatch);
-        box.append(
-          h('div', { class: 'note' }, _T('La même opération sur plusieurs séquences du projet, l\'une après l\'autre : RR FX ouvre chaque séquence et fait le travail. Chaque opération reste annulable dans l\'historique 🕘.')),
-          row(_T('Appliquer'), picker(BATCH.map(b => ({ v: b.id, label: b.label })), x.batch, v => { x.batch = v; app.persist(); })),
-          h('div', { class: 'row-buttons' }, load), list, h('div', { class: 'row-buttons' }, go));
-        redraw();
-        return [box];
-      }
-    });
+    app.batch = { BATCH, run: runBatch };
 
     // ---------------------------------------------------------------- modèles de projet
 

@@ -76,7 +76,7 @@
       // Sommaire collant : le format, puis les outils de l'onglet (extraits, vérification…).
       const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Sections de l\'onglet Formats') });
       [['format', 'Format']].concat(app.extras.formats.map(e => [e.id, e.nav])).forEach(([k, label]) => {
-        const b = h('button', { class: 'action' }, label);
+        const b = h('button', { class: 'action', 'data-target': k }, label);
         b.addEventListener('click', () => {
           const el = view.querySelector('[data-sec="' + k + '"]');
           if (!el) return;

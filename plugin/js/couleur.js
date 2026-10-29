@@ -580,7 +580,7 @@
       NAV.forEach(([id, label]) => {
         const el = view.querySelector('[data-panel="' + id + '"]');
         if (!el) return;
-        const b = h('button', { class: 'action' }, label);
+        const b = h('button', { class: 'action', 'data-target': id }, label);
         b.addEventListener('click', () => {
           if (el.classList.contains('closed')) el.querySelector('.lr-head').click();
           const sc = document.getElementById('scroll');

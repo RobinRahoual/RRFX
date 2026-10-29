@@ -32,7 +32,8 @@
     const st = () => {
       const s = app.settings();
       if (!s.tips || typeof s.tips !== 'object') s.tips = {};
-      const d = { on: true, day: '', shown: [] };
+      // Désactivée au départ : à activer dans Réglages > Astuce du jour.
+      const d = { on: false, day: '', shown: [] };
       Object.keys(d).forEach(k => { if (!(k in s.tips)) s.tips[k] = JSON.parse(JSON.stringify(d[k])); });
       return s.tips;
     };

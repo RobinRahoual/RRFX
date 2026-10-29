@@ -19,10 +19,11 @@
       let skip = false;
       try { skip = localStorage.getItem('rrfx-nowelcome') === '1'; } catch (e) { skip = false; }
       if (!force && (skip || s.welcomed === MAJOR)) return;
-      // Toute première ouverture (jamais vu l'accueil) : la page Instagram s'ouvre en fermant l'accueil.
-      const firstEver = !force && !s.welcomed && !s.instagramOpened;
       s.welcomed = MAJOR;
       app.persist();
+      // Instagram : un bouton, jamais ouvert sans clic.
+      const follow = h('button', { class: 'action wl-follow' }, _T('📸 Suivre @robin.rahoual sur Instagram : astuces et nouveautés'));
+      follow.addEventListener('click', () => { s.instagramOpened = true; app.persist(); if (app.services.openInstagram) app.services.openInstagram(); });
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
       const body = h('div', { class: 'wl' },
         h('div', { class: 'wl-lead' }, _T('Le couteau suisse gratuit du montage dans Premiere : transitions, silences, sous-titres, couleur, formats, pour toutes tes vidéos.')),
@@ -32,16 +33,11 @@
         card('🎨', _T('Couleur et formats'), _T('LOG → Rec.709, expo auto, raccord entre caméras, looks ; copies 9:16, 4:5, 1:1 recadrées ou sur fond flou.')),
         card('🔍', _T('Tout au clavier'), _T('Ctrl+K (ou /) cherche une action, un effet, un look ou un style.')),
         h('div', { class: 'note' }, _T('Une seule chose à faire par projet : Fichier > Nouveau > Calque de réglage. Réglages > Test de compatibilité vérifie ton Premiere en un clic.')),
-        firstEver ? h('div', { class: 'note' }, _T('📸 Ma page Instagram @robin.rahoual s\'ouvre dans ton navigateur : astuces, nouveautés et coulisses de RR FX.')) : null);
+        follow);
       app.modal(_T('Bienvenue dans RR FX ') + MAJOR + '.0', body, [
         { label: _T('Tester mon Premiere'), value: 'test' },
         { label: _T('C\'est parti'), value: 'go', primary: true }
       ]).then(v => {
-        if (firstEver) {
-          s.instagramOpened = true;
-          app.persist();
-          if (app.services.openInstagram) app.services.openInstagram();
-        }
         if (v === 'test') { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); } else if (v === 'go') app.switchTab('express');
       });
     }
@@ -79,6 +75,9 @@
     /* Ouvre l'onglet et amène l'outil en vue (panneau ou section ouverts) : sel, ou la section
        dont le titre contient title ; focus : le champ reçoit le curseur. */
     function reveal(tab, sel, focus, title) {
+      // Un outil masqué (menu Fenêtres) se réaffiche quand on y va.
+      const m = /data-(?:sec|panel)="?([\w-]+)/.exec(sel || '');
+      if (app.services.showWindow) app.services.showWindow(tab, m && m[1]);
       app.switchTab(tab);
       setTimeout(() => {
         const view = document.querySelector('.view.on');
@@ -97,6 +96,8 @@
       const A = app.actions, out = [];
       const act = (label, kind, run, hint) => out.push({ label, kind, run, hint: hint || '' });
       act(_T('Lancer le montage express'), 'Action', () => A.express && A.express(), 'Express');
+      act(_T('Fenêtres et espaces de travail'), 'Action', () => app.services.windows && app.services.windows());
+      (root.RRFXLayout ? root.RRFXLayout.SPACES : []).forEach(sp => act(_T('Espace de travail : ') + _T(sp.label), 'Action', () => app.services.applySpace && app.services.applySpace(sp.id)));
       act(_T('Appliquer l\'effet choisi'), 'Action', () => A.applyEffect && A.applyEffect(), 'A');
       act(_T('Poser les marqueurs des temps forts'), 'Action', () => A.beats && A.beats(), 'B');
       act(_T('Monter les rushs sélectionnés sur le rythme'), 'Action', () => A.autoEdit && A.autoEdit());
@@ -148,7 +149,7 @@
       act(_T('Barre de progression et compte à rebours'), 'Action', () => reveal('titles', '[data-sec=barre]'));
       act(_T('Extraits pour les réseaux (Reels, Shorts)'), 'Action', () => reveal('formats', '[data-sec=extraits]'));
       act(_T('Vérifier avant export'), 'Action', () => reveal('formats', '[data-sec=verif]'));
-      act(_T('Appliquer sur plusieurs séquences'), 'Action', () => reveal('formats', '[data-sec=lot]'));
+      act(_T('Appliquer sur plusieurs séquences'), 'Action', () => reveal('formats', '[data-sec=export]'));
       act(_T('Nouveau projet depuis un modèle'), 'Action', () => reveal('formats', '[data-sec=modeles]'));
       act(_T('Télécommande (Stream Deck, Companion)'), 'Action', () => reveal('settings', null, false, _T('Télécommande')));
       act(_T('Synchro entre ordinateurs'), 'Action', () => reveal('settings', null, false, 'Synchro entre ordinateurs'));

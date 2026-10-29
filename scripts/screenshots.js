@@ -30,6 +30,13 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
 
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: WIDTH, height: 900 }, deviceScaleFactor: 2 });
+  // Onglet : un clic sur son groupe (Montage, Bibliothèque) puis sur le sous-onglet, comme à la main.
+  const goTab = async (t, p) => {
+    p = p || page;
+    const g = await p.evaluate(x => { const gr = window.RRFXLayout.groupOf(x); return gr && gr.tabs.length > 1 ? gr.id : ''; }, t);
+    if (g && !(await p.isVisible('#subtabs .tab[data-tab=' + t + ']'))) await p.click('.tab-group[data-group=' + g + ']');
+    if (await p.isVisible('.tab[data-tab=' + t + ']')) await p.click('.tab[data-tab=' + t + ']');
+  };
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.route('https://api.github.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/issues\?/.test(r.request().url()) ? JSON.stringify(ISSUES) : '{}' }));
@@ -37,7 +44,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   // L'accueil de la première ouverture a son propre test.
   await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
-  await page.click('.tab[data-tab=effects]');
+  await goTab('effects');
   await page.waitForSelector('#grid .card');
   await page.waitForTimeout(400);
 
@@ -63,12 +70,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   }
 
   // 0. Express
-  await page.click('.tab[data-tab=express]');
+  await goTab('express');
   await page.waitForSelector('.xp-check');
   await page.waitForTimeout(600);
   await close();
   await shot('express', 600);
-  await page.click('.tab[data-tab=effects]');
+  await goTab('effects');
 
   // 1. Effets
   await page.click('#grid .card:has-text("Zoom rotation")');
@@ -82,11 +89,11 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('effets-overlays', 900);
 
   // 3. Rampe
-  await page.click('.tab[data-tab=ramp]');
+  await goTab('ramp');
   await shot('rampe');
 
   // Couleur : look appliqué, avant | après ; puis tous les panneaux ouverts.
-  await page.click('.tab[data-tab=color]');
+  await goTab('color');
   await page.waitForSelector('.lr-look');
   await page.click('.lr-look:has-text("Clip musical")');
   await close();
@@ -106,8 +113,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
       { id: 'a', brand: 'sony', model: 'A7 III', profile: 'slog3-sg3c', mode: 'lut', lut: '', lutName: 'SLog3SGamut3.CineToLC-709.cube', ev: 0, contrast: 'standard' },
       { id: 'b', brand: 'apple', model: 'iPhone 16 Pro', profile: 'applelog', mode: 'calc', ev: 1, contrast: 'standard' }] };
   });
-  await page.click('.tab[data-tab=ramp]');
-  await page.click('.tab[data-tab=color]');
+  await goTab('ramp');
+  await goTab('color');
   await page.click('.lr-head:has-text("Looks")');
   await page.click('.lr-head:has-text("Réglages de base")');
   await shot('couleur-conversion', 900);
@@ -129,7 +136,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.click('.lr-head:has-text("Réglages de base")');
 
   // 4. Musique : analyse d'un morceau et temps forts posés
-  await page.click('.tab[data-tab=music]');
+  await goTab('music');
   const [chooser] = await Promise.all([page.waitForEvent('filechooser'), page.click('.action:has-text("Choisir un fichier")')]);
   await chooser.setFiles(music);
   await page.waitForSelector('#status.ok:has-text("Musique analysée")', { timeout: 15000 });
@@ -139,22 +146,22 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('musique');
 
   // 5. Textes
-  await page.click('.tab[data-tab=titles]');
+  await goTab('titles');
   await page.fill('textarea.lyrics', 'On roule la nuit\nLes phares dans les yeux\nRien ne nous arrête\nJusqu\'au matin');
   await shot('textes', 900);
 
   // Parole : silences analysés.
-  await page.click('.tab[data-tab=speech]');
+  await goTab('speech');
   await page.click('button:has-text("Analyser")');
   await page.waitForSelector('#status.ok:has-text("silences trouvés")', { timeout: 10000 });
   await shot('parole', 600);
 
   // Formats : copie 9:16 avec les zones sûres.
-  await page.click('.tab[data-tab=formats]');
+  await goTab('formats');
   await shot('formats', 700);
 
   // 6-8. Ressources
-  await page.click('.tab[data-tab=assets]');
+  await goTab('assets');
   await shot('ressources-vide');
   await addFolder(page, pack);
   await page.waitForSelector('#res-grid .card');
@@ -174,7 +181,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     { type: 'ramp', name: 'Rampe refrain', data: { points: [{ t: 0, v: 100 }, { t: 0.6, v: 25 }, { t: 1, v: 300 }], frames: 16, segments: 10 } },
     { type: 'preset', name: 'Flash refrain', cat: 'flash', data: { base: 'flash-white', params: { frames: 5, intensity: 110 } } }
   ]));
-  await page.click('.tab[data-tab=mine]');
+  await goTab('mine');
   await page.click('#cta'); // capture (démo)
   await page.waitForSelector('#status.ok', { timeout: 5000 });
   await close();
@@ -188,12 +195,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.click('.mine-switch .action:has-text("Ma bibliothèque")');
 
   // 11. Réglages
-  await page.click('.tab[data-tab=settings]');
+  await goTab('settings');
   await close();
   await shot('reglages');
 
   // 12. Mode réduit
-  await page.click('.tab[data-tab=effects]');
+  await goTab('effects');
   await page.click('#toggle-compact');
   await page.waitForTimeout(300);
   await page.screenshot({ path: path.join(out, String(++n).padStart(2, '0') + '-mode-reduit.png'), clip: { x: 0, y: 0, width: WIDTH, height: await page.evaluate(() => Math.ceil(document.getElementById('status').getBoundingClientRect().bottom) + 12) } });
@@ -201,7 +208,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
 
   // 13. Thème clair (Premiere réglé en clair)
   await page.evaluate(() => { document.body.classList.add('theme-light'); document.body.classList.remove('theme-dark'); document.documentElement.style.setProperty('--bg', 'rgb(214,214,214)'); window.RRFXUI.css.reset(); });
-  await page.click('.tab[data-tab=assets]');
+  await goTab('assets');
   await page.click('.chips .action:has-text("Tout")');
   await page.click('#res-grid .card:has-text("Nuit bleue")');
   await shot('theme-clair', 1500);

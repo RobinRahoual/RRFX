@@ -39,6 +39,11 @@ test('no raw line/paragraph separators (they break regex literals in older engin
   });
 });
 
+test('host.jsx is built from src/host', () => {
+  const { build } = require('../scripts/build-host.js');
+  assert.strictEqual(read('plugin/jsx/host.jsx'), build(), 'node scripts/build-host.js');
+});
+
 // ExtendScript n'a que l'ES3 : pas de let/const, flèches, gabarits, classes, JSON natif…
 test('host.jsx is plain ES3 and runs', () => {
   const src = read('plugin/jsx/host.jsx');

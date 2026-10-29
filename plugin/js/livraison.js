@@ -20,7 +20,7 @@
     const st = () => {
       const s = app.settings();
       if (!s.livraison || typeof s.livraison !== 'object') s.livraison = {};
-      const d = { maxShot: 6, pattern: '{client}_{sequence}_{format}_v{vv}', client: '', version: 1, preset: '', dir: '', picked: [], archiveDir: '' };
+      const d = { maxShot: 6, pattern: '{client}_{sequence}_{format}_v{vv}', client: '', version: 1, preset: '', dir: '', picked: [], archiveDir: '', batch: 'export' };
       Object.keys(d).forEach(k => { if (!(k in s.livraison)) s.livraison[k] = JSON.parse(JSON.stringify(d[k])); });
       return s.livraison;
     };
@@ -135,13 +135,20 @@
         return { kind: r.failed && r.failed.length ? 'warn' : 'ok', title: app.plural(r.queued.length, _T('export en file'), _T('exports en file')) + _T(' dans Media Encoder'), detail: r.queued.slice(0, 3).map(q => q.file).join(', ') + (r.queued.length > 3 ? '…' : '') + _T(' · dossier : ') + dir + _T('. Le numéro de version passe à v') + String(x.version).padStart(2, '0') + _T(' pour le prochain export.') };
       });
     }
+    /* Plusieurs séquences : les exporter (Media Encoder, noms propres) ou leur appliquer la même
+       action (look, conversion LOG, copie au format, vérification, temps forts : formatsplus.js). */
     app.extras.formats.push({
-      id: 'export', title: _T('Export en lot (Media Encoder)'), nav: _T('Export'), shut: true,
+      id: 'export', title: _T('Plusieurs séquences : export et lot'), nav: _T('Export'), shut: true,
       render: () => {
         const x = st(), box = h('div');
         const draw = () => {
           box.innerHTML = '';
-          box.appendChild(h('div', { class: 'note' }, _T('Coche les séquences : chacune part dans Media Encoder avec le même préréglage et un nom propre. Media Encoder doit être installé.')));
+          const exporting = x.batch === 'export' || !app.batch;
+          const preview = h('div', { class: 'note' });
+          const previewText = () => { const n = names(); return n.length ? '→ ' + n.slice(0, 3).map(q => q.file).join(', ') + (n.length > 3 ? '…' : '') : _T('{client} {projet} {sequence} {format} {date} {vv} dans le nom.'); };
+          box.appendChild(h('div', { class: 'note' }, _T('Coche les séquences, puis exporte-les toutes dans Media Encoder avec des noms propres, ou applique-leur la même action, l\'une après l\'autre. Chaque opération reste annulable dans l\'historique 🕘.')));
+          const actions = [{ v: 'export', label: _T('Les exporter dans Media Encoder') }].concat(app.batch ? app.batch.BATCH.map(b => ({ v: b.id, label: b.label })) : []);
+          box.appendChild(row(_T('Action'), picker(actions, x.batch, v => { x.batch = v; app.persist(); draw(); })));
           if (!seqs) { box.appendChild(h('div', { class: 'note' }, _T('Clique sur « Lister les séquences ».'))); }
           else {
             const list = h('div', { class: 'seq-list' });
@@ -151,6 +158,16 @@
               app.persist(); preview.textContent = previewText();
             })));
             box.appendChild(list);
+          }
+          const load = h('button', { class: 'action' }, _T('Lister les séquences'));
+          load.addEventListener('click', () => loadSeqs(draw));
+          if (!exporting) {
+            const run = h('button', { class: 'action go' }, _T('Lancer sur les séquences cochées'));
+            run.addEventListener('click', () => app.batch.run((seqs || []).filter(q => x.picked.indexOf(q.id) >= 0), x.batch));
+            box.appendChild(h('div', { class: 'row-buttons wrap' }, run, load));
+            return;
+          }
+          if (seqs) {
             const opts = (presets || []).map(p => ({ v: p.path, label: p.name }));
             if (x.preset && !opts.some(o => o.v === x.preset)) opts.unshift({ v: x.preset, label: base(x.preset).replace(/\.epr$/i, '') });
             if (opts.length) box.appendChild(row(_T('Préréglage'), picker(opts, x.preset, v => { x.preset = v; app.persist(); })));
@@ -163,12 +180,8 @@
           box.appendChild(row(_T('Client'), client));
           box.appendChild(row(_T('Nom'), pat));
           box.appendChild(row(_T('Version'), ver));
-          const preview = h('div', { class: 'note' });
-          const previewText = () => { const n = names(); return n.length ? '→ ' + n.slice(0, 3).map(q => q.file).join(', ') + (n.length > 3 ? '…' : '') : _T('{client} {projet} {sequence} {format} {date} {vv} dans le nom.'); };
           preview.textContent = previewText();
           box.appendChild(preview);
-          const load = h('button', { class: 'action' }, _T('Lister les séquences'));
-          load.addEventListener('click', () => loadSeqs(draw));
           const pick = h('button', { class: 'action quiet', disabled: !Store.fs }, _T('Autre préréglage (.epr)…'));
           pick.addEventListener('click', () => { const f = Store.pickFiles(_T('Préréglage d\'export'), ['epr']); if (f && f[0]) { x.preset = f[0]; app.persist(); draw(); } });
           const dir = h('button', { class: 'action quiet', disabled: !Store.fs }, x.dir ? '📂 ' + base(x.dir) : _T('Dossier des exports…'));

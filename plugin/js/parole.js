@@ -393,7 +393,7 @@
       // Sommaire collant : un clic amène à la section (et la déplie).
       const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Sections de l\'onglet Parole') });
       NAV.concat(extras().map(e => [e.id, e.nav])).forEach(([k, label]) => {
-        const b = h('button', { class: 'action' + (x.lastTool === k ? ' selected' : '') }, label);
+        const b = h('button', { class: 'action' + (x.lastTool === k ? ' selected' : ''), 'data-target': k }, label);
         b.addEventListener('click', () => {
           const el = view.querySelector('[data-sec="' + k + '"]');
           if (!el) return;
@@ -442,13 +442,16 @@
       // Zoom visage
       const punch = h('button', { class: 'action go' }, _T('Zoomer sur le visage'));
       punch.addEventListener('click', use('visage', punchIn));
+      // Le même zoom, sur une seule coupe ou tout un plan : l'effet « Zoom visage » de l'onglet Effets.
+      const faceFx = h('button', { class: 'action quiet', title: _T('Effets › Mouvements : sur la coupe, les marqueurs, les temps forts ou tout un plan') }, _T('Sur une coupe ou un plan : Effets ›'));
+      faceFx.addEventListener('click', () => app.services.openEffect && app.services.openEffect('b:face-zoom'));
       view.appendChild(sec('visage', _T('Zoom visage'), [
         h('div', { class: 'note' }, _T('RR FX trouve le visage dans chaque plan et zoome sur les yeux en les suivant : ils restent à leur place à l\'écran pendant que le cadre se resserre. Après la coupe des silences, un plan sur deux : chaque jump cut devient un changement de cadre.')),
         row('Zoom', hotText({ value: x.faceAmount, min: 5, max: 60, step: 1, unit: '%', onChange: v => { x.faceAmount = v; app.persist(); } })),
         row(_T('Plans'), actionGroup([{ v: true, label: _T('Un sur deux') }, { v: false, label: _T('Tous') }], x.faceAlt, v => { x.faceAlt = v; app.persist(); }), { title: _T('Sur tous les plans de la séquence') }),
         row(_T('Yeux'), actionGroup([{ v: 'keep', label: _T('À leur place') }, { v: 'center', label: _T('Recentrés') }], x.faceFrame, v => { x.faceFrame = v; app.persist(); })),
         h('div', { class: 'field' }, app.UI.checkbox(_T('Suivre le visage (sinon : zoom fixe vers le haut du cadre)'), x.faceTrack, v => { x.faceTrack = v; app.persist(); })),
-        h('div', { class: 'row-buttons' }, punch)
+        h('div', { class: 'row-buttons' }, punch, faceFx)
       ]));
 
       // Sous-titres

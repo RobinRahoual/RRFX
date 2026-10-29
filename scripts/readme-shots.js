@@ -28,6 +28,13 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
 
   const browser = await chromium.launch();
   const page = await browser.newPage({ viewport: { width: W, height: H }, deviceScaleFactor: 2 });
+  // Onglet : un clic sur son groupe (Montage, Bibliothèque) puis sur le sous-onglet, comme à la main.
+  const goTab = async (t, p) => {
+    p = p || page;
+    const g = await p.evaluate(x => { const gr = window.RRFXLayout.groupOf(x); return gr && gr.tabs.length > 1 ? gr.id : ''; }, t);
+    if (g && !(await p.isVisible('#subtabs .tab[data-tab=' + t + ']'))) await p.click('.tab-group[data-group=' + g + ']');
+    if (await p.isVisible('.tab[data-tab=' + t + ']')) await p.click('.tab[data-tab=' + t + ']');
+  };
   const errors = [];
   page.on('pageerror', e => errors.push(e.message));
   await page.route('https://api.github.com/**', r => r.fulfill({ status: 200, contentType: 'application/json', body: /\/issues\?/.test(r.request().url()) ? JSON.stringify(demo.ISSUES) : '{}' }));
@@ -35,12 +42,12 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   // L'accueil de la première ouverture a son propre test.
   await page.addInitScript(() => { try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ } });
   await page.goto(url);
-  await page.click('.tab[data-tab=effects]');
+  await goTab('effects');
   await page.waitForSelector('#grid .card');
   await page.waitForTimeout(400);
 
   const close = async () => { if (await page.isVisible('#status-close')) await page.click('#status-close'); };
-  const tab = async t => { await page.click('.tab[data-tab=' + t + ']'); await page.waitForTimeout(250); };
+  const tab = async t => { await goTab(t); await page.waitForTimeout(250); };
   // La section voulue en haut de la zone de défilement (sous le bouton principal et l'état).
   async function shot(name, selector, settle) {
     await page.waitForTimeout(settle || 500);
@@ -386,7 +393,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await idle(); await close();
   await shot('rythme', '[data-sec=rythme]', 500);
   await sec('formats', 'export', 'Export');
-  await page.click('.section:has-text("Export en lot") .action:text-is("Lister les séquences")');
+  await page.click('[data-sec=export] .action:text-is("Lister les séquences")');
   await page.waitForSelector('[data-sec=export] .seq-list label');
   await page.click('[data-sec=export] .seq-list label >> nth=0');
   await page.click('[data-sec=export] .seq-list label >> nth=2');
@@ -422,7 +429,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.evaluate(() => localStorage.setItem('rrfx-lang', 'en'));
   await page.waitForTimeout(1500);
   await page.reload();
-  await page.waitForSelector('.tab[data-tab=effects]:has-text("Effects")');
+  await page.waitForSelector('.tab[data-tab=speech]:has-text("Speech")');
   await tab('express');
   await shot('anglais', null, 700);
   await page.evaluate(() => localStorage.setItem('rrfx-lang', 'fr'));

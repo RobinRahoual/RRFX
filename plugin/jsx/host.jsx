@@ -7,6 +7,8 @@ var RRFX = (function () {
     var TICKS = 254016000000;
     var VERSION = '2.6.0';
     var adjCache = null;
+    // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
+    var api = { version: VERSION };
 
     // ------------------------------------------------------------ JSON
 
@@ -617,6 +619,8 @@ var RRFX = (function () {
         return findNamed(s, track, start, name) || findItemAt(s, track, start);
     }
 
+    // ============================================================ Contexte, cibles, application des effets, capture, marqueurs, tout effacer
+
     // ------------------------------------------------------------ public: context
 
     function appVersion() {
@@ -1186,6 +1190,22 @@ var RRFX = (function () {
         return ok({ removed: removed, markers: markers });
     }
 
+    api.compat = guard(compat);
+    api.markerList = guard(markerList);
+    api.addMarkers = guard(addMarkers);
+    api.clearAll = guard(clearAll);
+    api.getContext = guard(getContext);
+    api.resolve = guard(resolve);
+    api.apply = guard(apply);
+    api.undo = guard(undo);
+    api.capture = guard(capture);
+    api.diagnose = guard(diagnose);
+    api.listEffects = guard(listEffects);
+    api.adjustmentInfo = guard(adjustmentInfo);
+    api.adjustmentFromSelection = guard(adjustmentFromSelection);
+
+    // ============================================================ Musique : rushs, decoupe sur le rythme, synchronisation, multicam, apercu
+
     // ------------------------------------------------------------ public: musique, rushs
 
     // La musique : le clip son selectionne, sinon le plus long clip son de la sequence.
@@ -1531,6 +1551,17 @@ var RRFX = (function () {
         return ok({ files: files, cut: secs(cut) });
     }
 
+    api.musicInfo = guard(musicInfo);
+    api.projectRushes = guard(projectRushes);
+    api.placeRushes = guard(placeRushes);
+    api.cutAtTimes = guard(cutAtTimes);
+    api.multicamSwitch = guard(multicamSwitch);
+    api.syncInfo = guard(syncInfo);
+    api.moveClips = guard(moveClips);
+    api.grabFrames = guard(grabFrames);
+
+    // ============================================================ Textes animes (MOGRT)
+
     // ------------------------------------------------------------ public: textes (MOGRT)
 
     function setMgtText(item, text) {
@@ -1643,6 +1674,10 @@ var RRFX = (function () {
         }
         return ok({ created: [{ kind: 'adj', track: ti, start: a, name: label }], track: ti, warnings: warnings });
     }
+
+    api.placeTitle = guard(placeTitle);
+
+    // ============================================================ Lumetri, conversion LOG -> Rec.709
 
     // ------------------------------------------------------------ Lumetri : LUT d'entree
 
@@ -1918,6 +1953,15 @@ var RRFX = (function () {
         return ok({ t: secs(tk(s.getPlayerPosition())) });
     }
 
+    api.logConvert = guard(logConvert);
+    api.placeGrades = guard(placeGrades);
+    api.rushList = guard(rushList);
+    api.framesBegin = guard(framesBegin);
+    api.framesEnd = guard(framesEnd);
+    api.setPlayhead = guard(setPlayhead);
+
+    // ============================================================ Formats 9:16, 4:5, 1:1
+
     // ------------------------------------------------------------ public: formats (9:16, 4:5, 1:1)
 
     // Copie de la sequence active au format o.width x o.height (1080 x 1920 pour Reels, TikTok,
@@ -2026,6 +2070,10 @@ var RRFX = (function () {
         }
         return ok({ name: s.name, reframed: reframed, filled: filled, blurred: blurred, faced: faced, width: W, height: H, warnings: warnings });
     }
+
+    api.formatCopy = guard(formatCopy);
+
+    // ============================================================ Parole (silences) et son (voix, musique)
 
     // ------------------------------------------------------------ public: parole (silences)
 
@@ -2271,6 +2319,13 @@ var RRFX = (function () {
         return ok({ done: done, cleaned: cleaned, created: created, warnings: warnings });
     }
 
+    api.speechInfo = guard(speechInfo);
+    api.cutSilences = guard(cutSilences);
+    api.duckMusic = guard(duckMusic);
+    api.voiceLevel = guard(voiceLevel);
+
+    // ============================================================ Test de compatibilite
+
     // ------------------------------------------------------------ public: test de compatibilite
 
     // Essaie, sur une copie jetable de la sequence active, chaque fonction de Premiere peu
@@ -2356,6 +2411,10 @@ var RRFX = (function () {
         });
         return ok({ results: results, frame: frame, app: appVersion(), version: VERSION });
     }
+
+    api.selfTest = guard(selfTest);
+
+    // ============================================================ Ressources (dossiers lies) et overlays
 
     // ------------------------------------------------------------ public: ressources (dossiers lies)
 
@@ -2465,6 +2524,12 @@ var RRFX = (function () {
         if (!c || !c.properties[1]) return fail('Opacit\u00e9 introuvable sur ce clip.');
         return ok({ value: c.properties[1].getValue() });
     }
+
+    api.placeAsset = guard(placeAsset);
+    api.importAssets = guard(importAssets);
+    api.readBlend = guard(readBlend);
+
+    // ============================================================ Speed ramps
 
     // ------------------------------------------------------------ public: speed ramps
     // Premiere does not expose Time Remapping to scripts, so a ramp is built from
@@ -2585,6 +2650,11 @@ var RRFX = (function () {
         if (bad.length) warnings.push('Morceaux \u00e0 v\u00e9rifier : ' + bad.join(', '));
         return ok({ pieces: K, sourceFrames: total / f, track: ti, created: created, warnings: warnings });
     }
+
+    api.rampResolve = guard(rampResolve);
+    api.rampApply = guard(rampApply);
+
+    // ============================================================ Sequences : volume, extraits, verification, plans de coupe, modeles
 
     // ------------------------------------------------------------ 2.4
 
@@ -2816,6 +2886,16 @@ var RRFX = (function () {
         }
         return ok({ name: ns.name, id: ns.sequenceID, clips: clips, adjPlaced: adjPlaced, warnings: warnings });
     }
+
+    api.gainKeys = guard(gainKeys);
+    api.listSequences = guard(listSequences);
+    api.openSequence = guard(openSequence);
+    api.extractCopy = guard(extractCopy);
+    api.preflight = guard(preflight);
+    api.placeStills = guard(placeStills);
+    api.newFromTemplate = guard(newFromTemplate);
+
+    // ============================================================ Projet : chutiers, rangement, versions, musique a la duree, proxies
 
     // ------------------------------------------------------------ 2.5 : projet, versions, musique, proxies
 
@@ -3138,6 +3218,20 @@ var RRFX = (function () {
         return ok({ id: o.id });
     }
 
+    api.importToBin = guard(importToBin);
+    api.tidyProject = guard(tidyProject);
+    api.renameItems = guard(renameItems);
+    api.versionSequence = guard(versionSequence);
+    api.fitMusic = guard(fitMusic);
+    api.activityPing = guard(activityPing);
+    api.proxyPresets = guard(proxyPresets);
+    api.makeProxies = guard(makeProxies);
+    api.proxyStatus = guard(proxyStatus);
+    api.setProxies = guard(setProxies);
+    api.deleteSequence = guard(deleteSequence);
+
+    // ============================================================ Raccords J/L-cut, coupes, credits, export en lot, archive
+
     // ------------------------------------------------------------ 2.6 : raccords, coupes, export, archive
 
     // Debut / fin d'un element deplace de delta ticks (le point d'entree / de sortie suit).
@@ -3369,71 +3463,13 @@ var RRFX = (function () {
         return ok({ files: out, project: app.project.path || '', projectName: app.project.name || '', offline: missing });
     }
 
-    return {
-        version: VERSION,
-        compat: guard(compat),
-        markerList: guard(markerList),
-        addMarkers: guard(addMarkers),
-        clearAll: guard(clearAll),
-        musicInfo: guard(musicInfo),
-        projectRushes: guard(projectRushes),
-        placeRushes: guard(placeRushes),
-        cutAtTimes: guard(cutAtTimes),
-        multicamSwitch: guard(multicamSwitch),
-        placeAsset: guard(placeAsset),
-        importAssets: guard(importAssets),
-        syncInfo: guard(syncInfo),
-        moveClips: guard(moveClips),
-        grabFrames: guard(grabFrames),
-        placeTitle: guard(placeTitle),
-        readBlend: guard(readBlend),
-        getContext: guard(getContext),
-        resolve: guard(resolve),
-        apply: guard(apply),
-        undo: guard(undo),
-        capture: guard(capture),
-        diagnose: guard(diagnose),
-        listEffects: guard(listEffects),
-        adjustmentInfo: guard(adjustmentInfo),
-        adjustmentFromSelection: guard(adjustmentFromSelection),
-        rampResolve: guard(rampResolve),
-        rampApply: guard(rampApply),
-        logConvert: guard(logConvert),
-        placeGrades: guard(placeGrades),
-        rushList: guard(rushList),
-        framesBegin: guard(framesBegin),
-        framesEnd: guard(framesEnd),
-        formatCopy: guard(formatCopy),
-        setPlayhead: guard(setPlayhead),
-        selfTest: guard(selfTest),
-        speechInfo: guard(speechInfo),
-        cutSilences: guard(cutSilences),
-        duckMusic: guard(duckMusic),
-        voiceLevel: guard(voiceLevel),
-        gainKeys: guard(gainKeys),
-        listSequences: guard(listSequences),
-        openSequence: guard(openSequence),
-        extractCopy: guard(extractCopy),
-        preflight: guard(preflight),
-        placeStills: guard(placeStills),
-        newFromTemplate: guard(newFromTemplate),
-        importToBin: guard(importToBin),
-        tidyProject: guard(tidyProject),
-        renameItems: guard(renameItems),
-        versionSequence: guard(versionSequence),
-        fitMusic: guard(fitMusic),
-        activityPing: guard(activityPing),
-        proxyPresets: guard(proxyPresets),
-        makeProxies: guard(makeProxies),
-        proxyStatus: guard(proxyStatus),
-        setProxies: guard(setProxies),
-        deleteSequence: guard(deleteSequence),
-        splitEdits: guard(splitEdits),
-        cutList: guard(cutList),
-        rollEdits: guard(rollEdits),
-        audioCredits: guard(audioCredits),
-        exportPresets: guard(exportPresets),
-        exportQueue: guard(exportQueue),
-        usedMedia: guard(usedMedia)
-    };
+    api.splitEdits = guard(splitEdits);
+    api.cutList = guard(cutList);
+    api.rollEdits = guard(rollEdits);
+    api.audioCredits = guard(audioCredits);
+    api.exportPresets = guard(exportPresets);
+    api.exportQueue = guard(exportQueue);
+    api.usedMedia = guard(usedMedia);
+
+    return api;
 })();
