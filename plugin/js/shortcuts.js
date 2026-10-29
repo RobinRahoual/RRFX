@@ -51,6 +51,7 @@
     rhythm: _T('Analyser le rythme du montage'),
     exportBatch: _T('Exporter les séquences cochées (Media Encoder)'),
     nativeTransitions: _T('Poser les transitions de Premiere sur les coupes'),
+    transcribe: _T('Transcrire les plans sélectionnés (Whisper)'),
     audioFades: _T('Fondus audio anti-clic sur toutes les coupes'),
     sceneEdits: _T('Détecter les changements de plan (Premiere)'),
     nativeCaptions: _T('Créer la piste de sous-titres de Premiere'),

@@ -57,7 +57,7 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 | Ce que tu fais aujourd'hui | Avec RR FX |
 |---|---|
 | Écouter l'interview, repérer chaque blanc, couper, recoller | **Un clic** : les silences sont coupés sur une copie de ta séquence |
-| Taper les sous-titres, les caler, les animer un par un | **Ton `.srt` posé en textes animés**, mot par mot ou phrase par phrase |
+| Taper les sous-titres, les caler, les animer un par un | **Whisper écrit le `.srt`**, RR FX le pose en textes animés, mot par mot ou phrase par phrase |
 | Poser un zoom et un whoosh sur chaque coupe, à la main | **Toutes les coupes d'un coup**, avec leurs sons |
 | Glisser un fondu enchaîné et un fondu audio sur chaque coupe | **Les transitions de Premiere sur toutes les coupes**, en un clic |
 | Chercher le kick de la musique image par image | **Un marqueur sur chaque temps fort**, trouvé tout seul |
@@ -108,9 +108,10 @@ sur une copie de ta séquence.
 | [✨ Effets, transitions, rampes](#effets) | [🎨 Couleur](#couleur) | [🔤 Textes et habillage](#textes) |
 | [📱 Formats et livraison](#formats) | [🗂️ Projet et ressources](#projet) | [🚀 Ton flux de travail](#flux) |
 
-**Nouveau dans la 2.7** : les **outils de Premiere en un clic** (transitions et fondus audio sur toutes les coupes,
-détection des changements de plan, piste de sous-titres native), des **onglets regroupés**, le menu **Fenêtres**
-pour n'afficher que tes outils, des **espaces de travail**, et les mises à jour **signées**. [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
+**Nouveau dans la 2.8** : la **transcription automatique** (Whisper, sur ton ordinateur) pour un .srt fait tout
+seul et des « euh » coupés au mot près, et une **détection de visage par réseau de neurones** (de profil, de trois
+quarts, en faible lumière). La 2.7 avait apporté les outils de Premiere en un clic, le menu Fenêtres et les espaces
+de travail. [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
 
 ---
 
@@ -162,6 +163,26 @@ lumineux, Chill / lofi, Rétro VHS… et **ton style** à toi, enregistré une f
 
 Interviews, podcasts filmés, YouTube, vidéos d'entreprise, face cam : tout ce qui prend des heures quand quelqu'un
 parle à la caméra.
+
+### Le .srt fait tout seul, avec Whisper
+
+> **Le problème :** sans transcription, pas de sous-titres, pas de montage par le texte, et des « euh » repérés à
+> l'oreille.
+
+Sélectionne tes plans, clique sur **Transcrire** : [Whisper](https://github.com/ggerganov/whisper.cpp), l'outil de
+transcription gratuit, écrit tout ce qui est dit, **mot par mot, sur ton ordinateur** (rien n'est envoyé en ligne).
+
+- ✅ Le `.srt` se fait tout seul : une phrase par sous-titre, à sa place dans la séquence.
+- ✅ Les **« euh » et les répétitions** sont coupés **au mot près**.
+- ✅ Les **extraits** écartent les passages pleins d'hésitations, les **chapitres** suivent les phrases.
+- ✅ RR FX trouve Whisper tout seul et télécharge le modèle (148 Mo) en un clic.
+
+<table>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/transcription.png" alt="Transcription automatique avec Whisper" width="250"><br><sub>Le .srt écrit par Whisper</sub></td>
+<td align="center" width="50%"><img src="docs/captures/outils/transcription-euh.png" alt="Euh et répétitions au mot près" width="250"><br><sub>Les « euh » et répétitions au mot près</sub></td>
+</tr>
+</table>
 
 ### Couper les silences en un clic
 
@@ -398,7 +419,8 @@ Survole une vignette pour la voir bouger. Pose l'effet sur **la coupe**, **toute
 ### Un zoom qui suit un visage ou ton produit
 
 - **Zoom visage** : RR FX trouve le visage dans chaque plan et zoome sur les yeux **en les suivant**. Parfait pour
-  la face cam et les interviews.
+  la face cam et les interviews. La détection passe par un **réseau de neurones** (YuNet, d'OpenCV) : de face, de
+  profil, de trois quarts et en faible lumière.
 - **Zoom suivi (objet)** : entoure un produit, un logo ou une personne sur la première image, RR FX le suit et zoome
   dessus. Idéal pour la pub, l'e-commerce et le sport.
 - **Stabiliser le visage** : la tête reste au même endroit du cadre même si la personne bouge.

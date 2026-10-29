@@ -55,7 +55,7 @@
         app.status.phase(_T('Écoute de la vidéo'));
         const an = await analyzeLong();
         const cues = app.speech.cues();
-        found = Mo.extracts({ speech: an.speech, energy: an.energy, cues, count: x.count, min: x.min, max: x.max }).map((e, i) => Object.assign(e, { on: true, n: i + 1 }));
+        found = Mo.extracts({ speech: an.speech, energy: an.energy, cues, words: app.transcript && app.transcript.has() ? app.transcript.words() : null, count: x.count, min: x.min, max: x.max }).map((e, i) => Object.assign(e, { on: true, n: i + 1 }));
         if (redraw) redraw();
         if (!found.length) return { kind: 'warn', title: _T('Aucun passage trouvé'), detail: _T('Sélectionne les plans où l\'on parle (au moins ') + x.min + _T(' s de parole), ou baisse la durée minimum.') };
         return { kind: 'ok', title: app.plural(found.length, _T('extrait trouvé'), _T('extraits trouvés')), detail: (cues.length ? _T('Phrases du .srt, ') : _T('Sans .srt : coupes sur les blancs, ')) + _T('à vérifier avant de créer.') };

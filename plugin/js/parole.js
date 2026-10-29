@@ -130,8 +130,18 @@
         V.fillers(a.samples, a.sr, { level: x.fillerLevel }).forEach(r => fillers.push({ a: Math.max(clips[i].start, a.toSeq(r.a)), b: Math.min(clips[i].end, a.toSeq(r.b)) }));
       }
       let repeats = [];
-      const cues = Sp.parseSubtitles(x.srt);
-      if (cues.length) repeats = Sp.repeats(cutAware(Sp.offset(cues, await startTime(x.capFrom))));
+      // Transcription Whisper (Parole > Transcrire) : les « euh » au mot près, en plus de ceux
+      // entendus dans le son, et les répétitions avec leurs vrais temps.
+      const T = app.transcript && app.transcript.has() ? app.transcript : null;
+      const inClips = r => clips.some(c => r.a >= c.start - 0.05 && r.b <= c.end + 0.05);
+      if (T) {
+        T.fillers().filter(inClips).forEach(f => { if (!fillers.some(g => f.a < g.b && g.a < f.b)) fillers.push({ a: f.a, b: f.b }); });
+        fillers.sort((p, q) => p.a - q.a);
+        repeats = T.repeats().filter(inClips);
+      } else {
+        const cues = Sp.parseSubtitles(x.srt);
+        if (cues.length) repeats = Sp.repeats(cutAware(Sp.offset(cues, await startTime(x.capFrom))));
+      }
       return { fillers, repeats };
     }
 
@@ -432,7 +442,7 @@
       const fillBtn = h('button', { class: 'action go' }, _T('Couper les « euh »'));
       fillBtn.addEventListener('click', use('euh', cutFillers));
       view.appendChild(sec('euh', _T('« Euh » et répétitions'), [
-        h('div', { class: 'note' }, _T('RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues entre deux mots. Avec un .srt (section Sous-titres), il trouve aussi les répétitions (« on va, on va ») et les faux départs.')),
+        h('div', { class: 'note' }, _T('RR FX écoute les plans choisis et repère les « euh », « hum » et voyelles tenues entre deux mots. Avec un .srt (section Sous-titres), il trouve aussi les répétitions (« on va, on va ») et les faux départs.')), h('div', { class: 'note' }, _T('Plus juste avec la transcription (Parole > Transcrire) : chaque « euh » et chaque répétition au mot près.')),
         row(_T('Sensibilité'), actionGroup([{ v: 'soft', label: _T('Douce') }, { v: 'normal', label: _T('Normale') }, { v: 'strong', label: _T('Forte') }], x.fillerLevel, v => { x.fillerLevel = v; app.persist(); })),
         row(_T('Résultat'), actionGroup([{ v: 'copy', label: _T('Sur une copie'), title: _T('Une copie « (sans euh) » : ta séquence reste intacte') }, { v: 'cut', label: _T('Directement') }, { v: 'markers', label: _T('Marqueurs'), title: _T('Conseillé pour un premier essai : un marqueur sur chaque « euh »') }], x.fillerMode, v => { x.fillerMode = v; app.persist(); })),
         h('div', { class: 'note' }, _T('Les répétitions dont le temps n\'est qu\'estimé (sous-titres de plusieurs mots) sont seulement listées dans le journal, ou marquées.')),

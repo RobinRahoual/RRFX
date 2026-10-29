@@ -66,6 +66,8 @@ coche. Si ce n'est pas le cas, note-le avec le modèle en bas de page.
 - [ ] Le même effet sur **toutes les coupes**, puis sur **les marqueurs**, puis sur **chaque temps fort**
 - [ ] Avec un **son** (whoosh) : il tombe pile sur la coupe
 - [ ] **Zoom visage** sur un plan d'interview : le zoom suit les yeux
+- [ ] 🔴 Zoom visage sur un visage **de profil**, de **trois quarts** et **en faible lumière** : le visage est trouvé (détection YuNet). Le panneau reste fluide pendant l'analyse
+- [ ] Le journal ne dit pas « Détection précise des visages indisponible » (sinon, copie la ligne)
 - [ ] **Zoom suivi (objet)** : entoure un objet, le zoom le suit pendant le plan
 - [ ] **Overlay** (Leak chaud) : posé en mode de fusion, avec un fondu
 - [ ] **Enchaînement** de 3 effets (Maj + clic) sur les temps forts
@@ -115,6 +117,17 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Coupes sur les blancs : plus aucun mot coupé en deux
 - [ ] Correcteur de sous-titres : *Tout corriger* puis *Poser les sous-titres*
 - [ ] Plans de coupe sur les mots clés : le plan apparaît quand le mot est dit
+
+### Transcription (Whisper)
+
+- [ ] 🔴 Installer whisper.cpp (Mac : `brew install whisper-cpp` ; Windows : `whisper-bin-x64.zip` de GitHub décompressé dans `Documents/RRFX/Outils`). *Parole › Transcrire* le trouve tout seul
+- [ ] 🔴 *Télécharger le modèle* (Base, 148 Mo) : la barre avance, « modèle prêt »
+- [ ] 🔴 Transcrire 2 plans d'interview : le .srt apparaît dans *Sous-titres*, une phrase par sous-titre, au bon moment dans la séquence
+- [ ] Le texte est juste en français (et en anglais avec *Langue : English*)
+- [ ] *Couper les « euh »* après la transcription : les « euh » et les répétitions tombent au mot près
+- [ ] Extraits pour les réseaux et chapitres YouTube après la transcription : plus justes qu'avant
+- [ ] Sans Whisper installé : un message clair dit comment l'installer
+- [ ] Modèle *Small* : plus juste, plus lent (note le temps pour 5 min de son)
 
 ## 8. Couleur
 

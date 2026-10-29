@@ -975,6 +975,24 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await idle();
     if ((await page.textContent('#cta')) !== 'Poser les transitions de Premiere') throw new Error('CTA : ' + await page.textContent('#cta'));
   });
+  await step('2.8 : transcription Whisper (démo), « euh » au mot près', async () => {
+    await goTab('speech');
+    await page.evaluate(() => { window.RRFXApp.speech.settings().srt = ''; });
+    await page.click('.view.on .sec-nav .action:text-is("Transcrire")');
+    await page.click('[data-sec=transcrire] .action.go');
+    await page.waitForSelector('#status.ok:has-text("sous-titres")', { timeout: 10000 });
+    await idle();
+    const srt = await page.evaluate(() => window.RRFXApp.speech.settings().srt);
+    if (!/Bonjour à tous/.test(srt) || /euh/.test(srt)) throw new Error('srt : ' + srt.slice(0, 200));
+    if (!(await page.evaluate(() => window.RRFXApp.transcript.has()))) throw new Error('mots non gardés');
+    const f = await page.evaluate(() => [window.RRFXApp.transcript.fillers().length, window.RRFXApp.transcript.repeats().length]);
+    if (f[0] < 2 || f[1] < 1) throw new Error('euh / répétitions : ' + f);
+    await page.evaluate(() => { window.RRFXApp.speech.settings().fillerMode = 'markers'; });
+    await page.click('.view.on .sec-nav .action:text-is("Euh")');
+    await page.click('[data-sec=euh] .action.go');
+    await page.waitForSelector('#status.ok:has-text("marqué")', { timeout: 10000 });
+    await idle();
+  });
   await step('langue : passage en anglais', async () => {
     await goTab('settings');
     await page.click('[data-sec=lang] button:has-text("English")');

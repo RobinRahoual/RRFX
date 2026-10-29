@@ -52,3 +52,17 @@ test('b-roll: a word of the subtitles found in a file name, at the time it is sa
   assert.ok(plan[0].t > 0 && plan[0].t < 4);
   assert.strictEqual(plan[2].t > 40, true, 'the same file is not reused within 30 s');
 });
+
+test('extracts with a transcript: a passage full of « euh » loses to a clean one', () => {
+  const cues = [], speech = [], words = [];
+  for (let i = 0; i < 40; i++) {
+    const a = i * 5;
+    cues.push({ start: a, end: a + 4.5, text: 'Pourquoi cette erreur ? 3 secrets' });
+    speech.push({ a, b: a + 4.6 });
+    // De 0 à 60 s : une hésitation tous les deux mots.
+    for (let k = 0; k < 8; k++) words.push({ text: a < 60 && k % 2 ? 'euh' : 'mot', start: a + k * 0.5, end: a + k * 0.5 + 0.4 });
+  }
+  const ex = Mo.extracts({ speech, cues, words, count: 1, min: 25, max: 35 });
+  assert.strictEqual(ex.length, 1);
+  assert.ok(ex[0].a >= 60, JSON.stringify(ex[0]));
+});

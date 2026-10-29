@@ -425,14 +425,17 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await page.evaluate(() => { window.RRFXApp.services.chooseLanguage(); });
   await page.waitForSelector('.modal:has-text("Language")');
   await shot('langue', null, 400);
-  await page.click('.modal footer button:has-text("English")');
-  await page.evaluate(() => localStorage.setItem('rrfx-lang', 'en'));
-  await page.waitForTimeout(1500);
-  await page.reload();
-  await page.waitForFunction(() => /Speech/.test((document.getElementById('tabs') || {}).textContent || ''), null, { timeout: 15000 }).catch(async e => { throw new Error('anglais : ' + await page.evaluate(() => document.documentElement.lang + ' ' + document.getElementById('tabs').textContent)); });
+  await page.keyboard.press('Escape');
+  // Le panneau en anglais : comme à la main, Réglages > Langue > English (il se recharge).
+  await tab('settings');
+  await page.click('[data-sec=lang] button:has-text("English")');
+  await page.waitForFunction(() => document.documentElement.lang === 'en' && window.RRFXApp && /Speech/.test((document.getElementById('tabs') || {}).textContent || ''), null, { timeout: 15000 });
+  await page.waitForTimeout(800);
   await tab('express');
   await shot('anglais', null, 700);
-  await page.evaluate(() => localStorage.setItem('rrfx-lang', 'fr'));
+  await tab('settings');
+  await page.click('[data-sec=lang] button:has-text("Français")');
+  await page.waitForFunction(() => document.documentElement.lang === 'fr' && window.RRFXApp, null, { timeout: 15000 }).catch(() => {});
 
   await browser.close();
   fs.rmSync(tmp, { recursive: true, force: true });

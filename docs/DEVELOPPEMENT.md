@@ -40,6 +40,12 @@ gh secret set RRFX_SIGNING_KEY --repo RobinRahoual/RRFX < ~/.rrfx-signing-key.pe
 publier sans le secret, et les panneaux refusent un pack non signé ou mal signé. Clé perdue : `node scripts/keys.js
 --force`, mais les panneaux déjà installés devront être mis à jour à la main une fois.
 
+## Modèle de visage (YuNet)
+
+`plugin/js/vendor/yunet-model.js` vient de `face_detection_yunet_2023mar.onnx` (OpenCV Zoo, licence MIT) :
+`python3 scripts/dev/yunet-convert.py face_detection_yunet_2023mar.onnx` (il faut le module Python `onnx`).
+`tests/yunet.test.js` compare le moteur JavaScript aux sorties d'onnxruntime (`tests/fixtures/yunet-astronaute.json`).
+
 ## Tester dans Premiere
 
 Les tests automatiques tournent sur une timeline simulée. La [checklist de test](CHECKLIST-TESTS.md) liste ce qu'il
@@ -86,8 +92,12 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/express.js          onglet Express : vérifications, styles, étapes enchaînées, compte rendu
   js/recipes.js          styles de montage (recettes) et étapes du montage express (testé)
   js/speech.js           silences dans le son, lecture .srt / .vtt, sous-titres courts (testé)
-  js/faces.js            détection du visage (Viola-Jones), suivi des yeux, cadrage du zoom visage (testé)
+  js/faces.js            détection du visage (Viola-Jones, repli), suivi des yeux, cadrage du zoom visage (testé)
+  js/yunet.js            détection du visage YuNet : moteur du réseau de neurones, sans dépendance (testé)
+  js/vendor/yunet-model.js le modèle YuNet d'OpenCV Zoo (licence MIT), converti par scripts/dev/yunet-convert.py
   js/vendor/haar-face.js cascade « visage de face » d'OpenCV (licences BSD / Intel en tête du fichier)
+  js/whisper.js          transcription Whisper : lecture du JSON, sous-titres, « euh », répétitions (testé)
+  js/transcription.js    Parole > Transcrire : outil, modèle, transcription des plans
   js/visage.js           images des plans, suivi du visage ou de l'objet entouré, 9:16 qui suit le visage
   js/voix.js             sonie LUFS (BS.1770), « euh » dans le son, courbe de ducking (testé)
   js/tracker.js          suivi d'un objet par corrélation (testé)

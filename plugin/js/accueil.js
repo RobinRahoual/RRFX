@@ -97,6 +97,7 @@
       const act = (label, kind, run, hint) => out.push({ label, kind, run, hint: hint || '' });
       act(_T('Lancer le montage express'), 'Action', () => A.express && A.express(), 'Express');
       act(_T('Fenêtres et espaces de travail'), 'Action', () => app.services.windows && app.services.windows());
+      act(_T('Transcrire les plans sélectionnés (Whisper)'), 'Action', () => reveal('speech', '[data-sec=transcrire]'));
       act(_T('Transitions de Premiere sur toutes les coupes'), 'Action', () => A.nativeTransitions && A.nativeTransitions());
       act(_T('Fondus audio anti-clic sur toutes les coupes'), 'Action', () => A.audioFades && A.audioFades());
       act(_T('Détecter les changements de plan (Premiere)'), 'Action', () => reveal('native', '[data-sec=scenes]'));

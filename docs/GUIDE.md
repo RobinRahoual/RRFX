@@ -104,8 +104,11 @@ position sur *Clips entiers*.
 
 *Zoom visage* et *Zoom visage progressif* (catégorie Mouvements) zooment sur la personne qui parle en gardant son
 regard en place. Pour chaque plan visé, RR FX exporte quelques images propres de la timeline (une toutes les
-0,6 s environ, sans looks ni titres), y cherche le visage (détecteur de Viola-Jones d'OpenCV, intégré au
-panneau, rien n'est envoyé en ligne), en déduit la ligne des yeux et la suit sur toute la durée du plan. Le zoom
+0,6 s environ, sans looks ni titres), y cherche le visage avec **YuNet**, le petit réseau de neurones de
+détection de visage d'OpenCV (intégré au panneau, calculé dans un Worker pour que le panneau reste fluide, rien
+n'est envoyé en ligne). Il trouve les visages de face, de profil, de trois quarts et en faible lumière, et donne
+directement la position des yeux. Si YuNet ne peut pas tourner, l'ancien détecteur (Viola-Jones) prend le relais.
+RR FX suit ensuite la ligne des yeux sur toute la durée du plan. Le zoom
 est posé sur un calque de réglage (effet Transformer) avec peu d'images clés, modifiables ensuite.
 
 | Réglage | Rôle |
@@ -388,9 +391,26 @@ fabriquées par RR FX, posées au-dessus des plans.
 
 Pour tout ce qui parle : YouTube, vlogs, interviews, podcasts filmés, témoignages, conférences.
 
-En haut, un **sommaire** (Silences, Euh, Visage, Sous-titres, Bandeau, Voix, Musique, Chapitres) amène à la
+En haut, un **sommaire** (Silences, Euh, Visage, Sous-titres, Bandeau, Voix, Musique, Chapitres, Transcrire…) amène à la
 section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil utilisé dans l'onglet.
 
+- **Transcription automatique (Whisper)** : *Transcrire les plans sélectionnés* écrit tout ce qui est dit, mot par
+  mot, avec [Whisper](https://github.com/ggerganov/whisper.cpp), un outil gratuit qui tourne sur ton ordinateur
+  (rien n'est envoyé en ligne). À installer une fois :
+  - Mac : `brew install whisper-cpp` ;
+  - Windows : télécharge `whisper-bin-x64.zip` sur la page des versions de whisper.cpp et décompresse-le dans
+    `Documents/RRFX/Outils` ;
+  - ou `pip install openai-whisper` (Python).
+
+  RR FX trouve l'outil tout seul (*Choisir l'outil…* sinon). Avec whisper.cpp, *Télécharger le modèle* récupère
+  le modèle choisi dans `Documents/RRFX/Whisper` : *Base* (148 Mo, rapide), *Small* (488 Mo, plus juste) ou
+  *Medium* (1,5 Go). *Langue* : détectée, ou imposée. *Garder les « euh »* demande à Whisper de les écrire
+  (sinon il les efface) pour pouvoir les couper ensuite.
+
+  Le résultat : le .srt de la section Sous-titres (une phrase par sous-titre, à sa place dans la séquence, sans les
+  « euh »), et les mots horodatés gardés en mémoire. Les **« euh » et répétitions** se trouvent alors au mot près
+  (en plus de ceux entendus dans le son), les **extraits** écartent les passages pleins d'hésitations et privilégient
+  ceux qui accrochent dès la première phrase, et les **chapitres** suivent les phrases.
 - **Couper les silences** : sélectionne dans la timeline les plans où l'on parle (image et son liés, ou le son seul
   d'un micro). **Analyser** écoute le son (WAV, MOV/MP4) et montre les blancs en rouge sur une barre, sans rien
   toucher. **Couper les silences** retire les blancs sur les pistes des plans choisis (image et son, toujours
@@ -773,6 +793,8 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - la coupe des silences : la lame QE (`razor`) sur les pistes audio, `remove` puis `move` des morceaux suivants
   (le son lié qui suit son image est vérifié avant d'être décalé) ;
 - la position d'un texte `.mogrt` par la *Trajectoire* du clip graphique (bandeau, sous-titres) ;
+- Whisper : le format JSON de whisper.cpp (`-ojf`, morceaux de mots horodatés) et d'openai-whisper
+  (`--word_timestamps`), lus par RR FX ;
 - les transitions de Premiere posées par QE (`getVideoTransitionByName`, `addTransition`) et leur retrait
   (`Track.transitions`), la détection des changements de plan (`performSceneEditDetectionOnSelection`) et la piste
   de sous-titres (`createCaptionTrack`).

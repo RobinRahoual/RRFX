@@ -407,6 +407,21 @@ const SRT = '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2
     await shot('archive', '[data-sec=archive]');
   });
 
+  // ------------------------------------------------------------------ 2.8 : transcription
+  await step('transcription', async () => {
+    await page.evaluate(() => { window.RRFXApp.speech.settings().srt = ''; });
+    await sec('speech', 'transcrire', 'Transcrire');
+    await page.click('[data-sec=transcrire] .action.go');
+    await page.waitForSelector('#status.ok:has-text("sous-titres")', { timeout: 10000 });
+    await idle();
+    await shot('transcription', '[data-sec=transcrire]', 300);
+    await page.evaluate(() => { const r = window.RRFXApp.speech.settings(); r.fillerMode = 'markers'; });
+    await sec('speech', 'euh', 'Euh');
+    await page.click('[data-sec=euh] .action.go');
+    await idle();
+    await shot('transcription-euh', '[data-sec=euh]', 300);
+  });
+
   // ------------------------------------------------------------------ 2.7 : outils de Premiere, fenêtres
   await step('premiere', async () => {
     await goTab('native');

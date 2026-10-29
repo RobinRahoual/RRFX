@@ -14,10 +14,13 @@
 
   const bare = w => String(w || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '');
   // Mots qui accrochent dans un extrait (français et anglais).
+  // Hésitations (comme whisper.js).
+  const FILLER = /^(e+u+h+m*|h?e+u+h+|heu+|hu+m+|h+m+|m+h+|mm+|u+m+|u+h+m*|e+r+m+|e+h+m+|a+h+m+)$/;
   const HOOK = /^(secret|secrets|erreur|erreurs|astuce|astuces|jamais|toujours|pourquoi|comment|incroyable|probleme|verite|argent|gratuit|million|millions|meilleur|pire|attention|vraiment|enfin|histoire|mistake|mistakes|secret|never|always|why|how|money|free|best|worst|truth|story|crazy|insane)$/;
 
   /* Meilleurs extraits. o : { duration, speech: [{ a, b }] (passages parlés), energy: { rate,
-     values (0 à 1) } (volume de la voix), cues: [{ start, end, text }] (facultatif), count,
+     values (0 à 1) } (volume de la voix), cues: [{ start, end, text }] (facultatif), words :
+     [{ text, start, end }] (transcription Whisper, facultatif : pénalise les hésitations), count,
      min, max } (s). → [{ a, b, score, title }] triés par moment, sans chevauchement. */
   function extracts(o) {
     const opt = Object.assign({ count: 3, min: 20, max: 60, cues: [] }, o);
@@ -51,7 +54,15 @@
         t.split(/\s+/).forEach(w => { n++; if (HOOK.test(bare(w))) hooks += 1.2; });
       });
       const first = inside[0].text.replace(/\s+/g, ' ').trim();
-      return { score: Math.min(1, hooks / Math.max(4, n / 6)), title: first.length > 60 ? first.slice(0, 57) + '…' : first };
+      // Une accroche dès la première phrase (question, chiffre, mot fort) : le passage tient.
+      const opening = /\?|\d/.test(first) || first.split(/\s+/).some(w => HOOK.test(bare(w))) ? 0.25 : 0;
+      // Avec la transcription (Whisper) : un passage plein d'hésitations est moins bon.
+      let hesit = 0;
+      if (opt.words) {
+        const ws = opt.words.filter(x => x.start >= a && x.end <= b);
+        hesit = ws.length ? ws.filter(x => FILLER.test(bare(x.text))).length / ws.length : 0;
+      }
+      return { score: Math.max(0, Math.min(1, Math.min(1, hooks / Math.max(4, n / 6)) + opening) - hesit * 2), title: first.length > 60 ? first.slice(0, 57) + '…' : first };
     }
     const cand = [];
     starts.forEach(a => {

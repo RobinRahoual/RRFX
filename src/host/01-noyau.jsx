@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.7.0';
+    var VERSION = '2.8.0';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };

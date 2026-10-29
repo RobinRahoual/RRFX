@@ -61,7 +61,7 @@
       tabs: ['express', 'effects', 'music', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
         music: ['musique', 'tempsforts', 'montageauto', 'duree'],
-        speech: ['silences', 'euh', 'visage', 'soustitres', 'bandeau', 'voix', 'texte'],
+        speech: ['transcrire', 'silences', 'euh', 'visage', 'soustitres', 'bandeau', 'voix', 'texte'],
         color: ['looks', 'basic', 'out', 'log', 'fix', 'luts'],
         formats: ['format', 'cadrage', 'verif', 'export'],
         assets: ['lien', 'dossiers', 'parcourir', 'rangement']
@@ -75,7 +75,7 @@
     { id: 'social', label: 'Réseaux sociaux', desc: 'Reels, TikTok, Shorts : rythme, sous-titres, 9:16, extraits.',
       tabs: ['express', 'effects', 'music', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
-        speech: ['silences', 'euh', 'visage', 'soustitres', 'correcteur', 'traduire', 'broll', 'texte'],
+        speech: ['transcrire', 'silences', 'euh', 'visage', 'soustitres', 'correcteur', 'traduire', 'broll', 'texte'],
         color: ['looks', 'basic', 'out', 'luts', 'gradient'],
         formats: ['format', 'cadrage', 'extraits', 'verif', 'rythme', 'export']
       } },
