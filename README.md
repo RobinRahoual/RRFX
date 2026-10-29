@@ -36,6 +36,21 @@ pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.
 
 ---
 
+## Nouveau dans la 2.4
+
+- 🌍 **RR FX parle anglais** : choisis ta langue au premier lancement.
+- 📱 **Extraits pour les réseaux** trouvés tout seuls dans tes longues vidéos.
+- ✅ **Vérification avant export**, et une action **sur plusieurs séquences** d'un coup.
+- 🗂️ **Nouveau projet depuis un modèle** (Reels, YouTube, interview, podcast…).
+- 🎞️ **Plans de coupe sur les mots clés** et 🌐 **sous-titres traduits** dans 24 langues.
+- 🫁 **Respirations et clics de bouche** baissés, 🎢 **risers avant les drops** et **réverb de fin**.
+- ⏳ **Barre de progression** et **compte à rebours**.
+- 🎛️ **Stream Deck**, un raccourci pour chaque action, **synchro entre ordinateurs** et 🕘 **historique détaillé**.
+
+Tout est détaillé plus bas, avec une capture par outil.
+
+---
+
 ## Ce que tu peux faire
 
 <table>
@@ -361,6 +376,7 @@ de lecture.
 <td width="44%"><img src="docs/captures/outils/parole-son.png" alt="Son de la voix, musique sous la voix, chapitres" width="300"></td>
 </tr>
 <tr>
+<td width="44%"><img src="docs/captures/outils/formats-visage.png" alt="Copie 9:16 qui suit le visage" width="300"></td>
 <td width="56%">
 
 ### 📱 Prêt pour Reels, TikTok et LinkedIn
@@ -375,10 +391,8 @@ Une **copie de ta séquence en 9:16** (ou 4:5, 1:1) en un clic.
 - Ta séquence d'origine ne bouge pas.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/formats-visage.png" alt="Copie 9:16 qui suit le visage" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/ressources.png" alt="Tes ressources" width="300"></td>
 <td width="56%">
 
 ### 📁 Toutes tes ressources à portée de clic
@@ -390,8 +404,10 @@ Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : to
 - Pose un whoosh **sur chaque coupe** en un clic.
 
 </td>
+<td width="44%"><img src="docs/captures/outils/ressources.png" alt="Tes ressources" width="300"></td>
 </tr>
 <tr>
+<td width="44%"><img src="docs/captures/outils/mes-effets.png" alt="Mes effets et packs de style" width="300"></td>
 <td width="56%">
 
 ### ⭐ Ton style, réutilisable et partageable
@@ -405,10 +421,8 @@ Lie le dossier où tu ranges tes **SFX, LUTs, polices, overlays et titres** : to
   palettes, styles Express, packs, LUTs, nuanciers `.ase`, modèles `.mogrt`. RR FX reconnaît le fichier tout seul.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/mes-effets.png" alt="Mes effets et packs de style" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/communaute.png" alt="Bibliothèque de la communauté" width="300"></td>
 <td width="56%">
 
 ### 🌍 La bibliothèque de la communauté
@@ -417,8 +431,10 @@ Les effets publiés par les autres monteurs : cherche, trie par les plus aimés,
 Publie les tiens en deux clics.
 
 </td>
+<td width="44%"><img src="docs/captures/outils/communaute.png" alt="Bibliothèque de la communauté" width="300"></td>
 </tr>
 <tr>
+<td width="44%"><img src="docs/captures/outils/extraits.png" alt="Extraits pour les réseaux" width="300"></td>
 <td width="56%">
 
 ### 📱 Des extraits prêts pour les réseaux
@@ -428,75 +444,150 @@ la voix vit, et avec un `.srt` les mots forts (questions, chiffres…). Chaque e
 phrase.
 
 - Choisis la durée (Reels, Shorts, TikTok) et le nombre d'extraits.
-- Une séquence par extrait, ta vidéo d'origine ne bouge pas.
+- Va voir chaque passage (▶) avant de le garder.
+- Une séquence par extrait, au format choisi et avec ses sous-titres. Ta vidéo d'origine ne bouge pas.
 
 </td>
-<td width="44%"><img src="docs/captures/outils/extraits.png" alt="Extraits pour les réseaux" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/verification.png" alt="Vérifier avant export" width="300"></td>
 <td width="56%">
 
 ### ✅ Vérifié avant d'exporter
 
-Un clic avant l'export : **médias hors ligne, trous noirs, pistes coupées, texte hors zone sûre, volume trop poussé**. Clique sur une
-ligne, la tête de lecture y va.
+Un clic avant d'envoyer à Media Encoder, et RR FX liste ce qui cloche :
 
-- **Sur plusieurs séquences** : coche-les, et la même action passe sur toutes (look, conversion LOG, copie au
-  format, vérification, temps forts).
-- **Nouveau projet depuis un modèle** : Reels, YouTube face cam, interview, podcast, vidéo d'entreprise, aftermovie. La séquence au
-  bon format avec tes rushs, prête pour Express. Enregistre tes modèles.
+- **médias et sons hors ligne**, **images noires** (trous dans la timeline), fin sans image ;
+- clips ou pistes **désactivés ou coupés** ;
+- **texte hors de la zone sûre**, **volume poussé** au-delà de +6 dB.
+
+Rouge : à corriger, orange : à regarder. Clique sur une ligne, la tête de lecture y va.
+
+**Sur plusieurs séquences** : coche-les, et la même action passe sur toutes, l'une après l'autre (look, conversion
+LOG, copie au format, vérification, temps forts).
+
+</td>
+<td width="44%"><img src="docs/captures/outils/verification.png" alt="Vérifier avant export" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/modeles.png" alt="Nouveau projet depuis un modèle" width="300"></td>
+<td width="56%">
+
+### 🗂️ Un nouveau projet en un clic
+
+Choisis un modèle : **Reels / TikTok, YouTube face cam, interview, podcast, vidéo d'entreprise, aftermovie**.
+Sélectionne tes rushs : RR FX crée la séquence au bon format avec eux, pose le calque de réglage et règle le style
+Express et les styles des textes. Il ne reste qu'à lancer Express.
+
+- **Enregistre tes réglages comme modèle** pour retrouver ta recette à chaque projet.
+- Tes modèles se partagent comme un effet.
 
 </td>
 </tr>
 <tr>
 <td width="56%">
 
-### 🎞️ Plans de coupe et sous-titres traduits
+### 🎞️ Des plans de coupe sur les mots clés
 
-- **Plans de coupe sur les mots clés** : quand tu dis « logo » ou « terrasse », la vidéo qui porte ce nom dans
-  tes dossiers apparaît au-dessus de la face cam.
-- **Traduis tes sous-titres** dans 24 langues, mêmes timings (MyMemory gratuit, ou DeepL avec ta clé).
-- **Bruitages** : un pop sur les mots clés, un ding sur les emojis.
-- **Respirations et clics de bouche** baissés, sans rien couper.
+Nomme tes plans de coupe comme ce qu'ils montrent (`logo.mp4`, `cafe_terrasse.mov`…) et lie leur dossier : quand le
+mot est dit dans les sous-titres, le plan apparaît au-dessus de la personne qui parle.
+
+- **Voir les correspondances** avant de poser : chaque mot et le plan qu'il appelle.
+- Durée des plans, écart minimum et nombre maximum réglables.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/plans-de-coupe.png" alt="Plans de coupe sur les mots clés" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/risers.png" alt="Risers avant les drops" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/traduction.png" alt="Traduire les sous-titres" width="300"></td>
 <td width="56%">
 
-### 🎢 Risers, réverb de fin, barre de progression
+### 🌐 Tes sous-titres dans 24 langues
 
-- **Risers avant les drops** : RR FX trouve les drops de ta musique et pose un riser qui y mène.
-- **Réverb de fin** : la musique s'arrête où tu veux et résonne, au lieu d'être coupée net.
-- **Barre de progression** sur toute la vidéo, ou **compte à rebours** (onglet Textes).
+Ton `.srt` traduit sous-titre par sous-titre, **les timings ne bougent pas**.
+
+- **MyMemory** : gratuit, sans compte. **DeepL** : meilleure qualité, avec ta clé (gratuite jusqu'à 500 000
+  caractères par mois).
+- Pose la version traduite, enregistre le `.srt`, ou reviens à l'original.
+- **Bruitages** : un pop sur les mots clés, un ding sur les emojis, calés sur le mot.
 
 </td>
 </tr>
 <tr>
 <td width="56%">
 
-### 🎛️ Stream Deck, raccourcis, synchro
+### 🫁 Respirations et clics de bouche en moins
 
-- **Un raccourci pour chaque action** (31), à ta façon.
-- **Télécommande** : chaque action sur un bouton de Stream Deck ou de Companion. Rien n'est ouvert sur le réseau.
-- **Synchro entre ordinateurs** : un dossier Dropbox, iCloud Drive, OneDrive ou Google Drive, et tes effets, looks,
-  styles et réglages te suivent. Aucun compte.
-- **Historique détaillé** : annule n'importe quelle opération, ou tout jusqu'à un point.
+Les respirations entre deux phrases et les petits **clics de bouche** sont baissés dans les plans choisis,
+**sans rien couper** : des images clés de volume, modifiables.
+
+- Respirations, clics, ou les deux.
+- Baisse de -6, -12 ou -20 dB, ou muet.
+- **↶ Annuler** remet le volume d'avant.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/respirations.png" alt="Respirations et clics de bouche" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/risers.png" alt="Risers avant les drops et réverb de fin" width="300"></td>
+<td width="56%">
+
+### 🎢 Risers avant les drops, réverb de fin
+
+- **Risers** : RR FX trouve les drops de ta musique et pose un riser qui finit pile dessus, avec un impact si tu
+  veux.
+- **Réverb de fin** : la musique s'arrête où tu veux (ou à sa fin) et **résonne** au lieu d'être coupée net.
+  Salle petite, grande ou cathédrale.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### ⏳ Barre de progression et compte à rebours
+
+- Une **barre qui avance** du début à la fin de la vidéo : les gens voient combien il reste et restent jusqu'au
+  bout. En haut ou en bas, à ta couleur.
+- Un **compte à rebours** (3, 5 ou 10 s) à la tête de lecture ou qui finit à la fin de la vidéo.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/barre-progression.png" alt="Barre de progression et compte à rebours" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/historique.png" alt="Historique détaillé" width="300"></td>
+<td width="56%">
+
+### 🕘 Un historique pour tout annuler
+
+Chaque opération RR FX avec son heure, sa séquence et ce qu'elle a posé.
+
+- **Annuler** celle que tu veux, même ancienne.
+- **Jusqu'ici** : retire toutes les plus récentes d'un coup.
+- Les 50 dernières opérations, même après avoir fermé Premiere.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🎛️ Stream Deck, raccourcis et synchro
+
+- **Télécommande** : chaque action sur un bouton de **Stream Deck** ou de Companion, même quand le panneau n'est
+  pas sélectionné. Rien n'est ouvert sur le réseau.
+- **Un raccourci pour chacune des 31 actions**, avec ou sans Maj, à ta façon.
+- **Synchro entre ordinateurs** : choisis un dossier Dropbox, iCloud Drive, OneDrive ou Google Drive, et tes effets,
+  looks, styles, couleurs et réglages te suivent. Aucun compte.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/telecommande.png" alt="Télécommande Stream Deck" width="300"></td>
 </tr>
 <tr>
-<td width="44%"><img src="docs/captures/outils/anglais.png" alt="RR FX en anglais" width="300"></td>
+<td width="44%"><img src="docs/captures/outils/langue.png" alt="Choix de la langue au premier lancement" width="146"> <img src="docs/captures/outils/anglais.png" alt="RR FX en anglais" width="146"></td>
 <td width="56%">
 
 ### 🌍 En français ou en anglais
 
-Au premier lancement, choisis **Français** ou **English** : tout le panneau suit, messages de Premiere compris.
-Ça se change à tout moment dans *Réglages*.
+Au premier lancement, choisis **Français** ou **English** (la langue de ton ordinateur est proposée) : tout le
+panneau suit, messages de Premiere compris. Ça se change à tout moment dans *Réglages*.
 
 *RR FX is also available in English: pick it on first launch, or anytime in Settings.*
 

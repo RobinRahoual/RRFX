@@ -48,6 +48,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
       const s = document.getElementById('scroll');
       s.scrollTop = 0;
       if (!sel) return;
+      // De la place sous la dernière section : elle peut monter en haut comme les autres.
+      const v = document.querySelector('.view.on');
+      if (v) v.style.paddingBottom = '700px';
       const el = document.querySelector(sel);
       // Sommaire collant (onglet Parole) : la section se place juste dessous.
       const nav = document.querySelector('.view.on .sec-nav');
@@ -56,6 +59,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForTimeout(300);
     const file = path.join(out, name + '.png');
     await page.screenshot({ path: file });
+    await page.evaluate(() => { const v = document.querySelector('.view.on'); if (v) v.style.paddingBottom = ''; });
     console.log(file);
   }
   const mark = async (sel, attr) => page.evaluate(([s, a]) => { document.querySelectorAll('[data-shot]').forEach(e => e.removeAttribute('data-shot')); const el = typeof s === 'string' ? Array.from(document.querySelectorAll(s.split('|')[0])).find(e => e.textContent.includes(s.split('|')[1])) : null; if (el) el.setAttribute('data-shot', a); }, [sel, attr]);

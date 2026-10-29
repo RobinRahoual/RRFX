@@ -300,7 +300,7 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
   principal pose un riser (2,4 s, ou long de 4 s) qui finit pile sur chaque drop, avec un impact dessus si tu veux,
   sur une piste son libre.
 - **Réverb de fin** : à la fin de la musique ou à la tête de lecture (RR FX y coupe la musique), la résonance du
-  dernier instant joué (petite, salle, grande, cathédrale), sur une piste son libre : la fin ne tombe plus à plat.
+  dernier instant joué (salle petite, grande ou cathédrale), sur une piste son libre : la fin ne tombe plus à plat.
 
 ### Onglet Textes
 
