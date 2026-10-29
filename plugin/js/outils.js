@@ -190,8 +190,120 @@
     return hh + ' ' + (hLabel || 'h') + (mm ? ' ' + String(mm).padStart(2, '0') : '');
   }
 
+  // ---------------------------------------------------------------- 2.6 : rythme du montage
+
+  /* Durées des plans (secondes) → statistiques et plans trop longs. clips : [{ start, end, name }]
+     (s), sur la piste du dessus ou toutes. max : au-delà, un plan est « long ». */
+  function rhythm(clips, max) {
+    const L = clips.map(c => Object.assign({}, c, { len: c.end - c.start })).filter(c => c.len > 0.04).sort((p, q) => p.start - q.start);
+    if (!L.length) return { count: 0, avg: 0, median: 0, long: [], total: 0 };
+    const lens = L.map(c => c.len).sort((p, q) => p - q), total = L.reduce((n, c) => n + c.len, 0);
+    const lim = max || Math.max(4, lens[Math.floor(lens.length / 2)] * 2.5);
+    return {
+      count: L.length, total, avg: total / L.length, median: lens[Math.floor(lens.length / 2)], max: lim,
+      shortest: lens[0], longest: lens[lens.length - 1],
+      long: L.filter(c => c.len > lim).map(c => ({ start: c.start, end: c.end, len: c.len, name: c.name })),
+      shots: L.map(c => ({ start: c.start, len: c.len }))
+    };
+  }
+
+  // ---------------------------------------------------------------- 2.6 : coupes sur les blancs
+
+  /* Énergie (moyenne quadratique) d'un son par fenêtre de step s. → Float32Array */
+  function energy(samples, sr, step) {
+    const n = Math.max(1, Math.round(sr * step)), out = new Float32Array(Math.floor(samples.length / n));
+    for (let i = 0; i < out.length; i++) {
+      let s = 0;
+      for (let k = i * n; k < (i + 1) * n; k++) s += samples[k] * samples[k];
+      out[i] = Math.sqrt(s / n);
+    }
+    return out;
+  }
+  /* Meilleur décalage d'une coupe : costA[k] / costB[k] = bruit de chaque côté pour un décalage
+     de (k - mid) pas. On garde 0 si la coupe est déjà dans un blanc ou si rien n'est nettement
+     plus calme. → décalage en pas (négatif : plus tôt). */
+  function quietOffset(costA, costB, mid) {
+    const at = k => (costA[k] || 0) + (costB[k] || 0), here = at(mid);
+    let best = mid;
+    for (let k = 0; k < Math.min(costA.length, costB.length); k++) {
+      const c = at(k) + Math.abs(k - mid) * here * 0.01;
+      if (c < at(best) + Math.abs(best - mid) * here * 0.01) best = k;
+    }
+    return here > 0 && at(best) < here * 0.5 ? best - mid : 0;
+  }
+
+  // ---------------------------------------------------------------- 2.6 : correcteur de sous-titres
+
+  /* Problèmes des sous-titres : lignes trop longues, lecture trop rapide (caractères par seconde),
+     trop courts, majuscule manquante, espaces en trop, ponctuation collée (français).
+     → [{ i, kind, text }] (kind : long, fast, short, caps, spaces, punct) */
+  function checkCues(cues, o) {
+    const opt = Object.assign({ maxLine: 42, maxCps: 20, minDur: 0.8, lang: 'fr' }, o || {}), out = [];
+    cues.forEach((c, i) => {
+      const lines = String(c.text).split('\n'), flat = lines.join(' '), d = c.end - c.start;
+      if (lines.some(l => l.length > opt.maxLine) || lines.length > 2) out.push({ i, kind: 'long' });
+      if (d > 0 && flat.replace(/\s+/g, '').length / d > opt.maxCps) out.push({ i, kind: 'fast' });
+      if (d < opt.minDur) out.push({ i, kind: 'short' });
+      const prev = cues[i - 1], ends = !prev || /[.!?…]["»”)]?\s*$/.test(prev.text);
+      if (ends && /^[a-zàâçéèêëîïôûùüÿœ]/.test(flat)) out.push({ i, kind: 'caps' });
+      if (/ {2,}|^\s|\s$/m.test(c.text)) out.push({ i, kind: 'spaces' });
+      if (opt.lang === 'fr' && /[^\s  ][:;!?»]/.test(flat.replace(/https?:\S+|\d+:\d+/g, ''))) out.push({ i, kind: 'punct' });
+    });
+    return out;
+  }
+  /* Corrige ce qui peut l'être sans changer le sens : lignes recoupées, majuscules, espaces,
+     ponctuation française ; sous-titres trop rapides ou trop courts allongés dans le blanc qui
+     suit. → { cues, fixed } */
+  function fixCues(cues, wrapFn, o) {
+    const opt = Object.assign({ maxLine: 42, maxCps: 20, minDur: 0.8, lang: 'fr' }, o || {});
+    let fixed = 0;
+    const out = cues.map(c => Object.assign({}, c));
+    out.forEach((c, i) => {
+      const before = c.text + '|' + c.end;
+      let t = String(c.text).split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
+      if (opt.lang === 'fr') t = t.replace(/(\S)\s*([:;!?»])/g, (m, a, p) => (/\d/.test(a) && p === ':' ? a + p : a + ' ' + p)).replace(/«\s*/g, '« ');
+      const prev = out[i - 1];
+      if ((!prev || /[.!?…]["»”)]?\s*$/.test(prev.text)) && /^[a-zàâçéèêëîïôûùüÿœ]/.test(t)) t = t.charAt(0).toUpperCase() + t.slice(1);
+      if (t.split('\n').some(l => l.length > opt.maxLine) || t.split('\n').length > 2) t = wrapFn ? wrapFn(t.replace(/\n/g, ' '), opt.maxLine) : t;
+      c.text = t;
+      // Durée : assez pour lire, sans mordre sur le suivant (0,1 s d'écart).
+      const need = Math.max(opt.minDur, t.replace(/\s+/g, '').length / opt.maxCps), next = out[i + 1];
+      if (c.end - c.start < need) c.end = Math.max(c.end, Math.min(c.start + need, next ? next.start - 0.1 : c.start + need));
+      if (c.text + '|' + c.end !== before) fixed++;
+    });
+    return { cues: out, fixed };
+  }
+
+  // ---------------------------------------------------------------- 2.6 : export en lot
+
+  /* Nom de fichier d'une séquence : {client}, {projet}, {sequence}, {format} (16x9, 9x16…),
+     {date} (2026-10-29), {v} ou {vv} (numéro de version). Caractères interdits retirés. */
+  function exportName(pattern, v) {
+    const ratio = (w, h) => { if (!w || !h) return ''; const g = (a, b) => (b ? g(b, a % b) : a), d = g(w, h); const r = w / d + 'x' + h / d; return { '16x9': '16x9', '9x16': '9x16', '4x5': '4x5', '1x1': '1x1', '256x135': '17x9' }[r] || (w + 'x' + h); };
+    const now = v.date || new Date();
+    const map = { client: v.client || '', projet: v.projet || '', project: v.projet || '', sequence: v.sequence || '', format: ratio(v.w, v.h), date: dayKey(now), v: String(v.version || 1), vv: String(v.version || 1).padStart(2, '0') };
+    return String(pattern || '{sequence}_{format}_v{vv}').replace(/\{(\w+)\}/g, (m, k) => (k in map ? map[k] : m))
+      .replace(/[\\/:*?"<>|]+/g, '-').replace(/[_\- ]{2,}/g, m => m[0]).replace(/^[_\- ]+|[_\- ]+$/g, '') || 'export';
+  }
+
+  // ---------------------------------------------------------------- 2.6 : badges
+
+  /* Badges débloqués selon le temps gagné (minutes), le nombre d'opérations et d'outils différents. */
+  const BADGES = [
+    { id: 'h1', kind: 'min', at: 60, icon: '⏱️' }, { id: 'h5', kind: 'min', at: 300, icon: '🚀' },
+    { id: 'h10', kind: 'min', at: 600, icon: '🔥' }, { id: 'h24', kind: 'min', at: 1440, icon: '🏆' },
+    { id: 'h100', kind: 'min', at: 6000, icon: '👑' },
+    { id: 'ops10', kind: 'ops', at: 10, icon: '✂️' }, { id: 'ops100', kind: 'ops', at: 100, icon: '⚡' },
+    { id: 'ops1000', kind: 'ops', at: 1000, icon: '🎖️' },
+    { id: 'tools5', kind: 'tools', at: 5, icon: '🧰' }, { id: 'tools15', kind: 'tools', at: 15, icon: '🎨' }
+  ];
+  function badges(stats) {
+    const v = { min: stats.minutes || 0, ops: stats.ops || 0, tools: stats.tools || 0 };
+    return BADGES.map(b => Object.assign({}, b, { done: v[b.kind] >= b.at, progress: Math.min(1, v[b.kind] / b.at) }));
+  }
+
   const monthKey = d => d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0');
   const dayKey = d => monthKey(d) + '-' + String(d.getDate()).padStart(2, '0');
 
-  return { textCuts, afterCuts, findText, retakes, fitPlan, baseName, versionName, versionsOf, renamePlan, activity, timeCsv, savedMinutes, duration, monthKey, dayKey };
+  return { rhythm, energy, quietOffset, checkCues, fixCues, exportName, badges, BADGES, textCuts, afterCuts, findText, retakes, fitPlan, baseName, versionName, versionsOf, renamePlan, activity, timeCsv, savedMinutes, duration, monthKey, dayKey };
 });

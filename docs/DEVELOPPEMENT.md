@@ -75,7 +75,10 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/duree.js            musique à la durée de la vidéo (onglet Musique)
   js/projet.js           dossiers surveillés, rangement, renommage, proxies (Ressources) ; versions (Formats)
   js/macros.js           macros : enchaînements d'actions sur un bouton, une touche, la télécommande
-  js/temps.js            temps passé par projet, temps gagné et carte à partager (Réglages)
+  js/temps.js            temps passé par projet, temps gagné, badges et carte à partager (Réglages)
+  js/raccords.js         J-cut / L-cut, coupes sur les blancs, correcteur de sous-titres (Parole)
+  js/livraison.js        rythme du montage, export en lot (Formats) ; archive (Ressources) ; crédits (Musique)
+  js/astuces.js          astuce du jour (un outil pas encore utilisé)
   js/updates.js          vérification des nouvelles versions sur GitHub
   js/host.js, mock.js    pont vers Premiere / faux Premiere du mode démo
   jsx/host.jsx           tout ce qui touche Premiere (ExtendScript ES3)

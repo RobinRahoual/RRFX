@@ -18,7 +18,7 @@
     const st = () => {
       const s = app.settings();
       if (!s.formatsPlus || typeof s.formatsPlus !== 'object') s.formatsPlus = {};
-      const d = { count: 3, min: 25, max: 50, exFormat: true, exCaptions: true, batch: 'applyLook', template: 'b:interview', picked: [] };
+      const d = { count: 3, min: 25, max: 50, exFormat: true, exCaptions: true, batch: 'applyLook', template: 'b:interview', picked: [], pfImage: true };
       Object.keys(d).forEach(k => { if (!(k in s.formatsPlus)) s.formatsPlus[k] = JSON.parse(JSON.stringify(d[k])); });
       return s.formatsPlus;
     };
@@ -120,11 +120,36 @@
 
     // ---------------------------------------------------------------- vérifier avant export
 
+    /* Image de chaque plan (jusqu'à 12) : sous- ou surexposée, dominante de couleur. */
+    async function imageIssues() {
+      const G = root.RRFXAuto, TICKS = 254016000000;
+      if (!G || !app.services.grabClean) return [];
+      const l = await Host.call('rushList', { scope: 'sequence' });
+      if (!l.ok || !l.clips.length) return [];
+      const pick = l.clips.length <= 12 ? l.clips : Array.from({ length: 12 }, (_, i) => l.clips[Math.round(i * (l.clips.length - 1) / 11)]);
+      app.status.phase(_T('Image des plans'));
+      const frames = await app.services.grabClean(pick.map(c => (c.start + c.end) / 2 / TICKS), 3, 240);
+      const out = [];
+      frames.forEach((f, i) => {
+        if (!f || !f.data) return;
+        const c = pick[i], p = G.autoParams(G.analyze(f.data), { levels: false }), warm = p.gain[0] / p.gain[2];
+        const where = 'V' + (c.track + 1), t = c.start / TICKS, name = c.name;
+        if (p.ev >= 0.6) out.push({ level: 'warn', t, where, text: _T('Plan sous-exposé (≈ +') + p.ev.toFixed(1).replace('.', ',') + _T(' IL à corriger) : ') + name });
+        else if (p.ev <= -0.6) out.push({ level: 'warn', t, where, text: _T('Plan surexposé (≈ ') + p.ev.toFixed(1).replace('.', ',') + _T(' IL à corriger) : ') + name });
+        if (warm >= 1.15) out.push({ level: 'warn', t, where, text: _T('Dominante froide (bleue) : ') + name });
+        else if (warm <= 0.87) out.push({ level: 'warn', t, where, text: _T('Dominante chaude (orange) : ') + name });
+      });
+      return out;
+    }
+
     let lastCheck = null;
     function preflight(redraw) {
       return app.runTask(_T('Vérification avant export'), async () => {
         const r = await Host.call('preflight', {});
         if (!r.ok) return { kind: 'error', title: _T('Vérification impossible'), detail: r.error };
+        if (st().pfImage) {
+          try { r.issues = r.issues.concat(await imageIssues()).sort((a, b) => a.t - b.t); } catch (e) { app.log(_T('Image des plans : ') + app.errorMessage(e), 'warn'); }
+        }
         lastCheck = r;
         if (redraw) redraw();
         const err = r.issues.filter(i => i.level === 'error').length, warn = r.issues.length - err;
@@ -148,7 +173,10 @@
         };
         const go = h('button', { class: 'action go' }, _T('Vérifier la séquence'));
         go.addEventListener('click', () => preflight(redraw));
-        box.append(h('div', { class: 'note' }, _T('Avant d\'envoyer à Media Encoder : médias hors ligne, images noires (trous sans plan), clips désactivés, pistes masquées ou coupées, volume poussé au-delà de +6 dB, textes RR FX hors de la zone sûre.')), h('div', { class: 'row-buttons' }, go), list);
+        const x = st();
+        box.append(h('div', { class: 'note' }, _T('Avant d\'envoyer à Media Encoder : médias hors ligne, images noires (trous sans plan), clips désactivés, pistes masquées ou coupées, volume poussé au-delà de +6 dB, textes RR FX hors de la zone sûre.')),
+          checkbox(_T('Vérifier aussi l\'image : plans trop sombres, trop clairs, dominante de couleur (Couleur > Expo et balance auto pour corriger)'), x.pfImage, v => { x.pfImage = v; app.persist(); }),
+          h('div', { class: 'row-buttons' }, go), list);
         redraw();
         return [box];
       }

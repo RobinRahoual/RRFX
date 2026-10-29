@@ -173,6 +173,7 @@
       const ok = report.filter(x => x.kind === 'ok').length, bad = report.filter(x => x.kind === 'error').length;
       const secs = Math.round((Date.now() - t0) / 1000);
       app.switchTab('express');
+      app.settings().expressRan = true;
       app.status.finish(bad ? 'warn' : 'ok', bad ? _T('Montage express : ') + app.plural(bad, _T('étape à revoir'), _T('étapes à revoir')) : _T('Ton montage est prêt · ') + r.name,
         app.plural(ok, _T('étape réussie'), _T('étapes réussies')) + _T(' en ') + (secs >= 60 ? Math.floor(secs / 60) + ' min ' + (secs % 60) + ' s' : secs + ' s') + _T('. ↶ Annuler retire une étape à la fois.'));
     }

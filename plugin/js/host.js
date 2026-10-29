@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const _T = (typeof self !== 'undefined' && self._T) || (s => s);
-  const VERSION = '2.5.1';
+  const VERSION = '2.6.0';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 

@@ -112,6 +112,35 @@
       });
     }
 
+    /* Référence prise dans une image (capture d'un film, d'un Reel…) au lieu d'un plan. */
+    function imageRef(refresh) {
+      const take = (src, name) => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.onload = () => {
+          const k = Math.min(1, 480 / Math.max(img.width, img.height)), cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(img.width * k)); cv.height = Math.max(1, Math.round(img.height * k));
+          const g = cv.getContext('2d');
+          g.drawImage(img, 0, 0, cv.width, cv.height);
+          const data = g.getImageData(0, 0, cv.width, cv.height), c = st().match;
+          c.ref = pack(G.analyze(data.data));
+          c.refName = name;
+          c.refThumb = thumbOf(data);
+          app.persist();
+          refresh();
+          app.status.finish('ok', _T('Référence : ') + name, _T('Sélectionne les plans à mettre dans ces couleurs, puis « Raccorder la sélection ».'));
+          resolve();
+        };
+        img.onerror = () => reject(new Error(_T('Image illisible : ') + name));
+        img.src = src;
+      }).catch(e => app.status.finish('error', _T('Image illisible'), app.errorMessage(e)));
+      const files = Store.pickFiles(_T('Image de référence'), ['jpg', 'jpeg', 'png', 'webp', 'bmp']);
+      if (files) { if (files[0]) take('file:///' + encodeURI(files[0].replace(/\\/g, '/')).replace(/#/g, '%23'), files[0].split(/[\\/]/).pop()); return; }
+      // Hors de Premiere : sélecteur du navigateur.
+      const input = h('input', { type: 'file', accept: 'image/*', class: 'hidden' });
+      input.addEventListener('change', () => { const f = input.files[0]; if (f) take(URL.createObjectURL(f), f.name); });
+      input.click();
+    }
+
     function matchSelection(refresh) {
       const c = st().match;
       if (!c.ref) return app.status.finish('warn', _T('Pas de référence'), _T('Place la tête de lecture sur un plan de la caméra de référence, puis « Prendre la référence ».'));
@@ -163,7 +192,7 @@
         box.appendChild(h('div', { class: 'note' }, _T('1. Tête de lecture sur un plan de la caméra qui a le bon rendu. 2. Sélectionne les plans de l\'autre caméra. Le raccord se pose au-dessus de la conversion et de l\'expo auto.')));
         const refBox = h('div', { class: 'fix-ref' },
           m.refThumb ? h('img', { src: m.refThumb, alt: '' }) : h('div', { class: 'fix-empty' }, _T('Pas encore de référence')),
-          h('div', { class: 'fix-ref-txt' }, m.ref ? h('div', { class: 'conv-name' }, _T('Référence : ') + m.refName) : null, btn(m.ref ? _T('Reprendre la référence') : _T('1. Prendre la référence'), () => captureRef(refresh))));
+          h('div', { class: 'fix-ref-txt' }, m.ref ? h('div', { class: 'conv-name' }, _T('Référence : ') + m.refName) : null, btn(m.ref ? _T('Reprendre la référence') : _T('1. Prendre la référence'), () => captureRef(refresh)), btn(_T('ou une image (film, Reel…)'), () => imageRef(refresh), 'quiet')));
         box.appendChild(refBox);
         box.appendChild(row(_T('Force'), strengthPicker(m)));
         box.appendChild(h('div', { class: 'row-buttons' }, btn(_T('2. Raccorder la sélection'), () => matchSelection(refresh), m.ref ? 'selected' : '')));

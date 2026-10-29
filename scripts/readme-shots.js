@@ -371,6 +371,39 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await shot('macros', '[data-sec=macros]', 400);
   await shot('temps-gagne', '[data-sec=gagne]', 400);
 
+  // 2.6 : raccords, correcteur, rythme, export en lot, crédits, image de référence, badges.
+  await sec('speech', 'raccords', 'Raccords');
+  await shot('raccords', '[data-sec=raccords]', 400);
+  await page.fill('.section:has(textarea.lyrics) textarea', '1\n00:00:01,000 --> 00:00:01,500\nbonjour  à tous!\n\n2\n00:00:02,000 --> 00:00:03,000\nOn vous montre aujourd\'hui comment on a tout refait dans notre atelier de A à Z\n\n3\n00:00:03,200 --> 00:00:06,000\nEt c\'est parti : première étape.\n');
+  await sec('speech', 'correcteur', 'Correcteur');
+  await page.click('.section:has-text("Correcteur de sous-titres") .action:text-is("Vérifier les sous-titres")');
+  await page.waitForSelector('[data-sec=correcteur] .pf-item');
+  await close();
+  await shot('correcteur-sous-titres', '[data-sec=correcteur]', 400);
+  await sec('formats', 'rythme', 'Rythme');
+  await page.click('.section:has-text("Rythme du montage") .action.go');
+  await page.waitForSelector('[data-sec=rythme] .note:has-text("médiane")', { timeout: 5000 });
+  await idle(); await close();
+  await shot('rythme', '[data-sec=rythme]', 500);
+  await sec('formats', 'export', 'Export');
+  await page.click('.section:has-text("Export en lot") .action:text-is("Lister les séquences")');
+  await page.waitForSelector('[data-sec=export] .seq-list label');
+  await page.click('[data-sec=export] .seq-list label >> nth=0');
+  await page.click('[data-sec=export] .seq-list label >> nth=2');
+  await page.fill('[data-sec=export] input[aria-label="Client"]', 'Nike');
+  await shot('export-lot', '[data-sec=export]', 400);
+  await sec('music', 'credits');
+  await page.click('.section:has-text("Crédits musique et sons") .action:text-is("Lister les sons")');
+  await page.waitForSelector('[data-sec=credits] .pf-item');
+  await idle(); await close();
+  await shot('credits', '[data-sec=credits]', 400);
+  await tab('settings');
+  await page.evaluate(() => { const s = window.RRFXApp.settings(); s.saved.ops = Math.max(s.saved.ops || 0, 134); s.saved.tools = Array.from({ length: 9 }, (x, i) => 'outil ' + i); window.RRFXApp.switchTab('settings'); });
+  await page.waitForTimeout(300);
+  await page.evaluate(() => window.RRFXApp.tips.show(window.RRFXApp.tips.all()[2]));
+  await shot('badges', '[data-sec=gagne]', 400);
+  await page.evaluate(() => { const b = document.querySelector('.tip-bar'); if (b) b.remove(); });
+
   // Test de compatibilité (Réglages) et accueil.
   await tab('settings');
   await page.evaluate(() => window.RRFXApp.diagnostic.run());

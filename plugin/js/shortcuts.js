@@ -45,7 +45,12 @@
     fitMusic: _T('Ajuster la musique à la vidéo'),
     keepVersion: _T('Garder une version de la séquence'),
     tidyProject: _T('Ranger le projet'),
-    proxies: _T('Créer les proxies')
+    proxies: _T('Créer les proxies'),
+    splitEdits: _T('Poser les raccords J-cut / L-cut'),
+    cleanCuts: _T('Recaler les coupes sur les blancs'),
+    rhythm: _T('Analyser le rythme du montage'),
+    exportBatch: _T('Exporter les séquences cochées (Media Encoder)'),
+    archive: _T('Archiver le projet')
   };
 
   const DEFAULTS = { apply: 'A', ramp: 'R', undo: 'U', capture: 'C', beats: 'B', sync: 'S', convert: 'L', express: 'E' };

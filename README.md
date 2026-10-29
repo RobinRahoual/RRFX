@@ -37,18 +37,17 @@ pour n'importe quelle vidéo. Un style en un clic, ou chaque outil séparément.
 
 ---
 
-## Nouveau dans la 2.5
+## Nouveau dans la 2.6
 
-- 📝 **Montage par le texte** : barre des phrases dans ton `.srt`, RR FX les coupe dans la timeline.
-- 🎵 **Musique à la durée de la vidéo**, coupée sur un temps fort pour finir avec la dernière image.
-- ▶ **Macros** : une chaîne d'actions sur un bouton, une touche ou un bouton de Stream Deck.
-- 🎬 **Prises ratées repérées** dans le texte, **fondu de sortie** de la musique, **rangement annulable**.
-- 🕓 **Versions de la séquence** en un clic, rangées dans un chutier.
-- 📂 **Dossiers surveillés**, 🧹 **projet rangé**, 🏷️ **renommage en série** et ⚡ **proxies en un clic**.
-- ⏱️ **Temps passé par projet** (pour facturer) et 🏆 **temps gagné avec RR FX**, en carte à partager.
+- 🎬 **J-cut et L-cut en un clic**, et ✂️ **coupes recalées sur les blancs** : plus jamais un mot coupé en deux.
+- 📝 **Correcteur de sous-titres** : lignes trop longues, lecture trop rapide, majuscules, ponctuation.
+- 📊 **Rythme du montage** : les plans trop longs repérés d'un coup d'œil.
+- 📤 **Export en lot** vers Media Encoder avec des noms propres, et 🗄️ **archive du projet**.
+- 🎵 **Crédits musique et sons**, 🎨 **raccord sur une image de référence**, ✅ **vérification de l'image** avant export.
+- 💡 **Astuce du jour** et 🏆 **badges** à partager.
 
-La 2.4 avait apporté : RR FX en anglais, extraits pour les réseaux, vérification avant export, modèles de projet,
-plans de coupe sur les mots clés, sous-titres traduits, risers, Stream Deck, synchro entre ordinateurs.
+La 2.5 avait apporté : montage par le texte, musique à la durée de la vidéo, macros, versions de la séquence,
+dossiers surveillés, rangement du projet, proxies, temps passé par projet et temps gagné.
 
 Tout est détaillé plus bas, avec une capture par outil.
 
@@ -702,6 +701,91 @@ tout seul, au fur et à mesure.
 
 </td>
 <td width="44%"><img src="docs/captures/outils/temps-gagne.png" alt="Temps gagné et temps passé" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/raccords.png" alt="J-cut et L-cut" width="300"></td>
+<td width="56%">
+
+### 🎬 J-cut, L-cut et coupes propres
+
+- **J-cut / L-cut en un clic** sur toutes les coupes de la sélection : on entend la phrase suivante avant de voir
+  la personne, ou la voix continue sur le plan d'après. Le raccord des interviews et des documentaires.
+- **Coupes sur les blancs** : chaque coupe qui tombe au milieu d'un mot glisse de quelques images vers le blanc le
+  plus proche, image et son ensemble.
+- Tout se règle en images, et **↶ Annuler** remet les coupes droites.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 📝 Des sous-titres propres
+
+Le **correcteur** relit ton `.srt` : lignes de plus de 42 caractères, lecture trop rapide (plus de 20 caractères
+par seconde), sous-titres trop courts, majuscules oubliées, espaces en trop, espace insécable avant « : ; ! ? ».
+
+- Un clic sur une remarque amène la tête de lecture.
+- **Tout corriger** recoupe les lignes, allonge les sous-titres trop rapides dans le blanc qui suit et répare la
+  ponctuation.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/correcteur-sous-titres.png" alt="Correcteur de sous-titres" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/rythme.png" alt="Rythme du montage" width="300"></td>
+<td width="56%">
+
+### 📊 Le rythme de ton montage
+
+La durée de **chaque plan** sur toute la vidéo, en un graphique : les plans trop longs ressortent en orange, là
+où l'attention décroche.
+
+- Moyenne, médiane, plan le plus long ; tu choisis à partir de combien de secondes un plan est « long ».
+- Un clic sur un plan long y amène la tête de lecture ; **Marquer les plans longs** pose des marqueurs.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 📤 Tout exporter d'un coup
+
+Coche tes séquences : chacune part dans **Media Encoder** avec le même préréglage et **un nom propre**
+(`Nike_Clip_9x16_v03`), le numéro de version avance tout seul.
+
+- `{client}`, `{projet}`, `{sequence}`, `{format}`, `{date}`, `{vv}` dans le nom.
+- **Archiver le projet** (Ressources) : un dossier avec seulement les médias utilisés, une copie du projet et un
+  récapitulatif, pour livrer ou libérer de la place.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/export-lot.png" alt="Export en lot" width="300"></td>
+</tr>
+<tr>
+<td width="44%"><img src="docs/captures/outils/credits.png" alt="Crédits musique et sons" width="300"></td>
+<td width="56%">
+
+### 🎵 Les crédits de ta musique
+
+Toutes les **musiques et tous les sons** de la séquence, avec leur fichier, leur place et leur durée.
+
+- **Copier la liste** pour la description, les crédits ou un client.
+- Pratique pour vérifier les droits avant de publier.
+
+</td>
+</tr>
+<tr>
+<td width="56%">
+
+### 🏆 Badges et astuce du jour
+
+- **Badges** : 1 h, 10 h, 100 h gagnées, 100 opérations, 15 outils différents… annoncés quand tu les débloques, à
+  **partager en story**.
+- **Astuce du jour** : une fois par jour, un outil de RR FX que tu n'as pas encore essayé, avec *Voir* pour y aller.
+- Et dans l'onglet Couleur : **le raccord sur une image de référence** (capture d'un film, d'un Reel…), et dans la
+  vérification avant export, **les plans trop sombres, trop clairs ou avec une dominante**.
+
+</td>
+<td width="44%"><img src="docs/captures/outils/badges.png" alt="Badges et astuce du jour" width="300"></td>
 </tr>
 <tr>
 <td width="44%"><img src="docs/captures/outils/recherche.png" alt="Recherche rapide" width="300"></td>

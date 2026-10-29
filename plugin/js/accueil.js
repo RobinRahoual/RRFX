@@ -68,6 +68,7 @@
       });
     }, 400));
     app.services.welcome = () => welcome(true);
+    app.services.reveal = (tab, sel) => reveal(tab, sel);
     app.services.chooseLanguage = () => (I18n ? chooseLanguage() : Promise.resolve('fr'));
 
     // ---------------------------------------------------------------- recherche rapide
@@ -128,6 +129,16 @@
       act(_T('Macros'), 'Action', () => reveal('settings', '[data-sec=macros]'));
       act(_T('Temps gagné avec RR FX'), 'Action', () => reveal('settings', '[data-sec=gagne]'));
       act(_T('Temps passé par projet'), 'Action', () => reveal('settings', '[data-sec=temps]'));
+      act(_T('Raccords J-cut / L-cut'), 'Action', () => reveal('speech', '[data-sec=raccords]'));
+      act(_T('Coupes sur les blancs'), 'Action', () => reveal('speech', '[data-sec=raccords]'));
+      act(_T('Correcteur de sous-titres'), 'Action', () => reveal('speech', '[data-sec=correcteur]'));
+      act(_T('Rythme du montage'), 'Action', () => reveal('formats', '[data-sec=rythme]'));
+      act(_T('Export en lot (Media Encoder)'), 'Action', () => reveal('formats', '[data-sec=export]'));
+      act(_T('Archiver le projet'), 'Action', () => reveal('assets', '[data-sec=archive]'));
+      act(_T('Crédits musique et sons'), 'Action', () => reveal('music', '[data-sec=credits]'));
+      act(_T('Raccord sur une image de référence'), 'Action', () => reveal('color', '[data-panel=fix]'));
+      act(_T('Badges et temps gagné'), 'Action', () => reveal('settings', '[data-sec=gagne]'));
+      act(_T('Astuce du jour'), 'Action', () => { if (app.tips) app.tips.show(app.tips.pick() || app.tips.all()[0]); });
       (app.macros ? app.macros.list() : []).forEach(m => act('▶ ' + m.name, 'Macro', () => app.macros.run(m.id)));
       act(_T('Risers avant les drops'), 'Action', () => reveal('music', '[data-sec=risers]'));
       act(_T('Réverb de fin de musique'), 'Action', () => reveal('music', '[data-sec=tail]'));
@@ -165,6 +176,7 @@
 
     let open = null;
     function palette() {
+      app.settings().paletteUsed = true;
       if (open) return;
       const all = commands();
       const input = h('input', { class: 'textfield pal-input', placeholder: _T('Rechercher une action, un effet, un look…'), 'aria-label': _T('Recherche rapide') });

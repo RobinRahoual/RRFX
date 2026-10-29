@@ -23,7 +23,7 @@
   const handlers = {
     compat: () => ({ ok: true, version: root.RRFXHost ? root.RRFXHost.VERSION : '?', app: _T('démo'), appPath: '', missing: [], optional: [] }),
     getContext: () => ({
-      ok: true, hasSequence: true, version: _T('démo'), app: _T('démo'), name: _T('Clip démo'), seqId: 'demo-1', fps: FPS, frameW: 1920, frameH: 1080,
+      ok: true, hasSequence: true, version: _T('démo'), app: _T('démo'), name: _T('Clip démo'), seqId: 'demo-1', project: _T('Projet démo'), fps: FPS, frameW: 1920, frameH: 1080,
       playhead: 12.4, selection: 2, selectionNames: ['A001_C004.mov', 'A001_C007.mov'], markers: 4,
       adj: { name: _T('Calque de réglage'), nodeId: 'demo' }
     }),
@@ -102,6 +102,16 @@
     proxyPresets: () => ({ ok: true, presets: [{ path: '/demo/H.264 Low Resolution Proxy.epr', name: 'H.264 Low Resolution Proxy' }, { path: '/demo/ProRes Low Resolution Proxy.epr', name: 'ProRes Low Resolution Proxy' }] }),
     makeProxies: async a => { await wait(200); proxies.total = 4; proxies.started = Date.now(); return { ok: true, queued: ['C0001.MP4', 'IMG_4512.MOV', 'C0002.MP4', 'DJI_0042.MP4'].map((name, i) => ({ job: String(i + 1), id: 'p' + i, name })), skipped: 0 }; },
     proxyStatus: () => { const n = Math.min(proxies.total, Math.floor((Date.now() - proxies.started) / 700)); return { ok: true, total: proxies.total, finished: n, attached: n, enabled: proxies.on }; },
+    splitEdits: async a => { await wait(150); const n = 3; return { ok: true, cuts: n, done: n, passed: 0, created: Array.from({ length: n * 2 }, (x, i) => ({ kind: 'atrim', track: 0, start: i, s0: i, e0: i + 1, name: 'Interview_A.mp4' })) }; },
+    cutList: () => ({ ok: true, fps: FPS, cuts: [3.2, 6.1, 10.7, 14.9].map((t, i) => ({ t, track: 0, a: { path: '', out: t, speed: 1, room: 2, len: 3 }, b: { path: '', inP: t, speed: 1, room: 2, len: 3 } })) }),
+    rollEdits: async a => { await wait(120); return { ok: true, moved: a.moves.length, created: a.moves.map(m => ({ kind: 'roll', at: m.to, back: m.t, name: 'Coupe' })) }; },
+    audioCredits: () => ({ ok: true, sequence: _T('Clip démo'), items: [
+      { name: 'Musique.wav', path: '/demo/Musique.wav', uses: 1, seconds: 60, first: 0, tracks: 'A2' },
+      { name: 'Whoosh 03.wav', path: '/demo/SFX/Whoosh 03.wav', uses: 6, seconds: 4.8, first: 3.2, tracks: 'A3' },
+      { name: 'Interview_A.mp4', path: '/demo/Interview_A.mp4', uses: 4, seconds: 42, first: 0, tracks: 'A1' }] }),
+    exportPresets: () => ({ ok: true, presets: [{ path: '/demo/Match Source - Adaptive High Bitrate.epr', name: 'Match Source - Adaptive High Bitrate' }, { path: '/demo/YouTube 1080p Full HD.epr', name: 'YouTube 1080p Full HD' }, { path: '/demo/Apple ProRes 422.epr', name: 'Apple ProRes 422' }] }),
+    exportQueue: async a => { await wait(200); return { ok: true, queued: a.items.map((it, i) => ({ file: it.file + (/prores/i.test(a.preset) ? '.mov' : '.mp4'), job: String(i + 1) })), failed: [] }; },
+    usedMedia: () => ({ ok: true, files: ['Interview_A.mp4', 'C0001.MP4', 'C0002.MP4', 'Musique.wav'].map(n => ({ name: n, path: '/demo/' + n })), project: '', projectName: _T('Projet démo.prproj'), offline: 0 }),
     setProxies: a => { proxies.on = !!a.on; return { ok: true, enabled: proxies.on }; },
     deleteSequence: a => { const i = seqs.findIndex(q => q.id === a.id); if (a.id === 'demo-1') return { ok: false, error: _T('C\'est la séquence ouverte : ouvre-en une autre d\'abord.') }; if (i >= 0) seqs.splice(i, 1); return { ok: true, id: a.id }; },
     openSequence: a => ({ ok: true, id: a.id, name: a.id }),

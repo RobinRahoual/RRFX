@@ -595,3 +595,19 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .saved-box { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; margin: 4px 0 6px; }
 .saved-big { font-size: 28px; font-weight: 800; color: var(--accent); line-height: 1.1; }
 .saved-box .note { margin: 0; }
+
+/* ---------- 2.6 : rythme, astuce du jour, badges ---------- */
+.rhythm-chart { width: 100%; height: 60px; margin: 6px 0; border-radius: 5px; background: var(--field); border: 1px solid var(--field-border); display: block; }
+.tip-bar { display: flex; align-items: center; gap: 6px; margin: 6px 0 0; padding: 6px 8px; border-radius: 6px; background: var(--flash); border: 1px solid var(--accent); font-size: 12px; }
+.tip-bar .tip-text { flex: 1; min-width: 0; }
+.tip-bar .action { flex: none; }
+.badge-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 6px; margin: 8px 0; }
+.badge { display: flex; flex-direction: column; align-items: center; gap: 3px; padding: 7px 4px; border-radius: 8px; background: var(--btn); border: 1px solid var(--field-border); color: var(--text-muted); font: inherit; font-size: 11px; text-align: center; opacity: 0.6; }
+.badge.on { opacity: 1; color: var(--text); border-color: var(--accent); cursor: pointer; }
+.badge.on:hover { background: var(--btn-hover); }
+.badge-icon { font-size: 20px; filter: grayscale(1); }
+.badge.on .badge-icon { filter: none; }
+.badge-bar { width: 80%; height: 3px; border-radius: 2px; background: var(--grid); overflow: hidden; }
+.badge-bar span { display: block; height: 100%; background: var(--accent); }
+.rr-toast { position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 50; display: flex; align-items: center; gap: 8px; max-width: calc(100% - 24px); padding: 8px 10px; border-radius: 8px; background: var(--status-bg); backdrop-filter: blur(6px); border: 1px solid var(--accent); box-shadow: 0 6px 20px rgba(0, 0, 0, 0.35); font-size: 12px; }
+.rr-toast-icon { font-size: 18px; }

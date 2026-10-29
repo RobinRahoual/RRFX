@@ -120,3 +120,55 @@ test('temps passé : CSV jour par jour', () => {
   assert.strictEqual(lines[1], '"2026-10-29";"A";"1,00";"50,00"');
   assert.strictEqual(lines[3], '"2026-10-28";"A";"1,00";"50,00"');
 });
+
+test('rythme : statistiques et plans trop longs', () => {
+  const r = O.rhythm([{ start: 0, end: 2 }, { start: 2, end: 5 }, { start: 5, end: 17, name: 'long' }, { start: 17, end: 19 }]);
+  assert.strictEqual(r.count, 4);
+  assert.strictEqual(r.avg, 19 / 4);
+  assert.deepStrictEqual(r.long.map(l => l.name), ['long']);
+  assert.strictEqual(O.rhythm([]).count, 0);
+  assert.deepStrictEqual(O.rhythm([{ start: 0, end: 6 }, { start: 6, end: 8 }], 5).long.map(l => l.len), [6]);
+});
+
+test('coupes sur les blancs : décalage vers le point le plus calme des deux côtés', () => {
+  // 11 pas, coupe au milieu (5) en plein mot ; blanc 3 pas plus tôt.
+  const a = [9, 9, 1, 0.1, 1, 9, 9, 9, 9, 9, 9], b = [5, 5, 1, 0.1, 1, 5, 5, 5, 5, 5, 5];
+  assert.strictEqual(O.quietOffset(a, b, 5), -2);
+  // Déjà dans un blanc : on ne bouge pas.
+  assert.strictEqual(O.quietOffset([1, 1, 0.1, 1, 1], [1, 1, 0.1, 1, 1], 2), 0);
+  const e = O.energy(new Float32Array([1, 1, 0, 0]), 2, 1);
+  assert.deepStrictEqual(Array.from(e), [1, 0]);
+});
+
+test('correcteur de sous-titres : problèmes trouvés et corrigés', () => {
+  const cues = [
+    { start: 0, end: 0.5, text: 'bonjour  à tous!' },
+    { start: 2, end: 2.6, text: 'Une phrase beaucoup trop longue pour une seule ligne de sous-titre qui déborde' },
+    { start: 4, end: 6, text: 'Ok : parfait.' }
+  ];
+  const issues = O.checkCues(cues);
+  const kinds = i => issues.filter(x => x.i === i).map(x => x.kind).sort();
+  assert.deepStrictEqual(kinds(0), ['caps', 'fast', 'punct', 'short', 'spaces']);
+  assert.deepStrictEqual(kinds(1), ['fast', 'long', 'short']);
+  assert.deepStrictEqual(kinds(2), []);
+  const wrap = (t, m) => { const w = t.split(' '), l = []; let c = ''; w.forEach(x => { if (c && (c + ' ' + x).length > m) { l.push(c); c = x; } else c = c ? c + ' ' + x : x; }); l.push(c); return l.join('\n'); };
+  const f = O.fixCues(cues, wrap);
+  assert.strictEqual(f.cues[0].text, 'Bonjour à tous !');
+  assert.ok(f.cues[0].end > 0.5 && f.cues[0].end <= 1.9, 'longer, without biting the next one');
+  assert.ok(f.cues[1].text.split('\n').every(l => l.length <= 42));
+  assert.strictEqual(f.fixed, 3, 'the 3rd one gets a non-breaking space before « : »');
+  assert.deepStrictEqual(O.checkCues(f.cues).filter(x => x.kind !== 'fast' && x.kind !== 'short'), []);
+});
+
+test('export en lot : noms de fichiers', () => {
+  const d = new Date(2026, 9, 29);
+  assert.strictEqual(O.exportName('{client}_{projet}_{format}_v{vv}', { client: 'Nike', projet: 'Run', w: 1080, h: 1920, version: 3 }), 'Nike_Run_9x16_v03');
+  assert.strictEqual(O.exportName('', { sequence: 'Clip: final?', w: 1920, h: 1080, version: 1 }), 'Clip-final-16x9_v01');
+  assert.strictEqual(O.exportName('{client}_{sequence}_{date}', { sequence: 'A', date: d }), 'A_2026-10-29');
+});
+
+test('badges', () => {
+  const b = O.badges({ minutes: 70, ops: 12, tools: 3 });
+  assert.deepStrictEqual(b.filter(x => x.done).map(x => x.id), ['h1', 'ops10']);
+  assert.ok(b.find(x => x.id === 'h5').progress > 0.2);
+});

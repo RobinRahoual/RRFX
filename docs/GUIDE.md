@@ -237,6 +237,9 @@ partageable par code et publiable dans la Communauté.
 Texture, Clarté, Correction du voile, vignettage et grain dépendent des pixels voisins : une LUT ne peut pas les
 porter, ils restent dans Lumetri.
 
+Le raccord peut aussi prendre **une image** comme référence (*ou une image (film, Reel…)*) : une capture d'un
+film ou d'un Reel dont tu aimes les couleurs ; ses tons et sa colorimétrie servent de cible.
+
 ### Mes LUTs (onglet Couleur)
 
 Ta bibliothèque de LUTs, **gardée d'un projet à l'autre** : plus besoin de réimporter une LUT pour l'essayer.
@@ -312,6 +315,10 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
   montre aussi où sera la coupe. Seuls les morceaux de la musique bougent (les autres sons de la piste
   restent). Une version de la séquence est gardée avant (option). Une musique plus courte que la vidéo n'est pas
   rallongée.
+
+- **Crédits musique et sons** : *Lister les sons* regroupe tous les éléments audio de la séquence par fichier
+  (première apparition, nombre d'utilisations, durée totale, pistes). *Copier la liste* donne un texte pour la
+  description, les crédits ou un client.
 
 ### Onglet Textes
 
@@ -412,6 +419,19 @@ section voulue et la déplie. Le bouton bleu du haut reprend le dernier outil ut
   à moins de 4 s : la première prise part) et les phrases faites seulement de mots de reprise (« euh attends je
   recommence », « pardon », « on la refait »). *Barrer les phrases trouvées* barre tout ce que la recherche trouve.
 
+- **Raccords J-cut / L-cut** : sur chaque coupe entre deux plans sélectionnés qui se suivent (avec leur son lié),
+  le son du plan suivant commence plus tôt (J-cut) ou celui du plan précédent continue (L-cut), du décalage choisi en
+  images. Il faut assez de média avant ou après la coupe : sinon le décalage est réduit, ou la coupe passée.
+  ↶ Annuler remet les coupes droites.
+- **Coupes sur les blancs** : RR FX écoute chaque coupe de la sélection (±0,3 s des deux côtés) ; si elle tombe dans
+  un mot alors qu'un blanc est tout près, la coupe glisse vers ce blanc (montage par roulement : image et son liés
+  bougent ensemble, la durée totale ne change pas). ↶ Annuler les remet.
+- **Correcteur de sous-titres** : *Vérifier* liste les lignes de plus de 42 caractères (ou plus de 2 lignes), les
+  sous-titres lus à plus de 20 caractères par seconde ou de moins de 0,8 s, les majuscules manquantes en début de
+  phrase, les espaces en trop et, en français, l'espace avant « : ; ! ? » (un clic amène la tête de lecture).
+  *Tout corriger* recoupe les lignes, met les majuscules et les espaces insécables, et allonge un sous-titre trop
+  rapide dans le blanc qui suit (sans toucher au suivant) ; ce qui reste demande de raccourcir le texte.
+
 ### Onglet Formats
 
 Une **copie de la séquence** au format des réseaux, en un clic : **9:16** (Reels, TikTok, Shorts), **4:5**
@@ -445,6 +465,17 @@ Dans le même onglet :
   la séquence d'origine ; la liste montre ses versions, *Ouvrir* en rouvre une, ✕ la supprime. Option : une
   version avant chaque coupe directe (silences, « euh », montage par le texte), quand la coupe ne se fait pas sur
   une copie.
+
+- **Rythme du montage** : la durée de chaque plan de la piste vidéo la plus basse qui en a, en barres (orange :
+  plus long que la limite choisie, 6 s par défaut). Moyenne, médiane, plan le plus long ; un clic sur un plan long y
+  amène la tête de lecture, *Marquer les plans longs* pose un marqueur « RR FX · plan long » au début de chacun.
+- **Export en lot (Media Encoder)** : *Lister les séquences*, coche celles à exporter, choisis le préréglage (ceux de
+  Premiere sont trouvés tout seuls, ou un `.epr`) et le dossier (`Documents/RRFX/Exports` par défaut). Le nom vient
+  du modèle : `{client}`, `{projet}`, `{sequence}`, `{format}` (16x9, 9x16, 4x5, 1x1…), `{date}`, `{v}` ou `{vv}`
+  (numéro de version, qui avance après chaque export). Deux séquences du même nom ne s'écrasent pas. Chaque fichier
+  part dans la file de Media Encoder, qui démarre tout seul.
+- **Vérifier avant export** vérifie aussi l'image (option) : jusqu'à 12 plans, image du milieu ; plan sous- ou
+  surexposé de plus de 0,6 IL, dominante bleue ou orange marquée. Corrige-les avec *Couleur > Expo et balance auto*.
 
 ### Onglet Ressources
 
@@ -504,6 +535,11 @@ Dans le même onglet, pour tenir le projet :
   *Activer les proxies* (ou le bouton *Activer / désactiver les proxies* de RR FX) pour monter avec ; l'export
   utilise toujours les originaux. Media Encoder doit être
   installé.
+
+- **Archiver le projet** : choisis le dossier de l'archive. RR FX y crée « Projet - archive (date) » avec un dossier
+  *Médias* (seulement les médias utilisés dans une séquence, sans les proxies ; deux fichiers du même nom sont
+  renommés), une copie du projet et un *LISEZMOI* (liste des médias, introuvables, comment relier). Tes fichiers
+  d'origine ne bougent pas. *Voir la taille* compte avant de copier.
 
 ### Onglet Mes effets
 
@@ -617,6 +653,15 @@ ajouter d'un clic : *Interview prête* (silences, « euh », voix, sous-titres, 
   minutes. Le total du jour est en haut. Indique ton tarif horaire pour voir le montant ; *Exporter en CSV…* donne
   un tableau (projet, fichier, heures, dernier jour, montant) pour Excel ou Numbers, *Jour par jour* une ligne par
   projet et par jour. Propre à chaque ordinateur, rien ne quitte ton ordinateur.
+
+### Astuce du jour et badges
+
+- **Astuce du jour** : une fois par jour, quelques secondes après l'ouverture, une ligne sous l'état présente un
+  outil que tu n'as pas encore utilisé, avec *Voir* pour y aller. *Réglages > Astuce du jour* pour l'arrêter ou en
+  voir une tout de suite.
+- **Badges** (*Réglages > Temps gagné avec RR FX*) : 1 h, 5 h, 10 h, une journée et 100 h gagnées ; 10, 100 et
+  1 000 opérations ; 5 et 15 outils différents. Un badge débloqué s'annonce en bas du panneau ; un clic le partage en
+  carte pour une story.
 
 ### Télécommande (Stream Deck, Companion)
 

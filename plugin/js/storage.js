@@ -192,15 +192,26 @@
     const out = [];
     const walk = (d, level) => {
       if (out.length >= max || level > depth) return;
-      let names = [];
-      try { names = fs.readdirSync(d); } catch (e) { return; }
-      names.forEach(n => {
+      // Le type de chaque entrée vient avec la liste (un seul accès disque par dossier) ; sinon
+      // (Node ancien), un stat par entrée.
+      let entries = null, names = [];
+      try { entries = fs.readdirSync(d, { withFileTypes: true }); } catch (e) { entries = null; }
+      if (!entries || (entries.length && typeof entries[0] === 'string')) {
+        try { names = entries || fs.readdirSync(d); } catch (e) { return; }
+        entries = null;
+      }
+      (entries || names).forEach(x => {
+        const n = entries ? x.name : x;
         if (out.length >= max || n[0] === '.') return;
         const full = path.join(d, n);
-        let st;
-        try { st = fs.statSync(full); } catch (e) { return; }
-        if (st.isDirectory()) walk(full, level + 1);
-        else if (exts.test(n)) out.push(full);
+        let dirFlag, fileFlag;
+        if (entries && !x.isSymbolicLink()) { dirFlag = x.isDirectory(); fileFlag = x.isFile(); } else {
+          let st;
+          try { st = fs.statSync(full); } catch (e) { return; }
+          dirFlag = st.isDirectory(); fileFlag = !dirFlag;
+        }
+        if (dirFlag) walk(full, level + 1);
+        else if (fileFlag && exts.test(n)) out.push(full);
       });
     };
     walk(dir, 0);

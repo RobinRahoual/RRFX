@@ -180,6 +180,7 @@ function makeEnv(fps) {
     getSettings() { return { videoFrameRate: T(F), videoDisplayFormat: 101, videoFrameWidth: this.frameSizeHorizontal, videoFrameHeight: this.frameSizeVertical }; },
     setSettings(st) { this.frameSizeHorizontal = st.videoFrameWidth; this.frameSizeVertical = st.videoFrameHeight; },
     sequenceID: 'seq-1',
+    getExportFileExtension(p) { return /prores/i.test(p) ? 'mov' : 'mp4'; },
     projectItem: null,
     // Copie de la séquence (pistes, plans, effets), ajoutée au projet.
     clone() {
@@ -334,6 +335,7 @@ function makeEnv(fps) {
     launchEncoder() { return true; },
     bind(ev, fn) { if (ev === 'onEncoderJobComplete') this.cb = fn; },
     encodeProjectItem(pi, out, preset) { const id = String(this.jobs.length + 1); this.jobs.push({ id, pi, out, preset }); return id; },
+    encodeSequence(sq, out, preset) { const id = String(this.jobs.length + 1); this.jobs.push({ id, seq: sq, out, preset }); return id; },
     startBatch() { this.started = true; },
     finish() { this.jobs.forEach(j => this.cb && this.cb(j.id, j.out)); }
   };
