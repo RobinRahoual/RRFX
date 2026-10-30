@@ -3,7 +3,7 @@
    6 heures). Une extension ne peut pas s'installer elle-même : on propose de
    télécharger le pack d'installation et d'ouvrir la page de la version. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXUpdates = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

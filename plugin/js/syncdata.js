@@ -5,7 +5,7 @@
      supprimés depuis sur l'un des deux.
    - Réglages : ceux de l'ordinateur modifié en dernier, sauf ce qui est propre à chaque machine. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXSyncData = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

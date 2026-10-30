@@ -2,7 +2,7 @@
    Une touche (lettre ou chiffre, seule ou avec Maj) par action, au choix de l'utilisateur.
    La même liste d'actions sert à la télécommande (Stream Deck, Companion…). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXShortcuts = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

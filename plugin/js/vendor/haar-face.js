@@ -30,7 +30,7 @@
    Copyright (C) 2000, Intel Corporation, all rights reserved (redistribution autorisée avec
    cette mention). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXHaarFace = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

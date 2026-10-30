@@ -7,7 +7,7 @@
      puis les boîtes décodées comme OpenCV (FaceDetectorYN) et filtrées (NMS).
    La fabrique n'utilise rien d'extérieur : elle tourne aussi dans un Worker (visage.js). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXYuNet = factory();
 })(typeof self !== 'undefined' ? self : this, function yunetFactory() {
   'use strict';

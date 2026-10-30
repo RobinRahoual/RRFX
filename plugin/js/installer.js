@@ -4,7 +4,7 @@
    sauvegarde est remise. Il reste à redémarrer Premiere. La partie « quels fichiers » est
    pure et testée sous Node ; l'écriture passe par fs (fourni par le panneau). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(root.RRFXStylePack || (typeof require === 'function' ? require('./stylepack.js') : null));
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory(root.RRFXStylePack || (typeof require === 'function' ? require('./stylepack.js') : null));
   else root.RRFXInstaller = factory(root.RRFXStylePack);
 })(typeof self !== 'undefined' ? self : this, function (Zip) {
   'use strict';

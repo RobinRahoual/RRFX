@@ -2,7 +2,7 @@
    (marque, modèle et, chez Sony, la courbe et le gamut du tournage : XML NonRealTimeMeta).
    Sans DOM, testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXCam = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

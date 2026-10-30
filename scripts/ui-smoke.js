@@ -1032,6 +1032,22 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (again) throw new Error('Instagram ouvert une deuxième fois');
     await fresh.close();
   });
+  // Dans Premiere, Node est activé dans la page (--enable-nodejs --mixed-context) : « module » et « exports »
+  // existent. Les modules doivent quand même s'attacher à la page (sinon le panneau reste vide, 2.10.0).
+  await step('Premiere : Node dans la page', async () => {
+    const cep = await browser.newPage({ viewport: { width: 380, height: 780 } });
+    cep.on('pageerror', e => errors.push('Node dans la page : ' + e.message));
+    await cep.addInitScript(() => {
+      try { localStorage.setItem('rrfx-nowelcome', '1'); } catch (e) { /* stockage indisponible */ }
+      window.module = { exports: {} };
+      window.exports = window.module.exports;
+    });
+    await cep.goto(url);
+    await cep.waitForSelector('.tab[data-tab=express]', { timeout: 10000 });
+    const ok = await cep.evaluate(() => !!(window.RRFXCore && window.RRFXApp && window.RRFXLayout && window.RRFXStylePack));
+    if (!ok) throw new Error('modules absents de la page');
+    await cep.close();
+  });
 
   await browser.close();
   fs.rmSync(tmp, { recursive: true, force: true });

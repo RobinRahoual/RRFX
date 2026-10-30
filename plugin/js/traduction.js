@@ -4,7 +4,7 @@
    - DeepL : meilleure qualité, avec ta clé API (gratuite jusqu'à 500 000 caractères par mois).
    Ce module prépare les requêtes et lit les réponses ; le panneau les envoie. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXTraduction = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

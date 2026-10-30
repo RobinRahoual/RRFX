@@ -7,7 +7,7 @@
    - choix des meilleurs extraits pour les réseaux ;
    - description d'un rush (image) et recherche par le sens (embeddings). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXIA = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

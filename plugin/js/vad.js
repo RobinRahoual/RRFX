@@ -7,7 +7,7 @@
    - silences(...) : les blancs entre eux, pour la coupe des silences.
    La fabrique n'utilise rien d'extérieur : elle tourne aussi dans un Worker (parole.js). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXVad = factory();
 })(typeof self !== 'undefined' ? self : this, function sileroFactory() {
   'use strict';

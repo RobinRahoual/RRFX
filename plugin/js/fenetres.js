@@ -9,7 +9,7 @@
    de style (les sections masquées restent dans la page, rien ne casse si un onglet se redessine). */
 (function (root, factory) {
   const api = factory();
-  if (typeof module === 'object' && module.exports) module.exports = api;
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = api;
   else root.RRFXLayout = api;
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

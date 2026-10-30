@@ -5,7 +5,7 @@
    Ce module lit leur résultat JSON (un horodatage par mot), en fait des sous-titres propres, et
    trouve les « euh » et les répétitions au mot près. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXWhisper = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

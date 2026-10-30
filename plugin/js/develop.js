@@ -10,7 +10,7 @@
    Texture, Clarté, Correction du voile, vignettage et grain dépendent des pixels voisins :
    une LUT ne peut pas les porter (ils restent à faire dans Lumetri). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXDevelop = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

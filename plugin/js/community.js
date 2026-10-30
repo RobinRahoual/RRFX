@@ -7,7 +7,7 @@
    - aimer : la réaction 👍 sur la page du preset ; les plus aimés passent en premier ;
    - modérer : fermer l'issue la retire de la bibliothèque. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXCommunity = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

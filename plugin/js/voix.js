@@ -2,7 +2,7 @@
    même niveau (-14 LUFS pour YouTube et les réseaux), « euh » et hésitations repérés dans le son,
    et courbe de volume de la musique qui baisse sous la voix (ducking). Sans DOM, testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXVoix = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

@@ -4,7 +4,7 @@
    tout le reste (images du plan, vidéo finale, pose dans Premiere) est fait par le panneau.
    Chaque script écrit « PROGRESS i n » pour l'avancement. Testés : compilation Python (tests). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXPy = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

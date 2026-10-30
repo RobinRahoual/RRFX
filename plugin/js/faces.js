@@ -3,7 +3,7 @@
    les zooms « visage » : le plan grossit mais les yeux restent à leur place à l'écran (ou sont
    recentrés). Sans DOM, testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory(require('./vendor/haar-face.js'));
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory(require('./vendor/haar-face.js'));
   else root.RRFXFaces = factory(root.RRFXHaarFace);
 })(typeof self !== 'undefined' ? self : this, function (CASCADE) {
   'use strict';

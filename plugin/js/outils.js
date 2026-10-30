@@ -6,7 +6,7 @@
    - activity : temps passé sur un projet (minutes où quelque chose a bougé dans Premiere).
    - savedMinutes / duration : temps gagné estimé par opération, et son affichage. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXOutils = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

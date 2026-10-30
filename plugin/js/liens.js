@@ -3,7 +3,7 @@
    Vimeo, SoundCloud…) passe par yt-dlp, l'outil gratuit que l'utilisateur installe lui-même.
    Ici : la partie sans Premiere ni réseau (type de lien, commande, noms de fichiers). Testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXLiens = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

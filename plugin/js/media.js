@@ -5,7 +5,7 @@
      directement ; son AAC (mp4a) renvoyé en flux ADTS, à décoder par le navigateur.
    io : { size() -> Promise<number>, read(position, length) -> Promise<Uint8Array> } */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXMedia = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

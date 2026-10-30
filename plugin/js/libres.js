@@ -9,7 +9,7 @@
    - brew : Homebrew sur Mac, s'il est là.
    Le panneau (outils-panel.js) fait les téléchargements et lance les commandes. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXLibres = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

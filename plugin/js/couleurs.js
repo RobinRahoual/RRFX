@@ -2,7 +2,7 @@
    Coolors), des nuanciers Adobe .ase, des dégradés CSS ; réglages de l'effet Dégradé (Ramp) de
    Premiere ; styles de texte (police, couleurs, contour, ombre, fond). Sans DOM, testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXCouleurs = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

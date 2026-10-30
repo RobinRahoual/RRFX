@@ -3,7 +3,7 @@
    VHS…) sur fond noir, pour un mode de fusion Écran / Ajout. Pour Premiere, la séquence
    d'images JPEG est fabriquée une fois, à la taille de la séquence, puis gardée sur disque. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXPacks = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

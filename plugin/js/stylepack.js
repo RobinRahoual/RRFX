@@ -3,7 +3,7 @@
    enchaînement d'effets. Le fichier est un ZIP ordinaire : pack.json + les fichiers.
    Sans DOM, testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXStylePack = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

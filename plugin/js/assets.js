@@ -2,7 +2,7 @@
    titres, overlays…). Indexation, classement, recherche, et lecture des LUT .cube pour les
    aperçus. Sans DOM : testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXAssets = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

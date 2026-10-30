@@ -5,7 +5,7 @@
    Dans Premiere, une vidéo 10 bits « plage vidéo » arrive avec le code 64 à 0 et 940 à 1.
    Certaines formules donnent le code sur 1023 (« code »), d'autres la valeur IRE (« ire »). */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXLog = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

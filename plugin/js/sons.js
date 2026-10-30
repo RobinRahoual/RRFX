@@ -2,7 +2,7 @@
    rien à télécharger, aucun droit à gérer. Ils se posent sur les transitions, calés sur la
    coupe (le moment fort du son tombe pile dessus). Sans DOM, testé sous Node. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXSons = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

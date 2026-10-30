@@ -6,7 +6,7 @@
    - breaths, clicks : respirations et petits clics de bouche dans une voix, à baisser.
    - duckKeys : plages à baisser → images clés de volume [temps, dB]. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXSonPlus = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';

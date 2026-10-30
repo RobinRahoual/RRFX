@@ -65,3 +65,17 @@ test('updates: no network, no repository, same version = no banner, no error', a
   assert.strictEqual(await Updates.checkForUpdate({ fetch: async () => ({ ok: false }), storage, currentVersion: '1.1.0', force: true }), null);
   assert.strictEqual(await Updates.checkForUpdate({ fetch: async () => release('v1.1.0'), storage, currentVersion: '1.1.0', force: true }), null);
 });
+
+test('every UMD module attaches to the page when a window exists (Premiere runs Node inside the page)', () => {
+  const fs = require('fs');
+  const path = require('path');
+  const files = [];
+  (function walk(d) {
+    fs.readdirSync(d).forEach(n => { const f = path.join(d, n); if (fs.statSync(f).isDirectory()) walk(f); else if (/\.js$/.test(n)) files.push(f); });
+  })(path.join(__dirname, '..', 'plugin', 'js'));
+  const bad = [];
+  files.forEach(f => fs.readFileSync(f, 'utf8').split('\n').forEach((l, i) => {
+    if (/typeof module === 'object'/.test(l) && !/typeof window === 'undefined'/.test(l)) bad.push(path.basename(f) + ':' + (i + 1));
+  }));
+  assert.deepStrictEqual(bad, []);
+});

@@ -6,7 +6,7 @@
    - plans : une personne parle → sa caméra ; deux à la fois, ou un long blanc → le plan large
      (s'il y en a un) ; aucun plan plus court que minShot. */
 (function (root, factory) {
-  if (typeof module === 'object' && module.exports) module.exports = factory();
+  if (typeof module === 'object' && module.exports && typeof window === 'undefined') module.exports = factory();
   else root.RRFXPodcast = factory();
 })(typeof self !== 'undefined' ? self : this, function () {
   'use strict';
