@@ -45,7 +45,7 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 <tr>
 <td align="center"><h3>20</h3><sub>speed ramps prédéfinies</sub></td>
 <td align="center"><h3>24</h3><sub>langues pour traduire tes sous-titres</sub></td>
-<td align="center"><h3>45</h3><sub>actions sur une touche ou un Stream Deck</sub></td>
+<td align="center"><h3>59</h3><sub>actions sur une touche ou un Stream Deck</sub></td>
 <td align="center"><h3>0 €</h3><sub>pas d'abonnement, pas de compte, IA comprise</sub></td>
 </tr>
 </table>
@@ -67,6 +67,9 @@ Un plugin <b>gratuit</b> pour Premiere Pro, en français et en anglais.</p>
 | Exporter chaque version, renommer chaque fichier | **Export en lot** dans Media Encoder, avec des noms propres |
 | Monter un podcast à 3 caméras, plan par plan | **La caméra de celui qui parle**, posée toute seule, plan large quand on parle à deux |
 | Fouiller 200 rushs pour trouver « la rue la nuit » | **Tape ce que tu cherches** : l'IA locale a décrit chaque rush |
+| Flouter un visage ou une plaque image clé par image clé | **Entoure-le une fois** : SAM 2 le suit dans tout le plan |
+| Écouter 500 bruitages pour trouver le bon whoosh | **Décris le son** : CLAP te donne les plus proches d'abord |
+| Rattraper une interview enregistrée dans une pièce qui résonne | **Voix studio** : l'écho et le son de téléphone réparés |
 
 Et rien n'est irréversible : **↶ Annuler** retire chaque opération, même ancienne, et les coupes se font par défaut
 sur une copie de ta séquence.
@@ -78,7 +81,7 @@ sur une copie de ta séquence.
 <table>
 <tr>
 <td width="25%" valign="top"><b>📱 Reels, TikTok, Shorts</b><br><sub>Express « Reels dynamique », sous-titres mot par mot, mots clés en couleur, copie 9:16, extraits d'une longue vidéo, barre de progression.</sub><br><a href="#express">Voir les outils</a></td>
-<td width="25%" valign="top"><b>🎙️ Interviews, entreprise, podcasts</b><br><sub>Silences et « euh » coupés, montage par le texte, J-cut et L-cut, bandeau nom et fonction, voix égalisée, fond flou en 9:16.</sub><br><a href="#parole">Voir les outils</a></td>
+<td width="25%" valign="top"><b>🎙️ Interviews, entreprise, podcasts</b><br><sub>Silences et « euh » coupés, montage par le texte, J-cut et L-cut, bandeau nom et fonction, voix égalisée et voix studio, flou d'arrière-plan façon portrait, visages floutés.</sub><br><a href="#parole">Voir les outils</a></td>
 <td width="25%" valign="top"><b>▶️ YouTube et vlogs</b><br><sub>Zoom visage sur les jump cuts, chapitres YouTube, musique sous la voix, plans de coupe sur les mots clés, rythme du montage.</sub><br><a href="#parole">Voir les outils</a></td>
 <td width="25%" valign="top"><b>🎵 Clips, mariages, aftermovies</b><br><sub>Effets sur les temps forts, montage auto sur le rythme, speed ramps, overlays, conversion LOG, raccord entre caméras, looks.</sub><br><a href="#musique">Voir les outils</a></td>
 </tr>
