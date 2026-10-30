@@ -958,12 +958,23 @@ Le résultat est posé au-dessus du plan, l'original reste dessous : ↶ Annuler
 
 ## Installer RR FX en 3 étapes
 
+**Sur Mac, le plus simple** : ferme Premiere, ouvre le **Terminal** (⌘ Espace, tape « Terminal »), colle cette ligne
+puis appuie sur Entrée. Elle télécharge la dernière version et l'installe, sans alerte de macOS :
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/RobinRahoual/RRFX/main/installer-mac.sh | sh
+```
+
+**Sinon, sur Windows comme sur Mac :**
+
 1. **[Télécharge RR FX](https://github.com/RobinRahoual/RRFX/releases/latest)** (fichier
    `RRFX-…-installation.zip`, section *Assets*) et décompresse-le.
 2. Ferme Premiere Pro, puis lance l'installateur :
    - **Windows** : double-clique sur `Installer RR FX (Windows).bat`.
      Si Windows affiche « Windows a protégé votre ordinateur » : *Informations complémentaires* > *Exécuter quand même*.
-   - **Mac** : clic droit sur `Installer RR FX (Mac).command` > *Ouvrir*.
+   - **Mac** : double-clique sur `Installer RR FX (Mac).command`. Si macOS affiche « Apple n'a pas pu confirmer… » :
+     clique sur *Terminé*, puis *Réglages Système > Confidentialité et sécurité*, tout en bas *Ouvrir quand même*
+     (ou, dans le Terminal, tape `sh ` puis glisse le fichier dans la fenêtre et appuie sur Entrée).
 3. Ouvre Premiere : **Fenêtre > Extensions > RR FX**.
 
 > **Une seule chose à faire par projet** : crée un calque de réglage (*Fichier > Nouveau > Calque de réglage*).

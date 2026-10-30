@@ -5,7 +5,13 @@ INSTALLATION
 2. Windows : double-clique sur "Installer RR FX (Windows).bat"
    (si Windows affiche "Windows a protege votre ordinateur" :
     "Informations complementaires" puis "Executer quand meme").
-   Mac : clic droit sur "Installer RR FX (Mac).command" > Ouvrir.
+   Mac : double-clique sur "Installer RR FX (Mac).command".
+   Si macOS dit "Apple n'a pas pu confirmer..." : clique sur "Termine",
+   puis Reglages Systeme > Confidentialite et securite > tout en bas
+   "Ouvrir quand meme". Ou, dans le Terminal : tape "sh " (avec l'espace),
+   glisse le fichier .command dans la fenetre, puis Entree.
+   Encore plus simple, sans rien telecharger a la main (Terminal) :
+   curl -fsSL https://raw.githubusercontent.com/RobinRahoual/RRFX/main/installer-mac.sh | sh
    Laisse le dossier RRFX dans le meme dossier que le script.
 3. Lance Premiere Pro, puis : Fenetre > Extensions > RR FX
 

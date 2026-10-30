@@ -5,12 +5,24 @@ Tout ce que fait chaque onglet, en détail. Pour découvrir le plugin en deux mi
 
 ## Installation en détail
 
+**Mac, en une ligne** (Terminal, Premiere fermé) : télécharge et installe la dernière version, sans l'alerte de
+macOS sur les scripts téléchargés.
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/RobinRahoual/RRFX/main/installer-mac.sh | sh
+```
+
+Ou bien :
+
 1. Télécharge `RRFX-<version>-installation.zip` depuis la
    [dernière release](https://github.com/RobinRahoual/RRFX/releases/latest) (section *Assets*) et décompresse-le.
 2. Ferme Premiere Pro, puis :
    - **Windows** : double-clique sur `Installer RR FX (Windows).bat` (si Windows affiche « Windows a protégé
      votre ordinateur » : *Informations complémentaires* > *Exécuter quand même*) ;
-   - **Mac** : clic droit sur `Installer RR FX (Mac).command` > *Ouvrir*.
+   - **Mac** : double-clique sur `Installer RR FX (Mac).command`. Si macOS affiche « Apple n'a pas pu confirmer
+     que… ne contenait pas de logiciel malveillant » : *Terminé*, puis *Réglages Système > Confidentialité et
+     sécurité > Ouvrir quand même* (macOS 15 n'accepte plus le clic droit > *Ouvrir*). Autre solution : dans le
+     Terminal, tape `sh ` (avec l'espace), glisse le fichier dans la fenêtre, puis Entrée.
 3. Dans Premiere : *Fenêtre > Extensions > RR FX*.
 
 Le script copie le panneau dans le dossier des extensions Adobe et autorise les extensions non signées

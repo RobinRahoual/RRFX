@@ -68,3 +68,13 @@ test('verifySignature: a pack signed with the RR FX key passes, anything else is
   // Pas encore de clé dans le panneau : pas de vérification (versions d'avant la signature).
   assert.strictEqual(I.verifySignature(crypto, bytes, '', ''), true);
 });
+
+test('installer-mac.sh: valid shell, downloads the pack name that package.js builds, runs the .command', () => {
+  const cp = require('child_process');
+  const src = fs.readFileSync(path.join(__dirname, '..', 'installer-mac.sh'), 'utf8');
+  assert.strictEqual(cp.spawnSync('sh', ['-n', '-c', src]).status, 0);
+  assert.match(src, /ZIP="RRFX-\$VERSION-installation\.zip"/);
+  assert.match(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'package.js'), 'utf8'), /'-installation\.zip'/);
+  assert.ok(src.indexOf("'Installer RR FX (Mac).command'") > 0);
+  assert.ok(fs.existsSync(path.join(__dirname, '..', 'install', 'Installer RR FX (Mac).command')));
+});
