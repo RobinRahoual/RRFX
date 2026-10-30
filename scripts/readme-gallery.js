@@ -435,6 +435,13 @@ const SRT = '1\n00:00:01,000 --> 00:00:03,000\nBonjour à tous et bienvenue\n\n2
       await shot(name, '[data-sec=' + id + ']', 300);
     }
   });
+  await step('ia2', async () => {
+    for (const [t, id, nav, name] of [['assets', 'masque', null, 'masque'], ['assets', 'portrait', null, 'portrait'], ['assets', 'grain', null, 'grain'], ['assets', 'sons', null, 'sons']]) {
+      await sec(t, id, nav);
+      await close();
+      await shot(name, '[data-sec=' + id + ']', 300);
+    }
+  });
 
   // ------------------------------------------------------------------ 2.7 : outils de Premiere, fenêtres
   await step('premiere', async () => {

@@ -111,10 +111,12 @@ sur une copie de ta séquence.
 | [📱 Formats et livraison](#formats) | [🗂️ Projet et ressources](#projet) | [🚀 Ton flux de travail](#flux) |
 | [🧠 IA locale et outils gratuits](#ia) | | |
 
-**Nouveau dans la 2.9** : l'**IA sur ton ordinateur**, installée en un clic et gratuite. Podcast multicam, voix
-débruitée, pistes séparées, titre et description écrits pour toi, recherche dans tes rushs par ce qu'ils montrent,
-ralentis fluides, texte derrière le sujet… et une coupe des silences qui reconnaît la voix (Silero), même avec de
-la musique. La 2.8 avait apporté la transcription Whisper et la détection de visage par réseau de neurones.
+**Nouveau dans la 2.10** : un **masque qui suit un objet** (SAM 2) pour flouter un visage ou une plaque, le **flou
+d'arrière-plan façon portrait**, la **voix studio**, l'**image débruitée** des plans de nuit, tes **sons retrouvés
+par une description** et un détourage aux cheveux près (BiRefNet). La 2.9 avait apporté l'**IA sur ton
+ordinateur**, installée en un clic et gratuite : podcast multicam, voix débruitée, pistes séparées, titre et
+description écrits pour toi, recherche dans tes rushs, ralentis fluides, et une coupe des silences qui reconnaît la
+voix (Silero).
 [Toutes les nouveautés](https://github.com/RobinRahoual/RRFX/releases/latest)
 
 ---
@@ -838,13 +840,17 @@ tes vidéos et ce qui est dit dedans ne partent jamais en ligne. Et RR FX marche
 | [Whisper](https://github.com/ggml-org/whisper.cpp) | Le `.srt` écrit tout seul, mot par mot |
 | [sherpa-onnx](https://github.com/k2-fsa/sherpa-onnx) | Qui parle, même avec un seul micro (podcast multicam) |
 | [DeepFilterNet](https://github.com/Rikorose/DeepFilterNet) | La voix sans le bruit de fond |
+| [VoiceFixer](https://github.com/haoheliu/voicefixer) | La « voix studio » : écho de la pièce, son de téléphone ou de visio, saturation réparés |
 | [Demucs](https://github.com/adefossez/demucs) | Voix, batterie, basse et reste séparés |
 | [Beat This!](https://github.com/CPJKU/beat_this) | Chaque temps et chaque premier temps de mesure, même sur les morceaux difficiles |
-| [rembg](https://github.com/danielgatis/rembg) | La personne détourée image par image |
+| [rembg](https://github.com/danielgatis/rembg) + [BiRefNet](https://github.com/ZhengPeng7/BiRefNet) | La personne détourée image par image, cheveux compris |
+| [SAM 2](https://github.com/facebookresearch/sam2) | Un masque qui suit l'objet que tu entoures, tout le plan |
+| [Depth Anything V2](https://github.com/DepthAnything/Depth-Anything-V2) | La profondeur de chaque image : le flou d'arrière-plan façon portrait |
+| [CLAP](https://github.com/microsoft/CLAP) | Tes sons retrouvés par une description |
 | [RIFE](https://github.com/nihui/rife-ncnn-vulkan) | Des ralentis fluides, sans saccade |
 | [Real-ESRGAN](https://github.com/xinntao/Real-ESRGAN) | Un plan basse définition agrandi avec ses détails |
 | [Piper](https://github.com/OHF-Voice/piper1-gpl) | Une voix off de synthèse naturelle |
-| [ffmpeg](https://ffmpeg.org) | Tous les formats vidéo et son |
+| [ffmpeg](https://ffmpeg.org) | Tous les formats vidéo et son, le grain des plans de nuit enlevé |
 
 Déjà intégrés, rien à installer : **Silero** (la voix reconnue pour couper les silences) et **YuNet** (les visages).
 
@@ -871,6 +877,11 @@ le monde ? sherpa-onnx reconnaît les voix.
 
 - 🎙️ **Débruiter la voix** (DeepFilterNet) : souffle, clim, rue, vent disparaissent ; la voix propre est posée sur une
   piste libre et le son d'origine coupé.
+- 🎧 **Voix studio** (VoiceFixer) : va plus loin qu'un débruitage. Une interview enregistrée dans une pièce qui
+  résonne, au téléphone ou en visio, ou un son saturé, retrouve une voix pleine.
+- 🔎 **Chercher un son par description** (CLAP) : RR FX écoute tes dossiers de bruitages une fois, puis tape
+  « whoosh métallique » ou « foule qui applaudit » : les sons les plus proches arrivent d'abord, à écouter et à poser
+  en un clic.
 - 🥁 **Séparer les pistes** (Demucs) : garde la voix d'un rush sans la musique, enlève la voix d'un morceau, ou cale
   tes temps forts sur la **batterie seule**.
 - 🎚️ **Temps forts par l'IA** (Beat This!) : chaque temps, ou le premier temps de chaque mesure, dans *Musique ›
@@ -882,6 +893,10 @@ le monde ? sherpa-onnx reconnaît les voix.
 <tr>
 <td align="center" width="50%"><img src="docs/captures/outils/debruiter.png" alt="Débruiter la voix" width="250"><br><sub>La voix débruitée par l'IA</sub></td>
 <td align="center" width="50%"><img src="docs/captures/outils/separer.png" alt="Séparer les pistes" width="250"><br><sub>Voix, batterie, basse et reste séparés</sub></td>
+</tr>
+<tr>
+<td align="center" width="50%"><img src="docs/captures/outils/sons.png" alt="Chercher un son par description" width="250"><br><sub>Tes bruitages retrouvés par une description</sub></td>
+<td align="center" width="50%"></td>
 </tr>
 </table>
 
@@ -911,7 +926,28 @@ automatiques** cherche, pour chaque phrase de l'interview, le rush qui lui resse
 </tr>
 </table>
 
-Et **Agrandir un plan** (Real-ESRGAN) redonne des détails à un vieux 720p ou à un zoom fort.
+Et **Agrandir un plan** (Real-ESRGAN) redonne des détails à un vieux 720p ou à un zoom fort. Pour le détourage,
+choisis **BiRefNet** : les contours et les cheveux sont bien plus fins.
+
+### Masque qui suit un objet, flou portrait, image débruitée
+
+- 🎯 **Masque qui suit un objet** (SAM 2 de Meta) : entoure un visage, une plaque, un logo ou une personne sur la
+  première image, il est suivi dans tout le plan. Puis **flouter l'objet**, **flouter tout le reste**, ou
+  **l'isoler** (transparent autour) pour glisser un titre ou un effet derrière.
+- 📷 **Flou d'arrière-plan façon portrait** (Depth Anything V2) : comme un objectif très ouvert. Le sujet reste net,
+  le fond se floute de plus en plus avec la distance, et tu règles la mise au point.
+- 🌙 **Débruiter l'image** (ffmpeg) : le grain des plans filmés de nuit ou dans une pièce sombre, enlevé sans perdre
+  la netteté.
+
+Le résultat est posé au-dessus du plan, l'original reste dessous : ↶ Annuler le retire.
+
+<table>
+<tr>
+<td align="center" width="33%"><img src="docs/captures/outils/masque.png" alt="Masque qui suit un objet" width="250"><br><sub><b>Masque qui suit un objet</b> (SAM 2)</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/portrait.png" alt="Flou d'arrière-plan façon portrait" width="250"><br><sub><b>Flou portrait</b> (Depth Anything)</sub></td>
+<td align="center" width="33%"><img src="docs/captures/outils/grain.png" alt="Débruiter l'image" width="250"><br><sub><b>Image débruitée</b> (ffmpeg)</sub></td>
+</tr>
+</table>
 
 <p align="right"><a href="#sommaire">⬆ Sommaire</a></p>
 
@@ -947,7 +983,7 @@ Oui. Pas d'abonnement, pas de compte, pas de publicité.
 <details>
 <summary><b>L'IA envoie-t-elle mes vidéos en ligne ?</b></summary>
 
-Non. Whisper, Ollama, Silero, DeepFilterNet, Demucs et les autres tournent **sur ton ordinateur** : rien n'est
+Non. Whisper, Ollama, Silero, DeepFilterNet, SAM 2, CLAP et les autres tournent **sur ton ordinateur** : rien n'est
 envoyé. Ils sont gratuits et optionnels ; RR FX les installe dans `Documents/RRFX/Outils` quand tu le demandes.
 Les modèles d'IA prennent de la place (de 30 Mo à quelques Go) et un ordinateur récent va plus vite, mais aucun
 n'est obligatoire.

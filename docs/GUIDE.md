@@ -778,6 +778,28 @@ ailleurs. Tout tourne sur ton ordinateur.
   (Real-ESRGAN, Bibliothèque) : sur le plan sélectionné ; le résultat est rangé dans `Documents/RRFX/Fabriqué` et posé
   au-dessus du plan.
 - **ffmpeg** lit le son des fichiers que RR FX ne lit pas seul (MXF, Opus…).
+
+**Nouveau en 2.10** (le résultat est posé au-dessus du plan sélectionné, l'original reste dessous) :
+
+- **Voix studio** (VoiceFixer) : *Parole › Débruiter la voix › Outil : Voix studio*. Pour une voix qui résonne, au
+  téléphone, en visio ou saturée. *Voix : Très abîmée* pousse la restauration. Le fichier est en 44,1 kHz.
+- **Détourage BiRefNet** : *Textes › Texte derrière le sujet › Détourage*. *Rapide (personnes)* = l'ancien modèle ;
+  *Précis, cheveux fins* et *Précis, tout objet* (BiRefNet) donnent des contours et des cheveux bien plus fins, plus lentement
+  (modèle téléchargé au premier usage).
+- **Masque qui suit un objet** (SAM 2, *Bibliothèque › Masque*) : sélectionne un plan, clique sur *Suivre un objet*,
+  trace un rectangle autour de l'objet sur la première image. *Effet* : *Flouter autour* (tout sauf l'objet),
+  *Flouter l'objet* (visage, plaque, logo) ou *Isoler* (l'objet seul sur fond transparent, en ProRes 4444).
+  *Précision* : *Rapide* (modèle tiny) ou *Précise* (small). *Durée max.* limite le passage traité depuis le début
+  du plan.
+- **Flou d'arrière-plan façon portrait** (Depth Anything V2, *Bibliothèque › Portrait*) : *Flou* = force du flou du
+  fond ; *Mise au point* : *Très près*, *Sujet* ou *Plus loin* (ce qui est plus près que ce seuil reste net).
+- **Débruiter l'image** (ffmpeg, *Bibliothèque › Grain*) : *Légère (rapide)*, *Normale* ou *Forte*. Lent en 4K.
+- **Chercher un son par description** (CLAP, *Bibliothèque › Sons IA*) : lie d'abord tes dossiers de sons
+  (*Bibliothèque › Ressources*), puis *Écouter mes sons* (une fois ; les nouveaux sons seulement ensuite). Tape une
+  description : les sons les plus proches s'affichent, *Écouter* les joue, *Poser* les met à la tête de lecture.
+  Les descriptions en anglais sont les plus justes ; en français, Ollama les traduit s'il est installé.
+- Les modèles SAM 2, Depth Anything et CLAP viennent de Hugging Face au premier usage (de 150 Mo à 700 Mo). Une
+  carte graphique NVIDIA ou un Mac Apple Silicon va bien plus vite.
 - **Silero** (intégré) : *Couper les silences* reconnaît la voix au lieu de mesurer le volume (case cochée par défaut).
 
 ### Test de compatibilité
@@ -826,8 +848,8 @@ simulée, pas encore sur toutes les versions de Premiere. En cas de souci, le jo
 - la position d'un texte `.mogrt` par la *Trajectoire* du clip graphique (bandeau, sous-titres) ;
 - Whisper : le format JSON de whisper.cpp (`-ojf`, morceaux de mots horodatés) et d'openai-whisper
   (`--word_timestamps`), lus par RR FX ;
-- les outils gratuits installés par RR FX (Ollama, sherpa-onnx, DeepFilterNet, Demucs, Beat This!, rembg, RIFE,
-  Real-ESRGAN, Piper, ffmpeg) : leurs options et le format de leurs sorties viennent de leur code source et sont
+- les outils gratuits installés par RR FX (Ollama, sherpa-onnx, DeepFilterNet, VoiceFixer, Demucs, Beat This!, rembg,
+  BiRefNet, RIFE, Real-ESRGAN, Piper, SAM 2, Depth Anything, CLAP, ffmpeg) : leurs options et le format de leurs sorties viennent de leur code source et sont
   testés, mais leur installation et leur lancement sur chaque système restent à confirmer ;
 - les transitions de Premiere posées par QE (`getVideoTransitionByName`, `addTransition`) et leur retrait
   (`Track.transitions`), la détection des changements de plan (`performSceneEditDetectionOnSelection`) et la piste

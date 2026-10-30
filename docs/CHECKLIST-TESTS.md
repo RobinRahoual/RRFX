@@ -227,6 +227,29 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] *Ralenti fluide* ×4 sur un plan court : pas de saccade ; sans carte graphique compatible, le calcul passe sur le processeur
 - [ ] Un fichier MXF ou Opus (son illisible avant) : le son est lu grâce à ffmpeg
 
+## 15. IA image et son (2.10)
+
+**Installation** :
+- [ ] 🔴 *Installer* « SAM 2 + Depth Anything » : torch et transformers s'installent dans `Documents/RRFX/Outils/python`, la carte passe à « ✓ installé »
+- [ ] *Installer* VoiceFixer, puis CLAP : CLAP va dans son propre environnement (`python-clap`), sans casser les autres outils Python
+- [ ] Premier usage de SAM 2, Depth Anything et CLAP : le modèle se télécharge (Hugging Face), puis la suite tourne sans Internet
+
+**Image** :
+- [ ] 🔴 *Masque › Suivre un objet* « Flouter l'objet » sur un visage qui bouge : le visage reste flouté jusqu'au bout (10 s)
+- [ ] *Masque* « Flouter autour » puis « Isoler (transparent) » : un titre glissé sous la copie isolée passe derrière l'objet
+- [ ] *Masque* en « Précise » : plus lent, contour plus juste ; *Arrêter* en cours : rien de posé, rien de cassé
+- [ ] 🔴 *Portrait › Flouter l'arrière-plan* sur une interview : le sujet net, le fond flou, sans pompage d'une image à l'autre
+- [ ] *Portrait* avec « Très près » puis « Plus loin » : la zone nette change bien
+- [ ] 🔴 *Grain › Débruiter l'image* « Normale » sur un plan de nuit : grain enlevé, détails gardés ; « Légère » est nettement plus rapide
+- [ ] *Texte derrière le sujet* avec « Précis, cheveux fins (BiRefNet) » : les cheveux sont mieux détourés qu'en « Rapide »
+
+**Son** :
+- [ ] 🔴 *Débruiter la voix › Voix studio* sur une voix qui résonne ou au téléphone : voix pleine, posée, l'original coupé
+- [ ] *Voix studio* « Très abîmée » sur un son saturé : mieux qu'en « Normale »
+- [ ] 🔴 *Sons IA › Écouter mes sons* sur un dossier de bruitages lié : tous écoutés ; relancé : seuls les nouveaux sons
+- [ ] Recherche « whoosh » puis « foule qui applaudit » : les bons sons en tête ; *Écouter* joue le son, *Poser* le met à la tête de lecture
+- [ ] Recherche en français avec Ollama installé : « Cherché en anglais » s'affiche ; sans Ollama, la recherche marche quand même
+
 ---
 
 ## Remonter un problème

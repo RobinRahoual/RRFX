@@ -32,7 +32,10 @@
     };
     const base = () => mkdir(Store.path.join(Store.dir, 'Outils'));
     const toolDir = id => Store.path.join(base(), id);
-    const venvDir = () => Store.path.join(base(), 'python');
+    // Environnement Python partagé, ou à part (python-<nom>) pour un outil dont les paquets gênent les autres.
+    const venvDir = name => Store.path.join(base(), name ? 'python-' + name : 'python');
+    // Outil lancé par un script de RR FX : prêt quand son environnement a été préparé (fichier témoin).
+    const marker = t => Store.path.join(venvDir(t.venv), 'rrfx-' + t.id + '.ok');
     // Une tâche RR FX peut être arrêtée : chaque attente le vérifie.
     const stopped = () => { if (app.S.cancel) throw new Error(_T('Arrêté')); };
     // Une erreur qui finit la tâche en avertissement (pas en échec).
@@ -176,6 +179,10 @@
       if (!t) return '';
       if (exists(x.exe)) return x.exe;
       if (found[id] && exists(found[id])) return found[id];
+      if (t.script) {
+        const py = Lb.venv(venvDir(t.venv), win()).python;
+        return (found[id] = exists(py) && exists(marker(t)) ? py : '');
+      }
       let exe = '';
       const d = toolDir(id);
       if (exists(d)) exe = Lb.findExe(Store.listFiles(d, /./, 5000, 6), t.exe, win());
@@ -220,23 +227,24 @@
       throw warn(_T('Installe Python puis relance'), _T('L\'installateur de Python vient de s\'ouvrir : suis-le jusqu\'au bout, puis relance l\'installation dans Réglages › Outils gratuits.'));
     }
     // L'environnement Python de RR FX (créé une fois), avec une version suffisante.
-    async function ensureVenv(min) {
-      const v = Lb.venv(venvDir(), win()), need = min || [3, 10];
+    async function ensureVenv(min, name) {
+      const dir = venvDir(name), v = Lb.venv(dir, win()), need = min || [3, 10];
       if (exists(v.python)) {
         const r = await Store.execFile(v.python, ['--version']);
         if (Lb.atLeast(Lb.pyVersion(r.out), need)) return v;
-        clean(venvDir());
+        clean(dir);
       }
       const py = (await findPython(need)) || (await installPython());
       app.status.phase(_T('Environnement Python de RR FX'));
-      await run(py.cmd, py.args.concat(['-m', 'venv', venvDir()]), { label: 'Python' });
-      if (!exists(v.python)) throw new Error(_T('L\'environnement Python n\'a pas été créé (') + venvDir() + ').');
+      await run(py.cmd, py.args.concat(['-m', 'venv', dir]), { label: 'Python' });
+      if (!exists(v.python)) throw new Error(_T('L\'environnement Python n\'a pas été créé (') + dir + ').');
       return v;
     }
-    async function pipInstall(pkg, name, min) {
-      const v = await ensureVenv(min);
+    // pkg : un ou plusieurs paquets séparés par des espaces (« transformers>=4.56 torch »).
+    async function pipInstall(pkg, name, min, venvName) {
+      const v = await ensureVenv(min, venvName);
       app.status.phase(_T('Installation de ') + name + _T(' (Python, peut prendre plusieurs minutes)'));
-      await run(v.python, Lb.pipArgs([pkg]), {
+      await run(v.python, Lb.pipArgs(String(pkg).split(/\s+/).filter(Boolean)), {
         label: name,
         onLine: l => { const s = Lb.pipStep(l); if (s) app.status.phase(name + ' · ' + (s.last ? _T('installation') : s.what + (s.size ? ' (' + s.size + ')' : ''))); }
       });
@@ -292,7 +300,8 @@
         clean(tmp);
         await unlock(dir, [f]);
       } else if (how.type === 'pip') {
-        await pipInstall(how.pkg, t.name, t.minPy);
+        await pipInstall(how.pkg, t.name, t.minPy, t.venv);
+        if (t.script) Store.fs.writeFileSync(marker(t), how.pkg + '\n' + new Date().toISOString() + '\n');
       } else if (how.type === 'brew') {
         const brew = ['/opt/homebrew/bin/brew', '/usr/local/bin/brew'].find(exists);
         if (!brew) {
@@ -342,6 +351,21 @@
       const exe2 = await installCore(id);
       refreshSection();
       return exe2;
+    }
+
+    // ---------------------------------------------------------------- scripts Python de RR FX
+
+    /* Lance un script de pyscripts.js avec l'environnement de l'outil id (installé au besoin).
+       Le script est écrit dans le dossier de travail dir. → { out, err } */
+    async function runPy(id, script, args, o) {
+      const py = await need(id, (o && o.why) || '');
+      const dir = (o && o.dir) || work('script'), file = Store.path.join(dir, script);
+      Store.fs.writeFileSync(file, root.RRFXPy.SCRIPTS[script], 'utf8');
+      return run(py, [file].concat(args), Object.assign({
+        // Hugging Face : pas d'alerte sur les liens symboliques (Windows) ; torch récent : anciens poids lisibles.
+        env: { HF_HUB_DISABLE_SYMLINKS_WARNING: '1', TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD: '1', TOKENIZERS_PARALLELISM: 'false' },
+        progress: root.RRFXPy.progress
+      }, o || {}));
     }
 
     // ---------------------------------------------------------------- ffmpeg
@@ -561,7 +585,7 @@
     app.settingsExtras.push(toolsSection);
 
     app.tools = {
-      find, need, install, installCore, run, work, clean, listDir, watchCount, download, models, fetchModel, audioOf, probe, toolDir,
+      find, need, install, installCore, run, runPy, work, clean, listDir, watchCount, download, models, fetchModel, audioOf, probe, toolDir,
       voice: async v => {
         const dir = mkdir(Store.path.join(toolDir('piper'), 'voices')), onnx = Store.path.join(dir, v.id + '.onnx');
         if (!exists(onnx)) {

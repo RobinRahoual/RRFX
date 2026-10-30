@@ -171,6 +171,7 @@
 
     app.services.trackFaces = trackFaces;
     app.services.trackObject = trackObject;
+    app.services.pickBox = pickBox;
     app.services.faceKeysForSequence = faceKeysForSequence;
   });
 })(typeof self !== 'undefined' ? self : this);

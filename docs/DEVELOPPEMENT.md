@@ -61,6 +61,14 @@ archive décompressée par `tar`, exécutable pris dans un paquet PyPI, paquet P
 nom de l'exécutable (`exe`). Les arguments et la lecture des sorties sont testés dans `tests/libres.test.js` ; les
 outils eux-mêmes se testent dans Premiere (voir la checklist).
 
+Les outils `script: true` (SAM 2 + Depth Anything, VoiceFixer, CLAP) n'ont pas d'exécutable à eux : ce sont des
+paquets Python. Un fichier témoin `rrfx-<id>.ok` dans l'environnement dit qu'ils sont installés, et
+`app.tools.runPy(id, script, args)` écrit l'un des scripts de `plugin/js/pyscripts.js` dans le dossier de travail
+puis le lance avec le Python de l'environnement (progression : lignes `PROGRESS i n`). CLAP (msclap) demande
+numpy < 2 : il a son propre environnement (`venv: 'clap'` → `Documents/RRFX/Outils/python-clap`). Les scripts sont
+compilés par les tests (`tests/pyscripts.test.js`) ; leurs appels à transformers et msclap suivent les sources de
+ces bibliothèques et restent à confirmer sur une vraie machine.
+
 ## Tester dans Premiere
 
 Les tests automatiques tournent sur une timeline simulée. La [checklist de test](CHECKLIST-TESTS.md) liste ce qu'il
@@ -120,7 +128,9 @@ plugin/                  l'extension CEP (copiée telle quelle dans le dossier d
   js/ia.js               IA locale : demandes à Ollama et lecture des réponses (testé)
   js/ia-panel.js         traduction, correction, chapitres, extraits, Publier, recherche dans les rushs
   js/podcast.js          podcast multicam : qui parle, plans, caméras (testé)
-  js/fonctions-libres.js podcast, débruitage, voix off, pistes séparées, détourage, ralenti, agrandissement
+  js/pyscripts.js        scripts Python lancés par RR FX : SAM 2, profondeur (Depth Anything), CLAP (testé)
+  js/fonctions-libres.js podcast, débruitage, voix studio, voix off, pistes séparées, détourage, ralenti,
+                         agrandissement, masque qui suit un objet, flou portrait, image débruitée, sons par description
   js/visage.js           images des plans, suivi du visage ou de l'objet entouré, 9:16 qui suit le visage
   js/voix.js             sonie LUFS (BS.1770), « euh » dans le son, courbe de ducking (testé)
   js/tracker.js          suivi d'un objet par corrélation (testé)

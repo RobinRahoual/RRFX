@@ -22,7 +22,9 @@
       const d = {
         pcMode: 'mics', pcPeople: 0, pcMin: 2, pcWide: 'auto', pcSens: 'normal',
         dnLevel: 'natural', voText: '', voVoice: Lb.VOICES[0].id, voSpeed: 1,
-        stems: 'vocals', stemMute: true, cutMax: 20, slow: 4, up: 2
+        stems: 'vocals', stemMute: true, cutMax: 20, slow: 4, up: 2,
+        dnTool: 'deepfilter', vfMode: '0', cutModel: 'u2net_human_seg',
+        maskMode: 'focus', maskBlur: 20, maskMax: 10, maskSize: 'tiny', bokeh: 14, bokehFocus: 0.55, bokehMax: 10, vidDenoise: 'normal'
       };
       Object.keys(d).forEach(k => { if (!(k in s.libres)) s.libres[k] = d[k]; });
       return s.libres;
@@ -161,7 +163,10 @@
         const no = onlyPremiere(); if (no) return no;
         const s = await selected(), clips = s.clips.filter(c => c.path);
         if (!clips.length) return { kind: 'warn', title: _T('Sélectionne les plans parlés'), detail: _T('Image et son, ou le son seul.') };
-        const exe = await T().need('deepfilter', _T('DeepFilterNet enlève le bruit de fond de la voix.'));
+        // Voix studio : VoiceFixer (bruit, écho, son de téléphone) ; sinon DeepFilterNet (bruit de fond).
+        const studio = x.dnTool === 'studio';
+        const exe = studio ? await T().need('voicefixer', _T('VoiceFixer restaure la voix : bruit, écho de la pièce, son de téléphone.'))
+          : await T().need('deepfilter', _T('DeepFilterNet enlève le bruit de fond de la voix.'));
         const dir = outDir(_T('Voix débruitées')), created = [], mute = [];
         let n = 0;
         for (const c of clips) {
@@ -170,15 +175,19 @@
           app.status.phase(_T('Débruitage de ') + c.name + ' (' + (++n) + '/' + clips.length + ')');
           const tmp = T().work('debruit'), wav = Store.path.join(tmp, base(c.name) + '.wav');
           try {
-            try { await T().audioOf(c.path, { start: c.inPoint, dur: c.end - c.start, rate: 48000, channels: 1, out: wav }); } catch (e) {
+            try { await T().audioOf(c.path, { start: c.inPoint, dur: c.end - c.start, rate: studio ? 44100 : 48000, channels: 1, out: wav }); } catch (e) {
               if (app.S.cancel) throw e;
               app.log(c.name + _T(' : son illisible (') + app.errorMessage(e) + ')', 'warn');
               continue;
             }
             const outTmp = Store.path.join(tmp, 'out');
-            await T().run(exe, Lb.deepFilterArgs({ out: outTmp, input: wav, atten: ATTEN[x.dnLevel] || 30 }));
-            const done = Store.path.join(dir, base(c.name) + _T(' (débruité) ') + stamp() + '.wav');
-            Store.fs.copyFileSync(Store.path.join(outTmp, Store.path.basename(wav)), done);
+            const done = Store.path.join(dir, base(c.name) + (studio ? _T(' (voix studio) ') : _T(' (débruité) ')) + stamp() + '.wav');
+            if (studio) {
+              await T().run(exe, Lb.voicefixerArgs({ input: wav, out: done, mode: x.vfMode }), { env: { TORCH_FORCE_NO_WEIGHTS_ONLY_LOAD: '1' } });
+            } else {
+              await T().run(exe, Lb.deepFilterArgs({ out: outTmp, input: wav, atten: ATTEN[x.dnLevel] || 30 }));
+              Store.fs.copyFileSync(Store.path.join(outTmp, Store.path.basename(wav)), done);
+            }
             created.push(...await place('audio', done, c.start));
             mute.push(...(c.audio || []).map(a => ({ track: a.track, start: a.start, gain: -96 })));
           } finally { T().clean(tmp); }
@@ -222,8 +231,11 @@
         const x = st(), go = h('button', { class: 'action go' }, _T('Débruiter la voix'));
         go.addEventListener('click', denoise);
         return [
-          h('div', { class: 'note' }, _T('Souffle, clim, rue, vent : DeepFilterNet garde la voix et enlève le reste, bien mieux qu\'un filtre classique. Sélectionne les plans parlés.')),
-          row(_T('Force'), actionGroup([{ v: 'light', label: _T('Légère') }, { v: 'natural', label: _T('Naturelle') }, { v: 'full', label: _T('Totale') }], x.dnLevel, v => { x.dnLevel = v; app.persist(); })),
+          h('div', { class: 'note' }, _T('Souffle, clim, rue, vent : DeepFilterNet garde la voix et enlève le reste, bien mieux qu\'un filtre classique. Voix studio (VoiceFixer) va plus loin : écho de la pièce, son de téléphone ou de visio, saturation. Sélectionne les plans parlés.')),
+          row(_T('Outil'), actionGroup([{ v: 'deepfilter', label: _T('Débruiter') }, { v: 'studio', label: _T('Voix studio') }], x.dnTool, v => { x.dnTool = v; app.persist(); app.switchTab('speech'); })),
+          x.dnTool === 'studio'
+            ? row(_T('Voix'), actionGroup([{ v: '0', label: _T('Normale') }, { v: '2', label: _T('Très abîmée') }], x.vfMode, v => { x.vfMode = v; app.persist(); }))
+            : row(_T('Force'), actionGroup([{ v: 'light', label: _T('Légère') }, { v: 'natural', label: _T('Naturelle') }, { v: 'full', label: _T('Totale') }], x.dnLevel, v => { x.dnLevel = v; app.persist(); })),
           h('div', { class: 'row-buttons' }, go)
         ];
       }
@@ -349,7 +361,7 @@
           Store.fs.mkdirSync(out, { recursive: true });
           app.status.phase(_T('Détourage (rembg)'));
           const stop = T().watchCount(out, f.files.length, _T('Détourage'));
-          try { await T().run(exe, Lb.rembgArgs({ input: f.dir, output: out })); } finally { stop(); }
+          try { await T().run(exe, Lb.rembgArgs({ input: f.dir, output: out, model: x.cutModel })); } finally { stop(); }
           const mov = Store.path.join(outDir(_T('Détourages')), base(c.name) + _T(' (détouré) ') + stamp() + '.mov');
           app.status.phase(_T('Vidéo transparente'));
           await T().run(await T().find('ffmpeg'), Lb.ffEncode(out, mov, { fps: f.fps, alpha: true }));
@@ -366,6 +378,7 @@
         go.addEventListener('click', cutout);
         return [
           h('div', { class: 'note' }, _T('L\'effet des Reels : le titre passe derrière la personne. Sélectionne le plan, RR FX détoure la personne (rembg) et pose une copie transparente au-dessus.')),
+          row(_T('Détourage'), picker(Lb.CUT_MODELS.map(m => ({ v: m.id, label: _T(m.label) })), x.cutModel, v => { x.cutModel = v; app.persist(); }), { title: _T('BiRefNet : contours et cheveux bien plus fins, plus lent (modèle téléchargé au premier usage)') }),
           row(_T('Durée max.'), hotText({ value: x.cutMax, min: 2, max: 60, step: 1, unit: 's', onChange: v => { x.cutMax = v; app.persist(); } }), { title: _T('Le détourage prend environ une seconde par image') }),
           h('div', { class: 'row-buttons' }, go)
         ];
@@ -446,6 +459,240 @@
       }
     });
 
-    Object.assign(app.actions, { podcast: () => podcast(), denoiseAI: () => denoise(), voiceOver: () => voiceOver(), separate: () => separate(), cutout: () => cutout(), smoothSlow: () => smoothSlow(), upscale: () => upscale() });
+    // ---------------------------------------------------------------- image d'un fichier (aperçu)
+
+    // Image d'un fichier du disque, réduite à max px de large. → { img (ImageData), w, h } (taille d'origine)
+    function imageOf(p, max) {
+      return new Promise((resolve, reject) => {
+        const im = new Image();
+        im.onload = () => {
+          const k = Math.min(1, max / im.naturalWidth), cv = document.createElement('canvas');
+          cv.width = Math.max(1, Math.round(im.naturalWidth * k)); cv.height = Math.max(1, Math.round(im.naturalHeight * k));
+          const g = cv.getContext('2d');
+          g.drawImage(im, 0, 0, cv.width, cv.height);
+          resolve({ img: g.getImageData(0, 0, cv.width, cv.height), w: im.naturalWidth, h: im.naturalHeight });
+        };
+        im.onerror = () => reject(new Error(_T('Image illisible : ') + p));
+        im.src = app.fileURL(p) + '?' + Date.now();
+      });
+    }
+    const placeVideo = async (file, c, dur, label) => {
+      const created = await place('video', file, c.start, dur ? { dur } : null);
+      app.pushHistory({ date: Date.now(), label: label + c.name, entries: created });
+      return created;
+    };
+    const cutNote = (f, c, max) => (f.dur < (c.end - c.start) * (c.speed || 1) - 0.05 ? _T(' Seules les ') + max + _T(' premières secondes ont été traitées.') : '');
+
+    // ---------------------------------------------------------------- masque qui suit un objet (SAM 2)
+
+    const MASK_MODES = () => [
+      { v: 'focus', label: _T('Flouter autour') }, { v: 'blur', label: _T('Flouter l\'objet') }, { v: 'isolate', label: _T('Isoler (transparent)') }
+    ];
+    function trackMask() {
+      const x = st();
+      return app.runTask(_T('Masque qui suit un objet (IA)'), async () => {
+        const no = onlyPremiere(); if (no) return no;
+        const { c, fps } = await oneVideo(_T('Le plan où se trouve l\'objet à suivre.'));
+        await T().need('vision', _T('SAM 2 suit l\'objet que tu entoures, image par image.'));
+        const f = await framesOf(c, { fps, max: x.maskMax });
+        try {
+          const first = await imageOf(f.files[0], 640);
+          const box = await app.services.pickBox(first.img);
+          if (!box) return { kind: 'warn', title: _T('Aucun objet choisi'), detail: _T('Trace un rectangle autour de l\'objet, puis « Suivre cet objet ».') };
+          const px = [box.x * first.w, box.y * first.h, (box.x + box.w) * first.w, (box.y + box.h) * first.h].map(v => String(Math.round(v)));
+          const masks = Store.path.join(f.work, 'masques');
+          app.status.phase(_T('Suivi de l\'objet (SAM 2, premier usage : téléchargement du modèle)'));
+          await T().runPy('vision', 'rrfx_sam.py', [f.dir, masks].concat(px, [Lb.byId('vision').hf[x.maskSize === 'small' ? 'samSmall' : 'sam']]), { dir: f.work, label: 'SAM 2' });
+          const iso = x.maskMode === 'isolate', file = Store.path.join(outDir(_T('Masques')), base(c.name) + ' (' + (MASK_MODES().find(m => m.v === x.maskMode) || {}).label + ') ' + stamp() + (iso ? '.mov' : '.mp4'));
+          app.status.phase(_T('Vidéo du masque'));
+          await T().run(await T().find('ffmpeg'), Lb.ffMask(f.dir, masks, file, { mode: x.maskMode, fps: f.fps, blur: x.maskBlur * first.w / 1920 }));
+          await placeVideo(file, c, f.dur, _T('Masque · '));
+          return { kind: 'ok', title: _T('Objet suivi'), detail: (iso ? _T('L\'objet seul, transparent autour, posé au-dessus : glisse un titre ou un effet en dessous.') : _T('Posé au-dessus du plan (image seule). ↶ Annuler le retire.')) + cutNote(f, c, x.maskMax) };
+        } finally { T().clean(f.work); }
+      }, true);
+    }
+    app.extras.assets.push({
+      id: 'masque', title: _T('Masque qui suit un objet (IA)'), nav: _T('Masque'), tool: [_T('Suivre un objet'), () => trackMask()],
+      render: () => {
+        const x = st(), go = h('button', { class: 'action go' }, _T('Suivre un objet'));
+        go.addEventListener('click', trackMask);
+        return [
+          h('div', { class: 'note' }, _T('Sélectionne un plan, entoure l\'objet ou la personne sur la première image : SAM 2 (Meta) le suit dans tout le plan. Pour flouter un visage, une plaque ou un logo, flouter tout le reste, ou isoler l\'objet.')),
+          row(_T('Effet'), actionGroup(MASK_MODES(), x.maskMode, v => { x.maskMode = v; app.persist(); })),
+          row(_T('Flou'), hotText({ value: x.maskBlur, min: 4, max: 60, step: 1, unit: 'px', onChange: v => { x.maskBlur = v; app.persist(); } })),
+          row(_T('Précision'), actionGroup([{ v: 'tiny', label: _T('Rapide') }, { v: 'small', label: _T('Précise') }], x.maskSize, v => { x.maskSize = v; app.persist(); })),
+          row(_T('Durée max.'), hotText({ value: x.maskMax, min: 2, max: 120, step: 1, unit: 's', onChange: v => { x.maskMax = v; app.persist(); } })),
+          h('div', { class: 'row-buttons' }, go)
+        ];
+      }
+    });
+
+    // ---------------------------------------------------------------- flou d'arrière-plan (Depth Anything)
+
+    function bokeh() {
+      const x = st();
+      return app.runTask(_T('Flou d\'arrière-plan (IA)'), async () => {
+        const no = onlyPremiere(); if (no) return no;
+        const { c, fps } = await oneVideo(_T('Le plan à flouter derrière le sujet.'));
+        await T().need('vision', _T('Depth Anything mesure la profondeur de chaque image.'));
+        const f = await framesOf(c, { fps, max: x.bokehMax });
+        try {
+          const out = Store.path.join(f.work, 'out');
+          app.status.phase(_T('Profondeur de chaque image (Depth Anything)'));
+          await T().runPy('vision', 'rrfx_depth.py', [f.dir, out, String(x.bokeh), String(x.bokehFocus), Lb.byId('vision').hf.depth], { dir: f.work, label: _T('Flou d\'arrière-plan') });
+          const mp4 = Store.path.join(outDir(_T('Flou portrait')), base(c.name) + _T(' (flou portrait) ') + stamp() + '.mp4');
+          app.status.phase(_T('Vidéo floutée'));
+          await T().run(await T().find('ffmpeg'), Lb.ffEncode(out, mp4, { fps: f.fps }));
+          await placeVideo(mp4, c, f.dur, _T('Flou portrait · '));
+          return { kind: 'ok', title: _T('Arrière-plan flouté'), detail: _T('Posé au-dessus du plan (image seule). Trop ou pas assez net ? Change la mise au point et recommence.') + cutNote(f, c, x.bokehMax) };
+        } finally { T().clean(f.work); }
+      }, true);
+    }
+    app.extras.assets.push({
+      id: 'portrait', title: _T('Flou d\'arrière-plan façon portrait (IA)'), nav: _T('Portrait'), tool: [_T('Flouter l\'arrière-plan'), () => bokeh()],
+      render: () => {
+        const x = st(), go = h('button', { class: 'action go' }, _T('Flouter l\'arrière-plan'));
+        go.addEventListener('click', bokeh);
+        return [
+          h('div', { class: 'note' }, _T('Comme un objectif très ouvert : Depth Anything mesure la distance de chaque point de l\'image, le sujet reste net et le fond se floute, de plus en plus avec la distance.')),
+          row(_T('Flou'), hotText({ value: x.bokeh, min: 2, max: 40, step: 1, unit: 'px', onChange: v => { x.bokeh = v; app.persist(); } })),
+          row(_T('Mise au point'), actionGroup([{ v: 0.75, label: _T('Très près') }, { v: 0.55, label: _T('Sujet') }, { v: 0.35, label: _T('Plus loin') }], x.bokehFocus, v => { x.bokehFocus = v; app.persist(); })),
+          row(_T('Durée max.'), hotText({ value: x.bokehMax, min: 2, max: 120, step: 1, unit: 's', onChange: v => { x.bokehMax = v; app.persist(); } })),
+          h('div', { class: 'row-buttons' }, go)
+        ];
+      }
+    });
+
+    // ---------------------------------------------------------------- débruiter l'image (ffmpeg)
+
+    function denoiseVideo() {
+      const x = st();
+      return app.runTask(_T('Débruiter l\'image'), async () => {
+        const no = onlyPremiere(); if (no) return no;
+        const { c } = await oneVideo(_T('Le plan filmé en basse lumière.'));
+        const ff = await T().need('ffmpeg', _T('ffmpeg débruite l\'image, sans perte de netteté.'));
+        const dur = (c.end - c.start) * (c.speed || 1), mp4 = Store.path.join(outDir(_T('Images débruitées')), base(c.name) + _T(' (débruité) ') + stamp() + '.mp4');
+        app.status.phase(_T('Débruitage de l\'image (lent, surtout en 4K)'));
+        await T().run(ff, Lb.ffDenoise(c.path, mp4, { start: c.inPoint, dur, level: x.vidDenoise }), { label: _T('Débruitage'), progress: l => Lb.ffProgress(l, dur) });
+        await placeVideo(mp4, c, 0, _T('Image débruitée · '));
+        return { kind: 'ok', title: _T('Image débruitée'), detail: _T('Posée au-dessus du plan (image seule). Compare en masquant la piste.') };
+      }, true);
+    }
+    app.extras.assets.push({
+      id: 'grain', title: _T('Débruiter l\'image (basse lumière)'), nav: _T('Grain'), tool: [_T('Débruiter l\'image'), () => denoiseVideo()],
+      render: () => {
+        const x = st(), go = h('button', { class: 'action go' }, _T('Débruiter l\'image'));
+        go.addEventListener('click', denoiseVideo);
+        return [
+          h('div', { class: 'note' }, _T('Le grain des plans filmés de nuit ou en intérieur sombre, enlevé par ffmpeg (gratuit). Lent : prévois plusieurs minutes par minute de 4K.')),
+          row(_T('Force'), actionGroup([{ v: 'light', label: _T('Légère (rapide)') }, { v: 'normal', label: _T('Normale') }, { v: 'strong', label: _T('Forte') }], x.vidDenoise, v => { x.vidDenoise = v; app.persist(); })),
+          h('div', { class: 'row-buttons' }, go)
+        ];
+      }
+    });
+
+    // ---------------------------------------------------------------- chercher un son par description (CLAP)
+
+    const SOUNDS = 'index-sons.json';
+    let sounds = null, soundHits = [], player = null;
+    const loadSounds = () => { if (!sounds) { const r = Store.readJSON(SOUNDS); sounds = r && r.items ? r : { version: 1, items: {} }; } return sounds; };
+    const saveSounds = () => { try { Store.writeJSON(SOUNDS, sounds); } catch (e) { app.log(_T('Index des sons non enregistré : ') + app.errorMessage(e), 'warn'); } };
+    const sigOf = p => { try { const q = Store.fs.statSync(p); return q.size + ':' + Math.round(q.mtimeMs); } catch (e) { return ''; } };
+    const Py = root.RRFXPy, IA = root.RRFXIA;
+
+    function indexSounds(redraw) {
+      return app.runTask(_T('Écoute des sons (IA)'), async () => {
+        const no = onlyPremiere(); if (no) return no;
+        const all = app.services.resourceAudio ? app.services.resourceAudio() : [];
+        if (!all.length) return { kind: 'warn', title: _T('Aucun son'), detail: _T('Lie d\'abord le dossier de tes sons et bruitages (Bibliothèque › Ressources).') };
+        const idx = loadSounds(), todo = all.filter(e => !idx.items[e.path] || idx.items[e.path].sig !== sigOf(e.path));
+        if (!todo.length) return { kind: 'ok', title: _T('Déjà écoutés'), detail: app.plural(all.length, _T('son')) + _T(' dans l\'index.') };
+        const dir = T().work('sons'), list = Store.path.join(dir, 'sons.json'), out = Store.path.join(dir, 'sons.jsonl');
+        let n = 0, failed = 0;
+        try {
+          Store.fs.writeFileSync(list, JSON.stringify(todo.map(e => e.path)), 'utf8');
+          app.status.phase(_T('Écoute de ') + app.plural(todo.length, _T('son')) + _T(' (CLAP, premier usage : téléchargement du modèle)'));
+          await T().runPy('clap', 'rrfx_clap.py', ['audio', list, out], { dir, label: 'CLAP', why: _T('CLAP comprend ce qu\'on entend dans chaque son.') });
+        } finally {
+          // Ce qui a été écouté est gardé, même si l'opération a été arrêtée.
+          const res = Store.fs.existsSync(out) ? Py.jsonLines(Store.fs.readFileSync(out, 'utf8')) : [];
+          res.forEach(r => {
+            const e = todo.find(q => q.path === r.path);
+            if (!e) return;
+            if (r.vec) { idx.items[e.path] = { name: e.name, vec: r.vec, sig: sigOf(e.path) }; n++; } else { failed++; app.log(e.name + ' : ' + r.error, 'warn'); }
+          });
+          saveSounds();
+          T().clean(dir);
+        }
+        if (redraw) redraw();
+        return { kind: failed ? 'warn' : 'ok', title: app.plural(n, _T('son écouté'), _T('sons écoutés')), detail: (failed ? app.plural(failed, _T('son illisible'), _T('sons illisibles')) + '. ' : '') + _T('Décris le son que tu cherches.') };
+      }, true);
+    }
+
+    // La description en anglais (CLAP a appris en anglais), par l'IA locale si elle est déjà prête.
+    async function inEnglish(q) {
+      if (!/[àâçéèêëîïôûùüÿœ]|\b(le|la|les|un|une|des|du|de|et|qui|avec)\b/i.test(q)) return q;
+      try {
+        const O = T().ollama, model = O.settings().text;
+        if (!(await O.up()) || !(await O.models()).some(n => n === model || n.split(':')[0] === model)) return q;
+        const r = IA.lines(await O.chat(model, IA.translate([q], 'fr', 'en').messages, { format: IA.translate([q], 'fr', 'en').format }), 1);
+        return r && r[0] ? r[0] : q;
+      } catch (e) { return q; }
+    }
+    function searchSound(q, redraw) {
+      return app.runTask(_T('Recherche d\'un son'), async () => {
+        const items = Object.keys(loadSounds().items).map(p => Object.assign({ path: p }, sounds.items[p]));
+        if (!items.length) return { kind: 'warn', title: _T('Aucun son écouté'), detail: _T('Clique d\'abord sur « Écouter mes sons ».') };
+        if (!String(q).trim()) return { kind: 'warn', title: _T('Quel son ?'), detail: _T('Décris-le : « whoosh métallique », « foule qui applaudit »…') };
+        const en = await inEnglish(q), dir = T().work('recherche-son'), list = Store.path.join(dir, 'q.json'), out = Store.path.join(dir, 'q.jsonl');
+        try {
+          Store.fs.writeFileSync(list, JSON.stringify([en]), 'utf8');
+          app.status.phase(_T('Sens de la description (CLAP)'));
+          await T().runPy('clap', 'rrfx_clap.py', ['text', list, out], { dir, label: 'CLAP' });
+          const v = Py.jsonLines(Store.fs.readFileSync(out, 'utf8'))[0];
+          if (!v || !v.vec) throw new Error(_T('CLAP n\'a rien répondu.'));
+          soundHits = IA.nearest(v.vec, items, 10);
+        } finally { T().clean(dir); }
+        if (redraw) redraw();
+        return { kind: 'ok', title: app.plural(soundHits.length, _T('son trouvé'), _T('sons trouvés')), detail: (en !== q ? _T('Cherché en anglais : « ') + en + _T(' ». ') : '') + _T('Les plus proches d\'abord.') };
+      }, true);
+    }
+    app.extras.assets.push({
+      id: 'sons', title: _T('Chercher un son par description (IA)'), nav: _T('Sons IA'), tool: [_T('Écouter mes sons'), () => indexSounds()],
+      render: () => {
+        const x = st(), list = h('div', { class: 'ia-results' }), info = h('div', { class: 'note' });
+        const draw = () => {
+          info.textContent = app.plural(Object.keys(loadSounds().items).length, _T('son écouté'), _T('sons écoutés')) + _T(' dans l\'index (Documents/RRFX).');
+          list.innerHTML = '';
+          soundHits.forEach(r => {
+            const play = h('button', { class: 'action quiet', title: _T('Écouter') }, '▶');
+            play.addEventListener('click', () => { if (player) player.pause(); player = new Audio(app.fileURL(r.item.path)); player.play().catch(() => {}); });
+            const put = h('button', { class: 'action quiet' }, _T('Poser'));
+            put.addEventListener('click', () => app.runTask(_T('Pose de ') + r.item.name, async () => {
+              const m = await Host.call('markerList', {});
+              const created = await place('audio', r.item.path, m.ok ? m.playhead : 0);
+              app.pushHistory({ date: Date.now(), label: _T('Son · ') + r.item.name, entries: created });
+              return { kind: 'ok', title: _T('« ') + r.item.name + _T(' » posé'), detail: _T('À la tête de lecture, sur une piste libre.') };
+            }));
+            list.appendChild(h('div', { class: 'ia-line' }, h('span', null, r.item.name), h('span', { class: 'badge' }, Math.round(r.score * 100) + ' %'), play, put));
+          });
+        };
+        const idx = h('button', { class: 'action' }, _T('Écouter mes sons'));
+        idx.addEventListener('click', () => indexSounds(draw));
+        const q = h('input', { class: 'textfield', value: x.soundQuery || '', placeholder: _T('ex. whoosh métallique, foule qui applaudit, porte qui grince…'), 'aria-label': _T('Son recherché') });
+        const go = h('button', { class: 'action go' }, _T('Chercher'));
+        const run = () => { x.soundQuery = q.value.trim(); app.persist(); searchSound(x.soundQuery, draw); };
+        go.addEventListener('click', run);
+        q.addEventListener('keydown', e => { if (e.key === 'Enter') run(); });
+        draw();
+        return [
+          h('div', { class: 'note' }, _T('CLAP écoute chaque son de tes dossiers liés (Ressources) et comprend ce qu\'on y entend. Décris ensuite le son voulu : les plus proches arrivent d\'abord. Les descriptions en anglais sont les plus justes ; en français, l\'IA locale les traduit si elle est installée.')),
+          h('div', { class: 'row-buttons' }, idx), info,
+          h('div', { class: 'ia-search' }, q, go), list
+        ];
+      }
+    });
+
+    Object.assign(app.actions, { trackMask: () => trackMask(), bokeh: () => bokeh(), denoiseVideo: () => denoiseVideo(), indexSounds: () => indexSounds(), podcast: () => podcast(), denoiseAI: () => denoise(), voiceOver: () => voiceOver(), separate: () => separate(), cutout: () => cutout(), smoothSlow: () => smoothSlow(), upscale: () => upscale() });
   });
 })(typeof self !== 'undefined' ? self : this);

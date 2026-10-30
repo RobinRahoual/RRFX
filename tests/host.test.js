@@ -419,7 +419,7 @@ test('compat reports what this Premiere offers', () => {
   const r = env.call('compat');
   assert.ok(r.ok);
   assert.deepStrictEqual(r.missing, []);
-  assert.strictEqual(r.version, '2.9.0');
+  assert.strictEqual(r.version, '2.10.0');
   assert.strictEqual(r.app, '25.6.0');
 });
 

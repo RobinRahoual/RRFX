@@ -34,6 +34,8 @@
     }
     // LUTs des dossiers liés, pour « Mes LUTs » (onglet Couleur).
     app.services.resourceLuts = () => { loadIndex(); return R.list.filter(e => e.type === 'lut' && e.path); };
+    // Sons des dossiers liés, pour la recherche par description (CLAP).
+    app.services.resourceAudio = () => { loadIndex(); return R.list.filter(e => e.type === 'audio' && e.path); };
     // Vidéos et images des dossiers liés, pour les plans de coupe sur les mots clés (onglet Parole).
     app.services.resourceMedia = () => { loadIndex(); return R.list.filter(e => (e.type === 'video' || e.type === 'image') && (e.path || e.file)); };
     function saveIndex() {

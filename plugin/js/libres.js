@@ -144,8 +144,71 @@
       uses: ['Parole › Voix off témoin'],
       exe: ['piper'],
       how: { any: { type: 'pip', pkg: 'piper-tts' } }
+    },
+    /* Outils lancés par un petit script Python de RR FX (pyscripts.js) : script = true, l'outil est
+       « installé » quand son environnement Python a été préparé (fichier témoin). venv : un
+       environnement à part quand les paquets ne s'entendent pas avec les autres (numpy < 2). */
+    {
+      id: 'vision', name: 'SAM 2 + Depth Anything', icon: '🎯', license: 'Apache 2.0', mb: 1300, site: 'https://github.com/facebookresearch/sam2', minPy: [3, 10],
+      what: 'Suit un objet que tu entoures, image par image (SAM 2 de Meta), et mesure la profondeur de chaque image (Depth Anything V2).',
+      uses: ['Bibliothèque › Masque qui suit un objet (isoler, flouter)', 'Bibliothèque › Flou d\'arrière-plan façon portrait'],
+      exe: ['python'], script: true,
+      how: { any: { type: 'pip', pkg: 'transformers>=4.56 torch torchvision pillow numpy' } },
+      // Modèles de Hugging Face, téléchargés par transformers au premier usage.
+      hf: { sam: 'facebook/sam2.1-hiera-tiny', samSmall: 'facebook/sam2.1-hiera-small', depth: 'depth-anything/Depth-Anything-V2-Small-hf' }
+    },
+    {
+      id: 'voicefixer', name: 'VoiceFixer', icon: '🎚', license: 'MIT', mb: 1100, site: 'https://github.com/haoheliu/voicefixer', minPy: [3, 9],
+      what: 'Restaure une voix abîmée : bruit, écho de la pièce, son de téléphone ou de visio, saturation.',
+      uses: ['Parole › Débruiter la voix › Voix studio'],
+      exe: ['python'], script: true,
+      how: { any: { type: 'pip', pkg: 'voicefixer' } }
+    },
+    {
+      id: 'clap', name: 'CLAP', icon: '🔎', license: 'MIT', mb: 1300, site: 'https://github.com/microsoft/CLAP', minPy: [3, 9],
+      what: 'Comprend ce qu\'on entend dans un son : tes bruitages se retrouvent par une description.',
+      uses: ['Bibliothèque › Chercher un son par description'],
+      exe: ['python'], script: true, venv: 'clap',
+      how: { any: { type: 'pip', pkg: 'msclap librosa' } }
     }
   ];
+
+  // Modèles de rembg (détourage) : rapide, ou BiRefNet (contours fins, cheveux).
+  const CUT_MODELS = [
+    { id: 'u2net_human_seg', label: 'Rapide (personnes)' },
+    { id: 'birefnet-portrait', label: 'Précis, cheveux fins (personnes, BiRefNet)' },
+    { id: 'birefnet-general', label: 'Précis, tout objet (BiRefNet)' }
+  ];
+
+  // Débruitage de l'image par ffmpeg : léger (rapide), normal et fort (plus lents).
+  const DENOISE = {
+    light: 'hqdn3d=3:2.5:6:4.5',
+    normal: 'nlmeans=s=3:p=7:r=9',
+    strong: 'nlmeans=s=6:p=7:r=15'
+  };
+  // Un passage d'une vidéo [start, start + dur] s, débruité, en H.264 de bonne qualité (sans le son).
+  function ffDenoise(input, out, o) {
+    const x = o || {}, a = ['-hide_banner', '-nostdin', '-y'];
+    if (x.start > 0) a.push('-ss', x.start.toFixed(3));
+    if (x.dur > 0) a.push('-t', x.dur.toFixed(3));
+    a.push('-i', input, '-vf', DENOISE[x.level] || DENOISE.normal, '-an', '-c:v', 'libx264', '-crf', '14', '-preset', 'medium', '-pix_fmt', 'yuv420p', out);
+    return a;
+  }
+  // Images + masques (PNG noir et blanc, mêmes numéros) → vidéo. mode : isolate (l'objet seul,
+  // transparent autour), blur (l'objet flouté), focus (tout flouté sauf l'objet).
+  function ffMask(frames, masks, out, o) {
+    const x = o || {}, r = Math.max(2, Math.round(x.blur || 20));
+    const a = ['-hide_banner', '-nostdin', '-y', '-framerate', String(x.fps || 25), '-i', frames + '/%06d.png', '-framerate', String(x.fps || 25), '-i', masks + '/%06d.png'];
+    // Bord du masque adouci (2 px) pour ne pas voir l'escalier.
+    const soft = '[1:v]format=gray,boxblur=2[m]';
+    if (x.mode === 'isolate') a.push('-filter_complex', soft + ';[0:v]format=rgba[c];[c][m]alphamerge[v]', '-map', '[v]', '-c:v', 'prores_ks', '-profile:v', '4444', '-pix_fmt', 'yuva444p10le', '-vendor', 'apl0');
+    else {
+      const m = x.mode === 'focus' ? soft + ';[m]negate[k]' : soft.replace('[m]', '[k]');
+      a.push('-filter_complex', m + ';[0:v]split[a][b];[b]boxblur=' + r + ':2,format=rgba[bl];[bl][k]alphamerge[f];[a][f]overlay=format=auto,format=yuv420p[v]', '-map', '[v]', '-c:v', 'libx264', '-crf', '15', '-pix_fmt', 'yuv420p');
+    }
+    a.push(out);
+    return a;
+  }
 
   const byId = id => TOOLS.find(t => t.id === id) || null;
 
@@ -349,6 +412,8 @@
   /* DeepFilterNet : le fichier WAV débruité, même nom, dans le dossier out. atten : réduction
      maximale du bruit en dB (100 : tout le bruit ; 20 à 30 : plus naturel, un peu d'ambiance). */
   const deepFilterArgs = o => ['-o', o.out, '--atten-lim-db', String(o.atten || 100), o.input];
+  /* VoiceFixer (module Python) : la voix restaurée. mode 0 : normal ; 2 : voix très abîmée. */
+  const voicefixerArgs = o => ['-m', 'voicefixer', '-i', o.input, '-o', o.out, '--mode', String(o.mode === '2' || o.mode === 2 ? 2 : 0), '--silent'];
   // Piper : texte (un fichier, une phrase par ligne) → WAV.
   const piperArgs = o => ['-m', o.model, '-f', o.out, '-i', o.text, '--sentence-silence', String(o.pause || 0.3)];
   // rembg : un dossier d'images détourées (PNG transparents), modèle local de silhouettes.
@@ -358,9 +423,9 @@
   const size = mb => (mb >= 1000 ? (mb / 1000).toFixed(1).replace('.', ',') + ' Go' : Math.round(mb) + ' Mo');
 
   return {
-    TOOLS, VOICES, OLLAMA_MODELS, PYTHON, HF, byId, plat, howFor, pickWheel, exeName, venv, pyVersion, atLeast,
+    TOOLS, VOICES, OLLAMA_MODELS, CUT_MODELS, DENOISE, ffDenoise, ffMask, PYTHON, HF, byId, plat, howFor, pickWheel, exeName, venv, pyVersion, atLeast,
     pythonCandidates, pipArgs, pipStep, findExe, ffAudio, ffFrames, ffThumb, ffEncode, ffProbe, ffProgress,
     diarizeArgs, parseDiarization, parseBeats, demucsArgs, percentOf, rifeArgs, esrganArgs, ncnnProgress,
-    deepFilterArgs, piperArgs, rembgArgs, size
+    deepFilterArgs, voicefixerArgs, piperArgs, rembgArgs, size
   };
 });
