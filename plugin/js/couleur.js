@@ -520,7 +520,7 @@
       const b = (label, fn, cls, title) => { const x = h('button', { class: 'action' + (cls ? ' ' + cls : ''), title }, label); x.addEventListener('click', fn); return x; };
       return panel('out', _T('Appliquer et exporter'), [
         row(_T('Nom'), nameIn),
-        row(_T('Sur'), actionGroup([{ v: 'clip', label: _T('Clip visé ou sélection') }, { v: 'sequence', label: _T('Toute la séquence') }], s.target, v => { s.target = v; app.persist(); })),
+        row(_T('Sur'), actionGroup([{ v: 'clip', label: _T('Clip visé ou sélection') }, { v: 'sequence', label: _T('Toute la séquence') }], s.target, v => { s.target = v; app.persist(); applyLock(); })),
         h('div', { class: 'row-buttons wrap' },
           b(_T('Enregistrer le look'), saveLook, '', _T('Dans Mes effets, partageable et publiable')),
           b(_T('Exporter .cube…'), exportCube, '', _T('LUT 33³ pour Premiere, Resolve, Final Cut, CapCut…')),
@@ -530,6 +530,24 @@
     }
 
     // ---------------------------------------------------------------- page
+
+    // Régler la couleur demande une cible : un plan ou un calque de réglage sélectionné dans la
+    // timeline (ou « Toute la séquence »). Sans cible, les curseurs sont grisés.
+    const LOCKED = ['looks', 'basic', 'curve', 'mixer', 'grading', 'calib'];
+    const needsTarget = () => {
+      const c = app.S.ctx;
+      return st().target !== 'sequence' && !!c && (!c.hasSequence || !(c.selection > 0));
+    };
+    function applyLock() {
+      const view = V.view;
+      if (!view || !view.isConnected) return;
+      const locked = needsTarget();
+      LOCKED.forEach(id => { const el = view.querySelector('[data-panel="' + id + '"]'); if (el) el.classList.toggle('lr-locked', locked); });
+      const note = view.querySelector('.lr-lock-note');
+      if (note) note.hidden = !locked;
+      if (V.locked !== locked) { V.locked = locked; app.renderCTA(); }
+    }
+    app.contextListeners.push(() => { if (app.S.tab === 'color') applyLock(); });
 
     const NAV = [['looks', 'Looks'], ['basic', _T('Réglages')], ['curve', _T('Courbe')], ['grading', _T('Roues')], ['luts', _T('Mes LUTs')], ['gradient', _T('Dégradés')], ['log', 'LOG'], ['fix', _T('Raccord')], ['out', _T('Exporter')]];
     function render(view) {
@@ -566,6 +584,10 @@
       // Sommaire collant : un clic amène au panneau (et l'ouvre).
       const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Panneaux de l\'onglet Couleur') });
       view.appendChild(nav);
+      const all = h('button', { class: 'action quiet' }, _T('Régler toute la séquence'));
+      all.addEventListener('click', () => { st().target = 'sequence'; app.persist(); render(); });
+      view.appendChild(h('div', { class: 'note lr-lock-note', hidden: true },
+        _T('Sélectionne un plan ou un calque de réglage dans la timeline pour régler sa couleur.'), ' ', all));
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       if (app.correction) view.appendChild(app.correction.panel(panel));
       if (app.lutLibrary) view.appendChild(app.lutLibrary.panel(panel));
@@ -588,13 +610,16 @@
         });
         nav.appendChild(b);
       });
+      applyLock();
       requestAnimationFrame(() => update(true));
     }
 
     app.actions.applyLook = applyInPremiere;
     app.tabs.color = {
       render,
-      cta: () => ({ label: _T('Appliquer le look · ') + (st().name || _T('Mon look')), run: applyInPremiere, enabled: true }),
+      cta: () => (needsTarget()
+        ? { label: _T('Sélectionne un plan ou un calque'), run: applyInPremiere, enabled: false }
+        : { label: _T('Appliquer le look · ') + (st().name || _T('Mon look')), run: applyInPremiere, enabled: true }),
       leave: () => { cancelAnimationFrame(V.timer); clearTimeout(V.hq); V.timer = 0; }
     };
     // Un look de la bibliothèque (Mes effets, communauté) s'ouvre ici.

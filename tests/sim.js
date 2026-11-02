@@ -152,6 +152,7 @@ function makeEnv(fps) {
         b.children.push(me); parents.set(me, b);
       },
       createBin(n) { const b = projItem(n, 2, 0); me.children.push(b); parents.set(b, me); return b; },
+      deleteBin() { const parent = parents.get(me); if (parent) parent.children.splice(parent.children.indexOf(me), 1); return true; },
       getMediaPath() { return me.path || ''; },
       canProxy() { return me.type === 1 && /\.(mov|mp4)$/i.test(me.path || ''); },
       hasProxy() { return !!me.proxy; },
@@ -348,6 +349,13 @@ function makeEnv(fps) {
   project.importFiles = (paths, suppress, targetBin, stills) => {
     imports.push({ paths, stills: !!stills });
     paths.forEach(p => {
+      // Projet importé : un chutier à son nom, avec son contenu (ici, un calque de réglage).
+      if (/\.prproj$/i.test(p)) {
+        const b = projItem(p.split('/').pop().replace(/\.prproj$/i, ''), 2, 0), a = projItem('Calque de réglage', 1, 125 * F);
+        b.children.push(a); parents.set(a, b);
+        targetBin.children.push(b); parents.set(b, targetBin);
+        return;
+      }
       // Séquence d'images : 50 images, cadence imposée ensuite par setOverrideFrameRate.
       const it = projItem(p.split('/').pop(), 1, stills ? 50 * F : /\.(png|jpg)$/i.test(p) ? 125 * F : 60 * F);
       it.path = p;
@@ -380,7 +388,10 @@ function makeEnv(fps) {
   let proxiesOn = 0;
   const app = { project, encoder, setEnableProxies(v) { proxiesOn = v; return true; }, getEnableProxies() { return proxiesOn; }, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
 
-  const ctx = vm.createContext({ app, qe, Time, Folder });
+  // Fichiers sur le disque vus par ExtendScript (new File(p).exists).
+  const disk = new Set();
+  class File { constructor(p) { this.fsName = String(p); } get exists() { return disk.has(this.fsName); } }
+  const ctx = vm.createContext({ app, qe, Time, Folder, File });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
   // Élément audio avec son réglage de volume (Niveau 0,1778 = 0 dB).
   const audioItem = (sq, pi, a, b, inP, name) => {
@@ -389,7 +400,7 @@ function makeEnv(fps) {
     it.components = coll([comp('Internal Volume Stereo', 'Volume', [false, Math.pow(10, -15 / 20)], it)]);
     return it;
   };
-  return { ctx, encoder, folders, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, encoder, folders, disk, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };

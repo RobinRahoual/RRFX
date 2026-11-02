@@ -2,7 +2,7 @@
 
 Généré par `node scripts/host-api.js` depuis `src/host/` : ne pas modifier à la main.
 
-**67 fonctions.**
+**69 fonctions.**
 
 Le panneau (HTML/JS) ne parle à Premiere que par `Host.call(nom, objet)` → `{ ok: true, … }` ou
 `{ ok: false, error }`. Toutes les fonctions ci-dessous sont dans `plugin/jsx/host.jsx` (ExtendScript, CEP).
@@ -15,6 +15,8 @@ comportement attendu de chacune.
 | Fonction | Rôle |
 |---|---|
 | `compat` | What this Premiere offers. Required = without it nothing works. |
+| `setAdjTemplate` | Projet modele contenant un calque de reglage (chemin vide : aucun). |
+| `takeDrop` | Effet glisse depuis le panneau : Premiere a pose le fichier porteur (o.tag dans son nom) a l'endroit lache. On note ou, on le retire (et son element du projet), le panneau pose l'effet la. |
 | `markerList` | Les marqueurs de la séquence, la tête de lecture et la plage sélectionnée (secondes). |
 | `addMarkers` | Pose des marqueurs aux temps donnes (secondes de sequence), nommes " RR FX . ... ". |
 | `clearAll` | Retire tout ce que RR FX a posé (calques « RR FX · … », copies, marqueurs) sur la séquence ou la sélection. |

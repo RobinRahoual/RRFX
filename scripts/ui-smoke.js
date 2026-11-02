@@ -724,6 +724,27 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await popup.close();
     await page.waitForSelector('#status.ok:has-text("Formulaire ouvert")', { timeout: 3000 });
   });
+  // 2.11 : double-clic sur un effet (posé à la tête de lecture), couleur sans plan sélectionné.
+  await step('2.11 : double-clic sur un effet', async () => {
+    await goTab('effects');
+    await page.dblclick('#view-effects .card[data-key]');
+    await page.waitForSelector('#status.ok', { timeout: 8000 });
+    const pl = await page.evaluate(() => window.RRFXApp.settings().placement);
+    if (pl === 'playhead') throw new Error('le double-clic ne doit pas changer le réglage « Position »');
+  });
+  await step('2.11 : couleur verrouillée sans plan sélectionné', async () => {
+    await goTab('color');
+    await page.waitForSelector('#view-color [data-panel=basic]');
+    const locked = () => page.evaluate(() => !!document.querySelector('#view-color [data-panel=basic].lr-locked'));
+    if (await locked()) throw new Error('verrouillé alors que des plans sont sélectionnés');
+    await page.evaluate(() => { const A = window.RRFXApp; A.S.ctx = Object.assign({}, A.S.ctx, { selection: 0 }); A.contextListeners.forEach(f => f(A.S.ctx)); });
+    if (!(await locked())) throw new Error('pas verrouillé sans sélection');
+    if (!(await page.isVisible('.lr-lock-note'))) throw new Error('message absent');
+    if (!(await page.isDisabled('#cta'))) throw new Error('bouton Appliquer actif');
+    await page.click('.lr-lock-note .action');
+    if (await locked()) throw new Error('« Toute la séquence » ne déverrouille pas');
+    await page.evaluate(() => { const A = window.RRFXApp; A.settings().color.target = 'clip'; A.S.ctx = Object.assign({}, A.S.ctx, { selection: 2 }); A.persist(); });
+  });
   await step('tout effacer', async () => {
     await goTab('settings');
     await page.click('.action:has-text("Tout effacer")');

@@ -45,12 +45,29 @@
         renderSettingsView();
         status.finish('ok', _T('Calque de réglage défini'), r.name);
       });
+      // Projet modèle : ExtendScript ne sait pas créer de calque de réglage ; RR FX importe celui de
+      // ce projet dans les projets qui n'en ont pas.
+      const tplPick = h('button', { class: 'action' }, st.adjTemplate ? _T('Changer de projet modèle…') : _T('Choisir un projet modèle…'));
+      tplPick.addEventListener('click', async () => {
+        const files = Store.pickFiles(_T('Projet Premiere contenant un calque de réglage (.prproj)'), ['prproj']);
+        if (files === null) return status.finish('warn', _T('Disponible dans Premiere'), _T('Choisis le projet depuis le panneau dans Premiere.'));
+        if (!files.length) return;
+        const r = await Host.call('setAdjTemplate', { path: files[0] });
+        if (!r.ok) return status.finish('error', _T('Projet modèle refusé'), r.error);
+        st.adjTemplate = files[0]; persist();
+        renderSettingsView();
+        status.finish('ok', _T('Projet modèle enregistré'), _T('Son calque de réglage sera importé dans chaque projet qui n\'en a pas.'));
+      });
+      const tplClear = st.adjTemplate ? h('button', { class: 'action quiet' }, _T('Retirer')) : null;
+      if (tplClear) tplClear.addEventListener('click', async () => { st.adjTemplate = ''; persist(); await Host.call('setAdjTemplate', { path: '' }); renderSettingsView(); });
       view.appendChild(section(_T('Calques'), [
         h('div', { class: 'note' }, _T('RR FX pose les effets sur des calques de réglage « RR FX · … » au-dessus du clip, qui n\'est jamais modifié. Exceptions « CLIP FX » : la speed ramp et le Motion blur (Écho) ont besoin des images du plan, qu\'un calque de réglage ne peut ni ralentir ni mélanger. Ils se posent donc sur une copie du passage, issue d\'un sous-clip vidéo seule (chutier « RR FX ») : tes pistes audio ne sont jamais touchées.')),
         h('div', { class: 'field' }, checkbox(_T('Recopier le cadrage et l\'étalonnage du clip sur les copies CLIP FX'), st.copyLook, v => { st.copyLook = v; persist(); })),
         h('div', { class: 'note' }, _T('Les courbes et LUT de Lumetri ne se recopient pas : étalonne plutôt sur un calque de réglage.')),
         h('div', { class: 'note' }, _T('Calque de réglage utilisé : ') + (st.adjName || _T('recherche automatique dans le projet')) + _T('. Il en faut un dans le projet : Fichier > Nouveau > Calque de réglage.')),
-        h('div', { class: 'row-buttons' }, find, fromSel)
+        h('div', { class: 'row-buttons' }, find, fromSel),
+        h('div', { class: 'note' }, _T('Plus besoin d\'en créer un dans chaque projet : crée une fois un petit projet avec seulement un calque de réglage (Fichier > Nouveau > Calque de réglage), enregistre-le, puis choisis-le ici. RR FX l\'importera tout seul là où il en manque.') + (st.adjTemplate ? _T(' Projet modèle : ') + st.adjTemplate : '')),
+        h('div', { class: 'row-buttons' }, tplPick, tplClear)
       ]));
 
       // Nettoyage

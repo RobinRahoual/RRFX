@@ -31,7 +31,9 @@ dans le bandeau du panneau (ou relance le script de la nouvelle version) ; tes e
 `%APPDATA%\Adobe\CEP\extensions` (Windows) ou `~/Library/Application Support/Adobe/CEP/extensions` (Mac).
 
 **Il faut un calque de réglage dans le projet** (une fois par projet) : *Fichier > Nouveau > Calque de réglage*.
-RR FX le retrouve tout seul.
+RR FX le retrouve tout seul. Pour ne plus y penser : crée une fois un petit projet qui ne contient qu'un calque de
+réglage, enregistre-le, puis choisis-le dans *Réglages › Calques › Choisir un projet modèle…*. RR FX importe son calque
+de réglage dans chaque projet qui n'en a pas (Premiere ne permet pas d'en créer un par script).
 
 ## Le panneau
 
@@ -88,6 +90,10 @@ fois. Les réglages de tes autres onglets sont rendus tels quels à la fin.
    **ta vraie image** (bouton 📷 *Ma vraie image* : deux images de ta séquence autour de la coupe la plus proche).
 3. Règle-le comme dans *Options d'effet* : glisse les **valeurs bleues** (Maj = ×10, clic = saisie).
 4. Clique sur **Appliquer · <effet>**.
+
+Plus rapide : **double-clique** sur une vignette, l'effet est posé à la **tête de lecture** ; ou **glisse-la sur une
+piste de la timeline**, il est posé à l'endroit lâché, sur cette piste (un calque de réglage `RR FX · …`). Le réglage
+*Position* n'est pas changé.
 
 | Réglage | Rôle |
 | --- | --- |
@@ -252,6 +258,8 @@ L'ordre des calques est toujours le même, de bas en haut : rushs, **conversion*
 ### Onglet Couleur (façon Lightroom)
 
 La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom.
+**Sélectionne d'abord un plan ou un calque de réglage dans la timeline** : sans sélection, les réglages sont grisés
+(sauf avec *Exporter › Sur : Toute la séquence*, ou le bouton *Régler toute la séquence* du message).
 Sous l'aperçu, un **sommaire** reste en haut quand tu fais défiler : *Looks, Réglages, Courbe, Roues, Mes LUTs,
 Dégradés, LOG, Raccord, Exporter*. Un clic amène au panneau et l'ouvre. Chaque panneau se replie d'un clic sur son
 titre (Dégradés et Calibrage sont repliés à la première ouverture) ; RR FX se souvient de ton choix.

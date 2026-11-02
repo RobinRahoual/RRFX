@@ -978,7 +978,8 @@ curl -fsSL https://raw.githubusercontent.com/RobinRahoual/RRFX/main/installer-ma
 3. Ouvre Premiere : **Fenêtre > Extensions > RR FX**.
 
 > **Une seule chose à faire par projet** : crée un calque de réglage (*Fichier > Nouveau > Calque de réglage*).
-> RR FX le retrouve tout seul.
+> RR FX le retrouve tout seul. Ou une fois pour toutes : un petit projet avec seulement un calque de réglage, choisi
+> dans *Réglages › Calques › Projet modèle* : RR FX l'importe là où il en manque.
 
 <p align="center">
   <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger%20gratuitement&style=for-the-badge&color=2680eb" alt="Télécharger RR FX gratuitement"></a>

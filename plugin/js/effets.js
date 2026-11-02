@@ -50,8 +50,8 @@
     // du plan (Motion blur / Écho : « CLIP FX ») se posent sur une copie du plan.
     const targetFor = entry => (entry.kind === 'overlay' ? 'overlay' : entry.def && entry.def.target ? entry.def.target : 'adjustment');
 
-    function activeSides() {
-      const pl = settings().placement, side = settings().side;
+    function activeSides(placement) {
+      const pl = placement || settings().placement, side = settings().side;
       if (pl === 'clipStart') return ['post'];
       if (pl === 'clipEnd') return ['pre'];
       if (isFull(pl)) return [side === 'pre' ? 'pre' : 'post'];
@@ -444,11 +444,55 @@
             isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null,
             settings().vary === 'chain' && settings().chain.keys.includes(e.key) ? h('span', { class: 'chain-mark', title: _T('Dans l\'enchaînement') }, String(settings().chain.keys.indexOf(e.key) + 1)) : null));
         card.addEventListener('click', ev => (ev.shiftKey ? toggleChain(e) : selectEntry(e)));
+        // Double-clic : posé à la tête de lecture. Glisser dans la timeline : posé où il est lâché.
+        card.addEventListener('dblclick', ev => { if (ev.shiftKey) return; selectEntry(e); applyEffect({ placement: 'playhead' }); });
+        card.draggable = true;
+        card.addEventListener('dragstart', ev => dragOut(ev, e));
+        card.addEventListener('dragend', () => { dropped(); });
         card.addEventListener('mouseenter', () => animateThumb(cv, e));
         card.addEventListener('mouseleave', () => { stopThumb(); drawThumb(cv, e); });
         grid.appendChild(card);
         drawThumb(cv, e);
       });
+    }
+
+    // Glisser un effet dans la timeline : Premiere reçoit un petit fichier transparent (glisser-déposer
+    // de CEP : « com.adobe.cep.dnd.file.0 ») et le pose où il est lâché ; RR FX le retire et pose
+    // l'effet à sa place, sur un calque de réglage.
+    const CARRIER = 'iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAEklEQVR4nGNgGAWjYBSMAggAAAQQAAFVN1rQAAAAAElFTkSuQmCC';
+    let drag = null;
+    function dragOut(ev, entry) {
+      drag = null;
+      if (S.demo || !Store.fs) return;
+      try {
+        const dir = Store.path.join(Store.dir, 'Glisser');
+        Store.fs.mkdirSync(dir, { recursive: true });
+        Store.fs.readdirSync(dir).forEach(f => { try { Store.fs.unlinkSync(Store.path.join(dir, f)); } catch (e) { /* encore utilisé par Premiere */ } });
+        const tag = 'RRFX-glisser-' + Date.now().toString(36), file = Store.path.join(dir, tag + '.png');
+        Store.fs.writeFileSync(file, CARRIER, 'base64');
+        ev.dataTransfer.effectAllowed = 'copy';
+        ev.dataTransfer.setData('com.adobe.cep.dnd.file.0', file);
+        drag = { tag, file, entry };
+      } catch (e) { log(_T('Glisser-déposer indisponible : ') + errorMessage(e), 'warn'); }
+    }
+    async function dropped() {
+      const d = drag;
+      drag = null;
+      if (!d) return;
+      let r = null;
+      // Premiere importe et pose le fichier juste après le lâcher : on l'attend jusqu'à 3 s.
+      for (let i = 0; i < 12; i++) {
+        await new Promise(res => setTimeout(res, 250));
+        r = await Host.call('takeDrop', { tag: d.tag, last: i === 11 });
+        if (!r.ok || r.found) break;
+      }
+      if (!r.ok) return status.finish('error', _T('Effet non posé'), r.error);
+      if (!r.found) {
+        if (r.inProject) status.finish('warn', _T('Effet non posé'), _T('Lâche l\'effet sur une piste de la timeline (ou double-clique dessus : il se pose à la tête de lecture).'));
+        return;
+      }
+      selectEntry(d.entry);
+      applyEffect({ placement: 'playhead', at: r.at, track: r.track });
     }
 
     function selectEntry(e, keepParams) {
@@ -778,22 +822,25 @@
       });
     }
 
-    function applyEffect() {
-      const st = settings(), chained = chainOn();
+    // o (facultatif) : { placement, at, track } pour le double-clic et le glisser-déposer (tête de
+    // lecture, ou l'endroit où l'effet a été lâché), sans toucher au réglage « Position ».
+    function applyEffect(o) {
+      o = o || {};
+      const st = settings(), pl = o.placement || st.placement, chained = !o.placement && chainOn();
       const e = chained ? Object.assign({}, chainEntries()[0], { name: _T('Enchaînement') }) : S.cur;
       if (!e) return null;
-      const multi = isMulti(st.placement);
+      const multi = isMulti(pl);
       return runTask(_T('Application · ') + e.name, async () => {
         status.phase(_T('Analyse de la timeline'));
         // Temps forts : détectés dans la musique, sans passer par des marqueurs.
         let times;
-        if (st.placement === 'beats') {
+        if (pl === 'beats') {
           if (!app.services.beatTimes) return { kind: 'error', title: _T('Musique indisponible'), detail: _T('Onglet Musique introuvable.') };
           status.phase(_T('Temps forts de la musique'));
           times = await app.services.beatTimes();
           if (!times.length) return { kind: 'warn', title: _T('Aucun temps fort'), detail: _T('Règle la détection dans l\'onglet Musique (sensibilité, type).') };
         }
-        const r = await Host.call('resolve', { placement: hostPlacement(st.placement), scope: st.placement === 'allcuts' || st.placement === 'allclips' ? 'sequence' : '', times, sides: activeSides(), frames: S.params.frames, target: targetFor(e) });
+        const r = await Host.call('resolve', { placement: hostPlacement(pl), scope: pl === 'allcuts' || pl === 'allclips' ? 'sequence' : '', times, sides: activeSides(pl), frames: S.params.frames, target: targetFor(e), at: o.at, track: o.track });
         if (!r.ok) {
           (r.warnings || []).forEach(w => log(w, 'warn'));
           return { kind: 'error', title: _T('Rien n\'a été appliqué'), detail: r.error };
@@ -812,7 +859,7 @@
           }
         }
         // « Un plan sur deux » (punch-in sur les jump cuts) : un clip visé sur deux, dans l'ordre.
-        if (isFull(st.placement) && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
+        if (isFull(pl) && st.alternate) r.targets = r.targets.slice().sort((a, b) => a.start - b.start).filter((t, i) => i % 2 === 1);
         if (!r.targets.length) return { kind: 'warn', title: _T('Un seul plan'), detail: _T('« Un plan sur deux » : sélectionne au moins deux clips.') };
         // Zoom visage / objet : le visage (ou l'objet entouré) est cherché dans chaque plan visé,
         // puis suivi image par image.

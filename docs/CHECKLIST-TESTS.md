@@ -250,6 +250,15 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Recherche « whoosh » puis « foule qui applaudit » : les bons sons en tête ; *Écouter* joue le son, *Poser* le met à la tête de lecture
 - [ ] Recherche en français avec Ollama installé : « Cherché en anglais » s'affiche ; sans Ollama, la recherche marche quand même
 
+## 16. Glisser-déposer, double-clic, calque automatique, couleur (2.11)
+
+- [ ] 🔴 *Effets* : **double-clic** sur une vignette : l'effet est posé à la tête de lecture (calque `RR FX · …`), le réglage *Position* ne change pas
+- [ ] 🔴 *Effets* : **glisser une vignette sur une piste** de la timeline : l'effet est posé à l'endroit lâché, sur cette piste ; le petit fichier transparent n'apparaît ni dans la timeline ni dans le panneau Projet
+- [ ] Glisser une vignette dans le panneau Projet : message « Lâche l'effet sur une piste », le fichier glissé est retiré du projet
+- [ ] 🔴 *Réglages › Calques › Choisir un projet modèle…* (un petit projet avec seulement un calque de réglage) ; dans un projet **sans** calque de réglage, *Appliquer* : le calque est importé tout seul, l'effet est posé
+- [ ] 🔴 *Couleur* sans clip sélectionné : réglages grisés, message, bouton *Appliquer* inactif ; sélectionne un plan : tout se réactive (en 2 s)
+- [ ] *Couleur* : *Régler toute la séquence* dans le message déverrouille sans sélection
+
 ---
 
 ## Remonter un problème

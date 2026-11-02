@@ -44,7 +44,7 @@
     { v: 'full', label: _T('Clip entier') }
   ];
   const DEFAULT_SETTINGS = {
-    target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', registry: {},
+    target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', adjTemplate: '', registry: {},
     tab: 'express', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
     volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false, chain: { keys: [], order: 'cycle' }, sfx: 'none',
     ramp: { points: Core.RAMP_PRESETS.intoCut.points, frames: 12, placement: 'pre', segments: 10, anchor: 'auto', interp: 'keep', preset: 'intoCut' }
@@ -349,6 +349,7 @@
       if (r && r.ok) {
         S.ctx = r;
         renderIdleDetail();
+        app.contextListeners.forEach(fn => { try { fn(r); } catch (e) { /* onglet indisponible */ } });
       }
     } finally {
       ctxPending = false;
@@ -792,6 +793,7 @@
     UI: window.RRFXUI, settings, persist, log, status, runTask, modal, promptName, confirmDialog,
     plural, clone, errorMessage, pushHistory, renderCTA, switchTab, layoutChanged, fps, registry, uid,
     copyText: Host.copyText,
+    contextListeners: [],
     tabs: {}, actions: {}, services: {}, whenReady: []
   };
   window.RRFXApp = app;
@@ -919,6 +921,7 @@
       if (c.app) log('Premiere ' + c.app, 'info');
     }
     await detectEffects(false);
+    if (settings().adjTemplate) Host.call('setAdjTemplate', { path: settings().adjTemplate }).then(r => { if (!r.ok) log(r.error, 'warn'); });
     registerKeys();
     setMenu();
     await refreshContext();

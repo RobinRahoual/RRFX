@@ -63,7 +63,7 @@
     // ------------------------------------------------------------ public: resolve targets
 
     function resolve(o) {
-        var s = activeSeq(), f = tpf(s), N = Math.max(1, Math.round(o.frames || 8)), ph = snap(tk(s.getPlayerPosition()), f);
+        var s = activeSeq(), f = tpf(s), N = Math.max(1, Math.round(o.frames || 8)), ph = snap(o.at != null ? Number(o.at) : tk(s.getPlayerPosition()), f);
         var targets = [], warnings = [], direct = o.target === 'clip' || o.target === 'copy', sides = o.sides || ['pre', 'post'];
         var i, j, ref, track, cut, c, list, a, b;
 
@@ -105,6 +105,8 @@
             atCut(cut, track,
                 o.placement === 'cut' ? clipEndingAt(s, track, cut) : clipContaining(s, track, cut - f),
                 clipContaining(s, track, cut));
+            // Effet lache sur une piste : le calque va sur cette piste (o.track) si elle est libre.
+            if (o.track != null) for (i = 0; i < targets.length; i++) targets[i].track = Number(o.track) - 1;
         } else if (o.placement === 'sequence') {
             // Toute la sequence : une zone du debut a la fin du dernier plan (looks...).
             hi = 0;
@@ -168,7 +170,7 @@
             // Debut d'un lot : on reverifie que le calque de reglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
             adj = findAdjustment(o.adjNodeId);
-            if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.');
+            if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage (ou choisis un projet mod\u00e8le dans R\u00e9glages > Calques : RR FX l\'ajoutera tout seul).');
         }
         for (i = 0; i < o.targets.length; i++) {
             t = o.targets[i];
@@ -428,6 +430,46 @@
         return ok({ names: names });
     }
 
+    // Projet modele contenant un calque de reglage (chemin vide : aucun).
+    function setAdjTemplate(o) {
+        adjTemplate = String((o && o.path) || '');
+        if (adjTemplate && !(new File(adjTemplate)).exists) return fail('Projet mod\u00e8le introuvable : ' + adjTemplate);
+        return ok({ path: adjTemplate });
+    }
+
+    // Effet glisse depuis le panneau : Premiere a pose le fichier porteur (o.tag dans son nom) a
+    // l'endroit lache. On note ou, on le retire (et son element du projet), le panneau pose l'effet la.
+    function takeDrop(o) {
+        var s = activeSeq(), i, j, list, it, pi, name, hit = null, bin;
+        for (i = 0; i < s.videoTracks.numTracks && !hit; i++) {
+            list = clipsOf(s, i);
+            for (j = 0; j < list.length; j++) {
+                it = list[j];
+                pi = it.projectItem;
+                name = String((pi && pi.name) || it.name || '');
+                if (name.split(o.tag).length > 1) { hit = { item: it, track: i, pi: pi }; break; }
+            }
+        }
+        // L'element du projet part dans un chutier jetable, supprime avec lui.
+        function drop(item) {
+            try {
+                bin = app.project.rootItem.createBin('RR FX \u00b7 glisser');
+                item.moveBin(bin);
+                bin.deleteBin();
+            } catch (e) {}
+        }
+        if (!hit) {
+            // Lache ailleurs (panneau Projet) : au dernier essai, on retire le fichier importe.
+            pi = o.last ? walk(app.project.rootItem, function (c) { return String(c.name || '').split(o.tag).length > 1; }) : null;
+            if (pi) drop(pi);
+            return ok({ found: false, inProject: !!pi });
+        }
+        var at = tk(hit.item.start), len = tk(hit.item.end) - at;
+        hit.item.remove(false, false);
+        if (hit.pi) drop(hit.pi);
+        return ok({ found: true, at: at, track: hit.track, length: len });
+    }
+
     function adjustmentInfo(o) {
         adjCache = null;
         var a = findAdjustment(o.nodeId);
@@ -579,6 +621,8 @@
     }
 
     api.compat = guard(compat);
+    api.setAdjTemplate = guard(setAdjTemplate);
+    api.takeDrop = guard(takeDrop);
     api.markerList = guard(markerList);
     api.addMarkers = guard(addMarkers);
     api.clearAll = guard(clearAll);

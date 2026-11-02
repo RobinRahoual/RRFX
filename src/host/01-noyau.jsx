@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.10.2';
+    var VERSION = '2.11.0';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -281,6 +281,17 @@ var RRFX = (function () {
         return pi.type === 1 && ADJ_NAME.test(pi.name);
     }
 
+    // ExtendScript ne sait pas creer de calque de reglage : un projet modele (.prproj) qui en
+    // contient un est importe dans le projet qui n'en a pas (Reglages > Calque de reglage).
+    var adjTemplate = '';
+
+    function importAdjTemplate() {
+        var f = adjTemplate ? new File(adjTemplate) : null;
+        if (!f || !f.exists) return null;
+        try { app.project.importFiles([f.fsName], true, app.project.rootItem, false); } catch (e) { return null; }
+        return walk(app.project.rootItem, isAdjustment);
+    }
+
     function findAdjustment(nodeId) {
         if (adjCache) {
             try { if (adjCache.nodeId && (!nodeId || adjCache.nodeId === nodeId)) return adjCache; } catch (e) { adjCache = null; }
@@ -288,6 +299,7 @@ var RRFX = (function () {
         var root = app.project.rootItem, found = null;
         if (nodeId) found = walk(root, function (c) { return c.nodeId === nodeId; });
         if (!found) found = walk(root, isAdjustment);
+        if (!found) found = importAdjTemplate();
         adjCache = found;
         return found;
     }
