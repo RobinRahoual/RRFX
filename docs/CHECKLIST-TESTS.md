@@ -285,6 +285,16 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] 🔴 Dans un projet **avec** un calque de réglage : `Documents/RRFX/Modele calque de reglage.prproj` apparaît (journal : « gardé comme modèle »), aucune séquence en plus dans le projet
 - [ ] 🔴 Puis dans un **nouveau projet vide** : glisser un effet sur la timeline : le calque de réglage est ajouté tout seul, l'effet posé dessus (`RR FX · …`)
 
+
+## 19. Colorimétrie en direct (2.14)
+
+- [ ] 🔴 Un plan sélectionné, bouge *Exposition* puis relâche : le plan change dans Premiere en moins d'une seconde ; « ● En direct sur 1 plan »
+- [ ] 🔴 Clique sur un look, puis modifie la courbe : chaque changement arrive dans Premiere ; *Options d'effet* : un seul Lumetri sur le plan
+- [ ] Deux plans sélectionnés : les deux changent ; ↶ Annuler retire le Lumetri ajouté
+- [ ] Aucun calque de réglage posé pour un plan ; *Toute la séquence* : un calque de réglage
+- [ ] *Exporter › En direct* décoché : plus rien ne part tant qu'on ne clique pas sur *Appliquer*
+- [ ] Le look reste après fermeture et réouverture du projet (la LUT est dans Documents/RRFX/Looks/En direct)
+
 ---
 
 ## Remonter un problème

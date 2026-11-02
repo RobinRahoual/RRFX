@@ -1,13 +1,14 @@
 /* RR FX : onglet Colorimétrie : la colorimétrie comme dans Lightroom (module Développement).
    Histogramme, avant/après, looks, Réglages de base, Courbe des tonalités, Mélangeur de
-   couleurs, Étalonnage des couleurs, Calibrage. Le look part dans Premiere en LUT .cube sur
-   un calque de réglage Lumetri, ou s'exporte en .cube et en DCTL (DaVinci Resolve). */
+   couleurs, Étalonnage des couleurs, Calibrage. Le look part dans Premiere en LUT .cube dans le
+   Lumetri des plans sélectionnés, en direct (ou sur un calque de réglage pour toute la séquence),
+   ou s'exporte en .cube et en DCTL (DaVinci Resolve). */
 (function (root) {
   'use strict';
   const _T = (typeof self !== 'undefined' && self._T) || (s => s);
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
-    const D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Pv } = app;
+    const D = root.RRFXDevelop, A = root.RRFXAssets, { Store, Pv, Host } = app;
     const { h, actionGroup, row, fitCanvas, css } = app.UI;
 
     const PW = 480, PH = 270; // taille de calcul de l'aperçu
@@ -50,7 +51,57 @@
       drawPreview();
       drawHisto(D.histogram(out.data, 128));
       if (V.curveDraw && st().open.curve) V.curveDraw();
+      if (final) pushLive();
     }
+
+    // ---------------------------------------------------------------- en direct dans Premiere
+
+    /* Chaque réglage (curseur relâché, look, courbe…) part tout de suite sur les plans sélectionnés :
+       la LUT du panneau dans la LUT d'entrée d'un Lumetri du plan, posé une fois puis réutilisé
+       (pas de calque de réglage). Les LUT intermédiaires d'une même sélection sont effacées. */
+    const LIVE = { sent: null, busy: false, again: false, sel: '', files: [] };
+    const liveOn = () => st().live !== false && st().target !== 'sequence' && !Host.demo && !!Store.fs;
+    const liveKey = () => JSON.stringify(P());
+    const selKey = c => (c ? [c.seqId, c.selection].concat(c.selectionNames || []).join('|') : '');
+    function setLive(kind, text) {
+      V.live = { kind, text };
+      const el = V.view && V.view.querySelector('.lr-live');
+      if (el) { el.className = 'note lr-live ' + kind; el.textContent = text; el.hidden = !text; }
+    }
+    async function pushLive() {
+      if (LIVE.sent === null) { LIVE.sent = liveKey(); return; }
+      const c = app.S.ctx;
+      if (!liveOn() || !c || !(c.selection > 0)) return;
+      const key = liveKey();
+      if (key === LIVE.sent) return;
+      if (LIVE.busy) { LIVE.again = true; return; }
+      LIVE.busy = true;
+      try {
+        const cube = D.toCube(D.buildLut(P(), 33), st().name || 'RR FX');
+        const dir = Store.path.join(Store.dir, 'Looks', 'En direct');
+        Store.fs.mkdirSync(dir, { recursive: true });
+        const file = Store.path.join(dir, 'RRFX live ' + A.hashText(cube) + '.cube');
+        if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
+        const fx = await app.services.lumetriFx();
+        const r = await Host.call('gradeClips', { lut: file, mark: 'RRFX', names: fx[0].names });
+        LIVE.sent = key;
+        if (!r.ok) setLive('warn', r.error);
+        else {
+          if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: _T('Colorimétrie'), entries: r.created });
+          (r.warnings || []).forEach(w => app.log(w, 'warn'));
+          setLive(r.graded ? 'ok' : 'warn', r.graded ? '● ' + _T('En direct sur ') + app.plural(r.graded, _T('plan'), _T('plans')) : (r.warnings || [])[0] || '');
+          // Même sélection : les LUT précédentes ne servent plus à aucun plan.
+          const sk = selKey(c);
+          if (sk !== LIVE.sel) { LIVE.sel = sk; LIVE.files = []; }
+          LIVE.files.filter(f => f !== file).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* encore lue */ } });
+          LIVE.files = [file];
+        }
+      } catch (e) { setLive('warn', app.errorMessage(e)); }
+      LIVE.busy = false;
+      if (LIVE.again) { LIVE.again = false; pushLive(); }
+    }
+    // Autre plan sélectionné : son étalonnage partira au prochain réglage.
+    app.contextListeners.push(c => { if (selKey(c) !== LIVE.sel && V.live && V.live.kind === 'ok') setLive('idle', c && c.selection ? _T('Nouveau plan sélectionné : bouge un réglage ou « Appliquer » pour l\'étalonner.') : ''); });
     function schedule(final) {
       if (final) { cancelAnimationFrame(V.timer); V.timer = 0; update(true); app.persist(); return; }
       if (V.timer) return;
@@ -465,6 +516,18 @@
           file = Store.path.join(dir, 'RRFX ' + slug(name) + ' ' + A.hashText(cube) + '.cube');
           if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
         }
+        // Plans sélectionnés : le look va dans leur Lumetri (le même qu'en direct), sans calque.
+        if (file && s.target !== 'sequence') {
+          app.status.phase(_T('Lumetri des plans sélectionnés'));
+          const fx = await app.services.lumetriFx();
+          const r = await Host.call('gradeClips', { lut: file, mark: 'RRFX', names: fx[0].names });
+          if (!r.ok) return { kind: 'warn', title: _T('Aucun plan sélectionné'), detail: r.error };
+          if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: 'Look · ' + name, entries: r.created });
+          LIVE.sent = liveKey();
+          (r.warnings || []).forEach(w => app.log(w, 'warn'));
+          if (!r.graded) return { kind: 'warn', title: _T('Look non posé'), detail: (r.warnings || [])[0] || '' };
+          return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: _T('Look posé · ') + app.plural(r.graded, _T('plan'), _T('plans')), detail: _T('Dans le Lumetri de chaque plan (LUT d\'entrée). Les prochains réglages s\'y appliquent en direct.') };
+        }
         app.status.phase(_T('Calque de réglage'));
         const { res, fail } = await app.services.adjustmentLayer('RR FX · Look ' + name, await app.services.lumetriFx(file), { scope: s.target === 'sequence' ? 'sequence' : 'clip', history: 'Look · ' + name });
         if (fail) return fail;
@@ -521,6 +584,7 @@
       return panel('out', _T('Appliquer et exporter'), [
         row(_T('Nom'), nameIn),
         row(_T('Sur'), actionGroup([{ v: 'clip', label: _T('Clip visé ou sélection') }, { v: 'sequence', label: _T('Toute la séquence') }], s.target, v => { s.target = v; app.persist(); applyLock(); })),
+        app.UI.checkbox(_T('En direct : chaque réglage s\'applique tout de suite aux plans sélectionnés'), s.live !== false, v => { s.live = v; app.persist(); if (v) { LIVE.sent = ''; pushLive(); } else setLive('idle', ''); }),
         h('div', { class: 'row-buttons wrap' },
           b(_T('Enregistrer le look'), saveLook, '', _T('Dans Mes effets, partageable et publiable')),
           b(_T('Exporter .cube…'), exportCube, '', _T('LUT 33³ pour Premiere, Resolve, Final Cut, CapCut…')),
@@ -588,6 +652,7 @@
       all.addEventListener('click', () => { st().target = 'sequence'; app.persist(); render(); });
       view.appendChild(h('div', { class: 'note lr-lock-note', hidden: true },
         _T('Sélectionne un plan ou un calque de réglage dans la timeline pour régler sa couleur.'), ' ', all));
+      view.appendChild(h('div', { class: 'note lr-live ' + (V.live ? V.live.kind : ''), hidden: !(V.live && V.live.text) }, V.live ? V.live.text : ''));
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       if (app.correction) view.appendChild(app.correction.panel(panel));
       if (app.lutLibrary) view.appendChild(app.lutLibrary.panel(panel));

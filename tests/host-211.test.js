@@ -88,3 +88,20 @@ test('adjustment layer template built by RR FX: first seen → exported as a pro
   assert.ok(a.ok, a.error);
   assert.deepStrictEqual(env.imports.map(i => i.paths[0]), [tpl]);
 });
+
+test('gradeClips: live grading on the selected clips, one Lumetri reused, no adjustment layer', () => {
+  const env = setup();
+  assert.match(env.call('gradeClips', { lut: '/docs/RRFX/Looks/En direct/RRFX live a.cube', mark: 'RRFX', names: ['Lumetri Color'] }).error, /S.lectionne/);
+  env.v[0].setSelected(true);
+  const lumetris = () => env.v[0].components.filter(c => /Lumetri/.test(c.matchName)).length;
+  const r1 = env.call('gradeClips', { lut: '/docs/RRFX/Looks/En direct/RRFX live a.cube', mark: 'RRFX', names: ['Lumetri Color'] });
+  assert.ok(r1.ok, r1.error);
+  assert.deepStrictEqual([r1.graded, r1.created.length, lumetris()], [1, 1, 1]);
+  const r2 = env.call('gradeClips', { lut: '/docs/RRFX/Looks/En direct/RRFX live b.cube', mark: 'RRFX', names: ['Lumetri Color'] });
+  assert.deepStrictEqual([r2.graded, r2.created.length, lumetris()], [1, 0, 1], 'same Lumetri, new LUT');
+  assert.strictEqual(env.seq.videoTracks[1].items.length, 0, 'no adjustment layer');
+  const u = env.call('undo', { entries: r1.created });
+  assert.ok(u.ok, u.error);
+  assert.strictEqual(lumetris(), 0, 'undo removes the Lumetri');
+  env.v[0].setSelected(false);
+});

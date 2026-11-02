@@ -260,6 +260,12 @@ L'ordre des calques est toujours le même, de bas en haut : rushs, **conversion*
 La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom.
 **Sélectionne d'abord un plan ou un calque de réglage dans la timeline** : sans sélection, les réglages sont grisés
 (sauf avec *Exporter › Sur : Toute la séquence*, ou le bouton *Régler toute la séquence* du message).
+
+**En direct** : chaque réglage (curseur relâché, look, courbe, roues…) s'applique aussitôt aux plans sélectionnés, dans
+leur propre Lumetri (LUT d'entrée) : pas de calque de réglage, et un seul Lumetri par plan, réutilisé à chaque
+réglage. « ● En direct sur 2 plans » le confirme sous le sommaire. Un autre plan sélectionné reçoit le look au
+prochain réglage (ou avec *Appliquer*). ↶ Annuler retire le Lumetri. Pour régler sans toucher Premiere, décoche
+*Exporter › En direct*. *Toute la séquence* passe toujours par un calque de réglage.
 Sous l'aperçu, un **sommaire** reste en haut quand tu fais défiler : *Looks, Réglages, Courbe, Roues, Mes LUTs,
 Dégradés, LOG, Raccord, Exporter*. Un clic amène au panneau et l'ouvre. Chaque panneau se replie d'un clic sur son
 titre (Dégradés et Calibrage sont repliés à la première ouverture) ; RR FX se souvient de ton choix.

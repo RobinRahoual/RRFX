@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.13.1';
+    var VERSION = '2.14.0';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -2090,6 +2090,38 @@ var RRFX = (function () {
         return ok({ t: secs(tk(s.getPlayerPosition())) });
     }
 
+    // ------------------------------------------------------------ public: etalonnage en direct
+
+    // L'etalonnage du panneau (une LUT .cube) sur les plans selectionnes, ou sur le calque de reglage
+    // selectionne : dans la LUT d'entree d'un Lumetri du plan, sans calque de reglage. Le Lumetri deja
+    // pose par RR FX (sa LUT contient o.mark) est reutilise : un reglage = une LUT remplacee, pas un
+    // effet de plus. o.names : noms de Lumetri. -> { graded, added (pour Annuler), warnings }.
+    function gradeClips(o) {
+        var s = activeSeq(), list = selectedVideo(s), i, j, it, c, b, path, comp, err, warnings = [], created = [], graded = 0;
+        if (!list.length) return fail('S\u00e9lectionne un plan ou un calque de r\u00e9glage dans la timeline.');
+        for (i = 0; i < list.length; i++) {
+            it = list[i].item;
+            comp = null;
+            for (j = it.components.numItems - 1; j >= 0 && !comp; j--) {
+                c = it.components[j];
+                if (c.matchName !== 'AE.ADBE Lumetri' && !/lumetri/i.test(String(c.displayName))) continue;
+                b = inputLutSlot(c);
+                if (b < 0) continue;
+                try { path = String(c.properties[b + 2].getValue()); } catch (e) { path = ''; }
+                if (o.mark && path.split(o.mark).length > 1) comp = c;
+            }
+            if (!comp) {
+                try { comp = addEffect(s, list[i].track, tk(it.start), { names: o.names, matchName: 'AE.ADBE Lumetri' }, warnings); } catch (e2) { warnings.push(e2.toString()); comp = null; }
+                if (!comp) continue;
+                created.push({ kind: 'clip', track: list[i].track, start: tk(it.start), name: it.name, added: [comp.matchName] });
+            }
+            err = setInputLut(comp, o.lut);
+            if (err) warnings.push(err); else graded++;
+        }
+        return ok({ graded: graded, clips: list.length, created: created, warnings: warnings });
+    }
+
+    api.gradeClips = guard(gradeClips);
     api.logConvert = guard(logConvert);
     api.placeGrades = guard(placeGrades);
     api.rushList = guard(rushList);

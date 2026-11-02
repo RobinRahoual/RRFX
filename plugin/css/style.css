@@ -681,3 +681,9 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .offer-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 46vh; overflow-y: auto; }
 .offer-item .note { margin: 0 0 0 26px; }
 .offer-total { font-weight: 600; }
+
+/* Colorimétrie en direct (2.14). */
+.lr-live { margin: 2px 0 6px; }
+.lr-live.ok { color: var(--ok, #3fb950); }
+.lr-live.warn { color: var(--warn); }
+.lr-live[hidden] { display: none; }

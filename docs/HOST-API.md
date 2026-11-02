@@ -2,7 +2,7 @@
 
 Généré par `node scripts/host-api.js` depuis `src/host/` : ne pas modifier à la main.
 
-**69 fonctions.**
+**70 fonctions.**
 
 Le panneau (HTML/JS) ne parle à Premiere que par `Host.call(nom, objet)` → `{ ok: true, … }` ou
 `{ ok: false, error }`. Toutes les fonctions ci-dessous sont dans `plugin/jsx/host.jsx` (ExtendScript, CEP).
@@ -53,6 +53,7 @@ comportement attendu de chacune.
 
 | Fonction | Rôle |
 |---|---|
+| `gradeClips` | L'etalonnage du panneau (une LUT .cube) sur les plans selectionnes, ou sur le calque de reglage selectionne : dans la LUT d'entree d'un Lumetri du plan, sans calque de reglage. Le Lumetri deja pose par RR FX (sa LUT contient o.mark) est reutilise : un reglage = une LUT remplacee, pas un effet de plus. o.names : noms de Lumetri. -> { graded, added (pour Annuler), warnings }. |
 | `logConvert` | Conversion LOG -> Rec.709 d'une seule camera. o.scope : 'sequence' (un calque du premier au dernier rush) ou 'selection' (un calque par groupe de rushs choisis). |
 | `placeGrades` | Pose des calques Lumetri d'etalonnage. o.layer : 'conversion', 'auto' ou 'match' ; o.groups : [{ name, lutPath, spans: [{ a, b, top }] }] (ticks ; top = piste du plan). Chaque calque va juste au-dessus des rushs de sa zone (et des calques d'etalonnage d'un niveau inferieur) : une piste est inseree si besoin, pour rester sous les looks. |
 | `rushList` | Les plans de la sequence pour le panneau (camera, analyse) : chemin du media, piste, bornes. o.scope : 'sequence' ou 'selection'. |
