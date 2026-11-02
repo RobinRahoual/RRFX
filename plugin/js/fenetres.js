@@ -167,11 +167,13 @@
       app.persist();
       app.layoutChanged();
     }
+    // Chaque changement s'enregistre tout seul dans « Mon espace » (rien à enregistrer à la main).
     function toggle(key, show) {
       const x = st(), i = x.hidden.indexOf(key);
       if (show && i >= 0) x.hidden.splice(i, 1);
       if (!show && i < 0) x.hidden.push(key);
-      x.space = 'custom';
+      x.space = 'mine';
+      x.mine = x.hidden.slice();
       app.persist();
       app.layoutChanged();
     }
@@ -180,14 +182,15 @@
       const x = st(), keys = [Ly.tabKey(tab)].concat(sec ? [Ly.secKey(tab, sec)] : []);
       if (!keys.some(k => x.hidden.indexOf(k) >= 0)) return false;
       x.hidden = x.hidden.filter(k => keys.indexOf(k) < 0);
+      if (x.space === 'mine') x.mine = x.hidden.slice();
       app.persist();
       app.layoutChanged();
       return true;
     };
 
     function applySpace(id) {
-      const c = st().custom.find(q => 'c:' + q.name === id);
-      setHidden(c ? c.hidden : Ly.hiddenFor(id, app.extras), id);
+      const x = st(), c = x.custom.find(q => 'c:' + q.name === id);
+      setHidden(id === 'mine' ? (x.mine || []) : c ? c.hidden : Ly.hiddenFor(id, app.extras), id);
     }
 
     function openWindows() {
@@ -197,26 +200,18 @@
         // Espaces de travail.
         const spaces = h('div', { class: 'win-spaces' });
         Ly.SPACES.map(s => ({ id: s.id, label: _T(s.label), desc: _T(s.desc) }))
+          .concat(x.mine ? [{ id: 'mine', label: _T('Mon espace'), desc: _T('Enregistré tout seul à chaque changement') }] : [])
           .concat(x.custom.map(c => ({ id: 'c:' + c.name, label: c.name, desc: _T('Ton espace de travail') })))
           .forEach(s => {
             const b = h('button', { class: 'action' + (x.space === s.id ? ' selected' : ''), title: s.desc }, s.label);
             b.addEventListener('click', () => { applySpace(s.id); draw(); });
             spaces.appendChild(b);
           });
-        const save = h('button', { class: 'action quiet' }, _T('＋ Enregistrer cet espace…'));
-        save.addEventListener('click', async () => {
-          const name = await app.promptName(_T('Nom de l\'espace de travail'), _T('Mon espace'));
-          if (!name) return;
-          const list = x.custom.filter(c => c.name !== name);
-          list.push({ name, hidden: x.hidden.slice() });
-          x.custom = list;
-          x.space = 'c:' + name;
-          app.persist();
-          openWindows();
-        });
         const del = x.space.indexOf('c:') === 0 ? h('button', { class: 'action quiet danger' }, _T('Supprimer cet espace')) : null;
-        if (del) del.addEventListener('click', () => { x.custom = x.custom.filter(c => 'c:' + c.name !== x.space); x.space = 'custom'; app.persist(); draw(); });
-        body.append(h('div', { class: 'win-title' }, _T('Espace de travail')), spaces, h('div', { class: 'row-buttons' }, save, del));
+        if (del) del.addEventListener('click', () => { x.custom = x.custom.filter(c => 'c:' + c.name !== x.space); x.space = 'mine'; x.mine = x.hidden.slice(); app.persist(); draw(); });
+        body.append(h('div', { class: 'win-title' }, _T('Espace de travail')), spaces,
+          h('div', { class: 'note' }, _T('Ce que tu affiches ou masques ci-dessous s\'enregistre tout seul dans « Mon espace ». Réglages › Démarrage et affichage › Réinitialiser l\'affichage remet tout.')),
+          del ? h('div', { class: 'row-buttons' }, del) : null);
         // Onglets et outils.
         body.appendChild(h('div', { class: 'win-title' }, _T('Onglets et outils affichés')));
         Ly.GROUPS.forEach(g => g.tabs.forEach(t => {

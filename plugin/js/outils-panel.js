@@ -618,13 +618,13 @@
     const missingTools = () => Lb.TOOLS.filter(t => Lb.howFor(t, P()) && !(state[t.id] && state[t.id].exe && state[t.id].models));
     const picked = new Set();
     const sizeOf = list => Lb.size(list.reduce((a, t) => a + (t.mb || 0), 0));
-    async function installAll() {
+    async function installAll(direct) {
       // État à jour d'abord : un outil déjà là n'est pas réinstallé.
       await Promise.all(Lb.TOOLS.map(t => (state[t.id] ? null : check(t.id).catch(() => null))));
       const todo = missingTools().filter(t => picked.has(t.id));
       if (!todo.length) return app.status.finish('warn', _T('Aucun outil coché'), _T('Coche les outils à installer (ou « Tout cocher »).'));
       const mb = todo.reduce((a, t) => a + (t.mb || 0), 0);
-      const go = await app.confirmDialog(todo.length > 1 ? _T('Installer ces outils ?') : _T('Installer cet outil ?'),
+      const go = direct || await app.confirmDialog(todo.length > 1 ? _T('Installer ces outils ?') : _T('Installer cet outil ?'),
         todo.map(t => t.name).join(', ') + _T(' : environ ') + Lb.size(mb) + _T(' à télécharger. Ça peut prendre un moment ; tu peux continuer à monter pendant ce temps, et Arrêter à tout moment.'),
         _T('Installer'));
       if (!go) return;
@@ -689,8 +689,32 @@
     }
     app.settingsExtras.push(toolsSection);
 
+    // Premier lancement (une fois) : proposer d'équiper RR FX de tous ses outils gratuits.
+    async function offer() {
+      const s = app.settings();
+      if (s.toolsOffered || !Store.fs) return;
+      s.toolsOffered = true;
+      app.persist();
+      await Promise.all(Lb.TOOLS.map(t => check(t.id).catch(() => null)));
+      const todo = missingTools();
+      if (!todo.length) return;
+      todo.forEach(t => picked.add(t.id));
+      const total = h('div', { class: 'note offer-total' });
+      const upd = () => { const sel = todo.filter(t => picked.has(t.id)); total.textContent = sel.length ? app.plural(sel.length, _T('outil coché'), _T('outils cochés')) + _T(' · environ ') + sizeOf(sel) + _T(' à télécharger') : _T('Aucun outil coché'); };
+      const list = h('div', { class: 'offer-list' }, todo.map(t => h('div', { class: 'offer-item' },
+        checkbox(t.icon + ' ' + t.name, true, v => { if (v) picked.add(t.id); else picked.delete(t.id); upd(); }),
+        h('div', { class: 'note' }, _T(t.what)))));
+      upd();
+      const v = await app.modal(_T('Équipe RR FX'), h('div', { class: 'wl' },
+        h('div', { class: 'wl-lead' }, _T('RR FX fonctionne mieux quand il est bien équipé : transcription, voix propre, pistes séparées, IA pour les titres et la recherche, détourage… Ces outils sont gratuits, tournent sur ton ordinateur et ne sont installés qu\'une fois.')),
+        h('div', { class: 'note' }, _T('Tu peux continuer à monter pendant l\'installation. Décoche ceux dont tu n\'as pas besoin ; tout se retrouve dans Réglages › Outils gratuits.')),
+        list, total), [{ label: _T('Plus tard'), value: null }, { label: _T('Installer la sélection'), primary: true, value: 'go' }]);
+      if (v !== 'go') { picked.clear(); app.log(_T('Outils gratuits : à installer plus tard dans Réglages › Outils gratuits.'), 'info'); return; }
+      await installAll(true);
+    }
+
     app.tools = {
-      find, need, install, installCore, run, runPy, work, clean, listDir, watchCount, download, models, fetchModel, audioOf, probe, toolDir,
+      offer, find, need, install, installCore, run, runPy, work, clean, listDir, watchCount, download, models, fetchModel, audioOf, probe, toolDir,
       voice: async v => {
         const dir = mkdir(Store.path.join(toolDir('piper'), 'voices')), onnx = Store.path.join(dir, v.id + '.onnx');
         if (!exists(onnx)) {

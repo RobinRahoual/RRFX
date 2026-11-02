@@ -979,10 +979,17 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if ((await page.locator('[data-sec=gagne] .badge').count()) !== 10) throw new Error('10 badges attendus');
     if ((await page.locator('[data-sec=gagne] .badge.on').count()) < 1) throw new Error('au moins un badge débloqué');
   });
-  await step('mode réduit', async () => {
-    await page.click('#toggle-compact');
-    if (!(await page.isHidden('#scroll'))) throw new Error('le contenu devrait être masqué');
-    await page.click('#toggle-compact');
+  await step('2.13 : réinitialiser l\'affichage, espace enregistré tout seul', async () => {
+    await page.click('#open-windows');
+    await page.click('.modal .win-group:has-text("Parole") label:has-text("Couper les silences")');
+    await page.click('.modal footer .cta');
+    const l = await page.evaluate(() => window.RRFXApp.settings().layout);
+    if (l.space !== 'mine' || !l.mine || !l.mine.some(k => /silences/.test(k))) throw new Error('espace non enregistré tout seul : ' + JSON.stringify(l));
+    await goTab('settings');
+    await page.click('[data-sec=demarrage] .action:has-text("Réinitialiser l\'affichage")');
+    const r = await page.evaluate(() => window.RRFXApp.settings().layout);
+    if (r.space !== 'all' || r.hidden.length || r.mine) throw new Error('réinitialisation : ' + JSON.stringify(r));
+    if (await page.locator('#toggle-compact').count()) throw new Error('le bouton Réduire devrait avoir disparu');
   });
   await step('2.7 : onglets regroupés et menu Fenêtres', async () => {
     // Montage : un clic sur le groupe ouvre ses sous-onglets.
@@ -1083,11 +1090,11 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await fresh.waitForSelector('.modal-title:has-text("Langue · Language")');
     await fresh.click('.modal footer button:has-text("English")');
     await fresh.waitForSelector('.modal-title:has-text("Welcome to RR FX")', { timeout: 8000 });
-    // Instagram : seulement si on clique sur « Suivre », jamais tout seul.
-    let early = false;
-    fresh.once('popup', () => { early = true; });
+    // Instagram : ouvert tout seul une fois au premier lancement (en même temps que l'accueil).
     await fresh.waitForTimeout(300);
-    if (early) throw new Error('Instagram ouvert sans clic');
+    const opened = fresh.context().pages().filter(p => /instagram\.com\/robin\.rahoual/.test(p.url()));
+    if (opened.length !== 1) throw new Error('Instagram devrait s\'ouvrir une fois au premier lancement : ' + opened.length);
+    await opened[0].close();
     const insta = fresh.waitForEvent('popup', { timeout: 5000 });
     await fresh.click('.modal .wl-follow:has-text("Follow @robin.rahoual")');
     const pop = await insta;

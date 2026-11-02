@@ -19,9 +19,11 @@
       let skip = false;
       try { skip = localStorage.getItem('rrfx-nowelcome') === '1'; } catch (e) { skip = false; }
       if (!force && (skip || s.welcomed === MAJOR)) return;
+      const first = !s.welcomed;
       s.welcomed = MAJOR;
+      // Tout premier lancement : le compte Instagram s'ouvre une fois, tout seul.
+      if (first && !force && !s.instagramOpened && app.services.openInstagram) { s.instagramOpened = true; app.services.openInstagram(); }
       app.persist();
-      // Instagram : un bouton, jamais ouvert sans clic.
       const follow = h('button', { class: 'action wl-follow', title: _T('Astuces, nouveautés et coulisses de RR FX') }, _T('📸 Suivre @robin.rahoual sur Instagram'));
       follow.addEventListener('click', () => { s.instagramOpened = true; app.persist(); if (app.services.openInstagram) app.services.openInstagram(); });
       const card = (icon, title, text) => h('div', { class: 'wl-card' }, h('span', { class: 'wl-icon' }, icon), h('div', null, h('b', null, title), h('div', { class: 'note' }, text)));
@@ -39,6 +41,8 @@
         { label: _T('C\'est parti'), value: 'go', primary: true }
       ]).then(v => {
         if (v === 'test') { app.switchTab('settings'); if (app.diagnostic) app.diagnostic.run(); } else if (v === 'go') app.switchTab('express');
+        // Puis, une fois : installer les outils gratuits (RR FX en fait plus avec).
+        if (!force && app.tools && app.tools.offer) setTimeout(() => app.tools.offer(), 300);
       });
     }
     /* Premier lancement : la langue d'abord (texte bilingue, celle de l'ordinateur proposée).

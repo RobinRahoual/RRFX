@@ -103,5 +103,15 @@
     return files.length;
   }
 
-  return { filesOf, extensionDir, download, install, verifySignature, PUBLIC_KEY, REQUIRED };
+  /* Ouverture du panneau au lancement de Premiere : le bloc <StartOn> du manifeste, ajouté ou
+     retiré (Réglages › Démarrage). → le manifeste modifié (identique s'il n'y a rien à faire). */
+  const START_ON = '<StartOn>\n            <Event>com.adobe.csxs.events.ApplicationActivate</Event>\n            <Event>applicationActivate</Event>\n          </StartOn>';
+  function startOn(xml, on) {
+    const s = String(xml || ''), has = /<StartOn>[\s\S]*?<\/StartOn>/.test(s);
+    if (on && !has) return s.replace(/(<AutoVisible>[^<]*<\/AutoVisible>)/, '$1\n          ' + START_ON);
+    if (!on && has) return s.replace(/\s*<StartOn>[\s\S]*?<\/StartOn>/, '');
+    return s;
+  }
+
+  return { filesOf, extensionDir, download, install, verifySignature, startOn, PUBLIC_KEY, REQUIRED };
 });

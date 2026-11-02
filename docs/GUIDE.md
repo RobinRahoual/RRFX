@@ -682,7 +682,7 @@ Un outil rangé dans un onglet (Mes LUTs, dégradé, import depuis un lien, styl
 ### Sans cliquer : menu et raccourcis
 
 Le menu du panneau (☰ en haut à droite du panneau) propose : montage express, recherche rapide, appliquer l'effet, appliquer la rampe, capturer,
-poser les temps forts, synchroniser, convertir le LOG en Rec.709, annuler, tout effacer, mode réduit.
+poser les temps forts, synchroniser, convertir le LOG en Rec.709, annuler, tout effacer.
 
 Quand le panneau RR FX est sélectionné (clique dedans), une touche suffit :
 
@@ -756,10 +756,16 @@ panneau suit, y compris les messages renvoyés par Premiere. *Réglages > Langue
 panneau se recharge, tes réglages et ta bibliothèque sont gardés. Les calques posés par RR FX gardent leur nom
 `RR FX · …` dans les deux langues.
 
-### Signal de fin, mode réduit, mises à jour
+### Démarrage, signal de fin, mises à jour
 
+- **Ouvrir RR FX au lancement de Premiere** (*Réglages › Démarrage et affichage*, coché par défaut) : le panneau
+  s'ouvre tout seul avec Premiere. Décoché, il ne s'ouvre plus qu'avec *Fenêtre › Extensions › RR FX* (pris en compte
+  au lancement suivant).
+- **Ton affichage s'enregistre tout seul** : onglets et outils masqués (menu ▦ Fenêtres) vont dans *Mon espace*, sans
+  rien enregistrer. **Réinitialiser l'affichage** (même section) réaffiche tout.
+- **Premier lancement** : la langue, l'accueil (et le compte Instagram de RR FX), puis RR FX propose d'installer ses
+  outils gratuits d'un coup (tous cochés, à décocher au besoin ; ou *Plus tard*).
 - Au-delà de 8 secondes (beaucoup de coupes, rampes), le bilan clignote et un petit son est joué (désactivable).
-- **▴ Réduire** ne garde que le crédit, le bouton principal et l'état. **▾ Réglages** réaffiche tout.
 - Au démarrage, RR FX vérifie sur GitHub (au plus toutes les 6 heures) si une nouvelle version est publiée et propose
   **Installer la mise à jour**, **Nouveautés** ou **Plus tard**. L'installation télécharge le pack, le vérifie en
   entier (ZIP intact, panneau complet, bon numéro de version), garde la version en place dans

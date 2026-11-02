@@ -84,8 +84,6 @@ body.scrubbing, body.scrubbing * { cursor: ew-resize !important; }
 .ig-icon { display: inline-flex; margin-right: 6px; }
 
 /* Mode réduit : seulement le crédit, le bouton principal et l'état. */
-.panel.compact .scroll, .panel.compact .tabs { display: none; }
-.panel.compact .header { border-bottom: none; }
 
 /* ---------- Boutons (sp-button / sp-action-button) ---------- */
 
@@ -678,3 +676,8 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .task-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-detail { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .task-row .progress-fill.busy { opacity: 0.35; animation: tool-bg-pulse 1.2s ease-in-out infinite; }
+
+/* Premier lancement : proposition des outils gratuits (2.13). */
+.offer-list { display: flex; flex-direction: column; gap: 6px; margin: 8px 0; max-height: 46vh; overflow-y: auto; }
+.offer-item .note { margin: 0 0 0 26px; }
+.offer-total { font-weight: 600; }

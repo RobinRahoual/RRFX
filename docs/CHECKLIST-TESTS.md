@@ -49,7 +49,7 @@ coche. Si ce n'est pas le cas, note-le avec le modèle en bas de page.
 - [ ] Espaces de travail : *Essentiel*, *Interview et YouTube*, *Réseaux sociaux*, *Clip et événement*, puis *Tout*
 - [ ] « Enregistrer cet espace… » : l'espace revient après avoir redémarré Premiere
 - [ ] Ctrl+K sur un outil masqué : il se réaffiche et le panneau y va
-- [ ] Mode réduit (*▴ Réduire*), puis thème clair de Premiere : tout reste lisible
+- [ ] Thème clair de Premiere : tout reste lisible
 
 ## 3. 🔴 Express
 
@@ -273,6 +273,15 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Une tâche qui finit pendant qu'une autre tourne : son résultat apparaît sur une ligne quelques secondes et dans le journal
 - [ ] *Annuler* (↶) et l'historique restent utilisables pendant une tâche
 - [ ] L'onglet s'appelle *Colorimétrie* (en anglais : *Color grading*)
+
+
+## 18. Démarrage et affichage (2.13)
+
+- [ ] 🔴 Ferme puis relance Premiere : RR FX s'ouvre tout seul ; décoche *Réglages › Démarrage et affichage › Ouvrir RR FX au lancement de Premiere*, relance : il ne s'ouvre plus (Fenêtre › Extensions › RR FX le rouvre)
+- [ ] 🔴 Premier lancement (réglages effacés) : langue, accueil, Instagram s'ouvre une fois, puis la fenêtre « Équipe RR FX » propose les outils (tous cochés) ; *Installer la sélection* les installe pendant que tu montes
+- [ ] Masque un outil (▦ Fenêtres) puis redémarre Premiere : il reste masqué, sans rien avoir enregistré (*Mon espace*)
+- [ ] *Réinitialiser l'affichage* : tous les onglets et outils réapparaissent
+- [ ] Le bouton *Réduire* n'existe plus en haut du panneau
 
 ---
 

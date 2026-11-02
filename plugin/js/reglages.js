@@ -12,6 +12,20 @@
 
     // ---------------------------------------------------------------- onglet Réglages
 
+    /* Ouverture avec Premiere : le manifeste du panneau installé porte (ou non) le bloc <StartOn>.
+       Remis d'accord avec le réglage à chaque démarrage (une mise à jour remplace le manifeste). */
+    function applyStartOn() {
+      try {
+        const dir = Host.extensionPath && Host.extensionPath(), I = window.RRFXInstaller;
+        if (!dir || !Store.fs || !I) return { ok: false, error: _T('Disponible dans Premiere.') };
+        const file = Store.path.join(dir, 'CSXS', 'manifest.xml'), xml = Store.fs.readFileSync(file, 'utf8');
+        const next = I.startOn(xml, settings().startWithPremiere !== false);
+        if (next !== xml) Store.fs.writeFileSync(file, next, 'utf8');
+        return { ok: true, changed: next !== xml };
+      } catch (e) { return { ok: false, error: _T('Manifeste non modifié : ') + errorMessage(e) }; }
+    }
+    app.whenReady.push(() => { if (!Host.demo) applyStartOn(); });
+
     function renderSettingsView() {
       const view = $('view-settings');
       view.innerHTML = '';
@@ -109,6 +123,30 @@
       // Signal de fin
       const test = h('button', { class: 'action quiet' }, _T('Tester le signal'));
       test.addEventListener('click', () => { status.finish('ok', _T('Test du signal de fin'), _T('Le bilan clignote et le son est joué (si activé).')); signalEnd(); });
+      // Démarrage et affichage : ouverture avec Premiere, espace de travail.
+      const resetLayout = h('button', { class: 'action' }, _T('Réinitialiser l\'affichage'));
+      resetLayout.addEventListener('click', () => {
+        const l = st.layout || {};
+        l.hidden = []; l.space = 'all'; delete l.mine;
+        st.layout = l; persist();
+        app.layoutChanged();
+        renderSettingsView();
+        status.finish('ok', _T('Affichage réinitialisé'), _T('Tous les onglets et tous les outils sont de nouveau affichés.'));
+      });
+      const winBtn = h('button', { class: 'action quiet' }, _T('Fenêtres…'));
+      winBtn.addEventListener('click', () => app.services.windows && app.services.windows());
+      const startSec = section(_T('Démarrage et affichage'), [
+        checkbox(_T('Ouvrir RR FX au lancement de Premiere'), st.startWithPremiere !== false, v => {
+          st.startWithPremiere = v; persist();
+          const r = applyStartOn();
+          status.finish(r.ok ? 'ok' : 'warn', v ? _T('RR FX s\'ouvrira avec Premiere') : _T('RR FX ne s\'ouvrira plus tout seul'), r.ok ? _T('Pris en compte au prochain lancement de Premiere.') : r.error);
+        }),
+        h('div', { class: 'note' }, _T('Ton affichage (onglets et outils masqués, menu Fenêtres) s\'enregistre tout seul.')),
+        h('div', { class: 'row-buttons' }, resetLayout, winBtn)
+      ]);
+      startSec.dataset.sec = 'demarrage';
+      view.appendChild(startSec);
+
       view.appendChild(section(_T('Signal de fin'), [
         checkbox(_T('Jouer un son à la fin'), st.endSound, v => { st.endSound = v; persist(); }),
         h('div', { class: 'note' }, _T('Pour les opérations de plus de 8 s (beaucoup de coupes, rampes) : le bilan clignote.')),
@@ -172,7 +210,7 @@
 
     // Réglages rangés par thème, avec un sommaire en haut (comme les onglets Parole et Formats).
     const SETTING_GROUPS = [
-      ['Général', [['lang', 'Langue · Language'], ['signal', 'Signal de fin'], ['confirm', 'Confirmations'], ['updates', 'Mises à jour']]],
+      ['Général', [['lang', 'Langue · Language'], ['demarrage', 'Démarrage et affichage'], ['signal', 'Signal de fin'], ['confirm', 'Confirmations'], ['updates', 'Mises à jour']]],
       ['Outils', [['outils', 'Outils gratuits et IA locale']]],
       ['Contrôle', [['shortcuts', 'Raccourcis clavier'], ['macros', 'Macros'], ['remote', 'Télécommande (Stream Deck, Companion…)']]],
       ['Temps', [['gagne', 'Temps gagné avec RR FX'], ['temps', 'Temps passé par projet'], ['astuces', 'Astuce du jour']]],

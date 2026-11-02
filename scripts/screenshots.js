@@ -199,13 +199,6 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   await close();
   await shot('reglages');
 
-  // 12. Mode réduit
-  await goTab('effects');
-  await page.click('#toggle-compact');
-  await page.waitForTimeout(300);
-  await page.screenshot({ path: path.join(out, String(++n).padStart(2, '0') + '-mode-reduit.png'), clip: { x: 0, y: 0, width: WIDTH, height: await page.evaluate(() => Math.ceil(document.getElementById('status').getBoundingClientRect().bottom) + 12) } });
-  await page.click('#toggle-compact');
-
   // 13. Thème clair (Premiere réglé en clair)
   await page.evaluate(() => { document.body.classList.add('theme-light'); document.body.classList.remove('theme-dark'); document.documentElement.style.setProperty('--bg', 'rgb(214,214,214)'); window.RRFXUI.css.reset(); });
   await goTab('assets');

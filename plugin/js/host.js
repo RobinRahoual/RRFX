@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const _T = (typeof self !== 'undefined' && self._T) || (s => s);
-  const VERSION = '2.12.0';
+  const VERSION = '2.13.0';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 
@@ -123,5 +123,8 @@
     try { cep.registerKeyEventsInterest(JSON.stringify(list)); } catch (e) { /* touches gardées par Premiere */ }
   }
 
-  root.RRFXHost = { VERSION, isMac, init, call, hostEnv, on, openURL, setMenu, registerKeys, copyText, demo: !cep };
+  // Dossier du panneau installé (vide hors de Premiere).
+  const extensionPath = () => (cep ? systemPath('extension') : '');
+
+  root.RRFXHost = { VERSION, isMac, init, call, hostEnv, on, openURL, setMenu, registerKeys, copyText, extensionPath, demo: !cep };
 })(typeof self !== 'undefined' ? self : this);

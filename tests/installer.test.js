@@ -78,3 +78,15 @@ test('installer-mac.sh: valid shell, downloads the pack name that package.js bui
   assert.ok(src.indexOf("'Installer RR FX (Mac).command'") > 0);
   assert.ok(fs.existsSync(path.join(__dirname, '..', 'install', 'Installer RR FX (Mac).command')));
 });
+
+test('startOn: the panel opens with Premiere (StartOn in the manifest), removable and idempotent', () => {
+  const xml = fs.readFileSync(path.join(__dirname, '..', 'plugin', 'CSXS', 'manifest.xml'), 'utf8');
+  assert.match(xml, /<StartOn>[\s\S]*ApplicationActivate[\s\S]*<\/StartOn>/, 'on by default');
+  const off = I.startOn(xml, false);
+  assert.ok(!/StartOn/.test(off) && /<AutoVisible>true<\/AutoVisible>/.test(off));
+  assert.strictEqual(I.startOn(off, false), off);
+  const on = I.startOn(off, true);
+  assert.match(on, /<AutoVisible>true<\/AutoVisible>\s*<StartOn>/);
+  assert.strictEqual(I.startOn(on, true), on);
+  assert.strictEqual((on.match(/<StartOn>/g) || []).length, 1);
+});

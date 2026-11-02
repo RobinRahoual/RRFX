@@ -45,7 +45,7 @@
   ];
   const DEFAULT_SETTINGS = {
     target: 'adjustment', placement: 'cut', side: 'both', vary: 'seed', adjNodeId: null, adjName: '', adjTemplate: '', registry: {},
-    tab: 'express', confirmRamp: true, confirmUndo: true, compact: false, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
+    tab: 'express', confirmRamp: true, confirmUndo: true, endSound: true, checkUpdates: true, shortcuts: null, copyLook: true,
     volumeFollow: false, volumeInfluence: 60, overlays: [], overlayBlend: 8, overlayBlendLearned: false, chain: { keys: [], order: 'cycle' }, sfx: 'none',
     ramp: { points: Core.RAMP_PRESETS.intoCut.points, frames: 12, placement: 'pre', segments: 10, anchor: 'auto', interp: 'keep', preset: 'intoCut' }
   };
@@ -619,18 +619,7 @@
     if (focus && tasks.indexOf(focus) >= 0) cancelTask(focus);
   }
 
-  // ---------------------------------------------------------------- mode réduit, menu, CTA
-
-  function applyCompact(compact) {
-    $('panel').classList.toggle('compact', compact);
-    $('toggle-compact').textContent = compact ? _T('▾ Réglages') : _T('▴ Réduire');
-  }
-  function toggleCompact() {
-    settings().compact = !settings().compact;
-    persist();
-    applyCompact(settings().compact);
-    setMenu();
-  }
+  // ---------------------------------------------------------------- menu, CTA
 
   function setMenu() {
     Host.setMenu([
@@ -650,10 +639,8 @@
       { id: 'history', label: _T('Historique des opérations…') },
       { id: 'clear', label: _T('Tout effacer (séquence)…') },
       { separator: true },
-      { id: 'compact', label: _T('Mode réduit'), checked: settings().compact },
       { id: 'instagram', label: _T('@robin.rahoual sur Instagram') }
     ], id => {
-      if (id === 'compact') return toggleCompact();
       if (id === 'instagram') return Host.openURL(INSTAGRAM_URL);
       if (id === 'clear') return clearAll({ scope: 'sequence', markers: true });
       if (id === 'autoFix') return app.actions.autoFix && app.actions.autoFix();
@@ -716,7 +703,7 @@
     Ly.GROUPS.forEach(g => {
       const tabs = Ly.visibleTabs(hidden, g);
       if (!tabs.length) return;
-      // Réglages : la roue, en haut à droite, à côté de « Réduire ».
+      // Réglages : la roue, en haut à droite.
       if (g.id === 'settings') { $('brand-tabs').innerHTML = ''; $('brand-tabs').appendChild(tabButton('settings', false)); return; }
       if (g.tabs.length === 1) { bar.appendChild(tabButton(tabs[0], false)); return; }
       const b = h('button', { class: 'tab tab-group', 'data-group': g.id, title: _T(g.title) }, _T(g.label));
@@ -847,7 +834,6 @@
   function bindHeader() {
     $('instagram').addEventListener('click', () => Host.openURL(INSTAGRAM_URL));
     app.services.openInstagram = () => Host.openURL(INSTAGRAM_URL);
-    $('toggle-compact').addEventListener('click', toggleCompact);
     $('cta').addEventListener('click', () => { const a = ctaAction(); if (a.enabled) a.run(); });
     $('undo').addEventListener('click', undoLast);
     $('history').addEventListener('click', showHistory);
@@ -971,7 +957,8 @@
     applyTheme();
     Host.on('com.adobe.csxs.events.ThemeColorChanged', applyTheme);
     bindHeader();
-    applyCompact(settings().compact);
+    // Le mode réduit (2.0 à 2.12) n'existe plus : la taille du panneau dépend de Premiere.
+    if (settings().compact) { delete settings().compact; persist(); }
     (window.RRFXPanels || []).forEach(panel => panel(core));
     app.itemTypes = core.ITEM_TYPES;
     app.importers = core.importers;
