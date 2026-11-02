@@ -282,6 +282,8 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Masque un outil (▦ Fenêtres) puis redémarre Premiere : il reste masqué, sans rien avoir enregistré (*Mon espace*)
 - [ ] *Réinitialiser l'affichage* : tous les onglets et outils réapparaissent
 - [ ] Le bouton *Réduire* n'existe plus en haut du panneau
+- [ ] 🔴 Dans un projet **avec** un calque de réglage : `Documents/RRFX/Modele calque de reglage.prproj` apparaît (journal : « gardé comme modèle »), aucune séquence en plus dans le projet
+- [ ] 🔴 Puis dans un **nouveau projet vide** : glisser un effet sur la timeline : le calque de réglage est ajouté tout seul, l'effet posé dessus (`RR FX · …`)
 
 ---
 

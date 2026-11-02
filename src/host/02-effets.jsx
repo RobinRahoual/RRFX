@@ -171,7 +171,7 @@
             // Debut d'un lot : on reverifie que le calque de reglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
             adj = findAdjustment(o.adjNodeId);
-            if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage (ou choisis un projet mod\u00e8le dans R\u00e9glages > Calques : RR FX l\'ajoutera tout seul).');
+            if (!adj) return fail(NO_ADJ);
         }
         for (i = 0; i < o.targets.length; i++) {
             t = o.targets[i];
@@ -205,7 +205,7 @@
                     // Calque de reglage supprime du projet depuis : on le recherche une fois.
                     adjCache = null;
                     adj = findAdjustment(o.adjNodeId);
-                    if (!adj) return fail('Le calque de r\u00e9glage a disparu du projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.', { created: created, warnings: warnings });
+                    if (!adj) return fail(NO_ADJ, { created: created, warnings: warnings });
                     placed = placeAdjustment(s, adj, t.track + 1, t.start, t.end, label, warnings);
                 }
                 track = placed.track;
@@ -432,10 +432,12 @@
     }
 
     // Projet modele contenant un calque de reglage (chemin vide : aucun).
+    // o.auto : modele fabrique par RR FX (le fichier n'existe pas forcement encore).
     function setAdjTemplate(o) {
         adjTemplate = String((o && o.path) || '');
-        if (adjTemplate && !(new File(adjTemplate)).exists) return fail('Projet mod\u00e8le introuvable : ' + adjTemplate);
-        return ok({ path: adjTemplate });
+        adjAuto = !!(o && o.auto);
+        if (adjTemplate && !adjAuto && !(new File(adjTemplate)).exists) return fail('Projet mod\u00e8le introuvable : ' + adjTemplate);
+        return ok({ path: adjTemplate, exists: !!adjTemplate && (new File(adjTemplate)).exists });
     }
 
     // Effet glisse depuis le panneau : Premiere a pose le fichier porteur (o.tag dans son nom) a

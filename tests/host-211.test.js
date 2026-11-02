@@ -47,7 +47,7 @@ test('adjustment layer missing: imported from the template project, refused if t
   env.root.children.splice(env.root.children.indexOf(env.adj), 1);
   const r = env.call('resolve', { placement: 'playhead', at: 100 * env.F, sides: ['post'], frames: 8, target: 'adjustment' });
   const go = () => env.call('apply', { target: 'adjustment', name: 'RR FX · Test', refreshAdj: true, targets: r.targets.map(t => Object.assign({}, t, { fx: [] })) });
-  assert.match(go().error, /projet mod/);
+  assert.match(go().error, /une seule fois/);
   assert.match(env.call('setAdjTemplate', { path: '/modeles/Calque.prproj' }).error, /introuvable/);
   env.disk.add('/modeles/Calque.prproj');
   assert.ok(env.call('setAdjTemplate', { path: '/modeles/Calque.prproj' }).ok);
@@ -67,4 +67,24 @@ test('resolve strict: only the selected clips (gradient on a text), never the cl
   assert.ok(s.ok, s.error);
   assert.deepStrictEqual(s.targets.map(t => t.clipStart / env.F), [250]);
   env.v[1].setSelected(false);
+});
+
+test('adjustment layer template built by RR FX: first seen → exported as a project, then imported where missing', () => {
+  const env = setup();
+  const tpl = '/docs/RRFX/Modele calque de reglage.prproj';
+  assert.ok(env.call('setAdjTemplate', { path: tpl, auto: true }).ok, 'auto: the file does not exist yet');
+  const before = env.ctx.app.project.sequences.length;
+  assert.ok(env.call('adjustmentInfo', {}).found);
+  assert.ok(env.disk.has(tpl), 'template written');
+  assert.strictEqual(JSON.stringify(env.exports.map(e => e.items)), JSON.stringify([['Calque de réglage']]));
+  assert.strictEqual(env.ctx.app.project.sequences.length, before, 'temporary sequence deleted');
+  assert.strictEqual(env.ctx.app.project.activeSequence.sequenceID, env.seq.sequenceID, 'original sequence still open');
+  env.call('adjustmentInfo', {});
+  assert.strictEqual(env.exports.length, 1, 'made once');
+  // Un autre projet sans calque de réglage : le modèle est importé tout seul.
+  env.root.children.splice(env.root.children.indexOf(env.adj), 1);
+  const r = env.call('resolve', { placement: 'playhead', at: 100 * env.F, sides: ['post'], frames: 8, target: 'adjustment' });
+  const a = env.call('apply', { target: 'adjustment', name: 'RR FX · Test', refreshAdj: true, targets: r.targets.map(t => Object.assign({}, t, { fx: [] })) });
+  assert.ok(a.ok, a.error);
+  assert.deepStrictEqual(env.imports.map(i => i.paths[0]), [tpl]);
 });

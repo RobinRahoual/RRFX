@@ -981,9 +981,8 @@ Le script **copie** RR FX dans le dossier des extensions Adobe (`%APPDATA%\Adobe
 Windows, `~/Library/Application Support/Adobe/CEP/extensions/RRFX` sur Mac). Le dossier téléchargé ne sert plus
 ensuite : tu peux le supprimer, RR FX reste installé.
 
-> **Une seule chose à faire par projet** : crée un calque de réglage (*Fichier > Nouveau > Calque de réglage*).
-> RR FX le retrouve tout seul. Ou une fois pour toutes : un petit projet avec seulement un calque de réglage, choisi
-> dans *Réglages › Calques › Projet modèle* : RR FX l'importe là où il en manque.
+> **Une seule chose à faire, une seule fois** : crée un calque de réglage (*Fichier > Nouveau > Calque de réglage*).
+> RR FX le garde comme modèle et l'ajoute ensuite tout seul dans tous tes projets.
 
 <p align="center">
   <a href="https://github.com/RobinRahoual/RRFX/releases/latest"><img src="https://img.shields.io/github/v/release/RobinRahoual/RRFX?label=T%C3%A9l%C3%A9charger%20gratuitement&style=for-the-badge&color=2680eb" alt="Télécharger RR FX gratuitement"></a>

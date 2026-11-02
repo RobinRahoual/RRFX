@@ -30,10 +30,10 @@ Le script copie le panneau dans le dossier des extensions Adobe et autorise les 
 dans le bandeau du panneau (ou relance le script de la nouvelle version) ; tes effets perso sont gardés. Pour désinstaller : supprime le dossier `RRFX` de
 `%APPDATA%\Adobe\CEP\extensions` (Windows) ou `~/Library/Application Support/Adobe/CEP/extensions` (Mac).
 
-**Il faut un calque de réglage dans le projet** (une fois par projet) : *Fichier > Nouveau > Calque de réglage*.
-RR FX le retrouve tout seul. Pour ne plus y penser : crée une fois un petit projet qui ne contient qu'un calque de
-réglage, enregistre-le, puis choisis-le dans *Réglages › Calques › Choisir un projet modèle…*. RR FX importe son calque
-de réglage dans chaque projet qui n'en a pas (Premiere ne permet pas d'en créer un par script).
+**Un calque de réglage, une seule fois** : Premiere ne laisse pas un plugin en créer un. Crée-en un une fois, dans
+n'importe quel projet (*Fichier > Nouveau > Calque de réglage*) : RR FX le garde comme modèle
+(`Documents/RRFX/Modele calque de reglage.prproj`) et l'ajoute ensuite tout seul dans chaque projet qui n'en a pas.
+Tu peux aussi choisir ton propre projet modèle (*Réglages › Calques › Choisir un projet modèle…*).
 
 ## Le panneau
 

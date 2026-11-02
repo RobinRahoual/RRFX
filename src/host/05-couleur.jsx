@@ -126,7 +126,7 @@
         var G = GRADES[o.layer] || GRADES.conversion, over = overlayIds(), adj, i, j, k, g, m, list, it, top, ti, before, placed, comp, err, kind, a, b;
         adjCache = null;
         adj = findAdjustment(o.adjNodeId);
-        if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.');
+        if (!adj) return fail(NO_ADJ);
         for (k = 0; k < o.groups.length; k++) {
             g = o.groups[k];
             m = mergeSpans(g.spans.slice(0), f);

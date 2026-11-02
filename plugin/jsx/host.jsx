@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.13.0';
+    var VERSION = '2.13.1';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -282,14 +282,43 @@ var RRFX = (function () {
         return pi.type === 1 && ADJ_NAME.test(pi.name);
     }
 
-    // ExtendScript ne sait pas creer de calque de reglage : un projet modele (.prproj) qui en
-    // contient un est importe dans le projet qui n'en a pas (Reglages > Calque de reglage).
-    var adjTemplate = '';
+    // ExtendScript ne sait pas creer de calque de reglage. Un projet modele (.prproj) qui en contient
+    // un est donc importe dans le projet qui n'en a pas. Ce modele, RR FX le fabrique tout seul (adjAuto)
+    // la premiere fois qu'il voit un calque de reglage : une sequence avec seulement ce calque,
+    // exportee comme projet (Sequence.exportAsProject), puis supprimee. Ou celui choisi dans les Reglages.
+    var adjTemplate = '', adjAuto = false;
+    var NO_ADJ = 'Premiere ne laisse pas un plugin cr\u00e9er un calque de r\u00e9glage : cr\u00e9e-en un une seule fois (Fichier > Nouveau > Calque de r\u00e9glage), puis recommence. RR FX le garde ensuite comme mod\u00e8le et l\'ajoute tout seul dans tous tes projets.';
+    var TPL_SEQ = 'RR FX \u00b7 mod\u00e8le du calque';
+
+    function dropTemplateSeqs() {
+        var P = app.project, i, q;
+        for (i = P.sequences.numSequences - 1; i >= 0; i--) {
+            q = P.sequences[i];
+            if (q && q.name === TPL_SEQ) { try { P.deleteSequence(q); } catch (e) {} }
+        }
+    }
+
+    function makeAdjTemplate(adj) {
+        var P = app.project, prev = P.activeSequence, ns = null, f;
+        if (!adjAuto || !adjTemplate || !adj || !P.createNewSequenceFromClips) return false;
+        f = new File(adjTemplate);
+        if (f.exists) return true;
+        try {
+            if (f.parent && !f.parent.exists) f.parent.create();
+            ns = P.createNewSequenceFromClips(TPL_SEQ, [adj], P.rootItem);
+            if (ns && ns.exportAsProject) ns.exportAsProject(f.fsName);
+        } catch (e) {}
+        dropTemplateSeqs();
+        try { if (prev) showSeq(prev); } catch (e2) {}
+        return (new File(adjTemplate)).exists;
+    }
 
     function importAdjTemplate() {
         var f = adjTemplate ? new File(adjTemplate) : null;
         if (!f || !f.exists) return null;
         try { app.project.importFiles([f.fsName], true, app.project.rootItem, false); } catch (e) { return null; }
+        // La sequence du modele vient avec : seul le calque de reglage reste.
+        dropTemplateSeqs();
         return walk(app.project.rootItem, isAdjustment);
     }
 
@@ -300,7 +329,8 @@ var RRFX = (function () {
         var root = app.project.rootItem, found = null;
         if (nodeId) found = walk(root, function (c) { return c.nodeId === nodeId; });
         if (!found) found = walk(root, isAdjustment);
-        if (!found) found = importAdjTemplate();
+        if (found) makeAdjTemplate(found);
+        else found = importAdjTemplate();
         adjCache = found;
         return found;
     }
@@ -828,7 +858,7 @@ var RRFX = (function () {
             // Debut d'un lot : on reverifie que le calque de reglage est toujours dans le projet.
             if (o.refreshAdj) adjCache = null;
             adj = findAdjustment(o.adjNodeId);
-            if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage (ou choisis un projet mod\u00e8le dans R\u00e9glages > Calques : RR FX l\'ajoutera tout seul).');
+            if (!adj) return fail(NO_ADJ);
         }
         for (i = 0; i < o.targets.length; i++) {
             t = o.targets[i];
@@ -862,7 +892,7 @@ var RRFX = (function () {
                     // Calque de reglage supprime du projet depuis : on le recherche une fois.
                     adjCache = null;
                     adj = findAdjustment(o.adjNodeId);
-                    if (!adj) return fail('Le calque de r\u00e9glage a disparu du projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.', { created: created, warnings: warnings });
+                    if (!adj) return fail(NO_ADJ, { created: created, warnings: warnings });
                     placed = placeAdjustment(s, adj, t.track + 1, t.start, t.end, label, warnings);
                 }
                 track = placed.track;
@@ -1089,10 +1119,12 @@ var RRFX = (function () {
     }
 
     // Projet modele contenant un calque de reglage (chemin vide : aucun).
+    // o.auto : modele fabrique par RR FX (le fichier n'existe pas forcement encore).
     function setAdjTemplate(o) {
         adjTemplate = String((o && o.path) || '');
-        if (adjTemplate && !(new File(adjTemplate)).exists) return fail('Projet mod\u00e8le introuvable : ' + adjTemplate);
-        return ok({ path: adjTemplate });
+        adjAuto = !!(o && o.auto);
+        if (adjTemplate && !adjAuto && !(new File(adjTemplate)).exists) return fail('Projet mod\u00e8le introuvable : ' + adjTemplate);
+        return ok({ path: adjTemplate, exists: !!adjTemplate && (new File(adjTemplate)).exists });
     }
 
     // Effet glisse depuis le panneau : Premiere a pose le fichier porteur (o.tag dans son nom) a
@@ -1910,7 +1942,7 @@ var RRFX = (function () {
         var G = GRADES[o.layer] || GRADES.conversion, over = overlayIds(), adj, i, j, k, g, m, list, it, top, ti, before, placed, comp, err, kind, a, b;
         adjCache = null;
         adj = findAdjustment(o.adjNodeId);
-        if (!adj) return fail('Aucun calque de r\u00e9glage dans le projet. Cr\u00e9e-en un : Fichier > Nouveau > Calque de r\u00e9glage.');
+        if (!adj) return fail(NO_ADJ);
         for (k = 0; k < o.groups.length; k++) {
             g = o.groups[k];
             m = mergeSpans(g.spans.slice(0), f);

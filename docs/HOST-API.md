@@ -15,7 +15,7 @@ comportement attendu de chacune.
 | Fonction | Rôle |
 |---|---|
 | `compat` | What this Premiere offers. Required = without it nothing works. |
-| `setAdjTemplate` | Projet modele contenant un calque de reglage (chemin vide : aucun). |
+| `setAdjTemplate` | Projet modele contenant un calque de reglage (chemin vide : aucun). o.auto : modele fabrique par RR FX (le fichier n'existe pas forcement encore). |
 | `takeDrop` | Effet glisse depuis le panneau : Premiere a pose le fichier porteur (o.tag dans son nom) a l'endroit lache. On note ou, on le retire (et son element du projet), le panneau pose l'effet la. |
 | `markerList` | Les marqueurs de la séquence, la tête de lecture et la plage sélectionnée (secondes). |
 | `addMarkers` | Pose des marqueurs aux temps donnes (secondes de sequence), nommes " RR FX . ... ". |

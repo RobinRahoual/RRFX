@@ -911,6 +911,12 @@
   /* Calque de réglage « name » portant fx, sur le clip visé ou toute la séquence (scope) : pose,
      ↶ Annuler (history) et avertissements au journal. → { res } (res.kind : ok ou warn), ou
      { fail } : le résultat de tâche à rendre tel quel. */
+  // Modèle de calque de réglage : celui choisi dans les Réglages, sinon celui que RR FX fabrique.
+  app.services.adjTemplate = () => {
+    const own = settings().adjTemplate;
+    if (own) return { path: own, auto: false };
+    return Store.fs && Store.dir ? { path: Store.path.join(Store.dir, 'Modele calque de reglage.prproj'), auto: true } : null;
+  };
   app.services.adjustmentLayer = async (name, fx, o) => {
     const scope = (o && o.scope) || 'clip';
     const r = await Host.call('resolve', { placement: scope === 'sequence' ? 'sequence' : 'full', sides: ['post'], frames: 1, target: 'adjustment' });
@@ -990,7 +996,15 @@
       if (c.app) log('Premiere ' + c.app, 'info');
     }
     await detectEffects(false);
-    if (settings().adjTemplate) Host.call('setAdjTemplate', { path: settings().adjTemplate }).then(r => { if (!r.ok) log(r.error, 'warn'); });
+    // Calque de réglage : le modèle (choisi, ou fabriqué par RR FX dès qu'il en voit un) est importé
+    // tout seul dans les projets qui n'en ont pas.
+    const tpl = app.services.adjTemplate();
+    if (tpl && !S.demo) {
+      Host.call('setAdjTemplate', tpl).then(r => {
+        if (!r.ok) return log(r.error, 'warn');
+        if (tpl.auto && !r.exists) Host.call('adjustmentInfo', {}).then(i => { if (i.ok && i.found) log(_T('Calque de réglage gardé comme modèle : RR FX l\'ajoutera tout seul dans tes autres projets.'), 'ok'); });
+      });
+    }
     registerKeys();
     setMenu();
     await refreshContext();

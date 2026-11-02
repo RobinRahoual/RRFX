@@ -255,6 +255,12 @@ function makeEnv(fps) {
   const sequences = coll([seq]);
   Object.defineProperty(sequences, 'numSequences', { get: () => sequences.length });
   project.sequences = sequences;
+  // Séquence faite de clips (ici : vide, nommée) ; exportée comme projet = un fichier sur le disque.
+  project.createNewSequenceFromClips = (name, items) => {
+    const sq = { name, sequenceID: 'seq-' + nid(), _items: items, exportAsProject(p) { disk.add(String(p)); exports.push({ path: String(p), items: items.map(i => i.name) }); return 0; } };
+    sequences.push(sq);
+    return sq;
+  };
   project.deleteSequence = sq => { const i = sequences.indexOf(sq); if (i < 0) return false; sequences.splice(i, 1); return true; };
   project.openSequence = id => { const f = sequences.find(x => x.sequenceID === id); if (f) active = f; return !!f; };
 
@@ -389,7 +395,7 @@ function makeEnv(fps) {
   const app = { project, encoder, setEnableProxies(v) { proxiesOn = v; return true; }, getEnableProxies() { return proxiesOn; }, version: '25.6.0', path: '/Applications/Adobe Premiere Pro 2025', enableQE() {}, getCurrentProjectViewSelection() { return projectSelection || [adj]; } };
 
   // Fichiers sur le disque vus par ExtendScript (new File(p).exists).
-  const disk = new Set();
+  const disk = new Set(), exports = [];
   class File { constructor(p) { this.fsName = String(p); } get exists() { return disk.has(this.fsName); } }
   const ctx = vm.createContext({ app, qe, Time, Folder, File });
   vm.runInContext(fs.readFileSync(require('path').join(__dirname, '..', 'plugin', 'jsx', 'host.jsx'), 'utf8'), ctx);
@@ -400,7 +406,7 @@ function makeEnv(fps) {
     it.components = coll([comp('Internal Volume Stereo', 'Volume', [false, Math.pow(10, -15 / 20)], it)]);
     return it;
   };
-  return { ctx, encoder, folders, disk, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, encoder, folders, disk, exports, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };
