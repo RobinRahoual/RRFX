@@ -1,4 +1,4 @@
-/* RR FX : correction des plans (onglet Couleur). Exposition et balance des blancs auto de
+/* RR FX : correction des plans (onglet Colorimétrie). Exposition et balance des blancs auto de
    chaque plan, et raccord d'une caméra sur une autre à partir d'une image de référence.
    RR FX exporte des images « propres » de la timeline (sans looks ni titres), les analyse,
    fabrique une LUT par plan (ou une pour le raccord) et la charge dans un calque Lumetri posé

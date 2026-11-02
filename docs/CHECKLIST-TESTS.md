@@ -256,13 +256,23 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Pendant une installation d'outils (Réglages › Outils gratuits) : glisser et double-cliquer un effet marche, l'avancement de l'installation reste affiché dans la section des outils
 - [ ] Glisser une vignette dans le panneau Projet : message « Lâche l'effet sur une piste », le fichier glissé est retiré du projet
 - [ ] 🔴 *Réglages › Calques › Choisir un projet modèle…* (un petit projet avec seulement un calque de réglage) ; dans un projet **sans** calque de réglage, *Appliquer* : le calque est importé tout seul, l'effet est posé
-- [ ] 🔴 *Couleur* sans clip sélectionné : réglages grisés, message, bouton *Appliquer* inactif ; sélectionne un plan : tout se réactive (en 2 s)
-- [ ] *Couleur* : *Régler toute la séquence* dans le message déverrouille sans sélection
+- [ ] 🔴 *Colorimétrie* sans clip sélectionné : réglages grisés, message, bouton *Appliquer* inactif ; sélectionne un plan : tout se réactive (en 2 s)
+- [ ] *Colorimétrie* : *Régler toute la séquence* dans le message déverrouille sans sélection
 - [ ] 🔴 *Textes › Dégradé sur un texte ou une forme* : un texte sélectionné, *Appliquer le dégradé* : seules les lettres prennent le dégradé ; sans sélection : message « Aucun texte sélectionné »
-- [ ] *Couleur* : un plan sélectionné pendant un téléchargement d'outil ou de modèle : les réglages se dégrisent
+- [ ] *Colorimétrie* : un plan sélectionné pendant un téléchargement d'outil ou de modèle : les réglages se dégrisent
 - [ ] *Réglages › Outils gratuits* : coche 2 outils (ou *Tout cocher*), *Installer la sélection* : ils s'installent l'un après l'autre, le bilan liste les échecs éventuels ; *Arrêter* au milieu : rien de cassé
 - [ ] *Désinstaller* un outil (fichier, Python, et Ollama lancé) : il repasse à « non installé », ses fichiers ont disparu de Documents/RRFX/Outils
 - [ ] Installateur Windows et Mac : le message final indique le dossier des extensions Adobe ; supprimer ensuite le dossier téléchargé ne retire pas RR FX
+
+
+## 17. Plusieurs actions à la fois (2.12)
+
+- [ ] 🔴 Lance un téléchargement long (outil ou modèle) puis applique un effet : l'effet est posé tout de suite, le téléchargement continue sur sa ligne sous le bloc d'état
+- [ ] 🔴 Pendant une transcription ou un traitement IA (Débruiter, Séparer…) : appliquer un look, couper les silences, poser un texte marchent
+- [ ] *Arrêter* sur la ligne d'une tâche n'arrête que celle-là ; *Arrêter* du bloc d'état n'arrête que la tâche qu'il montre
+- [ ] Une tâche qui finit pendant qu'une autre tourne : son résultat apparaît sur une ligne quelques secondes et dans le journal
+- [ ] *Annuler* (↶) et l'historique restent utilisables pendant une tâche
+- [ ] L'onglet s'appelle *Colorimétrie* (en anglais : *Color grading*)
 
 ---
 

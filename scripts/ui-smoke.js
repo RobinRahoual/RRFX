@@ -428,7 +428,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/2 éléments/.test(t) || !/2 couleurs|2 éléments dans Mes couleurs/.test(t)) throw new Error('détail : ' + t);
     await page.waitForSelector('.list-item:has-text("Style reçu")', { timeout: 2000 });
     await page.click('.list-item:has-text("Dégradé reçu") .action:text-is("Ouvrir")');
-    await page.waitForSelector('.tab.on[data-tab=color]', { timeout: 3000 });
+    await page.waitForSelector('.tab.on[data-tab=titles]', { timeout: 3000 });
   });
   await step('clip express', async () => {
     await goTab('express');
@@ -733,14 +733,27 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const pl = await page.evaluate(() => window.RRFXApp.settings().placement);
     if (pl === 'playhead') throw new Error('le double-clic ne doit pas changer le réglage « Position »');
   });
-  await step('2.11.1 : double-clic pendant une autre tâche, posé à sa fin', async () => {
+  // 2.12 : plusieurs tâches à la fois. Une longue tâche (téléchargement…) tourne sur sa ligne ;
+  // un effet s'applique pendant ce temps ; Arrêter sur la ligne arrête seulement la longue.
+  await step('2.12 : tâches en même temps, rien ne bloque', async () => {
     await goTab('effects');
-    await page.evaluate(() => { window.RRFXApp.S.busy = true; });
+    await page.evaluate(() => {
+      const A = window.RRFXApp;
+      window.__long = A.runTask('Téléchargement test', async () => {
+        A.status.phase('Téléchargement');
+        for (let i = 0; i < 60; i++) { if (A.S.cancel) return { kind: 'warn', title: 'Long arrêté' }; A.status.progress(i, 60, 'fichier'); await new Promise(r => setTimeout(r, 100)); }
+        return { kind: 'ok', title: 'Long fini' };
+      }, true);
+    });
+    await page.waitForSelector('#status.running:has-text("Téléchargement test")');
     await page.dblclick('#view-effects .card[data-key]');
-    await page.waitForTimeout(600);
-    await page.evaluate(() => { window.RRFXApp.S.busy = false; });
-    await page.waitForFunction(() => /posé à la fin de la tâche en cours/.test(document.getElementById('log') ? document.getElementById('log').textContent : document.body.textContent), null, { timeout: 4000 }).catch(() => {});
-    await page.waitForSelector('#status.ok', { timeout: 8000 });
+    await page.waitForSelector('#status.ok:has-text("appliqué")', { timeout: 8000 });
+    await page.waitForSelector('#tasks .task-row:has-text("Téléchargement test")', { timeout: 2000 });
+    await page.click('#tasks .task-row:has-text("Téléchargement test") .action:has-text("Arrêter")');
+    const r = await page.evaluate(() => window.__long);
+    if (!r || r.title !== 'Long arrêté') throw new Error('arrêt de la longue tâche : ' + JSON.stringify(r));
+    // Résultat dans le bloc d'état (libre) ou sur une ligne (une autre tâche l'occupe).
+    await page.waitForSelector('#status:has-text("Long arrêté"), #tasks .task-row.done:has-text("Long arrêté")', { timeout: 3000 });
   });
   await step('2.11 : couleur verrouillée sans plan sélectionné', async () => {
     await goTab('color');

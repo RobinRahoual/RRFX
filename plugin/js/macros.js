@@ -37,12 +37,13 @@
       app.S.shortcuts = Keys.withDefaults(app.settings().shortcuts || app.S.shortcuts);
     }
 
-    const idle = () => new Promise(resolve => { const t = setInterval(() => { if (!app.S.busy) { clearInterval(t); resolve(); } }, 120); });
+    // Entre deux étapes : un court temps, le temps que Premiere prenne la main (chaque étape est attendue).
+    const idle = () => new Promise(resolve => setTimeout(resolve, 150));
 
     let running = false;
     async function run(id) {
       const m = list().find(q => q.id === id);
-      if (!m || running || app.S.busy) return;
+      if (!m || running) return;
       running = true;
       const t0 = Date.now();
       let done = 0, failed = null;

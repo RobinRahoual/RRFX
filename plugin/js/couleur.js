@@ -1,4 +1,4 @@
-/* RR FX : onglet Couleur : la colorimétrie comme dans Lightroom (module Développement).
+/* RR FX : onglet Colorimétrie : la colorimétrie comme dans Lightroom (module Développement).
    Histogramme, avant/après, looks, Réglages de base, Courbe des tonalités, Mélangeur de
    couleurs, Étalonnage des couleurs, Calibrage. Le look part dans Premiere en LUT .cube sur
    un calque de réglage Lumetri, ou s'exporte en .cube et en DCTL (DaVinci Resolve). */
@@ -582,7 +582,7 @@
           actionGroup([{ v: 'A', label: _T('Plan 1') }, { v: 'B', label: _T('Plan 2') }], s.shot, v => { s.shot = v; V.src = null; app.persist(); update(true); }),
           realBtn)));
       // Sommaire collant : un clic amène au panneau (et l'ouvre).
-      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Panneaux de l\'onglet Couleur') });
+      const nav = h('div', { class: 'sec-nav', role: 'navigation', 'aria-label': _T('Panneaux de l\'onglet Colorimétrie') });
       view.appendChild(nav);
       const all = h('button', { class: 'action quiet' }, _T('Régler toute la séquence'));
       all.addEventListener('click', () => { st().target = 'sequence'; app.persist(); render(); });

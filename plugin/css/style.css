@@ -667,3 +667,14 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .tool-bg-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }
 .tool-bg-fill.busy { opacity: 0.5; animation: tool-bg-pulse 1.2s ease-in-out infinite; }
 @keyframes tool-bg-pulse { 50% { opacity: 0.2; } }
+
+/* Tâches en cours en même temps (2.12) : une ligne par tâche sous le bloc d'état. */
+.tasks { margin: 4px 0 6px; display: flex; flex-direction: column; gap: 4px; }
+.task-row { padding: 5px 8px; border-left: 3px solid var(--accent); border-radius: 4px; background: var(--field); }
+.task-row.done.ok { border-left-color: var(--ok, #3fb950); }
+.task-row.done.warn { border-left-color: var(--warn); }
+.task-row.done.error { border-left-color: var(--danger, #e5534b); }
+.task-head { display: flex; align-items: center; justify-content: space-between; gap: 6px; }
+.task-title { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-detail { font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.task-row .progress-fill.busy { opacity: 0.35; animation: tool-bg-pulse 1.2s ease-in-out infinite; }

@@ -51,7 +51,7 @@
       if (!http) { state = _T('Disponible dans Premiere (mode démo ici).'); return; }
       const x = st();
       server = http.createServer((req, res) => {
-        const r = answer(req.url, x.token, app.S.busy, id => setTimeout(() => app.services.runAction(id), 0));
+        const r = answer(req.url, x.token, false, id => setTimeout(() => app.services.runAction(id), 0));
         res.writeHead(r.code, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store' });
         res.end(JSON.stringify(r.body));
         if (r.code === 202) app.log(_T('Télécommande : ') + r.body.label, 'info');

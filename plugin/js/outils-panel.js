@@ -37,17 +37,9 @@
     // Outil lancé par un script de RR FX : prêt quand son environnement a été préparé (fichier témoin).
     const marker = t => Store.path.join(venvDir(t.venv), 'rrfx-' + t.id + '.ok');
     // Une tâche RR FX peut être arrêtée : chaque attente le vérifie.
-    // Installations en arrière-plan (bg) : RR FX reste utilisable pendant ce temps (effets, couleur,
-    // glisser-déposer…). Leur avancement, leur arrêt et leurs commandes passent par bg, pas par le
-    // bloc d'état ; les fonctions qui ont besoin d'un outil attendent la fin (need).
-    const bg = { running: false, cancel: false, onCancel: null, label: '', phase: '', text: '', pct: -1 };
-    const ctl = () => (bg.running ? bg : app.S);
-    const bgStatus = {
-      phase: t => { bg.phase = t; bg.text = t + '…'; bg.pct = -1; drawBg(); },
-      progress: (d, n, name) => { bg.pct = n > 0 ? Math.min(1, d / n) : -1; bg.text = (bg.phase || bg.label) + (name ? ' · ' + name : ''); drawBg(); },
-      finish: () => {}
-    };
-    const stat = () => (bg.running ? bgStatus : app.status);
+    // Chaque tâche a son avancement et son arrêt (main.js : plusieurs tâches à la fois).
+    const stat = () => app.status;
+    const ctl = () => app.S;
     const stopped = () => { if (ctl().cancel) throw new Error(_T('Arrêté')); };
     // Une erreur qui finit la tâche en avertissement (pas en échec).
     const warn = (title, detail) => Object.assign(new Error(detail || title), { result: { kind: 'warn', title, detail } });
@@ -343,51 +335,8 @@
       if (id === 'ollama') await ollamaStart();
       return exe;
     }
-    // Une installation (ou désinstallation) en arrière-plan à la fois ; le résultat va dans le journal,
-    // et dans le bloc d'état s'il est libre.
-    async function runBg(label, fn) {
-      if (!Store.fs) return app.status.finish('warn', _T('Disponible dans Premiere'), _T('Les outils s\'installent depuis Premiere.'));
-      if (bg.running) return app.status.finish('warn', _T('Une installation est déjà en cours'), bg.label + _T(' : attends sa fin (Réglages › Outils gratuits).'));
-      Object.assign(bg, { running: true, cancel: false, onCancel: null, label, phase: '', text: _T('Démarrage…'), pct: -1 });
-      app.log(label, 'info');
-      refreshSection();
-      let res;
-      try { res = (await fn()) || { kind: 'ok', title: label }; } catch (e) {
-        res = e.result || (bg.cancel ? { kind: 'warn', title: _T('Arrêté'), detail: label } : { kind: 'error', title: label, detail: app.errorMessage(e) });
-      }
-      bg.running = false;
-      bg.onCancel = null;
-      app.log(res.title + (res.detail ? ' · ' + res.detail : ''), res.kind === 'ok' ? 'ok' : res.kind === 'error' ? 'error' : 'warn');
-      if (!app.S.busy) app.status.finish(res.kind, res.title, res.detail);
-      refreshSection();
-      return res;
-    }
-    function stopBg() {
-      bg.cancel = true;
-      bg.text = _T('Arrêt…');
-      drawBg();
-      if (bg.onCancel) { try { bg.onCancel(); } catch (e) { /* déjà fini */ } }
-    }
-    // Avancement de l'installation en cours, en haut de la section des outils.
-    let bgEl = null;
-    function bgBox() {
-      if (!bg.running) return (bgEl = null);
-      const stop = h('button', { class: 'action quiet' }, _T('Arrêter'));
-      stop.addEventListener('click', stopBg);
-      bgEl = h('div', { class: 'tool-bg' },
-        h('div', { class: 'tool-bg-head' }, h('strong', null, bg.label), stop),
-        h('div', { class: 'progress' }, h('div', { class: 'tool-bg-fill' })),
-        h('div', { class: 'note tool-bg-text' }, _T('Tu peux continuer à utiliser RR FX pendant ce temps.')));
-      drawBg();
-      return bgEl;
-    }
-    function drawBg() {
-      if (!bgEl || !bgEl.isConnected) return;
-      const fill = bgEl.querySelector('.tool-bg-fill');
-      fill.style.width = bg.pct >= 0 ? Math.round(bg.pct * 100) + '%' : '100%';
-      fill.classList.toggle('busy', bg.pct < 0);
-      bgEl.querySelector('.tool-bg-text').textContent = bg.text || '';
-    }
+    // Installation, désinstallation : des tâches comme les autres, qui ne bloquent rien.
+    const runBg = (label, fn) => app.runTask(label, fn, true).then(r => { refreshSection(); return r; });
 
     const install = id => runBg(_T('Installation de ') + Lb.byId(id).name, async () => {
       const exe = await installCore(id);
@@ -432,9 +381,6 @@
 
     // Dans une tâche : l'outil, ou la proposition de l'installer tout de suite.
     async function need(id, why) {
-      // Pendant une installation en arrière-plan, les outils attendent : elle passerait ses
-      // commandes et son arrêt avec les leurs.
-      if (bg.running) throw warn(_T('Installation d\'outils en cours'), _T('Attends la fin de « ') + bg.label + _T(' » (Réglages › Outils gratuits), puis recommence.'));
       const exe = await find(id);
       if (exe) return exe;
       const t = Lb.byId(id);
@@ -608,12 +554,12 @@
       const pill = h('span', { class: 'badge tool-state' + (ok ? ' ok' : '') }, !s ? (Store.fs ? '…' : _T('non installé')) : ok ? _T('✓ installé') : s.exe ? _T('modèles à télécharger') : _T('non installé'));
       const btns = h('div', { class: 'row-buttons wrap' });
       if (!ok) {
-        const b = h('button', { class: 'action go', disabled: !Store.fs || !how || bg.running }, (s && s.exe ? _T('Télécharger les modèles') : _T('Installer')) + ' (' + Lb.size(t.mb) + ')');
+        const b = h('button', { class: 'action go', disabled: !Store.fs || !how }, (s && s.exe ? _T('Télécharger les modèles') : _T('Installer')) + ' (' + Lb.size(t.mb) + ')');
         b.addEventListener('click', () => install(t.id));
         btns.appendChild(b);
       }
       if (s && s.exe && ours(s.exe)) {
-        const un = h('button', { class: 'action quiet danger', disabled: bg.running }, _T('Désinstaller'));
+        const un = h('button', { class: 'action quiet danger' }, _T('Désinstaller'));
         un.addEventListener('click', () => uninstall(t.id));
         btns.appendChild(un);
       }
@@ -712,8 +658,6 @@
 
     function fill(box) {
       box.innerHTML = '';
-      const running = bgBox();
-      if (running) box.appendChild(running);
       box.appendChild(h('div', { class: 'note' }, _T('Des outils gratuits et open source qui tournent sur ton ordinateur : rien n\'est envoyé en ligne. Chacun est optionnel ; RR FX propose aussi de l\'installer au moment où une fonction en a besoin. Tout va dans Documents/RRFX/Outils.')));
       box.appendChild(h('div', { class: 'note' }, _T('Intégré, rien à installer : la détection de la voix (Silero) pour couper les silences, et la détection des visages (YuNet).')));
       // Cases à cocher sur les outils manquants, « Tout cocher », puis « Installer la sélection ».
@@ -722,7 +666,7 @@
         const sel = todo.filter(t => picked.has(t.id)), every = sel.length === todo.length;
         const all = h('button', { class: 'action' }, every ? _T('Tout décocher') : _T('Tout cocher'));
         all.addEventListener('click', () => { todo.forEach(t => (every ? picked.delete(t.id) : picked.add(t.id))); refreshSection(); });
-        const go = h('button', { class: 'action go tools-go', disabled: !Store.fs || !sel.length || bg.running },
+        const go = h('button', { class: 'action go tools-go', disabled: !Store.fs || !sel.length },
           sel.length ? _T('Installer la sélection') + ' (' + sel.length + ' · ' + sizeOf(sel) + ')' : _T('Coche les outils à installer'));
         go.addEventListener('click', installAll);
         box.appendChild(h('div', { class: 'row-buttons tools-bar' }, all, go));

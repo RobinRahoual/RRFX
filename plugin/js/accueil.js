@@ -70,7 +70,7 @@
     // ---------------------------------------------------------------- recherche rapide
 
     const norm = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-    const TABS = [['express', '⚡ Express'], ['effects', _T('Effets')], ['ramp', _T('Rampe')], ['color', _T('Couleur')], ['music', _T('Musique')], ['titles', _T('Textes')], ['speech', _T('Parole')], ['formats', 'Formats'], ['assets', _T('Ressources')], ['mine', _T('Mes effets')], ['settings', _T('Réglages')]];
+    const TABS = [['express', '⚡ Express'], ['effects', _T('Effets')], ['ramp', _T('Rampe')], ['color', _T('Colorimétrie')], ['music', _T('Musique')], ['titles', _T('Textes')], ['speech', _T('Parole')], ['formats', 'Formats'], ['assets', _T('Ressources')], ['mine', _T('Mes effets')], ['settings', _T('Réglages')]];
 
     /* Ouvre l'onglet et amène l'outil en vue (panneau ou section ouverts) : sel, ou la section
        dont le titre contient title ; focus : le champ reçoit le curseur. */
@@ -121,7 +121,7 @@
       act(_T('Importer une vidéo ou un son depuis un lien'), 'Action', () => reveal('assets', 'input.link-input', true));
       act(_T('Importer des presets, LUTs, couleurs…'), 'Action', () => { app.switchTab('mine'); const b = Array.from(document.querySelectorAll('#view-mine .action')).find(x => x.textContent === _T('Importer…')); if (b) b.click(); });
       act(_T('Mes LUTs'), 'Action', () => reveal('color', '[data-panel=luts]'));
-      act(_T('Dégradé de couleur'), 'Action', () => reveal('color', '[data-panel=gradient]'));
+      act(_T('Dégradé sur un texte ou une forme'), 'Action', () => reveal('titles', '[data-sec=degrade]'));
       act(_T('Style de texte et Mes couleurs'), 'Action', () => reveal('titles', null, false, 'Style du texte'));
       act(_T('Historique des opérations RR FX'), 'Action', () => app.services.showHistory());
       act('Langue · Language (Français / English)', 'Action', () => reveal('settings', '[data-sec=lang]'));

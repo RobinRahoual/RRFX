@@ -152,7 +152,6 @@
 
     async function applyRamp() {
       const R = ramp();
-      if (S.busy) return;
       if (!(await confirmDialog(_T('Appliquer la rampe ?'), _T('Une copie du passage, découpée en ') + R.segments + _T(' morceaux à vitesses différentes, va être posée juste au-dessus du clip. Le clip d\'origine, son son et la coupe ne bougent pas. Le bouton ↶ Annuler la retire.'), _T('Appliquer'), 'confirmRamp'))) return;
       await runTask('Speed ramp', async () => {
         status.phase(_T('Analyse du clip'));

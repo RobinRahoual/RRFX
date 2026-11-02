@@ -73,7 +73,6 @@
 
     async function makeExtracts() {
       const x = st(), list = found.filter(e => e.on);
-      if (app.S.busy) return;
       if (!list.length) return app.status.finish('warn', _T('Aucun extrait choisi'), _T('Lance d\'abord « Trouver les passages ».'));
       const ctx = await Host.call('getContext', {});
       if (!ctx.ok || !ctx.hasSequence) return app.status.finish('error', _T('Ouvre la séquence de la vidéo'), _T('Les extraits sont pris dans la séquence active.'));
@@ -185,7 +184,7 @@
         go.addEventListener('click', () => preflight(redraw));
         const x = st();
         box.append(h('div', { class: 'note' }, _T('Avant d\'envoyer à Media Encoder : médias hors ligne, images noires (trous sans plan), clips désactivés, pistes masquées ou coupées, volume poussé au-delà de +6 dB, textes RR FX hors de la zone sûre.')),
-          checkbox(_T('Vérifier aussi l\'image : plans trop sombres, trop clairs, dominante de couleur (Couleur > Expo et balance auto pour corriger)'), x.pfImage, v => { x.pfImage = v; app.persist(); }),
+          checkbox(_T('Vérifier aussi l\'image : plans trop sombres, trop clairs, dominante de couleur (Colorimétrie > Expo et balance auto pour corriger)'), x.pfImage, v => { x.pfImage = v; app.persist(); }),
           h('div', { class: 'row-buttons' }, go), list);
         redraw();
         return [box];
@@ -205,7 +204,9 @@
        l'autre. La section « Plusieurs séquences » (livraison.js) s'en sert, avec l'export en lot. */
     async function runBatch(list, batchId) {
       const what = BATCH.find(b => b.id === batchId);
-      if (app.S.busy || !what) return;
+      if (!what) return;
+      // Le lot ouvre une séquence après l'autre : les autres tâches viseraient la mauvaise.
+      if (app.S.busy) return app.status.finish('warn', _T('Des tâches sont en cours'), _T('Le traitement par lot ouvre chaque séquence l\'une après l\'autre : attends la fin des tâches en cours (ou arrête-les).'));
       if (!list.length) return app.status.finish('warn', _T('Aucune séquence cochée'), _T('Coche les séquences à traiter.'));
       const fn = batchId === 'preflight' ? () => preflight(null) : app.actions[batchId];
       if (!fn) return app.status.finish('error', _T('Action indisponible'), what.label);

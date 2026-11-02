@@ -1,4 +1,4 @@
-/* RR FX : conversion LOG → Rec.709 en un clic (onglet Couleur).
+/* RR FX : conversion LOG → Rec.709 en un clic (onglet Colorimétrie).
    On enregistre une fois sa caméra et sa LUT de conversion (celle du fabricant, gardée dans
    Documents/RRFX/Conversion pour tous les projets, ou une LUT calculée par RR FX). Ensuite, un
    clic pose un calque de réglage Lumetri juste au-dessus des rushs, de la longueur de la
@@ -58,7 +58,7 @@
     function lutFor(cam) {
       if (!Store.fs) return '';
       if (cam.mode !== 'calc') {
-        if (!cam.lut || !Store.fs.existsSync(cam.lut)) throw new Error(_T('LUT de ') + label(cam) + _T(' introuvable') + (cam.lut ? ' (' + cam.lut + ')' : '') + _T(' : réimporte-la dans l\'onglet Couleur.'));
+        if (!cam.lut || !Store.fs.existsSync(cam.lut)) throw new Error(_T('LUT de ') + label(cam) + _T(' introuvable') + (cam.lut ? ' (' + cam.lut + ')' : '') + _T(' : réimporte-la dans l\'onglet Colorimétrie.'));
         return cam.lut;
       }
       const cube = D.toCube(L.buildLut(cam.profile, { size: 33, ev: cam.ev, contrast: cam.contrast }), label(cam) + _T(' vers Rec.709'));
@@ -70,7 +70,7 @@
       return file;
     }
 
-    // Pour l'aperçu de l'onglet Couleur : la LUT de conversion de la caméra active.
+    // Pour l'aperçu de l'onglet Colorimétrie : la LUT de conversion de la caméra active.
     const previewCache = { key: '', lut: null };
     function previewLut() {
       const cam = active();
@@ -178,7 +178,7 @@
       const cam = active(), c = st();
       if (!cam) {
         app.switchTab('color');
-        return app.status.finish('warn', _T('Aucune caméra enregistrée'), _T('Onglet Couleur > Conversion LOG → Rec.709 : choisis ta caméra et sa LUT, une seule fois.'));
+        return app.status.finish('warn', _T('Aucune caméra enregistrée'), _T('Onglet Colorimétrie > Conversion LOG → Rec.709 : choisis ta caméra et sa LUT, une seule fois.'));
       }
       return app.runTask(c.mode === 'auto' ? _T('Rec.709 par caméra') : 'Rec.709 · ' + label(cam), async () => {
         const out = c.mode === 'auto' ? await convertEach() : await convertOne(cam);
@@ -304,7 +304,7 @@
       return el;
     }
 
-    /* Panneau « Conversion LOG → Rec.709 » ; panel(id, titre, contenu) vient de l'onglet Couleur,
+    /* Panneau « Conversion LOG → Rec.709 » ; panel(id, titre, contenu) vient de l'onglet Colorimétrie,
        onPreview() redessine l'aperçu quand la conversion d'aperçu change. */
     function panel(makePanel, onPreview) {
       const box = h('div');

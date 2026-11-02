@@ -253,7 +253,7 @@
   }
 
   function toCube(lut, title) {
-    const lines = ['# Créé avec RR FX (@robin.rahoual), onglet Couleur', 'TITLE "' + String(title || 'RR FX').replace(/"/g, '\'') + '"', 'LUT_3D_SIZE ' + lut.size, 'DOMAIN_MIN 0.0 0.0 0.0', 'DOMAIN_MAX 1.0 1.0 1.0'];
+    const lines = ['# Créé avec RR FX (@robin.rahoual), onglet Colorimétrie', 'TITLE "' + String(title || 'RR FX').replace(/"/g, '\'') + '"', 'LUT_3D_SIZE ' + lut.size, 'DOMAIN_MIN 0.0 0.0 0.0', 'DOMAIN_MAX 1.0 1.0 1.0'];
     const d = lut.data;
     for (let i = 0; i < d.length; i += 3) lines.push(d[i].toFixed(6) + ' ' + d[i + 1].toFixed(6) + ' ' + d[i + 2].toFixed(6));
     return lines.join('\n') + '\n';
@@ -291,7 +291,7 @@
     const L = [];
     // Tout en ASCII : le DCTL est compilé pour la carte graphique par Resolve.
     const ascii = t => String(t).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^\x20-\x7e]/g, '');
-    L.push('// ' + ascii(title || 'RR FX') + _T(' : look cree avec RR FX (@robin.rahoual) - onglet Couleur.'));
+    L.push('// ' + ascii(title || 'RR FX') + _T(' : look cree avec RR FX (@robin.rahoual) - onglet Colorimetrie.'));
     L.push('// Curseurs facon Lightroom. Entree et sortie : Rec.709 (gamma 2.4).');
     L.push('// Texture, Clarte, Correction du voile, vignettage et grain ne sont pas inclus.');
     L.push('');

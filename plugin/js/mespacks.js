@@ -27,7 +27,7 @@
         name,
         h('div', { class: 'lr-sub' }, _T('Contenu')),
         items.length ? list : h('div', { class: 'note' }, _T('Aucun effet perso pour l\'instant.')),
-        color ? checkbox(_T('Look en cours de l\'onglet Couleur (« ') + (s.color.name || _T('Mon look')) + _T(' »)'), pick.look, v => { pick.look = v; }) : null,
+        color ? checkbox(_T('Look en cours de l\'onglet Colorimétrie (« ') + (s.color.name || _T('Mon look')) + _T(' »)'), pick.look, v => { pick.look = v; }) : null,
         s.titles ? checkbox(_T('Style des textes (animation') + (s.titles.mogrt ? _T(' et modèle .mogrt') : '') + ')', pick.titles, v => { pick.titles = v; }) : null,
         overlays.length ? checkbox(app.plural(overlays.length, _T('overlay importé'), _T('overlays importés')) + _T(' (fichiers inclus)'), pick.overlays, v => { pick.overlays = v; }) : null,
         chain.length ? checkbox(_T('Enchaînement de ') + app.plural(chain.length, _T('effet')), pick.chain, v => { pick.chain = v; }) : null);

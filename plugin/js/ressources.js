@@ -32,7 +32,7 @@
       st().roots.forEach(r => { if (saved && saved.roots && saved.roots[r]) R.index[r] = saved.roots[r]; });
       rebuild();
     }
-    // LUTs des dossiers liés, pour « Mes LUTs » (onglet Couleur).
+    // LUTs des dossiers liés, pour « Mes LUTs » (onglet Colorimétrie).
     app.services.resourceLuts = () => { loadIndex(); return R.list.filter(e => e.type === 'lut' && e.path); };
     // Sons des dossiers liés, pour la recherche par description (CLAP).
     app.services.resourceAudio = () => { loadIndex(); return R.list.filter(e => e.type === 'audio' && e.path); };
@@ -642,8 +642,8 @@
         if (rr) actions.push(btn(_T('Ajouter à Mes effets'), () => addPresetFile(e)));
         if (e.ext === 'rrfxpack') actions.push(btn(_T('Importer le pack de style'), () => importPackFile(e)));
       }
-      // Les LUTs de tes dossiers sont aussi dans Couleur > Mes LUTs (vignettes, favorites).
-      if (e.type === 'lut') actions.push(btn(_T('Toutes mes LUTs : Couleur ›'), () => app.services.reveal ? app.services.reveal('color', '[data-panel=luts]') : app.switchTab('color'), 'quiet'));
+      // Les LUTs de tes dossiers sont aussi dans Colorimétrie > Mes LUTs (vignettes, favorites).
+      if (e.type === 'lut') actions.push(btn(_T('Toutes mes LUTs : Colorimétrie ›'), () => app.services.reveal ? app.services.reveal('color', '[data-panel=luts]') : app.switchTab('color'), 'quiet'));
       if (e.type !== 'font' && e.type !== 'lut' && e.type !== 'preset' && e.type !== 'mogrt') actions.push(btn(_T('Importer dans le projet'), () => importOne(e), 'quiet'));
       if (e.path) actions.push(btn(Store.isWin() ? _T('Afficher dans l\'Explorateur') : _T('Afficher dans le Finder'), () => reveal(e), 'quiet'));
       const buttons = actions.filter(a => a.tagName === 'BUTTON'), others = actions.filter(a => a.tagName !== 'BUTTON');

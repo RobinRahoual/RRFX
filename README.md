@@ -110,7 +110,7 @@ sur une copie de ta séquence.
 | | | |
 |---|---|---|
 | [⚡ Express](#express) | [🎙️ Vidéos qui parlent](#parole) | [🎵 Musique et rythme](#musique) |
-| [✨ Effets, transitions, rampes](#effets) | [🎨 Couleur](#couleur) | [🔤 Textes et habillage](#textes) |
+| [✨ Effets, transitions, rampes](#effets) | [🎨 Colorimétrie](#couleur) | [🔤 Textes et habillage](#textes) |
 | [📱 Formats et livraison](#formats) | [🗂️ Projet et ressources](#projet) | [🚀 Ton flux de travail](#flux) |
 | [🧠 IA locale et outils gratuits](#ia) | | |
 
@@ -498,7 +498,7 @@ claque sur la coupe, quasi-arrêt, double pulsation, timelapse…
 
 <a id="couleur"></a>
 
-## 🎨 Couleur
+## 🎨 Colorimétrie
 
 ### L'étalonnage comme dans Lightroom
 

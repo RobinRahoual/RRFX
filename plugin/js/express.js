@@ -65,7 +65,7 @@
       if (id === 'lower' && !c.lower) return _T('Écris le nom et la fonction (onglet Parole)');
       if ((id === 'captions' || id === 'lower') && !c.mogrt) return _T('Choisis un modèle de texte (onglet Textes)');
       if (id === 'montage' && !c.rushes) return _T('Sélectionne tes rushs dans le panneau Projet');
-      if (id === 'convert' && !c.cams) return _T('Ajoute ta caméra (onglet Couleur)');
+      if (id === 'convert' && !c.cams) return _T('Ajoute ta caméra (onglet Colorimétrie)');
       if (id === 'titles' && !c.lyrics) return _T('Colle tes paroles (onglet Textes)');
       if (id === 'titles' && !c.mogrt) return _T('Choisis un modèle de texte (onglet Textes)');
       return '';
@@ -135,7 +135,6 @@
 
     let report = [];
     async function launch() {
-      if (app.S.busy) return;
       const c = await verify();
       if (!c.sequence) return app.status.finish('error', _T('Ouvre une séquence'), _T('Le montage express travaille sur la séquence active de Premiere.'));
       if (!c.adj) return app.status.finish('error', _T('Il manque un calque de réglage'), _T('Une fois par projet : Fichier > Nouveau > Calque de réglage. RR FX le retrouve tout seul.'));
@@ -244,7 +243,7 @@
         music ? [!!c.music, c.music ? _T('Musique : ') + c.music : _T('Musique dans la séquence'), _T('Pose ta musique sur une piste audio')] : null,
         has('silences') ? [c.speech > 0, c.speech ? app.plural(c.speech, _T('plan parlé sélectionné'), _T('plans parlés sélectionnés')) : _T('Plans où l\'on parle sélectionnés'), _T('Sélectionne-les dans la timeline (sinon la coupe des silences est passée)'), true] : null,
         has('montage') ? [c.rushes > 0, c.rushes ? app.plural(c.rushes, _T('rush sélectionné'), _T('rushs sélectionnés')) + _T(' dans Projet') : _T('Rushs sélectionnés dans le panneau Projet'), _T('Pour le montage auto (sinon, il est passé)'), true] : null,
-        has('convert') ? [c.cams > 0, c.cams ? app.plural(c.cams, _T('caméra enregistrée'), _T('caméras enregistrées')) : _T('Caméra enregistrée'), _T('Pour la conversion LOG (onglet Couleur)'), true] : null,
+        has('convert') ? [c.cams > 0, c.cams ? app.plural(c.cams, _T('caméra enregistrée'), _T('caméras enregistrées')) : _T('Caméra enregistrée'), _T('Pour la conversion LOG (onglet Colorimétrie)'), true] : null,
         has('titles') ? [c.lyrics > 0 && c.mogrt, c.lyrics ? app.plural(c.lyrics, _T('ligne de paroles'), _T('lignes de paroles')) : _T('Paroles'), _T('Pour les paroles animées (onglet Textes)'), true] : null,
         has('captions') ? [c.captions > 0 && c.mogrt, c.captions ? app.plural(c.captions, _T('sous-titre'), _T('sous-titres')) : _T('Sous-titres (.srt)'), _T('Importe ton .srt dans l\'onglet Parole'), true] : null,
         has('lower') ? [c.lower && c.mogrt, c.lower ? _T('Bandeau prêt') : _T('Bandeau nom et fonction'), _T('Écris le nom dans l\'onglet Parole'), true] : null

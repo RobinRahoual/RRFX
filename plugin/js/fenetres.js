@@ -23,7 +23,7 @@
     music: ['Musique', 'Temps forts, montage auto, synchro, multicam'],
     native: ['Premiere', 'Les outils de Premiere en un clic : transitions et fondus audio sur toutes les coupes, changements de plan, sous-titres'],
     speech: ['Parole', 'YouTube, interviews, vidéos d\'entreprise : silences, jump cuts, sous-titres, bandeaux'],
-    color: ['Couleur', 'Conversion LOG, expo auto, raccord, looks façon Lightroom'],
+    color: ['Colorimétrie', 'Conversion LOG, expo auto, raccord, looks façon Lightroom'],
     titles: ['Textes', 'Titres et paroles animés'],
     formats: ['Formats', 'Copie 9:16, 4:5, 1:1, vérification, export, versions'],
     assets: ['Ressources', 'Tes dossiers d\'effets, sons, LUTs, polices ; rangement du projet'],

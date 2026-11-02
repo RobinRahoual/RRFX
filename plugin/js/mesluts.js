@@ -1,4 +1,4 @@
-/* RR FX : Mes LUTs (onglet Couleur). Toutes tes LUTs au même endroit, pour tous tes projets :
+/* RR FX : Mes LUTs (onglet Colorimétrie). Toutes tes LUTs au même endroit, pour tous tes projets :
    importées une fois (copiées dans Documents/RRFX/Mes LUTs), plus celles de tes dossiers liés
    (onglet Ressources). Vignette de chaque LUT sur ton image, recherche, favoris, avant/après, et
    un clic pour la poser sur un calque Lumetri (le clip visé ou toute la séquence). */
@@ -84,7 +84,7 @@
       });
       thumbs.clear();
       listed = null;
-      return { n, what: _T('dans Mes LUTs (onglet Couleur)') };
+      return { n, what: _T('dans Mes LUTs (onglet Colorimétrie)') };
     }
     async function importFiles(refresh) {
       const files = await app.services.pickFiles(_T('Importer des LUTs'), EXTS);

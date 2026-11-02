@@ -51,7 +51,7 @@
   };
 
   const S = {
-    lib: null, ctx: null, demo: false, busy: false, cancel: false,
+    lib: null, ctx: null, demo: false,
     tab: 'effects', cat: 'all', search: '', favOnly: false,
     cur: null, params: null, resolved: null, compat: null,
     player: null, rampPlayer: null, curveEd: null, rampEd: null,
@@ -122,53 +122,116 @@
     return s < 60 ? s + ' s' : Math.floor(s / 60) + ' min ' + String(s % 60).padStart(2, '0') + ' s';
   }
 
+  /* Tâches : plusieurs à la fois (un téléchargement n'empêche pas d'appliquer un effet). Le bloc
+     d'état montre la plus récente (focus) ; les autres ont chacune une ligne sous le bloc, avec leur
+     avancement et « Arrêter ». Le code d'une tâche lit S.cancel / S.onCancel et écrit
+     status.phase / status.progress : ils visent SA tâche, grâce au contexte asynchrone de Node dans
+     Premiere (AsyncLocalStorage) ; ailleurs (aperçu dans un navigateur), la plus récente. */
+  const ALS = (() => {
+    try { const A = typeof require === 'function' ? require('async_hooks').AsyncLocalStorage : null; return A ? new A() : null; } catch (e) { return null; }
+  })();
+  const tasks = [];
+  let focus = null, taskSeq = 0;
+  const cur = () => (ALS && ALS.getStore()) || focus || tasks[tasks.length - 1] || null;
+  Object.defineProperty(S, 'busy', { get: () => tasks.length > 0, set: () => {}, configurable: true });
+  Object.defineProperty(S, 'cancel', { get: () => { const t = cur(); return !!(t && t.cancel); }, set: v => { const t = cur(); if (t) t.cancel = !!v; }, configurable: true });
+  Object.defineProperty(S, 'onCancel', { get: () => { const t = cur(); return t ? t.onCancel : null; }, set: v => { const t = cur(); if (t) t.onCancel = v; }, configurable: true });
+  function cancelTask(t) {
+    if (!t || t.cancel) return;
+    t.cancel = true;
+    // Tâche qui tourne hors de Premiere (téléchargement, outil…) : arrêtée aussi.
+    if (t.onCancel) { try { t.onCancel(); } catch (e) { /* déjà finie */ } }
+    status.draw(t);
+  }
+
   const status = (() => {
-    let title = '', started = 0, phaseLabel = '', phaseStarted = 0, ticker = null, lastUpdate = 0, frame = 0, kindNow = 'idle';
+    let kindNow = 'idle', ticker = null, frame = 0;
     const SPINNER = ['◐', '◓', '◑', '◒'];
     const setKind = kind => { kindNow = kind; $('status').className = 'status ' + kind; };
-
-    // Toutes les 250 ms : icône animée et temps écoulé, pour voir que ça tourne.
+    const pct = t => (t.total > 1 ? Math.round(Math.min(t.done, t.total) / Math.max(1, t.total) * 100) : -1);
+    function line(t) {
+      if (t.cancel) return _T('Arrêt après la zone en cours…');
+      if (!t.total) return t.phaseLabel ? t.phaseLabel + '…' : _T('Démarrage…');
+      let text = t.phaseLabel + ' · ' + Math.min(t.done + (t.name ? 1 : 0), t.total) + '/' + t.total;
+      if (t.name) text += ' · ' + t.name;
+      if (t.done >= 2 && t.done < t.total) {
+        const remaining = (Date.now() - t.phaseStarted) / t.done * (t.total - t.done);
+        if (remaining > 1500) text += _T(' · encore ~') + formatDuration(remaining);
+      }
+      return text;
+    }
+    const titleOf = t => t.label + ' · ' + formatDuration(Date.now() - t.started);
+    // Ligne d'une tâche qui n'est pas dans le bloc d'état (créée une fois, mise à jour sur place).
+    function rowOf(t) {
+      if (t.row) return t.row;
+      const stop = h('button', { class: 'action quiet' }, _T('Arrêter'));
+      stop.addEventListener('click', () => cancelTask(t));
+      t.row = h('div', { class: 'task-row' },
+        h('div', { class: 'task-head' }, h('span', { class: 'task-title' }), t.cancellable ? stop : null),
+        h('div', { class: 'progress' }, h('div', { class: 'progress-fill' })),
+        h('div', { class: 'task-detail muted' }));
+      $('tasks').appendChild(t.row);
+      return t.row;
+    }
+    function dropRow(t) { if (t.row) { t.row.remove(); t.row = null; } }
+    function draw(t) {
+      if (!t) return;
+      const p = pct(t);
+      if (t === focus) {
+        $('status-icon').textContent = SPINNER[frame];
+        $('status-title').textContent = titleOf(t);
+        $('status-detail').textContent = line(t);
+        show($('progress'), p >= 0);
+        if (p >= 0) $('progress-fill').style.width = p + '%';
+        show($('cancel'), !!t.cancellable && !t.cancel);
+      } else if (tasks.indexOf(t) >= 0) {
+        const r = rowOf(t);
+        r.querySelector('.task-title').textContent = SPINNER[frame] + ' ' + titleOf(t);
+        r.querySelector('.task-detail').textContent = line(t);
+        const f = r.querySelector('.progress-fill');
+        f.style.width = (p >= 0 ? p : 100) + '%';
+        f.classList.toggle('busy', p < 0);
+      }
+      show($('tasks'), tasks.some(x => x !== focus));
+    }
     function tick() {
       frame = (frame + 1) % SPINNER.length;
-      $('status-icon').textContent = SPINNER[frame];
-      $('status-title').textContent = title + ' · ' + formatDuration(Date.now() - started);
+      tasks.forEach(draw);
+      if (!tasks.length) { clearInterval(ticker); ticker = null; }
     }
-    function start(text, cancellable) {
-      title = text; started = Date.now(); phaseLabel = '';
+    // Le bloc d'état passe à t ; la tâche qui y était continue sur sa ligne.
+    function start(t) {
+      focus = t;
+      dropRow(t);
       setKind('running');
-      show($('cancel'), !!cancellable);
       show($('status-close'), false);
       show($('status-log'), false);
       show($('progress'), false);
       $('progress-fill').style.width = '0%';
-      $('status-detail').textContent = _T('Démarrage…');
-      if (ticker) clearInterval(ticker);
-      ticker = setInterval(tick, 250);
-      tick();
+      if (!ticker) ticker = setInterval(tick, 250);
+      tasks.forEach(draw);
     }
     function phase(label) {
-      phaseLabel = label; phaseStarted = Date.now(); lastUpdate = 0;
-      $('status-detail').textContent = label + '…';
+      const t = cur();
+      if (!t) return;
+      t.phaseLabel = label; t.phaseStarted = Date.now(); t.done = 0; t.total = 0; t.name = ''; t.last = 0;
+      draw(t);
     }
     // Mise à jour limitée à ~10 fois par seconde.
     function progress(done, total, name) {
+      const t = cur();
+      if (!t) return;
       const now = Date.now();
-      if (done < total && now - lastUpdate < 100) return;
-      lastUpdate = now;
-      show($('progress'), total > 1);
-      $('progress-fill').style.width = Math.round(Math.min(done, total) / Math.max(1, total) * 100) + '%';
-      let text = phaseLabel + ' · ' + Math.min(done + (name ? 1 : 0), total) + '/' + total;
-      if (name) text += ' · ' + name;
-      if (done >= 2 && done < total) {
-        const remaining = (now - phaseStarted) / done * (total - done);
-        if (remaining > 1500) text += _T(' · encore ~') + formatDuration(remaining);
-      }
-      $('status-detail').textContent = text;
+      t.done = done; t.total = total; t.name = name || '';
+      if (done < total && now - t.last < 100) return;
+      t.last = now;
+      draw(t);
     }
+    // Message dans le bloc d'état. Une tâche qui y tournait continue sur sa ligne.
     // kind : "ok" | "warn" | "error" | "idle"
     function finish(kind, text, detail) {
-      if (ticker) clearInterval(ticker);
-      ticker = null;
+      if (focus && tasks.indexOf(focus) >= 0) { const was = focus; focus = null; draw(was); }
+      focus = null;
       setKind(kind);
       $('status-icon').textContent = { ok: '✓', warn: '⚠', error: '✕', idle: '' }[kind] || '';
       $('status-title').textContent = text;
@@ -177,10 +240,27 @@
       show($('progress'), false);
       show($('status-close'), kind !== 'idle');
       show($('status-log'), kind === 'warn' || kind === 'error');
+      show($('tasks'), tasks.length > 0);
       if (kind === 'idle') renderIdleDetail();
     }
+    // Fin d'une tâche : son résultat va dans le bloc d'état s'il est à elle ou libre ; sinon (une
+    // autre tâche y tourne), dans le journal et sur une ligne de résultat quelques secondes.
+    function end(t, kind, text, detail) {
+      const i = tasks.indexOf(t);
+      if (i >= 0) tasks.splice(i, 1);
+      dropRow(t);
+      if (t === focus || !focus || tasks.indexOf(focus) < 0) { focus = t; finish(kind, text, detail); return; }
+      const close = h('button', { class: 'action quiet icon', title: _T('Fermer') }, '✕');
+      const row = h('div', { class: 'task-row done ' + kind },
+        h('div', { class: 'task-head' }, h('span', { class: 'task-title' }, ({ ok: '✓ ', warn: '⚠ ', error: '✕ ' }[kind] || '') + text), close),
+        detail ? h('div', { class: 'task-detail muted' }, detail) : null);
+      close.addEventListener('click', () => { row.remove(); show($('tasks'), !!$('tasks').children.length); });
+      $('tasks').appendChild(row);
+      show($('tasks'), true);
+      setTimeout(() => { row.remove(); show($('tasks'), !!$('tasks').children.length && tasks.some(x => x !== focus)); }, 9000);
+    }
     function reset() { finish('idle', _T('Prêt'), ''); }
-    return { start, phase, progress, finish, reset, get kind() { return kindNow; } };
+    return { start, phase, progress, finish, end, draw, reset, get kind() { return focus && tasks.indexOf(focus) >= 0 ? 'running' : kindNow; } };
   })();
 
   function renderIdleDetail() {
@@ -199,43 +279,49 @@
     $('status-detail').textContent = text;
   }
 
-  function setBusy(value) {
-    S.busy = value;
+  // Les boutons suivent le nombre de tâches en cours (Annuler, Appliquer).
+  function tasksChanged() {
     renderCTA();
     renderUndo();
   }
 
-  // Exécute une tâche avec le bloc d'état. La tâche renvoie { kind, title, detail } ;
-  // une exception = échec.
+  /* Exécute une tâche. Elle renvoie { kind, title, detail } ; une exception = échec. Plusieurs
+     tâches tournent en même temps ; la même relancée dans la seconde (double-clic) est ignorée. */
   async function runTask(label, task, cancellable) {
-    if (S.busy) return null;
-    S.cancel = false;
-    setBusy(true);
-    status.start(label, cancellable);
-    const started = Date.now(), placed = S.placed || 0;
-    try {
-      const result = (await task()) || { kind: 'ok', title: _T('Terminé') };
-      status.finish(result.kind, result.title, result.detail);
-      // Ce que la tâche a posé (historique), pour le temps gagné et autres suivis.
-      const added = (S.placed || 0) - placed;
-      (app.taskHooks || []).forEach(fn => { try { fn(label, result, added); } catch (e) { /* suivi : jamais bloquant */ } });
-      if (Date.now() - started > LONG_TASK_MS && result.kind !== 'idle') signalEnd();
-      return result;
-    } catch (e) {
-      // Une tâche qui s'arrête proprement (outil non installé, refus) : avertissement, pas échec.
-      if (e && e.result) {
-        status.finish(e.result.kind, e.result.title, e.result.detail);
-        log(e.result.title + (e.result.detail ? ' : ' + e.result.detail : ''), 'warn');
-        return e.result;
+    const now = Date.now();
+    if (tasks.some(x => x.label === label && now - x.started < 800)) return null;
+    const t = { id: ++taskSeq, label, cancellable: !!cancellable, started: now, cancel: false, onCancel: null, phaseLabel: '', phaseStarted: now, done: 0, total: 0, name: '', last: 0, row: null };
+    tasks.push(t);
+    status.start(t);
+    tasksChanged();
+    const placed = S.placed || 0;
+    const body = async () => {
+      try {
+        const result = (await task()) || { kind: 'ok', title: _T('Terminé') };
+        status.end(t, result.kind, result.title, result.detail);
+        // Ce que la tâche a posé (historique), pour le temps gagné et autres suivis.
+        const added = (S.placed || 0) - placed;
+        (app.taskHooks || []).forEach(fn => { try { fn(label, result, added); } catch (e) { /* suivi : jamais bloquant */ } });
+        if (Date.now() - t.started > LONG_TASK_MS && result.kind !== 'idle') signalEnd();
+        return result;
+      } catch (e) {
+        // Une tâche qui s'arrête proprement (outil non installé, refus) : avertissement, pas échec.
+        if (e && e.result) {
+          status.end(t, e.result.kind, e.result.title, e.result.detail);
+          log(e.result.title + (e.result.detail ? ' : ' + e.result.detail : ''), 'warn');
+          return e.result;
+        }
+        const msg = t.cancel ? _T('Arrêté') : errorMessage(e);
+        status.end(t, t.cancel ? 'warn' : 'error', t.cancel ? label + _T(' · arrêté') : _T('Échec · ') + label, msg);
+        log(label + ' : ' + msg, t.cancel ? 'warn' : 'error');
+        if (Date.now() - t.started > LONG_TASK_MS) signalEnd();
+        return { kind: 'error', title: _T('Échec'), detail: msg };
+      } finally {
+        tasksChanged();
+        refreshContext();
       }
-      status.finish('error', _T('Échec'), errorMessage(e));
-      log(errorMessage(e), 'error');
-      if (Date.now() - started > LONG_TASK_MS) signalEnd();
-      return { kind: 'error', title: _T('Échec'), detail: errorMessage(e) };
-    } finally {
-      setBusy(false);
-      refreshContext();
-    }
+    };
+    return ALS ? ALS.run(t, body) : body();
   }
 
   // ---------------------------------------------------------------- signal de fin
@@ -341,7 +427,7 @@
   // ---------------------------------------------------------------- contexte Premiere
 
   let ctxPending = false;
-  // Lu aussi pendant une tâche (lecture seule) : l'onglet Couleur suit la sélection, même pendant
+  // Lu aussi pendant une tâche (lecture seule) : l'onglet Colorimétrie suit la sélection, même pendant
   // un export ou un téléchargement. Le bloc d'état, lui, ne change pas tant que la tâche tourne.
   async function refreshContext() {
     if (ctxPending) return;
@@ -374,12 +460,11 @@
   function renderUndo() {
     const last = S.lib && S.lib.history[S.lib.history.length - 1];
     const b = $('undo');
-    setDisabled(b, S.busy || !last);
+    setDisabled(b, !last);
     b.textContent = last ? _T('↶ Annuler (') + last.entries.length + ')' : _T('↶ Annuler');
     b.title = last ? _T('Retirer : ') + last.label : _T('Rien à annuler');
-    show(b, !S.busy);
     const hb = $('history');
-    if (hb) { show(hb, !S.busy); setDisabled(hb, !S.lib || !S.lib.history.length); }
+    if (hb) setDisabled(hb, !S.lib || !S.lib.history.length);
   }
 
   function describeOp(op) {
@@ -389,7 +474,7 @@
 
   async function undoLast() {
     const last = S.lib.history[S.lib.history.length - 1];
-    if (!last || S.busy) return;
+    if (!last) return;
     if (!(await confirmDialog(_T('Annuler la dernière opération ?'), describeOp(last) + _T(' : les calques et effets posés par RR FX seront retirés. Ce que tu as modifié depuis n\'est pas touché.'), _T('Annuler l\'opération'), 'confirmUndo'))) return;
     await undoOps([last]);
   }
@@ -424,7 +509,6 @@
 
   // Historique détaillé : toutes les opérations RR FX, à annuler une par une ou jusqu'à un point.
   async function showHistory() {
-    if (S.busy) return;
     const list = h('div', { class: 'hist-list' });
     let pick = null;
     const draw = () => {
@@ -458,7 +542,6 @@
   }
 
   async function clearAll(o) {
-    if (S.busy) return;
     const where = o.scope === 'selection' ? _T('dans la zone sélectionnée') : _T('dans toute la séquence');
     const yes = await modal(_T('Tout effacer ') + where + ' ?', h('p', null, _T('Les calques, copies, overlays et textes « RR FX · … »') + (o.markers ? _T(' et les marqueurs RR FX') : '') + _T(' seront retirés. Tes clips restent intacts. Ctrl+Z / Cmd+Z dans Premiere pour revenir en arrière.')), [
       { label: _T('Garder'), value: false }, { label: _T('Tout effacer'), primary: true, value: true }]);
@@ -524,19 +607,16 @@
       renderShortcuts();
       return;
     }
-    if (event.key === 'Escape' && S.busy) { requestCancel(); return; }
+    if (event.key === 'Escape' && focus && tasks.indexOf(focus) >= 0) { requestCancel(); return; }
     const tag = String((event.target && event.target.tagName) || '').toLowerCase();
-    if (S.busy || tag === 'input' || tag === 'textarea' || tag === 'select') return;
+    if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
     const action = Keys.actionFor(S.shortcuts, Keys.normalizeKey(event));
     if (action && actionFn(action)) { event.preventDefault(); runAction(action); }
   }
 
+  // « Arrêter » du bloc d'état : la tâche qui y est montrée.
   function requestCancel() {
-    if (!S.busy) return;
-    S.cancel = true;
-    // Tâche qui tourne hors de Premiere (téléchargement…) : arrêtée aussi.
-    if (S.onCancel) { try { S.onCancel(); } catch (e) { /* déjà finie */ } }
-    $('status-detail').textContent = _T('Arrêt après la zone en cours…');
+    if (focus && tasks.indexOf(focus) >= 0) cancelTask(focus);
   }
 
   // ---------------------------------------------------------------- mode réduit, menu, CTA
@@ -596,7 +676,7 @@
   function renderCTA() {
     const a = ctaAction(), b = $('cta');
     b.textContent = a.label;
-    setDisabled(b, S.busy || !a.enabled);
+    setDisabled(b, !a.enabled);
   }
 
   // Fondu sur les bords de la barre d'onglets quand elle déborde.
@@ -768,7 +848,7 @@
     $('instagram').addEventListener('click', () => Host.openURL(INSTAGRAM_URL));
     app.services.openInstagram = () => Host.openURL(INSTAGRAM_URL);
     $('toggle-compact').addEventListener('click', toggleCompact);
-    $('cta').addEventListener('click', () => { const a = ctaAction(); if (a.enabled && !S.busy) a.run(); });
+    $('cta').addEventListener('click', () => { const a = ctaAction(); if (a.enabled) a.run(); });
     $('undo').addEventListener('click', undoLast);
     $('history').addEventListener('click', showHistory);
     $('cancel').addEventListener('click', requestCancel);

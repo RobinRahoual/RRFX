@@ -494,18 +494,8 @@
       selectEntry(d.entry);
       applyWhenIdle({ placement: 'playhead', at: r.at, track: r.track }, d.entry);
     }
-    // Une autre tâche tourne (export, transcription…) : l'effet est posé dès qu'elle est finie,
-    // au lieu d'être perdu.
-    async function applyWhenIdle(o, entry) {
-      if (S.busy) {
-        log(entry.name + _T(' : posé à la fin de la tâche en cours.'), 'info');
-        const t0 = Date.now();
-        while (S.busy && Date.now() - t0 < 10 * 60000) await new Promise(res => setTimeout(res, 400));
-        if (S.busy) return log(entry.name + _T(' : pas posé, la tâche en cours dure trop longtemps.'), 'warn');
-        if (!S.cur || S.cur.key !== entry.key) selectEntry(entry);
-      }
-      return applyEffect(o);
-    }
+    // Les tâches tournent en même temps : l'effet est posé tout de suite, même si une autre tourne.
+    const applyWhenIdle = o => applyEffect(o);
 
     function selectEntry(e, keepParams) {
       S.cur = e;

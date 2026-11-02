@@ -48,7 +48,7 @@ on y revient.
 ### Onglets regroupés, Fenêtres et espaces de travail
 
 - Les onglets tiennent sur une ligne : **⚡ Express**, **Montage** (sous-onglets *Effets*, *Rampe*, *Musique*,
-  *Premiere*), **Parole**, **Couleur**, **Textes**, **Formats**, **📚** (*Ressources*, *Mes effets*). Un groupe
+  *Premiere*), **Parole**, **Colorimétrie**, **Textes**, **Formats**, **📚** (*Ressources*, *Mes effets*). Un groupe
   rouvre le dernier sous-onglet utilisé.
 - **▦ Fenêtres** (ou *Ctrl+K > Fenêtres*, ou le menu du panneau) : coche ou décoche chaque onglet et chaque outil
   (section), comme le menu *Fenêtre* de Premiere. Un outil masqué reste disponible : la recherche rapide, son
@@ -209,12 +209,12 @@ constante (« RR FX · Rampe »). Avec 8 à 16 morceaux et l'interpolation *Flux
   sur le texte et amélioration de la voix ne se pilotent pas depuis un plugin : RR FX a *Musique à la durée*,
   *Montage par le texte* et *Égaliser la voix*.
 
-### Conversion LOG → Rec.709 en un clic (onglet Couleur)
+### Conversion LOG → Rec.709 en un clic (onglet Colorimétrie)
 
 Tu filmes en LOG ? Enregistre **une seule fois** ta caméra et sa LUT de conversion, elles servent ensuite à **tous
 tes projets** :
 
-1. *Couleur > Conversion LOG → Rec.709 > + Ajouter une caméra* : marque, modèle (ex. Sony **A7 III**), profil
+1. *Colorimétrie > Conversion LOG → Rec.709 > + Ajouter une caméra* : marque, modèle (ex. Sony **A7 III**), profil
    (ex. **S-Log3 / S-Gamut3.Cine**) ;
 2. **LUT du fabricant** : *Importer la LUT .cube…* (le bouton *Trouver la LUT officielle* lance la recherche). RR FX
    la garde dans `Documents/RRFX/Conversion` et la copie dans le dossier *LUTs/Technical* d'Adobe (elle apparaît
@@ -241,7 +241,7 @@ F-Log2, Nikon N-Log, DJI D-Log (et D-Log M avec la LUT DJI), Apple Log, Blackmag
 Samsung Log (LUT du fabricant), ARRI LogC3 / LogC4. Premiere 25 qui convertit déjà le log tout seul (*Gestion des
 couleurs > Détection automatique du log*) : coupe cette option, sinon l'image est convertie deux fois.
 
-### Expo, balance et raccord entre caméras (onglet Couleur)
+### Expo, balance et raccord entre caméras (onglet Colorimétrie)
 
 - **Expo et balance des blancs auto** : RR FX exporte l'image du milieu de chaque plan (après la conversion, sans
   les looks ni les titres, coupés le temps de l'export), l'analyse et corrige exposition, balance des blancs et
@@ -255,7 +255,7 @@ couleurs > Détection automatique du log*) : coupe cette option, sinon l'image e
 L'ordre des calques est toujours le même, de bas en haut : rushs, **conversion**, **expo auto**, **raccord**, puis tes
 **looks**, titres et overlays. Relancer une étape remplace ses calques sans toucher aux autres.
 
-### Onglet Couleur (façon Lightroom)
+### Onglet Colorimétrie (façon Lightroom)
 
 La colorimétrie comme en retouche photo, avec les panneaux et les réglages du module Développement de Lightroom.
 **Sélectionne d'abord un plan ou un calque de réglage dans la timeline** : sans sélection, les réglages sont grisés
@@ -295,7 +295,7 @@ porter, ils restent dans Lumetri.
 Le raccord peut aussi prendre **une image** comme référence (*ou une image (film, Reel…)*) : une capture d'un
 film ou d'un Reel dont tu aimes les couleurs ; ses tons et sa colorimétrie servent de cible.
 
-### Mes LUTs (onglet Couleur)
+### Mes LUTs (onglet Colorimétrie)
 
 Ta bibliothèque de LUTs, **gardée d'un projet à l'autre** : plus besoin de réimporter une LUT pour l'essayer.
 
@@ -537,7 +537,7 @@ Dans le même onglet :
   - ou la même action sur chacune, l'une après l'autre : look en cours, conversion LOG, copie au format choisi,
     vérification avant export, marqueurs des temps forts.
 - **Vérifier avant export** vérifie aussi l'image (option) : jusqu'à 12 plans, image du milieu ; plan sous- ou
-  surexposé de plus de 0,6 IL, dominante bleue ou orange marquée. Corrige-les avec *Couleur > Expo et balance auto*.
+  surexposé de plus de 0,6 IL, dominante bleue ou orange marquée. Corrige-les avec *Colorimétrie > Expo et balance auto*.
 
 ### Onglet Ressources
 
@@ -623,7 +623,7 @@ exporter, partager, publier, supprimer) apparaissent au survol. Double-clic sur 
 - Chaque élément a son type et s'**ouvre** à sa place (un style de texte dans l'onglet Textes, un dégradé dans
   l'onglet Textes, un style Express dans Express…). Tout se partage par code et se publie dans la Communauté.
 - **Packs de style** (`.rrfxpack`) : *Créer un pack…* rassemble dans un seul fichier tes effets et rampes perso, tes
-  looks (et celui en cours dans l'onglet Couleur), l'animation des textes et son modèle `.mogrt`, tes overlays
+  looks (et celui en cours dans l'onglet Colorimétrie), l'animation des textes et son modèle `.mogrt`, tes overlays
   importés (fichiers compris) et ton enchaînement d'effets. *Importer un pack…* (ou depuis l'onglet Ressources)
   ajoute tout en un clic, fichiers rangés dans `Documents/RRFX/Packs`. C'est un ZIP ordinaire.
 
@@ -663,7 +663,14 @@ séquence ou dans la zone sélectionnée (calques, copies, overlays, textes, son
 
 Pendant l'application, le bloc d'état montre que ça tourne (icône animée, temps écoulé), où on en est
 (« 3/12 · Glitch POST »), une barre de progression et le temps restant. **Arrêter** (ou Échap) interrompt proprement
-après la zone en cours. À la fin : **✓ vert**, **⚠ orange** (remarques dans le journal) ou **✕ rouge**, avec
+après la zone en cours.
+
+**Plusieurs actions à la fois** : rien n'attend. Pendant un téléchargement, une transcription ou un traitement par
+l'IA, tu peux appliquer un effet, régler la colorimétrie ou lancer autre chose. Le bloc d'état montre la dernière
+action lancée ; les autres continuent chacune sur sa ligne juste en dessous, avec son avancement et son **Arrêter**.
+Une action qui se termine pendant qu'une autre occupe le bloc affiche son résultat sur une ligne quelques secondes
+(et dans le journal). Seul le traitement par lot de plusieurs séquences attend que les autres soient finies (il
+ouvre une séquence après l'autre). À la fin : **✓ vert**, **⚠ orange** (remarques dans le journal) ou **✕ rouge**, avec
 **Voir le détail**. Au repos, la ligne d'état résume la séquence : cadence, clips sélectionnés, marqueurs.
 
 ### Recherche rapide
