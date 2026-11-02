@@ -661,3 +661,9 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .tool-head .tool-pick { margin-right: 2px; }
 .tools-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 6px 0; }
 .action.danger.quiet { color: var(--danger, #e5534b); }
+/* Installation d'outils en arrière-plan (2.11.1). */
+.tool-bg { margin: 6px 0 10px; padding: 8px 10px; border: 1px solid var(--accent); border-radius: 6px; }
+.tool-bg-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.tool-bg-fill { height: 100%; width: 0; background: var(--accent); transition: width 0.15s; }
+.tool-bg-fill.busy { opacity: 0.5; animation: tool-bg-pulse 1.2s ease-in-out infinite; }
+@keyframes tool-bg-pulse { 50% { opacity: 0.2; } }

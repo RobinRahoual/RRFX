@@ -37,7 +37,18 @@
     // Outil lancé par un script de RR FX : prêt quand son environnement a été préparé (fichier témoin).
     const marker = t => Store.path.join(venvDir(t.venv), 'rrfx-' + t.id + '.ok');
     // Une tâche RR FX peut être arrêtée : chaque attente le vérifie.
-    const stopped = () => { if (app.S.cancel) throw new Error(_T('Arrêté')); };
+    // Installations en arrière-plan (bg) : RR FX reste utilisable pendant ce temps (effets, couleur,
+    // glisser-déposer…). Leur avancement, leur arrêt et leurs commandes passent par bg, pas par le
+    // bloc d'état ; les fonctions qui ont besoin d'un outil attendent la fin (need).
+    const bg = { running: false, cancel: false, onCancel: null, label: '', phase: '', text: '', pct: -1 };
+    const ctl = () => (bg.running ? bg : app.S);
+    const bgStatus = {
+      phase: t => { bg.phase = t; bg.text = t + '…'; bg.pct = -1; drawBg(); },
+      progress: (d, n, name) => { bg.pct = n > 0 ? Math.min(1, d / n) : -1; bg.text = (bg.phase || bg.label) + (name ? ' · ' + name : ''); drawBg(); },
+      finish: () => {}
+    };
+    const stat = () => (bg.running ? bgStatus : app.status);
+    const stopped = () => { if (ctl().cancel) throw new Error(_T('Arrêté')); };
     // Une erreur qui finit la tâche en avertissement (pas en échec).
     const warn = (title, detail) => Object.assign(new Error(detail || title), { result: { kind: 'warn', title, detail } });
 
@@ -67,22 +78,23 @@
         try { cp = node('child_process').spawn(exe, args, { windowsHide: true, cwd: x.cwd, env: env(x.env) }); } catch (e) { return reject(e); }
         let out = '', err = '', buf = '';
         const onLine = l => {
-          if (x.progress) { const p = x.progress(l); if (p !== null && p !== undefined) app.status.progress(Math.round(p * 100), 100, x.label || ''); }
+          if (x.progress) { const p = x.progress(l); if (p !== null && p !== undefined) stat().progress(Math.round(p * 100), 100, x.label || ''); }
           if (x.onLine) x.onLine(l);
         };
         const feed = d => { buf += String(d); const lines = buf.split(/[\r\n]+/); buf = lines.pop(); lines.forEach(onLine); };
         cp.stdout.on('data', d => { if (x.keep || out.length < 4e6) out += d; feed(d); });
         cp.stderr.on('data', d => { err += d; if (err.length > 80000) err = err.slice(-40000); feed(d); });
         if (x.input !== undefined) cp.stdin.end(x.input);
-        app.S.onCancel = () => { try { cp.kill(); } catch (e) { /* déjà fini */ } };
+        const c = ctl();
+        c.onCancel = () => { try { cp.kill(); } catch (e) { /* déjà fini */ } };
         cp.on('error', e => {
-          app.S.onCancel = null;
+          c.onCancel = null;
           reject(e && e.code === 'ENOENT' ? new Error(_T('Introuvable : ') + exe) : e);
         });
         cp.on('close', code => {
-          app.S.onCancel = null;
+          c.onCancel = null;
           if (buf) onLine(buf);
-          if (app.S.cancel) return reject(new Error(_T('Arrêté')));
+          if (c.cancel) return reject(new Error(_T('Arrêté')));
           if (code === 0 || x.anyCode) resolve({ out, err, code });
           else reject(new Error(lastLine(err) || lastLine(out) || Store.path.basename(exe) + _T(' s\'est arrêté (code ') + code + ')'));
         });
@@ -101,7 +113,7 @@
     const listDir = (dir, re) => { try { return Store.fs.readdirSync(dir).filter(n => !re || re.test(n)).sort().map(n => Store.path.join(dir, n)); } catch (e) { return []; } };
     // Pour les outils sans avancement : le nombre de fichiers écrits dans out, sur total.
     function watchCount(dir, total, label) {
-      const t = setInterval(() => { const n = listDir(dir).length; if (total) app.status.progress(Math.min(n, total), total, label); }, 700);
+      const t = setInterval(() => { const n = listDir(dir).length; if (total) stat().progress(Math.min(n, total), total, label); }, 700);
       return () => clearInterval(t);
     }
 
@@ -125,11 +137,12 @@
           if (res.statusCode !== 200) { res.resume(); return reject(new Error(_T('Téléchargement refusé (') + res.statusCode + ') : ' + url)); }
           const total = Number(res.headers['content-length']) || (mb || 0) * 1e6, out = Store.fs.createWriteStream(part);
           let got = 0;
-          app.S.onCancel = () => res.destroy(new Error(_T('Arrêté')));
-          res.on('data', c => { got += c.length; if (total) app.status.progress(Math.min(got, total), total, label + ' · ' + Lb.size(got / 1e6)); });
+          const c = ctl();
+          c.onCancel = () => res.destroy(new Error(_T('Arrêté')));
+          res.on('data', c => { got += c.length; if (total) stat().progress(Math.min(got, total), total, label + ' · ' + Lb.size(got / 1e6)); });
           res.on('error', e => { out.destroy(); reject(e); });
           out.on('error', reject);
-          out.on('finish', () => { app.S.onCancel = null; try { Store.fs.renameSync(part, file); resolve(file); } catch (e) { reject(e); } });
+          out.on('finish', () => { c.onCancel = null; try { Store.fs.renameSync(part, file); resolve(file); } catch (e) { reject(e); } });
           res.pipe(out);
         });
         req.on('error', e => reject(new Error(_T('Pas de connexion à ') + new URL(url).host + ' (' + (e.code || e.message) + ')')));
@@ -212,7 +225,7 @@
     async function installPython() {
       const dir = toolDir('python312');
       if (win()) {
-        app.status.phase(_T('Installation de Python ') + Lb.PYTHON.version);
+        stat().phase(_T('Installation de Python ') + Lb.PYTHON.version);
         const exe = Store.path.join(work('python'), 'python-setup.exe');
         await download(Lb.PYTHON.win, exe, 'Python', 26);
         await run(exe, Lb.PYTHON.winArgs(dir), { label: 'Python' });
@@ -235,7 +248,7 @@
         clean(dir);
       }
       const py = (await findPython(need)) || (await installPython());
-      app.status.phase(_T('Environnement Python de RR FX'));
+      stat().phase(_T('Environnement Python de RR FX'));
       await run(py.cmd, py.args.concat(['-m', 'venv', dir]), { label: 'Python' });
       if (!exists(v.python)) throw new Error(_T('L\'environnement Python n\'a pas été créé (') + dir + ').');
       return v;
@@ -243,10 +256,10 @@
     // pkg : un ou plusieurs paquets séparés par des espaces (« transformers>=4.56 torch »).
     async function pipInstall(pkg, name, min, venvName) {
       const v = await ensureVenv(min, venvName);
-      app.status.phase(_T('Installation de ') + name + _T(' (Python, peut prendre plusieurs minutes)'));
+      stat().phase(_T('Installation de ') + name + _T(' (Python, peut prendre plusieurs minutes)'));
       await run(v.python, Lb.pipArgs(String(pkg).split(/\s+/).filter(Boolean)), {
         label: name,
-        onLine: l => { const s = Lb.pipStep(l); if (s) app.status.phase(name + ' · ' + (s.last ? _T('installation') : s.what + (s.size ? ' (' + s.size + ')' : ''))); }
+        onLine: l => { const s = Lb.pipStep(l); if (s) stat().phase(name + ' · ' + (s.last ? _T('installation') : s.what + (s.size ? ' (' + s.size + ')' : ''))); }
       });
     }
 
@@ -285,7 +298,7 @@
         clean(tmp);
         await unlock(dir, Store.listFiles(dir, /./, 5000, 6).filter(f => t.exe.indexOf(Store.path.basename(f)) >= 0));
       } else if (how.type === 'wheel') {
-        app.status.phase(t.name + _T(' : recherche de la dernière version'));
+        stat().phase(t.name + _T(' : recherche de la dernière version'));
         const meta = await getJSON('https://pypi.org/pypi/' + how.pkg + '/json'), w = Lb.pickWheel(meta.urls, P());
         if (!w) throw new Error(t.name + _T(' : aucun paquet pour ce système.'));
         const tmp = work(t.id), a = Store.path.join(tmp, w.filename);
@@ -308,7 +321,7 @@
           if (how.fallback) return installWith(t, how.fallback);
           throw new Error(_T('Homebrew est nécessaire (brew.sh), ou installe ') + t.name + _T(' toi-même.'));
         }
-        app.status.phase(_T('Installation de ') + t.name + ' (Homebrew)');
+        stat().phase(_T('Installation de ') + t.name + ' (Homebrew)');
         await run(brew, ['install', how.formula], { label: t.name, env: { HOMEBREW_NO_AUTO_UPDATE: '1', HOMEBREW_NO_INSTALL_CLEANUP: '1' } });
       }
       return null;
@@ -319,7 +332,7 @@
       if (!Store.fs) throw warn(_T('Disponible dans Premiere'), _T('Les outils s\'installent depuis Premiere.'));
       const t = Lb.byId(id), how = Lb.howFor(t, P());
       if (!how) throw new Error(t.name + _T(' ne s\'installe pas tout seul sur ce système : ') + t.site);
-      app.status.phase(_T('Installation de ') + t.name);
+      stat().phase(_T('Installation de ') + t.name);
       await installWith(t, how);
       stopped();
       if (t.models) await models(id);
@@ -330,10 +343,56 @@
       if (id === 'ollama') await ollamaStart();
       return exe;
     }
-    const install = id => app.runTask(_T('Installation de ') + Lb.byId(id).name, async () => {
+    // Une installation (ou désinstallation) en arrière-plan à la fois ; le résultat va dans le journal,
+    // et dans le bloc d'état s'il est libre.
+    async function runBg(label, fn) {
+      if (!Store.fs) return app.status.finish('warn', _T('Disponible dans Premiere'), _T('Les outils s\'installent depuis Premiere.'));
+      if (bg.running) return app.status.finish('warn', _T('Une installation est déjà en cours'), bg.label + _T(' : attends sa fin (Réglages › Outils gratuits).'));
+      Object.assign(bg, { running: true, cancel: false, onCancel: null, label, phase: '', text: _T('Démarrage…'), pct: -1 });
+      app.log(label, 'info');
+      refreshSection();
+      let res;
+      try { res = (await fn()) || { kind: 'ok', title: label }; } catch (e) {
+        res = e.result || (bg.cancel ? { kind: 'warn', title: _T('Arrêté'), detail: label } : { kind: 'error', title: label, detail: app.errorMessage(e) });
+      }
+      bg.running = false;
+      bg.onCancel = null;
+      app.log(res.title + (res.detail ? ' · ' + res.detail : ''), res.kind === 'ok' ? 'ok' : res.kind === 'error' ? 'error' : 'warn');
+      if (!app.S.busy) app.status.finish(res.kind, res.title, res.detail);
+      refreshSection();
+      return res;
+    }
+    function stopBg() {
+      bg.cancel = true;
+      bg.text = _T('Arrêt…');
+      drawBg();
+      if (bg.onCancel) { try { bg.onCancel(); } catch (e) { /* déjà fini */ } }
+    }
+    // Avancement de l'installation en cours, en haut de la section des outils.
+    let bgEl = null;
+    function bgBox() {
+      if (!bg.running) return (bgEl = null);
+      const stop = h('button', { class: 'action quiet' }, _T('Arrêter'));
+      stop.addEventListener('click', stopBg);
+      bgEl = h('div', { class: 'tool-bg' },
+        h('div', { class: 'tool-bg-head' }, h('strong', null, bg.label), stop),
+        h('div', { class: 'progress' }, h('div', { class: 'tool-bg-fill' })),
+        h('div', { class: 'note tool-bg-text' }, _T('Tu peux continuer à utiliser RR FX pendant ce temps.')));
+      drawBg();
+      return bgEl;
+    }
+    function drawBg() {
+      if (!bgEl || !bgEl.isConnected) return;
+      const fill = bgEl.querySelector('.tool-bg-fill');
+      fill.style.width = bg.pct >= 0 ? Math.round(bg.pct * 100) + '%' : '100%';
+      fill.classList.toggle('busy', bg.pct < 0);
+      bgEl.querySelector('.tool-bg-text').textContent = bg.text || '';
+    }
+
+    const install = id => runBg(_T('Installation de ') + Lb.byId(id).name, async () => {
       const exe = await installCore(id);
       return { kind: 'ok', title: Lb.byId(id).name + _T(' est prêt'), detail: exe };
-    }, true).then(r => { refreshSection(); return r; });
+    });
 
     // Désinstaller ce que RR FX a installé (dans Documents/RRFX/Outils) : son dossier, ses paquets
     // Python (ou tout son environnement s'il en a un à lui). Les modèles d'Ollama (~/.ollama) restent.
@@ -349,7 +408,7 @@
         if (t.venv) clean(venvDir(t.venv));
         else {
           const v = Lb.venv(venvDir(), win());
-          if (exists(v.python)) { app.status.phase(_T('Désinstallation de ') + t.name); await run(v.python, Lb.pipUninstallArgs(how.pkg), { label: t.name }); }
+          if (exists(v.python)) { stat().phase(_T('Désinstallation de ') + t.name); await run(v.python, Lb.pipUninstallArgs(how.pkg), { label: t.name }); }
           if (t.script) { try { Store.fs.unlinkSync(marker(t)); } catch (e) { /* déjà retiré */ } }
         }
       }
@@ -363,7 +422,7 @@
       const t = Lb.byId(id);
       const go = await app.confirmDialog(_T('Désinstaller ') + t.name + ' ?', _T('Ses fichiers sont supprimés de Documents/RRFX/Outils') + _T('. Tu pourras le réinstaller à tout moment.') + (id === 'ollama' ? _T(' Les modèles restent dans le dossier .ollama de ton compte : supprime-le pour récupérer leur place.') : ''), _T('Désinstaller'));
       if (!go) return;
-      await app.runTask(_T('Désinstallation de ') + t.name, async () => {
+      await runBg(_T('Désinstallation de ') + t.name, async () => {
         await uninstallCore(id);
         return { kind: 'ok', title: t.name + _T(' désinstallé'), detail: '' };
       });
@@ -373,6 +432,9 @@
 
     // Dans une tâche : l'outil, ou la proposition de l'installer tout de suite.
     async function need(id, why) {
+      // Pendant une installation en arrière-plan, les outils attendent : elle passerait ses
+      // commandes et son arrêt avec les leurs.
+      if (bg.running) throw warn(_T('Installation d\'outils en cours'), _T('Attends la fin de « ') + bg.label + _T(' » (Réglages › Outils gratuits), puis recommence.'));
       const exe = await find(id);
       if (exe) return exe;
       const t = Lb.byId(id);
@@ -450,7 +512,7 @@
         });
         req.on('error', reject);
         if (timeout) req.setTimeout(timeout, () => req.destroy(new Error(_T('Ollama ne répond pas'))));
-        app.S.onCancel = () => req.destroy(new Error(_T('Arrêté')));
+        ctl().onCancel = () => req.destroy(new Error(_T('Arrêté')));
         if (data) req.write(data);
         req.end();
       });
@@ -476,12 +538,12 @@
     }
     const hasModel = (list, id) => list.some(n => n === id || n === id + ':latest' || n.split(':')[0] === id && id.indexOf(':') < 0);
     async function pull(model) {
-      app.status.phase(_T('Téléchargement du modèle ') + model);
+      stat().phase(_T('Téléchargement du modèle ') + model);
       let failed = '';
       await ollamaCall('POST', '/api/pull', { model, stream: true }, m => {
         if (m.error) failed = m.error;
-        else if (m.total) app.status.progress(m.completed || 0, m.total, model + ' · ' + Lb.size((m.completed || 0) / 1e6) + ' / ' + Lb.size(m.total / 1e6));
-        else if (m.status) app.status.phase(model + ' · ' + m.status);
+        else if (m.total) stat().progress(m.completed || 0, m.total, model + ' · ' + Lb.size((m.completed || 0) / 1e6) + ' / ' + Lb.size(m.total / 1e6));
+        else if (m.status) stat().phase(model + ' · ' + m.status);
       });
       if (failed) throw new Error('Ollama : ' + failed);
     }
@@ -546,12 +608,12 @@
       const pill = h('span', { class: 'badge tool-state' + (ok ? ' ok' : '') }, !s ? (Store.fs ? '…' : _T('non installé')) : ok ? _T('✓ installé') : s.exe ? _T('modèles à télécharger') : _T('non installé'));
       const btns = h('div', { class: 'row-buttons wrap' });
       if (!ok) {
-        const b = h('button', { class: 'action go', disabled: !Store.fs || !how }, (s && s.exe ? _T('Télécharger les modèles') : _T('Installer')) + ' (' + Lb.size(t.mb) + ')');
+        const b = h('button', { class: 'action go', disabled: !Store.fs || !how || bg.running }, (s && s.exe ? _T('Télécharger les modèles') : _T('Installer')) + ' (' + Lb.size(t.mb) + ')');
         b.addEventListener('click', () => install(t.id));
         btns.appendChild(b);
       }
       if (s && s.exe && ours(s.exe)) {
-        const un = h('button', { class: 'action quiet danger' }, _T('Désinstaller'));
+        const un = h('button', { class: 'action quiet danger', disabled: bg.running }, _T('Désinstaller'));
         un.addEventListener('click', () => uninstall(t.id));
         btns.appendChild(un);
       }
@@ -595,10 +657,10 @@
         const missing = Object.keys(labels).map(k => o[k]).filter(m => !hasModel(s.list, m));
         if (missing.length) {
           const b = h('button', { class: 'action' }, _T('Télécharger les modèles choisis'));
-          b.addEventListener('click', () => app.runTask(_T('Modèles Ollama'), async () => {
+          b.addEventListener('click', () => runBg(_T('Modèles Ollama'), async () => {
             for (const m of missing) { stopped(); await pull(m); }
             return { kind: 'ok', title: app.plural(missing.length, _T('modèle prêt'), _T('modèles prêts')), detail: missing.join(', ') };
-          }, true).then(() => check('ollama')).then(refreshSection));
+          }).then(() => check('ollama')).then(refreshSection));
           box.appendChild(h('div', { class: 'row-buttons' }, b));
         }
       }
@@ -620,13 +682,13 @@
         todo.map(t => t.name).join(', ') + _T(' : environ ') + Lb.size(mb) + _T(' à télécharger. Ça peut prendre un moment ; tu peux continuer à monter pendant ce temps, et Arrêter à tout moment.'),
         _T('Installer'));
       if (!go) return;
-      await app.runTask(_T('Installation des outils'), async () => {
+      await runBg(_T('Installation des outils'), async () => {
         const done = [], failed = [];
         for (let i = 0; i < todo.length; i++) {
           stopped();
-          app.status.progress(i, todo.length, todo[i].name);
+          stat().progress(i, todo.length, todo[i].name);
           try { await installCore(todo[i].id); done.push(todo[i].name); } catch (e) {
-            if (app.S.cancel) throw e;
+            if (ctl().cancel) throw e;
             failed.push(todo[i].name + ' (' + app.errorMessage(e) + ')');
             app.log(todo[i].name + ' : ' + app.errorMessage(e), 'warn');
           }
@@ -637,19 +699,21 @@
           try {
             const o = st().ollama, have = await ollamaModels();
             for (const m of [o.text, o.vision, o.embed].filter((m, i, a) => m && a.indexOf(m) === i && !hasModel(have, m))) { stopped(); await pull(m); }
-          } catch (e) { if (app.S.cancel) throw e; failed.push(_T('modèles Ollama (') + app.errorMessage(e) + ')'); }
+          } catch (e) { if (ctl().cancel) throw e; failed.push(_T('modèles Ollama (') + app.errorMessage(e) + ')'); }
         }
-        app.status.progress(todo.length, todo.length, '');
+        stat().progress(todo.length, todo.length, '');
         todo.forEach(t => picked.delete(t.id));
         if (!failed.length) return { kind: 'ok', title: app.plural(done.length, _T('outil installé'), _T('outils installés')), detail: done.join(', ') };
         return { kind: 'warn', title: app.plural(done.length, _T('outil installé'), _T('outils installés')) + ', ' + app.plural(failed.length, _T('échec'), _T('échecs')), detail: failed.join(' · ') };
-      }, true);
+      });
       await Promise.all(Lb.TOOLS.map(t => check(t.id).catch(() => null)));
       refreshSection();
     }
 
     function fill(box) {
       box.innerHTML = '';
+      const running = bgBox();
+      if (running) box.appendChild(running);
       box.appendChild(h('div', { class: 'note' }, _T('Des outils gratuits et open source qui tournent sur ton ordinateur : rien n\'est envoyé en ligne. Chacun est optionnel ; RR FX propose aussi de l\'installer au moment où une fonction en a besoin. Tout va dans Documents/RRFX/Outils.')));
       box.appendChild(h('div', { class: 'note' }, _T('Intégré, rien à installer : la détection de la voix (Silero) pour couper les silences, et la détection des visages (YuNet).')));
       // Cases à cocher sur les outils manquants, « Tout cocher », puis « Installer la sélection ».
@@ -658,7 +722,7 @@
         const sel = todo.filter(t => picked.has(t.id)), every = sel.length === todo.length;
         const all = h('button', { class: 'action' }, every ? _T('Tout décocher') : _T('Tout cocher'));
         all.addEventListener('click', () => { todo.forEach(t => (every ? picked.delete(t.id) : picked.add(t.id))); refreshSection(); });
-        const go = h('button', { class: 'action go tools-go', disabled: !Store.fs || !sel.length },
+        const go = h('button', { class: 'action go tools-go', disabled: !Store.fs || !sel.length || bg.running },
           sel.length ? _T('Installer la sélection') + ' (' + sel.length + ' · ' + sizeOf(sel) + ')' : _T('Coche les outils à installer'));
         go.addEventListener('click', installAll);
         box.appendChild(h('div', { class: 'row-buttons tools-bar' }, all, go));

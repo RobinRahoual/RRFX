@@ -445,7 +445,7 @@
             settings().vary === 'chain' && settings().chain.keys.includes(e.key) ? h('span', { class: 'chain-mark', title: _T('Dans l\'enchaînement') }, String(settings().chain.keys.indexOf(e.key) + 1)) : null));
         card.addEventListener('click', ev => (ev.shiftKey ? toggleChain(e) : selectEntry(e)));
         // Double-clic : posé à la tête de lecture. Glisser dans la timeline : posé où il est lâché.
-        card.addEventListener('dblclick', ev => { if (ev.shiftKey) return; selectEntry(e); applyEffect({ placement: 'playhead' }); });
+        card.addEventListener('dblclick', ev => { if (ev.shiftKey) return; selectEntry(e); applyWhenIdle({ placement: 'playhead' }, e); });
         card.draggable = true;
         card.addEventListener('dragstart', ev => dragOut(ev, e));
         card.addEventListener('dragend', () => { dropped(); });
@@ -492,7 +492,19 @@
         return;
       }
       selectEntry(d.entry);
-      applyEffect({ placement: 'playhead', at: r.at, track: r.track });
+      applyWhenIdle({ placement: 'playhead', at: r.at, track: r.track }, d.entry);
+    }
+    // Une autre tâche tourne (export, transcription…) : l'effet est posé dès qu'elle est finie,
+    // au lieu d'être perdu.
+    async function applyWhenIdle(o, entry) {
+      if (S.busy) {
+        log(entry.name + _T(' : posé à la fin de la tâche en cours.'), 'info');
+        const t0 = Date.now();
+        while (S.busy && Date.now() - t0 < 10 * 60000) await new Promise(res => setTimeout(res, 400));
+        if (S.busy) return log(entry.name + _T(' : pas posé, la tâche en cours dure trop longtemps.'), 'warn');
+        if (!S.cur || S.cur.key !== entry.key) selectEntry(entry);
+      }
+      return applyEffect(o);
     }
 
     function selectEntry(e, keepParams) {

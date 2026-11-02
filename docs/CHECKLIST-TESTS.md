@@ -254,6 +254,7 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 
 - [ ] 🔴 *Effets* : **double-clic** sur une vignette : l'effet est posé à la tête de lecture (calque `RR FX · …`), le réglage *Position* ne change pas
 - [ ] 🔴 *Effets* : **glisser une vignette sur une piste** de la timeline : l'effet est posé à l'endroit lâché, sur cette piste ; le petit fichier transparent n'apparaît ni dans la timeline ni dans le panneau Projet
+- [ ] Pendant une installation d'outils (Réglages › Outils gratuits) : glisser et double-cliquer un effet marche, l'avancement de l'installation reste affiché dans la section des outils
 - [ ] Glisser une vignette dans le panneau Projet : message « Lâche l'effet sur une piste », le fichier glissé est retiré du projet
 - [ ] 🔴 *Réglages › Calques › Choisir un projet modèle…* (un petit projet avec seulement un calque de réglage) ; dans un projet **sans** calque de réglage, *Appliquer* : le calque est importé tout seul, l'effet est posé
 - [ ] 🔴 *Couleur* sans clip sélectionné : réglages grisés, message, bouton *Appliquer* inactif ; sélectionne un plan : tout se réactive (en 2 s)

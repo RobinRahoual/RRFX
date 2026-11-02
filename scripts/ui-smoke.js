@@ -732,6 +732,15 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const pl = await page.evaluate(() => window.RRFXApp.settings().placement);
     if (pl === 'playhead') throw new Error('le double-clic ne doit pas changer le réglage « Position »');
   });
+  await step('2.11.1 : double-clic pendant une autre tâche, posé à sa fin', async () => {
+    await goTab('effects');
+    await page.evaluate(() => { window.RRFXApp.S.busy = true; });
+    await page.dblclick('#view-effects .card[data-key]');
+    await page.waitForTimeout(600);
+    await page.evaluate(() => { window.RRFXApp.S.busy = false; });
+    await page.waitForFunction(() => /posé à la fin de la tâche en cours/.test(document.getElementById('log') ? document.getElementById('log').textContent : document.body.textContent), null, { timeout: 4000 }).catch(() => {});
+    await page.waitForSelector('#status.ok', { timeout: 8000 });
+  });
   await step('2.11 : couleur verrouillée sans plan sélectionné', async () => {
     await goTab('color');
     await page.waitForSelector('#view-color [data-panel=basic]');
