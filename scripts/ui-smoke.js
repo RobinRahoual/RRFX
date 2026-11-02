@@ -764,7 +764,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const moved = await page.textContent(row + ' .lr-val');
     if (/^0$/.test(moved.trim())) throw new Error('le clic sur la piste aurait dû changer la valeur');
     await page.mouse.dblclick(box.x + box.width * 0.9, box.y + box.height / 2);
-    await page.waitForFunction(sel => document.querySelector(sel + ' .lr-val').textContent.trim() === '0', row, { timeout: 2000 });
+    await page.waitForTimeout(300);
+    const back = (await page.textContent(row + ' .lr-val')).trim();
+    if (back !== '0') throw new Error('après le double-clic : ' + back);
   });
   await step('2.11 : couleur verrouillée sans plan sélectionné', async () => {
     await goTab('color');
