@@ -24,7 +24,12 @@ rm -rf "$HOME/Library/Application Support/Adobe/CEP/extensions/CutFX"
 
 if rm -rf "$DEST" && mkdir -p "$DEST" && cp -R "$SRC/." "$DEST/"; then
   xattr -dr com.apple.quarantine "$DEST" 2>/dev/null || true
-  echo "RR FX est installé. Redémarre Premiere Pro, puis : Fenêtre > Extensions > RR FX"
+  echo "RR FX est installé dans le dossier des extensions Adobe :"
+  echo "  $DEST"
+  echo
+  # Installation en une ligne (installer-mac.sh) : le pack temporaire est déjà supprimé.
+  [ -z "$RRFX_TEMP" ] && echo "Le dossier téléchargé (celui de ce script) ne sert plus : tu peux le supprimer."
+  echo "Redémarre Premiere Pro, puis : Fenêtre > Extensions > RR FX"
 else
   echo
   echo "La copie a échoué. Ferme Premiere Pro puis relance ce script."

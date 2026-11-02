@@ -977,6 +977,10 @@ curl -fsSL https://raw.githubusercontent.com/RobinRahoual/RRFX/main/installer-ma
      (ou, dans le Terminal, tape `sh ` puis glisse le fichier dans la fenêtre et appuie sur Entrée).
 3. Ouvre Premiere : **Fenêtre > Extensions > RR FX**.
 
+Le script **copie** RR FX dans le dossier des extensions Adobe (`%APPDATA%\Adobe\CEP\extensions\RRFX` sur
+Windows, `~/Library/Application Support/Adobe/CEP/extensions/RRFX` sur Mac). Le dossier téléchargé ne sert plus
+ensuite : tu peux le supprimer, RR FX reste installé.
+
 > **Une seule chose à faire par projet** : crée un calque de réglage (*Fichier > Nouveau > Calque de réglage*).
 > RR FX le retrouve tout seul. Ou une fois pour toutes : un petit projet avec seulement un calque de réglage, choisi
 > dans *Réglages › Calques › Projet modèle* : RR FX l'importe là où il en manque.

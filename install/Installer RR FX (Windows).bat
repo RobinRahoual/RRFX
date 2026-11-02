@@ -8,7 +8,7 @@ rem Pas de parentheses dans les messages : elles cassent les blocs des fichiers 
 
 set "SRC=%~dp0RRFX"
 set "DEST=%APPDATA%\Adobe\CEP\extensions\RRFX"
-set "LOG=%~dp0installation-rrfx.log"
+set "LOG=%TEMP%\installation-rrfx.log"
 
 if not exist "%SRC%\CSXS\manifest.xml" goto no_src
 
@@ -25,7 +25,11 @@ robocopy "%SRC%" "%DEST%" /E /NFL /NDL /NJH /NJS /NP > "%LOG%" 2>&1
 if %ERRORLEVEL% GEQ 8 goto failed
 if not exist "%DEST%\CSXS\manifest.xml" goto failed
 
-echo Termine. Redemarre Premiere Pro, puis : Fenetre ^> Extensions ^> RR FX
+echo Termine. RR FX est installe dans le dossier des extensions Adobe :
+echo   "%DEST%"
+echo.
+echo Le dossier telecharge, celui de ce script, ne sert plus : tu peux le supprimer.
+echo Redemarre Premiere Pro, puis : Fenetre ^> Extensions ^> RR FX
 goto end
 
 :failed

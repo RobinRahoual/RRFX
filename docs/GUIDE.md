@@ -774,7 +774,8 @@ panneau se recharge, tes réglages et ta bibliothèque sont gardés. Les calques
 *Réglages › Outils gratuits* liste les outils open source que RR FX sait piloter, avec leur taille et leur licence.
 **Installer** les télécharge dans `Documents/RRFX/Outils` (les paquets Python vont dans un environnement à part,
 `Documents/RRFX/Outils/python` ; Python est installé s'il manque, sur Mac l'installateur officiel s'ouvre). Une
-fonction qui a besoin d'un outil absent propose aussi de l'installer. *Indiquer l'outil…* sert si tu l'as déjà
+fonction qui a besoin d'un outil absent propose aussi de l'installer. **Tout installer** installe d'un coup tous
+les outils manquants (puis les modèles Ollama choisis), l'un après l'autre ; un échec n'arrête pas la suite. *Indiquer l'outil…* sert si tu l'as déjà
 ailleurs. Tout tourne sur ton ordinateur.
 
 - **Ollama** (IA de texte et d'image) : choisis les modèles *Texte*, *Images* et *Recherche*, téléchargés au premier

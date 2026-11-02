@@ -562,10 +562,56 @@
       return box;
     }
 
+    // Tout installer : les outils manquants l'un après l'autre, puis les modèles Ollama choisis.
+    // Un échec n'arrête pas la suite ; le bilan dit ce qui n'a pas pu s'installer.
+    const missingTools = () => Lb.TOOLS.filter(t => Lb.howFor(t, P()) && !(state[t.id] && state[t.id].exe && state[t.id].models));
+    async function installAll() {
+      // État à jour d'abord : un outil déjà là n'est pas réinstallé.
+      await Promise.all(Lb.TOOLS.map(t => (state[t.id] ? null : check(t.id).catch(() => null))));
+      const todo = missingTools();
+      if (!todo.length) return app.status.finish('ok', _T('Tout est déjà installé'), '');
+      const mb = todo.reduce((a, t) => a + (t.mb || 0), 0);
+      const go = await app.confirmDialog(_T('Installer tous les outils ?'),
+        todo.map(t => t.name).join(', ') + _T(' : environ ') + Lb.size(mb) + _T(' à télécharger. Ça peut prendre un moment ; tu peux continuer à monter pendant ce temps, et Arrêter à tout moment.'),
+        _T('Tout installer'));
+      if (!go) return;
+      await app.runTask(_T('Installation des outils'), async () => {
+        const done = [], failed = [];
+        for (let i = 0; i < todo.length; i++) {
+          stopped();
+          app.status.progress(i, todo.length, todo[i].name);
+          try { await installCore(todo[i].id); done.push(todo[i].name); } catch (e) {
+            if (app.S.cancel) throw e;
+            failed.push(todo[i].name + ' (' + app.errorMessage(e) + ')');
+            app.log(todo[i].name + ' : ' + app.errorMessage(e), 'warn');
+          }
+          forget(todo[i].id);
+        }
+        // Modèles Ollama choisis (texte, images, recherche), si Ollama est là.
+        if (todo.some(t => t.id === 'ollama') && done.indexOf(Lb.byId('ollama').name) >= 0) {
+          try {
+            const o = st().ollama, have = await ollamaModels();
+            for (const m of [o.text, o.vision, o.embed].filter((m, i, a) => m && a.indexOf(m) === i && !hasModel(have, m))) { stopped(); await pull(m); }
+          } catch (e) { if (app.S.cancel) throw e; failed.push(_T('modèles Ollama (') + app.errorMessage(e) + ')'); }
+        }
+        app.status.progress(todo.length, todo.length, '');
+        if (!failed.length) return { kind: 'ok', title: app.plural(done.length, _T('outil installé'), _T('outils installés')), detail: done.join(', ') };
+        return { kind: 'warn', title: app.plural(done.length, _T('outil installé'), _T('outils installés')) + ', ' + app.plural(failed.length, _T('échec'), _T('échecs')), detail: failed.join(' · ') };
+      }, true);
+      await Promise.all(Lb.TOOLS.map(t => check(t.id).catch(() => null)));
+      refreshSection();
+    }
+
     function fill(box) {
       box.innerHTML = '';
       box.appendChild(h('div', { class: 'note' }, _T('Des outils gratuits et open source qui tournent sur ton ordinateur : rien n\'est envoyé en ligne. Chacun est optionnel ; RR FX propose aussi de l\'installer au moment où une fonction en a besoin. Tout va dans Documents/RRFX/Outils.')));
       box.appendChild(h('div', { class: 'note' }, _T('Intégré, rien à installer : la détection de la voix (Silero) pour couper les silences, et la détection des visages (YuNet).')));
+      const todo = missingTools();
+      if (todo.length) {
+        const all = h('button', { class: 'action go', disabled: !Store.fs }, _T('Tout installer') + ' (' + todo.length + ' · ' + Lb.size(todo.reduce((a, t) => a + (t.mb || 0), 0)) + ')');
+        all.addEventListener('click', installAll);
+        box.appendChild(h('div', { class: 'row-buttons' }, all));
+      }
       Lb.TOOLS.forEach(t => box.appendChild(card(t)));
     }
 

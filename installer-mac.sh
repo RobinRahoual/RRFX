@@ -38,4 +38,4 @@ if [ -z "$SCRIPT" ]; then
   exit 1
 fi
 echo
-sh "$SCRIPT"
+RRFX_TEMP=1 sh "$SCRIPT"

@@ -12,7 +12,10 @@ INSTALLATION
    glisse le fichier .command dans la fenetre, puis Entree.
    Encore plus simple, sans rien telecharger a la main (Terminal) :
    curl -fsSL https://raw.githubusercontent.com/RobinRahoual/RRFX/main/installer-mac.sh | sh
-   Laisse le dossier RRFX dans le meme dossier que le script.
+   Laisse le dossier RRFX dans le meme dossier que le script : le script
+   le COPIE dans le dossier des extensions Adobe (voir plus bas). Une fois
+   l'installation terminee, ce dossier telecharge ne sert plus : tu peux
+   le supprimer, RR FX reste installe.
 3. Lance Premiere Pro, puis : Fenetre > Extensions > RR FX
 
 Il faut un calque de reglage dans le projet :

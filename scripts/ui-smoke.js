@@ -1016,13 +1016,20 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('langue : passage en anglais', async () => {
     await goTab('settings');
-    await page.click('[data-sec=lang] button:has-text("English")');
-    await page.waitForFunction(() => document.documentElement.lang === 'en' && window.RRFXApp, null, { timeout: 20000 });
+    // Le clic peut tomber pendant un rafraîchissement des Réglages : on reclique une fois au besoin.
+    const switchLang = async (label, l) => {
+      await page.click('[data-sec=lang] button:has-text("' + label + '")');
+      try { await page.waitForFunction(x => document.documentElement.lang === x && window.RRFXApp, l, { timeout: 8000 }); } catch (e) {
+        await goTab('settings');
+        await page.click('[data-sec=lang] button:has-text("' + label + '")');
+        await page.waitForFunction(x => document.documentElement.lang === x && window.RRFXApp, l, { timeout: 20000 });
+      }
+    };
+    await switchLang('English', 'en');
     await page.waitForSelector('.tab[data-tab=speech]:has-text("Speech")');
     for (const t of ['express', 'effects', 'color', 'speech', 'formats', 'settings']) await goTab(t);
     await page.waitForSelector('.section-title:has-text("Remote control")');
-    await page.click('[data-sec=lang] button:has-text("Français")');
-    await page.waitForFunction(() => document.documentElement.lang === 'fr' && window.RRFXApp, null, { timeout: 20000 });
+    await switchLang('Français', 'fr');
     await page.waitForSelector('.tab[data-tab=speech]:has-text("Parole")');
   });
   await step('langue : choix au premier lancement', async () => {
