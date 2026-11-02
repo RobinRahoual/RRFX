@@ -173,7 +173,8 @@ var RRFX = (function () {
         var sel = s.getSelection(), out = [], ids = {}, n = 0, i, j, tr, c;
         if (!sel || !sel.length) return out;
         for (i = 0; i < sel.length; i++) {
-            if (sel[i].mediaType !== 'Video') continue;
+            // Les plans son sont ecartes ; les autres sont cherches sur les pistes video (mediaType peut manquer).
+            if (String(sel[i].mediaType || '').toLowerCase() === 'audio') continue;
             ids[sel[i].nodeId] = sel[i];
             n++;
         }

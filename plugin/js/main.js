@@ -341,8 +341,10 @@
   // ---------------------------------------------------------------- contexte Premiere
 
   let ctxPending = false;
+  // Lu aussi pendant une tâche (lecture seule) : l'onglet Couleur suit la sélection, même pendant
+  // un export ou un téléchargement. Le bloc d'état, lui, ne change pas tant que la tâche tourne.
   async function refreshContext() {
-    if (ctxPending || S.busy) return;
+    if (ctxPending) return;
     ctxPending = true;
     try {
       const r = await Host.call('getContext', {});
@@ -927,6 +929,11 @@
     await refreshContext();
     if (S.tab === 'settings') core.renderSettingsView();
     setInterval(() => { if (!document.hidden) refreshContext(); }, 2000);
+    // Retour sur le panneau après avoir sélectionné un plan dans la timeline : relu tout de suite.
+    let lastEnter = 0;
+    const onEnter = () => { if (Date.now() - lastEnter > 500) { lastEnter = Date.now(); refreshContext(); } };
+    document.addEventListener('mouseenter', onEnter);
+    window.addEventListener('focus', onEnter);
     if (settings().checkUpdates && !S.demo) checkUpdates(false).catch(() => {});
     (app.whenReady || []).forEach(fn => { try { fn(); } catch (e) { log(errorMessage(e), 'warn'); } });
   }
