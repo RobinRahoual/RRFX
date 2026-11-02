@@ -13,7 +13,7 @@
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const Lb = root.RRFXLibres, L = root.RRFXLiens, { Store } = app;
-    const { h, row, picker, section } = app.UI;
+    const { h, row, picker, section, checkbox } = app.UI;
     const proc = () => (root.process || {});
     // Hors de Premiere (mode démo) : présenté comme sur Windows.
     const P = () => Lb.plat(proc().platform || 'win32', proc().arch);
@@ -335,6 +335,42 @@
       return { kind: 'ok', title: Lb.byId(id).name + _T(' est prêt'), detail: exe };
     }, true).then(r => { refreshSection(); return r; });
 
+    // Désinstaller ce que RR FX a installé (dans Documents/RRFX/Outils) : son dossier, ses paquets
+    // Python (ou tout son environnement s'il en a un à lui). Les modèles d'Ollama (~/.ollama) restent.
+    const ours = p => { try { return !!p && Store.path.resolve(p).indexOf(Store.path.resolve(base()) + Store.path.sep) === 0; } catch (e) { return false; } };
+    async function uninstallCore(id) {
+      const t = Lb.byId(id), how = Lb.howFor(t, P());
+      if (st().tools[id]) { delete st().tools[id]; app.persist(); }
+      if (id === 'ollama') {
+        // Ollama lancé par RR FX : arrêté d'abord, sinon ses fichiers restent verrouillés (Windows).
+        try { await (win() ? Store.execFile('taskkill', ['/IM', 'ollama.exe', '/F']) : Store.execFile('pkill', ['-x', 'ollama'])); } catch (e) { /* pas lancé */ }
+      }
+      if (how && how.type === 'pip') {
+        if (t.venv) clean(venvDir(t.venv));
+        else {
+          const v = Lb.venv(venvDir(), win());
+          if (exists(v.python)) { app.status.phase(_T('Désinstallation de ') + t.name); await run(v.python, Lb.pipUninstallArgs(how.pkg), { label: t.name }); }
+          if (t.script) { try { Store.fs.unlinkSync(marker(t)); } catch (e) { /* déjà retiré */ } }
+        }
+      }
+      clean(toolDir(id));
+      forget(id);
+      delete state[id];
+      if (exists(toolDir(id))) throw new Error(t.name + _T(' : des fichiers sont encore utilisés. Ferme ce qui l\'utilise, puis recommence.'));
+      app.log(t.name + _T(' désinstallé'), 'ok');
+    }
+    async function uninstall(id) {
+      const t = Lb.byId(id);
+      const go = await app.confirmDialog(_T('Désinstaller ') + t.name + ' ?', _T('Ses fichiers sont supprimés de Documents/RRFX/Outils') + _T('. Tu pourras le réinstaller à tout moment.') + (id === 'ollama' ? _T(' Les modèles restent dans le dossier .ollama de ton compte : supprime-le pour récupérer leur place.') : ''), _T('Désinstaller'));
+      if (!go) return;
+      await app.runTask(_T('Désinstallation de ') + t.name, async () => {
+        await uninstallCore(id);
+        return { kind: 'ok', title: t.name + _T(' désinstallé'), detail: '' };
+      });
+      await check(id).catch(() => null);
+      refreshSection();
+    }
+
     // Dans une tâche : l'outil, ou la proposition de l'installer tout de suite.
     async function need(id, why) {
       const exe = await find(id);
@@ -514,6 +550,11 @@
         b.addEventListener('click', () => install(t.id));
         btns.appendChild(b);
       }
+      if (s && s.exe && ours(s.exe)) {
+        const un = h('button', { class: 'action quiet danger' }, _T('Désinstaller'));
+        un.addEventListener('click', () => uninstall(t.id));
+        btns.appendChild(un);
+      }
       const pick = h('button', { class: 'action quiet', disabled: !Store.fs }, _T('Indiquer l\'outil…'));
       pick.addEventListener('click', () => {
         const f = Store.pickFiles(_T('Où est ') + t.name + ' ?', []);
@@ -527,8 +568,10 @@
         open.addEventListener('click', () => Store.reveal(s.exe));
         btns.appendChild(open);
       }
+      const tick = !ok && how ? checkbox('', picked.has(t.id), v => { if (v) picked.add(t.id); else picked.delete(t.id); refreshSection(); }) : null;
+      if (tick) { tick.classList.add('tool-pick'); tick.title = _T('À installer avec « Installer la sélection »'); }
       const kids = [
-        h('div', { class: 'tool-head' }, h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, t.icon), h('strong', null, t.name), pill),
+        h('div', { class: 'tool-head' }, tick, h('span', { class: 'tool-icon', 'aria-hidden': 'true' }, t.icon), h('strong', null, t.name), pill),
         h('div', { class: 'note' }, _T(t.what)),
         h('div', { class: 'note tool-uses' }, t.uses.map(u => _T(u)).join(' · ')),
         h('div', { class: 'note' }, Lb.size(t.mb) + _T(' · licence ') + t.license + (how && how.type === 'pip' ? _T(' · s\'installe avec Python (fait par RR FX)') : '') + (!how ? _T(' · à installer soi-même sur ce système') : '') + (s && s.exe ? ' · ' + s.exe : ''))
@@ -562,18 +605,20 @@
       return box;
     }
 
-    // Tout installer : les outils manquants l'un après l'autre, puis les modèles Ollama choisis.
-    // Un échec n'arrête pas la suite ; le bilan dit ce qui n'a pas pu s'installer.
+    // Installer les outils cochés : l'un après l'autre, puis les modèles Ollama choisis. Un échec
+    // n'arrête pas la suite ; le bilan dit ce qui n'a pas pu s'installer.
     const missingTools = () => Lb.TOOLS.filter(t => Lb.howFor(t, P()) && !(state[t.id] && state[t.id].exe && state[t.id].models));
+    const picked = new Set();
+    const sizeOf = list => Lb.size(list.reduce((a, t) => a + (t.mb || 0), 0));
     async function installAll() {
       // État à jour d'abord : un outil déjà là n'est pas réinstallé.
       await Promise.all(Lb.TOOLS.map(t => (state[t.id] ? null : check(t.id).catch(() => null))));
-      const todo = missingTools();
-      if (!todo.length) return app.status.finish('ok', _T('Tout est déjà installé'), '');
+      const todo = missingTools().filter(t => picked.has(t.id));
+      if (!todo.length) return app.status.finish('warn', _T('Aucun outil coché'), _T('Coche les outils à installer (ou « Tout cocher »).'));
       const mb = todo.reduce((a, t) => a + (t.mb || 0), 0);
-      const go = await app.confirmDialog(_T('Installer tous les outils ?'),
+      const go = await app.confirmDialog(todo.length > 1 ? _T('Installer ces outils ?') : _T('Installer cet outil ?'),
         todo.map(t => t.name).join(', ') + _T(' : environ ') + Lb.size(mb) + _T(' à télécharger. Ça peut prendre un moment ; tu peux continuer à monter pendant ce temps, et Arrêter à tout moment.'),
-        _T('Tout installer'));
+        _T('Installer'));
       if (!go) return;
       await app.runTask(_T('Installation des outils'), async () => {
         const done = [], failed = [];
@@ -595,6 +640,7 @@
           } catch (e) { if (app.S.cancel) throw e; failed.push(_T('modèles Ollama (') + app.errorMessage(e) + ')'); }
         }
         app.status.progress(todo.length, todo.length, '');
+        todo.forEach(t => picked.delete(t.id));
         if (!failed.length) return { kind: 'ok', title: app.plural(done.length, _T('outil installé'), _T('outils installés')), detail: done.join(', ') };
         return { kind: 'warn', title: app.plural(done.length, _T('outil installé'), _T('outils installés')) + ', ' + app.plural(failed.length, _T('échec'), _T('échecs')), detail: failed.join(' · ') };
       }, true);
@@ -606,11 +652,16 @@
       box.innerHTML = '';
       box.appendChild(h('div', { class: 'note' }, _T('Des outils gratuits et open source qui tournent sur ton ordinateur : rien n\'est envoyé en ligne. Chacun est optionnel ; RR FX propose aussi de l\'installer au moment où une fonction en a besoin. Tout va dans Documents/RRFX/Outils.')));
       box.appendChild(h('div', { class: 'note' }, _T('Intégré, rien à installer : la détection de la voix (Silero) pour couper les silences, et la détection des visages (YuNet).')));
+      // Cases à cocher sur les outils manquants, « Tout cocher », puis « Installer la sélection ».
       const todo = missingTools();
       if (todo.length) {
-        const all = h('button', { class: 'action go', disabled: !Store.fs }, _T('Tout installer') + ' (' + todo.length + ' · ' + Lb.size(todo.reduce((a, t) => a + (t.mb || 0), 0)) + ')');
-        all.addEventListener('click', installAll);
-        box.appendChild(h('div', { class: 'row-buttons' }, all));
+        const sel = todo.filter(t => picked.has(t.id)), every = sel.length === todo.length;
+        const all = h('button', { class: 'action' }, every ? _T('Tout décocher') : _T('Tout cocher'));
+        all.addEventListener('click', () => { todo.forEach(t => (every ? picked.delete(t.id) : picked.add(t.id))); refreshSection(); });
+        const go = h('button', { class: 'action go tools-go', disabled: !Store.fs || !sel.length },
+          sel.length ? _T('Installer la sélection') + ' (' + sel.length + ' · ' + sizeOf(sel) + ')' : _T('Coche les outils à installer'));
+        go.addEventListener('click', installAll);
+        box.appendChild(h('div', { class: 'row-buttons tools-bar' }, all, go));
       }
       Lb.TOOLS.forEach(t => box.appendChild(card(t)));
     }

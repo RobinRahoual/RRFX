@@ -280,6 +280,8 @@
 
   // Arguments de pip pour installer des paquets dans l'environnement de RR FX.
   const pipArgs = pkgs => ['-m', 'pip', 'install', '--upgrade', '--disable-pip-version-check', '--no-input'].concat(pkgs);
+  // Désinstallation : les noms des paquets, sans contrainte de version (« transformers>=4.56 » → transformers).
+  const pipUninstallArgs = pkg => ['-m', 'pip', 'uninstall', '-y', '--disable-pip-version-check'].concat(String(pkg || '').split(/\s+/).filter(Boolean).map(p => p.split(/[<>=!~;\[ ]/)[0]));
   // Une ligne de pip → ce qui est en cours (court), ou null.
   function pipStep(line) {
     const l = String(line || '').trim();
@@ -424,7 +426,7 @@
 
   return {
     TOOLS, VOICES, OLLAMA_MODELS, CUT_MODELS, DENOISE, ffDenoise, ffMask, PYTHON, HF, byId, plat, howFor, pickWheel, exeName, venv, pyVersion, atLeast,
-    pythonCandidates, pipArgs, pipStep, findExe, ffAudio, ffFrames, ffThumb, ffEncode, ffProbe, ffProgress,
+    pythonCandidates, pipArgs, pipUninstallArgs, pipStep, findExe, ffAudio, ffFrames, ffThumb, ffEncode, ffProbe, ffProgress,
     diarizeArgs, parseDiarization, parseBeats, demucsArgs, percentOf, rifeArgs, esrganArgs, ncnnProgress,
     deepFilterArgs, voicefixerArgs, piperArgs, rembgArgs, size
   };

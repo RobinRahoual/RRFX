@@ -114,3 +114,10 @@ test('libres: diarization, beats and other tool outputs', () => {
   assert.strictEqual(Lb.size(412), '412 Mo');
   assert.strictEqual(Lb.size(1500), '1,5 Go');
 });
+
+test('pipUninstallArgs: package names only, without version constraints', () => {
+  const Lb = require('../plugin/js/libres.js');
+  assert.deepStrictEqual(Lb.pipUninstallArgs('transformers>=4.56 torch torchvision pillow numpy'), ['-m', 'pip', 'uninstall', '-y', '--disable-pip-version-check', 'transformers', 'torch', 'torchvision', 'pillow', 'numpy']);
+  assert.deepStrictEqual(Lb.pipUninstallArgs('demucs').slice(-1), ['demucs']);
+  assert.deepStrictEqual(Lb.pipUninstallArgs('numpy<2 msclap[x]').slice(-2), ['numpy', 'msclap']);
+});

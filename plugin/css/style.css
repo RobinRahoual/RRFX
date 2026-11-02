@@ -656,3 +656,8 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .lr-lock-note { margin: 8px 0; padding: 8px 10px; border-left: 3px solid var(--warn); background: var(--field); border-radius: 4px; }
 .lr-lock-note[hidden] { display: none; }
 .lr-lock-note .action { margin-left: 6px; }
+
+/* Outils gratuits : cases à cocher et barre « Installer la sélection » (2.11). */
+.tool-head .tool-pick { margin-right: 2px; }
+.tools-bar { position: sticky; top: 0; z-index: 2; background: var(--bg); padding: 6px 0; }
+.action.danger.quiet { color: var(--danger, #e5534b); }

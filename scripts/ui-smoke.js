@@ -745,6 +745,18 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (await locked()) throw new Error('« Toute la séquence » ne déverrouille pas');
     await page.evaluate(() => { const A = window.RRFXApp; A.settings().color.target = 'clip'; A.S.ctx = Object.assign({}, A.S.ctx, { selection: 2 }); A.persist(); });
   });
+  await step('2.11 : outils gratuits, cases à cocher', async () => {
+    await goTab('settings');
+    await page.waitForSelector('[data-sec=outils] .tools-bar');
+    const n = await page.locator('[data-sec=outils] .tool-pick input').count();
+    if (n < 5) throw new Error('cases à cocher absentes : ' + n);
+    await page.click('[data-sec=outils] .tools-bar .action:has-text("Tout cocher")');
+    await page.waitForSelector('[data-sec=outils] .tools-bar .action:has-text("Tout décocher")');
+    const checked = await page.locator('[data-sec=outils] .tool-pick input:checked').count();
+    if (checked !== n) throw new Error('tout cocher : ' + checked + ' / ' + n);
+    if (!/Installer la sélection \(/.test(await page.textContent('[data-sec=outils] .tools-go'))) throw new Error('bouton Installer la sélection');
+    await page.click('[data-sec=outils] .tools-bar .action:has-text("Tout décocher")');
+  });
   await step('tout effacer', async () => {
     await goTab('settings');
     await page.click('.action:has-text("Tout effacer")');

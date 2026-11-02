@@ -258,7 +258,8 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] 🔴 *Réglages › Calques › Choisir un projet modèle…* (un petit projet avec seulement un calque de réglage) ; dans un projet **sans** calque de réglage, *Appliquer* : le calque est importé tout seul, l'effet est posé
 - [ ] 🔴 *Couleur* sans clip sélectionné : réglages grisés, message, bouton *Appliquer* inactif ; sélectionne un plan : tout se réactive (en 2 s)
 - [ ] *Couleur* : *Régler toute la séquence* dans le message déverrouille sans sélection
-- [ ] *Réglages › Outils gratuits › Tout installer* : les outils manquants s'installent l'un après l'autre, le bilan liste les échecs éventuels ; *Arrêter* au milieu : rien de cassé
+- [ ] *Réglages › Outils gratuits* : coche 2 outils (ou *Tout cocher*), *Installer la sélection* : ils s'installent l'un après l'autre, le bilan liste les échecs éventuels ; *Arrêter* au milieu : rien de cassé
+- [ ] *Désinstaller* un outil (fichier, Python, et Ollama lancé) : il repasse à « non installé », ses fichiers ont disparu de Documents/RRFX/Outils
 - [ ] Installateur Windows et Mac : le message final indique le dossier des extensions Adobe ; supprimer ensuite le dossier téléchargé ne retire pas RR FX
 
 ---
