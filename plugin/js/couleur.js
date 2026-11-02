@@ -549,7 +549,7 @@
     }
     app.contextListeners.push(() => { if (app.S.tab === 'color') applyLock(); });
 
-    const NAV = [['looks', 'Looks'], ['basic', _T('Réglages')], ['curve', _T('Courbe')], ['grading', _T('Roues')], ['luts', _T('Mes LUTs')], ['gradient', _T('Dégradés')], ['log', 'LOG'], ['fix', _T('Raccord')], ['out', _T('Exporter')]];
+    const NAV = [['looks', 'Looks'], ['basic', _T('Réglages')], ['curve', _T('Courbe')], ['grading', _T('Roues')], ['luts', _T('Mes LUTs')], ['log', 'LOG'], ['fix', _T('Raccord')], ['out', _T('Exporter')]];
     function render(view) {
       if (view) V.view = view;
       view = V.view;
@@ -591,7 +591,6 @@
       if (app.conversion) view.appendChild(app.conversion.panel(panel, () => { V.src = null; update(true); }));
       if (app.correction) view.appendChild(app.correction.panel(panel));
       if (app.lutLibrary) view.appendChild(app.lutLibrary.panel(panel));
-      if (app.gradients) view.appendChild(app.gradients.panel(panel));
       view.appendChild(looksPanel());
       view.appendChild(basicPanel());
       view.appendChild(curvePanel());

@@ -57,3 +57,14 @@ test('adjustment layer missing: imported from the template project, refused if t
   assert.ok(go().ok);
   assert.strictEqual(env.imports.length, 1, 'imported once, then found in the project');
 });
+
+test('resolve strict: only the selected clips (gradient on a text), never the clip under the playhead', () => {
+  const env = setup();
+  const r = env.call('resolve', { placement: 'full', strict: true, sides: ['post'], frames: 1, target: 'clip' });
+  assert.ok(!r.ok, 'nothing selected → refused');
+  env.v[1].setSelected(true);
+  const s = env.call('resolve', { placement: 'full', strict: true, sides: ['post'], frames: 1, target: 'clip' });
+  assert.ok(s.ok, s.error);
+  assert.deepStrictEqual(s.targets.map(t => t.clipStart / env.F), [250]);
+  env.v[1].setSelected(false);
+});

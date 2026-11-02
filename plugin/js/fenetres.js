@@ -45,7 +45,7 @@
   const SECTIONS = {
     music: [['musique', 'Musique'], ['tempsforts', 'Temps forts'], ['montageauto', 'Montage auto sur le rythme'], ['synchro', 'Synchroniser le son et l\'image'], ['volume', 'Volume et intensité']],
     speech: [['silences', 'Couper les silences'], ['euh', '« Euh » et répétitions'], ['visage', 'Zoom visage'], ['soustitres', 'Sous-titres'], ['bandeau', 'Bandeau nom et fonction'], ['voix', 'Son de la voix'], ['musique', 'Musique sous la voix'], ['chapitres', 'Chapitres YouTube']],
-    color: [['looks', 'Looks'], ['basic', 'Réglages de base'], ['curve', 'Courbe des tonalités'], ['mixer', 'Mélangeur de couleurs'], ['grading', 'Étalonnage des couleurs'], ['calib', 'Calibrage'], ['out', 'Appliquer et exporter'], ['log', 'Conversion LOG → Rec.709'], ['fix', 'Expo, balance et raccord'], ['luts', 'Mes LUTs'], ['gradient', 'Dégradés de couleur']],
+    color: [['looks', 'Looks'], ['basic', 'Réglages de base'], ['curve', 'Courbe des tonalités'], ['mixer', 'Mélangeur de couleurs'], ['grading', 'Étalonnage des couleurs'], ['calib', 'Calibrage'], ['out', 'Appliquer et exporter'], ['log', 'Conversion LOG → Rec.709'], ['fix', 'Expo, balance et raccord'], ['luts', 'Mes LUTs']],
     titles: [['modele', 'Modèle de texte'], ['texte', 'Texte et paroles'], ['placement', 'Placement'], ['style', 'Style du texte'], ['animation', 'Animation'], ['couleurs', 'Mes couleurs']],
     formats: [['format', 'Format'], ['cadrage', 'Cadrage']],
     assets: [['lien', 'Importer depuis un lien'], ['dossiers', 'Dossiers liés'], ['parcourir', 'Parcourir']]
@@ -76,7 +76,7 @@
       tabs: ['express', 'effects', 'music', 'native', 'speech', 'color', 'titles', 'formats', 'assets', 'settings'],
       sections: {
         speech: ['transcrire', 'silences', 'euh', 'visage', 'soustitres', 'correcteur', 'traduire', 'broll', 'texte', 'publier'],
-        color: ['looks', 'basic', 'out', 'luts', 'gradient'],
+        color: ['looks', 'basic', 'out', 'luts'],
         formats: ['format', 'cadrage', 'extraits', 'verif', 'rythme', 'export']
       } },
     { id: 'clip', label: 'Clip et événement', desc: 'Musique, effets, rampes, couleur : clips, aftermovies, mariages.',

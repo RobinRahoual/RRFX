@@ -389,10 +389,11 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.lr-panel:has-text("Mes LUTs") .action.go:text-is("Appliquer")');
     await page.waitForSelector('#status.warn:has-text("LUT d\'exemple")', { timeout: 5000 });
     await snap('9b-mes-luts');
-    const g = '.lr-panel:has(.lr-title:text-is("Dégradés de couleur"))';
-    // Fermé à la première ouverture : le sommaire l'ouvre et l'amène en vue.
-    await page.click('.view.on .sec-nav .action:text-is("Dégradés")');
-    await page.waitForSelector(g + ':not(.closed)', { timeout: 2000 });
+    // Dégradés : onglet Textes, sur le texte ou la forme sélectionné.
+    await goTab('titles');
+    const g = '#view-titles [data-sec=degrade]';
+    await page.waitForSelector(g);
+    await page.evaluate(sel => { const t = document.querySelector(sel); if (t.classList.contains('folded')) t.querySelector('.section-title').click(); }, g);
     await page.click(g + ' .action:text-is("Coller du CSS…")');
     await page.fill('.modal textarea', 'linear-gradient(to right, #ff7e5f, #feb47b)');
     await page.click('.modal .cta');
@@ -666,9 +667,9 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('.tab.on[data-tab=color]');
     // Les outils sans onglet à eux sont amenés en vue (et ouverts).
     await page.keyboard.press('Control+k');
-    await page.fill('.pal-input', 'dégradé de couleur');
+    await page.fill('.pal-input', 'dégradé sur un texte');
     await page.keyboard.press('Enter');
-    await page.waitForSelector('.view.on [data-panel=gradient]:not(.closed)', { timeout: 2000 });
+    await page.waitForSelector('.view.on [data-sec=degrade]:not(.folded)', { timeout: 2000 });
     await page.keyboard.press('Control+k');
     await page.fill('.pal-input', 'depuis un lien');
     await page.keyboard.press('Enter');
@@ -746,13 +747,20 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.waitForSelector('#view-color [data-panel=basic]');
     const locked = () => page.evaluate(() => !!document.querySelector('#view-color [data-panel=basic].lr-locked'));
     if (await locked()) throw new Error('verrouillé alors que des plans sont sélectionnés');
-    await page.evaluate(() => { const A = window.RRFXApp; A.S.ctx = Object.assign({}, A.S.ctx, { selection: 0 }); A.contextListeners.forEach(f => f(A.S.ctx)); });
+    // Premiere répond « aucun plan sélectionné » (la sélection est relue toutes les 2 s).
+    await page.evaluate(() => {
+      const H = window.RRFXHost, A = window.RRFXApp;
+      H._call = H.call;
+      H.call = (fn, a) => (fn === 'getContext' ? H._call(fn, a).then(r => Object.assign(r, { selection: 0 })) : H._call(fn, a));
+      A.S.ctx = Object.assign({}, A.S.ctx, { selection: 0 });
+      A.contextListeners.forEach(f => f(A.S.ctx));
+    });
     if (!(await locked())) throw new Error('pas verrouillé sans sélection');
     if (!(await page.isVisible('.lr-lock-note'))) throw new Error('message absent');
     if (!(await page.isDisabled('#cta'))) throw new Error('bouton Appliquer actif');
     await page.click('.lr-lock-note .action');
     if (await locked()) throw new Error('« Toute la séquence » ne déverrouille pas');
-    await page.evaluate(() => { const A = window.RRFXApp; A.settings().color.target = 'clip'; A.S.ctx = Object.assign({}, A.S.ctx, { selection: 2 }); A.persist(); });
+    await page.evaluate(() => { const H = window.RRFXHost, A = window.RRFXApp; H.call = H._call; A.settings().color.target = 'clip'; A.S.ctx = Object.assign({}, A.S.ctx, { selection: 2 }); A.persist(); });
   });
   await step('2.11 : outils gratuits, cases à cocher', async () => {
     await goTab('settings');

@@ -517,7 +517,7 @@ d'étalonnage, calibrage. Des **looks** prêts à l'emploi et un **avant / aprè
 <tr>
 <td align="center"><img src="docs/captures/outils/couleur-roues.png" alt="Roues d'étalonnage" width="250"><br><sub>Roues d'étalonnage</sub></td>
 <td align="center"><img src="docs/captures/outils/couleur-melangeur.png" alt="Mélangeur de couleurs" width="250"><br><sub>Mélangeur de couleurs</sub></td>
-<td align="center"><img src="docs/captures/outils/degrade.png" alt="Dégradé de couleur" width="250"><br><sub>Dégradés de couleur (CSS, Figma…)</sub></td>
+<td align="center"><img src="docs/captures/outils/degrade.png" alt="Dégradé sur un texte" width="250"><br><sub>Dégradé sur un texte ou une forme (CSS, Figma…)</sub></td>
 </tr>
 </table>
 

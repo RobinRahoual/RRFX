@@ -309,23 +309,6 @@ Ta bibliothèque de LUTs, **gardée d'un projet à l'autre** : plus besoin de r�
 
 Les vignettes se calculent pour les `.cube` ; les autres formats sont posés tels quels par Premiere.
 
-### Dégradés de couleur (onglet Couleur)
-
-Un dégradé fondu sur l'image : ciel plus chaud, teinte de marque, vignette colorée.
-
-- **Dégradé** : 6 fournis (Coucher de soleil, Teal & orange, Ciel bleu, Rose doré, Nuit violette, Vignette chaude),
-  les tiens (★), ou *Mon réglage*.
-- **Couleur 1 / Couleur 2** (avec Mes couleurs), **Forme** linéaire ou radiale, **Angle**, **Fusion** (Lumière
-  tamisée, Incrustation, Produit, Écran, Normal), **Intensité**, sur le **clip visé** ou **toute la séquence**.
-  L'aperçu fait le même mélange.
-- **Maintiens le clic sur l'aperçu** pour voir l'image sans le dégradé.
-- **Coller du CSS…** : un `linear-gradient(…)` ou `radial-gradient(…)` copié d'uiGradients, CSS Gradient, Figma…
-  (les deux couleurs extrêmes et l'angle sont repris).
-- **Enregistrer…** : dans Mes effets, partageable et publiable.
-
-Dans Premiere : un calque de réglage « RR FX · Dégradé » avec l'effet **Dégradé** (Ramp) et le mode de fusion de
-l'**Opacité**, tout reste réglable dans *Options d'effet*.
-
 ### Onglet Musique
 
 La musique est le plus long clip son de la séquence (ou le clip son sélectionné). **Analyser** la lit et affiche sa
@@ -395,7 +378,14 @@ Le même choix existe pour les **sous-titres** et les **bandeaux** (onglet Parol
 Ce que Premiere laisse faire : police, taille et majuscules vont dans le texte du modèle ; couleur, contour, ombre
 et fond passent par les réglages que le modèle expose dans *Objets graphiques essentiels*. Sinon, la couleur passe
 par l'effet **Teinte** et l'ombre par **Ombre portée** ; le contour et le fond ne sont possibles que si le modèle les
-propose (RR FX le signale). Premiere ne permet pas de poser un dégradé *dans* un texte par script.
+propose (RR FX le signale).
+
+**Dégradé sur un texte ou une forme** : sélectionne un texte, une forme ou un logo dans la timeline, choisis le dégradé
+(6 fournis, les tiens ★, ou tes deux couleurs, avec Mes couleurs), sa **forme** (linéaire ou radiale), son **angle**
+et son **intensité** (100 % : le dégradé seul ; moins : mélangé à la couleur d'origine), puis **Appliquer le dégradé**.
+RR FX pose l'effet *Dégradé* de Premiere sur l'élément lui-même : il ne remplit que ses lettres ou sa forme. Ses points
+et couleurs restent réglables dans *Options d'effet*. **Coller du CSS…** reprend un `linear-gradient(…)` copié
+d'uiGradients, CSS Gradient ou Figma ; **Enregistrer…** le range dans Mes effets.
 
 **Mes couleurs** : ta palette (couleurs de ta marque), proposée partout où tu choisis une couleur (mots clés, styles
 de texte, dégradés). Ajoute une couleur, **Coller des codes…** (`#264653`, `rgb(…)`, lien d'une palette Coolors ou
@@ -631,7 +621,7 @@ exporter, partager, publier, supprimer) apparaissent au survol. Double-clic sur 
   styles Express), packs (`.rrfxpack`), LUTs (`.cube`, `.3dl`, `.look`… vers Mes LUTs), nuanciers (`.ase` vers Mes
   couleurs), modèles de texte (`.mogrt`). **Exporter** en `.json` pour sauvegarder ta bibliothèque.
 - Chaque élément a son type et s'**ouvre** à sa place (un style de texte dans l'onglet Textes, un dégradé dans
-  l'onglet Couleur, un style Express dans Express…). Tout se partage par code et se publie dans la Communauté.
+  l'onglet Textes, un style Express dans Express…). Tout se partage par code et se publie dans la Communauté.
 - **Packs de style** (`.rrfxpack`) : *Créer un pack…* rassemble dans un seul fichier tes effets et rampes perso, tes
   looks (et celui en cours dans l'onglet Couleur), l'animation des textes et son modèle `.mogrt`, tes overlays
   importés (fichiers compris) et ton enchaînement d'effets. *Importer un pack…* (ou depuis l'onglet Ressources)

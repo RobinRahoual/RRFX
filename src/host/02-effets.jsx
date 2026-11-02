@@ -145,7 +145,8 @@
             if (!targets.length) return fail(o.scope === 'sequence' ? 'Aucune coupe entre deux plans dans la s\u00e9quence.' : 'S\u00e9lectionnez au moins deux clips qui se suivent sur la m\u00eame piste.');
         } else {
             list = o.scope === 'sequence' ? allVideo(s) : selectedVideo(s);
-            if (!list.length && o.scope !== 'sequence') {
+            // o.strict : seulement les clips selectionnes (pas celui sous la tete de lecture).
+            if (!list.length && o.scope !== 'sequence' && !o.strict) {
                 ref = refClip(s);
                 if (ref) list = [ref];
             }
