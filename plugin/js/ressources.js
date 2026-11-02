@@ -379,10 +379,7 @@
       });
     }
 
-    function copy(text) {
-      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => false);
-      return Promise.resolve(false);
-    }
+    const copy = text => app.copyText(text);
 
     async function installLut(e) {
       const dirs = Store.systemDirs();

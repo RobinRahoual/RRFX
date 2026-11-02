@@ -604,8 +604,8 @@
         if (!chap) return;
         const out = h('textarea', { class: 'code', rows: Math.min(12, chap.list.length + 1), readonly: true }, chap.text);
         const copy = h('button', { class: 'action' }, _T('Copier'));
-        copy.addEventListener('click', () => (navigator.clipboard ? navigator.clipboard.writeText(chap.text) : Promise.reject(new Error(_T('presse-papiers indisponible'))))
-          .then(() => app.status.finish('ok', _T('Chapitres copiés'), _T('Colle-les dans la description de ta vidéo YouTube.')), e => app.status.finish('warn', _T('Copie impossible'), app.errorMessage(e))));
+        copy.addEventListener('click', () => app.copyText(chap.text).then(ok => ok ? app.status.finish('ok', _T('Chapitres copiés'), _T('Colle-les dans la description de ta vidéo YouTube.'))
+          : app.status.finish('warn', _T('Copie impossible'), _T('Sélectionne le texte et copie-le à la main (Ctrl+C / ⌘C).'))));
         const mark = h('button', { class: 'action' }, _T('Poser les marqueurs'));
         mark.addEventListener('click', () => app.runTask(_T('Marqueurs de chapitre'), async () => {
           for (const c of chap.list) {

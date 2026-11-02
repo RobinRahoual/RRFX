@@ -74,7 +74,7 @@
     // o.copy : sur une copie de la sequence (l'original reste intact).
     function cutSilences(o) {
         var s = activeSeq(), P = app.project, t = speechTargets(s), f = tpf(s), ranges = [], merged = [], warnings = [], plan = [];
-        var i, j, k, a, b, r, x, list, it, removed = 0, moved = 0, refused = 0, total = 0, before, ns, others = [];
+        var i, j, k, a, b, r, x, list, it, removed = 0, moved = 0, refused = 0, total = 0, ns, others = [];
         if (!t.clips.length) return fail('S\u00e9lectionne dans la timeline les plans o\u00f9 l\'on parle.');
         for (i = 0; i < (o.ranges || []).length; i++) {
             a = Math.max(snap(o.ranges[i].a * TICKS, f), t.lo);
@@ -90,13 +90,10 @@
         if (!ranges.length) return ok({ removed: 0, ranges: 0, seconds: 0, moved: 0, name: s.name, copy: false, warnings: [] });
         if (o.copy) {
             if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script : d\u00e9coche \u00ab Sur une copie \u00bb.');
-            before = P.sequences.numSequences;
-            s.clone();
-            if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-            ns = P.sequences[P.sequences.numSequences - 1];
+            ns = cloneSeq(s);
+            if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
             try { ns.name = s.name + (o.suffix || ' (sans silences)'); } catch (e0) {}
-            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e1) {}
-            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+            if (!showSeq(ns)) return fail('Copie cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
             s = activeSeq();
         }
         var qs = qeSeq();

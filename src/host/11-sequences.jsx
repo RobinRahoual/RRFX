@@ -48,16 +48,13 @@
 
     // Extrait [o.a, o.b] (s) dans une copie de la sequence, recolle au debut : toutes les pistes.
     function extractCopy(o) {
-        var s = activeSeq(), P = app.project, f = tpf(s), A = snap(o.a * TICKS, f), B = snap(o.b * TICKS, f), ns, before, qs, i, j, k, list, it, x, warnings = [], refused = 0, kept = 0;
+        var s = activeSeq(), P = app.project, f = tpf(s), A = snap(o.a * TICKS, f), B = snap(o.b * TICKS, f), ns, qs, i, j, k, list, it, x, warnings = [], refused = 0, kept = 0;
         if (!(B - A >= f)) return fail('Extrait trop court');
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
-        before = P.sequences.numSequences;
-        s.clone();
-        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-        ns = P.sequences[P.sequences.numSequences - 1];
+        ns = cloneSeq(s);
+        if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
         try { ns.name = o.name || (s.name + ' \u00b7 Extrait'); } catch (e0) {}
-        try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e1) {}
-        if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+        if (!showSeq(ns)) return fail('Copie cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
         s = activeSeq();
         qs = qeSeq();
         // Coupes aux deux bords, sur toutes les pistes.
@@ -179,32 +176,28 @@
     // Projet (sinon vide, aux reglages de la sequence active), au format o.width x o.height, avec
     // un calque de reglage sur toute la duree si o.adj. -> { name, id, clips, adjPlaced }
     function newFromTemplate(o) {
-        var P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], sel = [], i, ns = null, st, before, s, adj, dur, it, j, list, clips = 0, adjPlaced = false;
+        var P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], sel = [], i, ns = null, st, s, adj, dur, it, j, list, clips = 0, adjPlaced = false;
         // Rushs video selectionnes dans le panneau Projet.
         try {
             list = app.getCurrentProjectViewSelection ? app.getCurrentProjectViewSelection() : null;
             for (i = 0; list && i < list.length; i++) { it = list[i]; if (it.type === 1 && !(it.isSequence && it.isSequence()) && !isAdjustment(it)) sel.push(it); }
         } catch (e0) { sel = []; }
-        before = P.sequences.numSequences;
         if (sel.length && P.createNewSequenceFromClips) {
             try { ns = P.createNewSequenceFromClips(o.name, sel, P.rootItem); } catch (e1) { ns = null; }
         }
         if (!ns) {
             s = P.activeSequence;
             if (!s || !s.clone) return fail('S\u00e9lectionne tes rushs dans le panneau Projet (ou ouvre une s\u00e9quence \u00e0 copier).');
-            s.clone();
-            if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu cr\u00e9er la s\u00e9quence.');
-            ns = P.sequences[P.sequences.numSequences - 1];
+            ns = cloneSeq(s);
+            if (!ns) return fail('Premiere n\'a pas pu cr\u00e9er la s\u00e9quence.');
             try { ns.name = o.name; } catch (e2) {}
-            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e3) {}
-            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e4) {}
+            if (!showSeq(ns)) return fail('S\u00e9quence cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
             ns = activeSeq();
             // Copie videe : seulement ses reglages.
             for (j = 0; j < ns.videoTracks.numTracks; j++) { list = clipsOf(ns, j); for (i = 0; i < list.length; i++) { try { list[i].remove(false, false); } catch (e5) {} } }
             for (j = 0; j < ns.audioTracks.numTracks; j++) { list = audioItems(ns, j); for (i = 0; i < list.length; i++) { try { list[i].remove(false, false); } catch (e6) {} } }
         } else {
-            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e7) {}
-            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e8) {}
+            showSeq(ns);
             ns = activeSeq();
         }
         if (W && H) {

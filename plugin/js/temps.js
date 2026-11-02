@@ -194,8 +194,7 @@
       const copy = h('button', { class: 'action quiet' }, _T('Copier le texte'));
       copy.addEventListener('click', () => {
         const txt = caption(), done = ok => app.status.finish(ok ? 'ok' : 'warn', ok ? _T('Texte copié') : _T('Copie impossible'), txt);
-        if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => done(true), () => done(false));
-        else done(false);
+        app.copyText(txt).then(done);
       });
       const sec = section(_T('Temps gagné avec RR FX'), [
         h('div', { class: 'saved-box' },

@@ -242,11 +242,7 @@
     }
 
     function copyText(text, field) {
-      if (navigator.clipboard && navigator.clipboard.writeText) return navigator.clipboard.writeText(text).then(() => true, () => copyText(text, null));
-      if (field) { field.focus(); field.select(); }
-      let done = false;
-      try { done = document.execCommand('copy'); } catch (e) { done = false; }
-      return Promise.resolve(done);
+      return app.copyText(text).then(ok => { if (!ok && field) { field.focus(); field.select(); } return ok; });
     }
 
     function shareItems(items, label) {

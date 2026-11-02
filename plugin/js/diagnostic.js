@@ -77,8 +77,8 @@
         const copy = h('button', { class: 'action', disabled: !saved }, _T('Copier le rapport'));
         copy.addEventListener('click', () => {
           const txt = report(Object.assign({ version: '', app: '' }, saved));
-          (navigator.clipboard ? navigator.clipboard.writeText(txt) : Promise.reject(new Error(_T('presse-papiers indisponible'))))
-            .then(() => app.status.finish('ok', _T('Rapport copié'), _T('Colle-le dans un message.')), e => app.status.finish('warn', _T('Copie impossible'), app.errorMessage(e)));
+          app.copyText(txt).then(ok => ok ? app.status.finish('ok', _T('Rapport copié'), _T('Colle-le dans un message.'))
+            : app.status.finish('warn', _T('Copie impossible'), _T('Sélectionne le texte et copie-le à la main (Ctrl+C / ⌘C).')));
         });
         box.appendChild(h('div', { class: 'row-buttons' }, go, copy));
       };

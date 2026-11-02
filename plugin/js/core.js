@@ -171,6 +171,12 @@
     }
   };
 
+  // Effet absent de ce Premiere (Lens Distortion n'existe plus dans certaines versions) : un autre
+  // effet le remplace. props : clé d'origine → [clé du remplaçant, conversion de la valeur].
+  const FALLBACKS = {
+    lens: { type: 'transform', props: { curvature: ['scale', v => 100 + Math.abs(v) * 0.25] } }
+  };
+
   // Effect names in Premiere's list, any language (normalized: lower case, no accents).
   const EFFECT_PATTERNS = {
     transform: /^(transform|transformer|transformation|transformieren|transformar|trasforma)$/,
@@ -226,7 +232,8 @@
     if (resolved) {
       for (const type in resolved) {
         const name = resolved[type];
-        if (!name || !out[type]) continue;
+        if (!out[type]) continue;
+        if (!name) { out[type].missing = true; continue; }
         // Detected name first, after any name the user typed in the settings.
         const names = out[type].names.filter(n => n !== name);
         const at = overrides && overrides[type] && Array.isArray(overrides[type].names) ? Math.min(overrides[type].names.length, names.length) : 0;
@@ -304,8 +311,17 @@
     const ctx = makeCtx(N, side, p, fps);
     const built = def.build(ctx) || [];
     const out = [];
-    built.forEach(fx => {
-      const reg = registry[fx.type];
+    built.forEach(orig => {
+      let fx = orig, reg = registry[fx.type];
+      const fb = reg && reg.missing && FALLBACKS[fx.type];
+      if (fb) {
+        fx = { type: fb.type, props: {} };
+        Object.keys(orig.props).forEach(k => {
+          const m = fb.props[k], src = orig.props[k];
+          if (m) fx.props[m[0]] = typeof src === 'function' ? i => m[1](src(i)) : m[1](src);
+        });
+        reg = registry[fb.type];
+      }
       if (!reg) return;
       const props = [];
       Object.keys(fx.props).forEach(key => {
@@ -634,7 +650,7 @@
 
   return {
     clamp, lerp, CURVE_PRESETS, curveValue, bezier, hash, smoothNoise,
-    REGISTRY, EFFECT_PATTERNS, normName, resolveEffectNames, mergeRegistry, typeForMatchName, keyForIndex,
+    REGISTRY, FALLBACKS, EFFECT_PATTERNS, normName, resolveEffectNames, mergeRegistry, typeForMatchName, keyForIndex,
     paramDefaults, makeCtx, compileEffect, keysFromValues, toWire, resampleValues, fitValues, compileCaptured,
     compileOverlay, splitLyrics, titleTimeline, titleSpec, planAutoEdit,
     rampFunction, rampPieces, rampSourceFrames, RAMP_PRESETS

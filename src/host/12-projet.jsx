@@ -141,14 +141,12 @@
     // Version de la sequence active : copie figee rangee dans le chutier Versions ; on continue
     // sur la sequence d'origine.
     function versionSequence(o) {
-        var s = activeSeq(), P = app.project, before, ns;
+        var s = activeSeq(), P = app.project, ns;
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
-        before = P.sequences.numSequences;
-        s.clone();
-        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-        ns = P.sequences[P.sequences.numSequences - 1];
+        ns = cloneSeq(s);
+        if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
         try { ns.name = o.name || (s.name + ' v02'); } catch (e) {}
-        if (P.activeSequence !== s) { try { P.openSequence(s.sequenceID); } catch (e1) {} }
+        showSeq(s);
         try { if (ns.projectItem) ns.projectItem.moveBin(binPath(o.bin || 'Versions')); } catch (e2) {}
         return ok({ id: ns.sequenceID, name: ns.name, of: s.name, ofId: s.sequenceID });
     }

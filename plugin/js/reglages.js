@@ -70,8 +70,8 @@
       Object.keys(Core.REGISTRY).filter(t => !Core.REGISTRY[t].intrinsic).forEach(type => {
         const found = S.resolved ? S.resolved[type] : undefined;
         fx.appendChild(h('div', { class: 'fx-status' },
-          h('span', { class: found ? 'ok' : (S.resolved ? 'missing' : 'muted') }, found ? '✓' : (S.resolved ? '✕' : '…')),
-          h('span', null, found || (S.resolved ? reg[type].names[0] + _T(' introuvable') : reg[type].names[0]))));
+          h('span', { class: found ? 'ok' : (S.resolved && !Core.FALLBACKS[type] ? 'missing' : 'muted') }, found ? '✓' : (S.resolved ? (Core.FALLBACKS[type] ? '↺' : '✕') : '…')),
+          h('span', null, found || (S.resolved ? reg[type].names[0] + (Core.FALLBACKS[type] ? _T(' absent : remplacé par ') + reg[Core.FALLBACKS[type].type].names[0] : _T(' introuvable')) : reg[type].names[0]))));
       });
       const detect = h('button', { class: 'action quiet' }, _T('Détecter à nouveau'));
       detect.addEventListener('click', async () => { await detectEffects(true); renderSettingsView(); });

@@ -288,7 +288,7 @@
         copy.addEventListener('click', () => {
           if (!lastCredits) return app.status.finish('warn', _T('Liste vide'), _T('Clique d\'abord sur « Lister les sons ».'));
           const txt = creditsText(lastCredits), done = ok => app.status.finish(ok ? 'ok' : 'warn', ok ? _T('Liste copiée') : _T('Copie impossible'), ok ? _T('Colle-la dans la description ou ton mail au client.') : txt.slice(0, 200));
-          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(txt).then(() => done(true), () => done(false)); else done(false);
+          app.copyText(txt).then(done);
         });
         draw();
         box.append(h('div', { class: 'note' }, _T('Toutes les musiques et tous les sons de la séquence, avec leur fichier, leur place et leur durée : pour les crédits, une demande de licence ou un client qui veut savoir d\'où vient la musique.')), h('div', { class: 'row-buttons' }, go, copy), list);

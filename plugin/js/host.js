@@ -3,7 +3,7 @@
 (function (root) {
   'use strict';
   const _T = (typeof self !== 'undefined' && self._T) || (s => s);
-  const VERSION = '2.10.1';
+  const VERSION = '2.10.2';
   const cep = root.__adobe_cep__;
   const isMac = /Mac/i.test(navigator.platform || '');
 
@@ -97,10 +97,31 @@
     setMenu.handler = onClick;
   }
 
+  /* Copie un texte dans le presse-papiers → Promise<boolean>. Dans Premiere, navigator.clipboard est
+     refusé (« Write permission denied ») : copie par une zone de texte cachée d'abord, l'API récente
+     ensuite (navigateur). */
+  function copyText(text) {
+    let ok = false;
+    try {
+      const d = root.document, ta = d.createElement('textarea'), prev = d.activeElement;
+      ta.value = String(text);
+      ta.setAttribute('readonly', '');
+      ta.style.cssText = 'position:fixed;top:-1000px;left:0;opacity:0';
+      d.body.appendChild(ta);
+      ta.select();
+      ok = d.execCommand('copy');
+      d.body.removeChild(ta);
+      if (prev && prev.focus) prev.focus();
+    } catch (e) { ok = false; }
+    if (ok) return Promise.resolve(true);
+    const c = root.navigator && root.navigator.clipboard;
+    return c && c.writeText ? c.writeText(String(text)).then(() => true, () => false) : Promise.resolve(false);
+  }
+
   function registerKeys(list) {
     if (!cep || !cep.registerKeyEventsInterest) return;
     try { cep.registerKeyEventsInterest(JSON.stringify(list)); } catch (e) { /* touches gardées par Premiere */ }
   }
 
-  root.RRFXHost = { VERSION, isMac, init, call, hostEnv, on, openURL, setMenu, registerKeys, demo: !cep };
+  root.RRFXHost = { VERSION, isMac, init, call, hostEnv, on, openURL, setMenu, registerKeys, copyText, demo: !cep };
 })(typeof self !== 'undefined' ? self : this);

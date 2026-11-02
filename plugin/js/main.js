@@ -755,7 +755,8 @@
       return;
     }
     S.resolved = Core.resolveEffectNames(r.names, Core.mergeRegistry(settings().registry));
-    const missing = Object.keys(S.resolved).filter(t => !S.resolved[t]);
+    const missing = Object.keys(S.resolved).filter(t => !S.resolved[t] && !Core.FALLBACKS[t]);
+    Object.keys(S.resolved).filter(t => !S.resolved[t] && Core.FALLBACKS[t]).forEach(t => log(Core.REGISTRY[t].names[0] + _T(' absent de ce Premiere : remplacé par ') + Core.REGISTRY[Core.FALLBACKS[t].type].names[0] + '.', 'info'));
     if (missing.length) log(_T('Effets Premiere introuvables : ') + missing.map(t => Core.REGISTRY[t].names[0]).join(', ') + _T(' (Réglages > Avancé)'), 'warn');
     else if (force) log(_T('Tous les effets Premiere utilisés sont trouvés.'), 'ok');
   }
@@ -790,6 +791,7 @@
     S, Core, Lib, Pv, Store, Host, Audio, Media, Share,
     UI: window.RRFXUI, settings, persist, log, status, runTask, modal, promptName, confirmDialog,
     plural, clone, errorMessage, pushHistory, renderCTA, switchTab, layoutChanged, fps, registry, uid,
+    copyText: Host.copyText,
     tabs: {}, actions: {}, services: {}, whenReady: []
   };
   window.RRFXApp = app;

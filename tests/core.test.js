@@ -236,3 +236,18 @@ test('titles: fixed timing never makes empty or negative texts', () => {
   assert.deepStrictEqual(items, []);
   assert.strictEqual(Core.titleTimeline(['a', 'b'], null, { fixed: 1, gap: 0.08 }).length, 2);
 });
+
+test('effect missing from this Premiere (Lens Distortion): Bulge falls back to a Transform zoom', () => {
+  const def = Lib.byId.lens;
+  const resolved = Core.resolveEffectNames(['Transformation', 'Flou gaussien'], Core.REGISTRY);
+  assert.strictEqual(resolved.lens, null);
+  const reg = Core.mergeRegistry({}, resolved);
+  assert.ok(reg.lens.missing);
+  const out = Core.compileEffect(def, {}, 'in', 8, 25, reg);
+  assert.strictEqual(out.length, 1);
+  assert.strictEqual(out[0].type, 'transform');
+  const scale = out[0].props.find(p => p.key === 'scale');
+  assert.ok(scale && scale.values.some(v => v > 100) && scale.values.every(v => v >= 100));
+  const normal = Core.compileEffect(def, {}, 'in', 8, 25, Core.mergeRegistry({}, Object.assign({}, resolved, { lens: 'Lens Distortion' })));
+  assert.strictEqual(normal[0].type, 'lens');
+});

@@ -479,7 +479,7 @@
             Store.fs.copyFileSync(file, Store.path.join(sys.luts, Store.path.basename(file)));
           } catch (e) { app.log(_T('LUT non installée dans le dossier Adobe : ') + app.errorMessage(e), 'warn'); }
         }
-        const copied = file && navigator.clipboard ? await navigator.clipboard.writeText(file).then(() => true, () => false) : false;
+        const copied = file ? await app.copyText(file) : false;
         return {
           kind: res.kind,
           title,

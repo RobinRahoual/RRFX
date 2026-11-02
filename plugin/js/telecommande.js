@@ -88,8 +88,7 @@
         copy.addEventListener('click', () => {
           url.select();
           const done = ok => app.status.finish(ok ? 'ok' : 'warn', ok ? _T('Adresse copiée') : _T('Copie impossible'), ok ? _T('Colle-la dans ton Stream Deck ou Companion.') : _T('Sélectionne l\'adresse et copie-la à la main.'));
-          if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(url.value).then(() => done(true), () => done(document.execCommand('copy')));
-          else done(document.execCommand('copy'));
+          app.copyText(url.value).then(done);
         });
         const renew = h('button', { class: 'action quiet', title: _T('Les anciennes adresses ne marcheront plus') }, _T('Nouveau jeton'));
         renew.addEventListener('click', () => { x.token = newToken(); app.persist(); refresh(); });

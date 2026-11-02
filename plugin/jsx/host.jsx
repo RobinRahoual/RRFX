@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.10.1';
+    var VERSION = '2.10.2';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -92,6 +92,29 @@ var RRFX = (function () {
         var s = app.project.activeSequence;
         if (!s) throw new Error('Aucune s\u00e9quence active');
         return s;
+    }
+
+    // Meme sequence ? Premiere renvoie un nouvel objet a chaque lecture : on compare les identifiants.
+    function sameSeq(a, b) { return !!(a && b && a.sequenceID === b.sequenceID); }
+
+    // Rend s active. openSequence d'abord : activeSequence n'est pas modifiable dans toutes les
+    // versions (Premiere 26 : Write permission denied).
+    function showSeq(s) {
+        var P = app.project;
+        if (sameSeq(P.activeSequence, s)) return true;
+        try { if (P.openSequence) P.openSequence(s.sequenceID); } catch (e) {}
+        if (!sameSeq(P.activeSequence, s)) { try { P.activeSequence = s; } catch (e2) {} }
+        return sameSeq(P.activeSequence, s);
+    }
+
+    // Copie de s : la sequence dont l'identifiant n'existait pas avant (pas forcement la derniere
+    // de la liste), ou null.
+    function cloneSeq(s) {
+        var P = app.project, ids = {}, i, q;
+        for (i = 0; i < P.sequences.numSequences; i++) ids[P.sequences[i].sequenceID] = true;
+        s.clone();
+        for (i = P.sequences.numSequences - 1; i >= 0; i--) { q = P.sequences[i]; if (!ids[q.sequenceID]) return q; }
+        return null;
     }
 
     function seqById(id) {
@@ -2028,13 +2051,11 @@ var RRFX = (function () {
     }
 
     function formatCopy(o) {
-        var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, before, k, i, j, list, it, comp, sc, over, kind;
-        var reframed = 0, filled = 0, blurred = 0, faced = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
+        var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, k, i, j, list, it, comp, sc, over, kind;
+        var reframed = 0, filled = 0, blurred = 0, faced = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080;
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
-        before = P.sequences.numSequences;
-        s.clone();
-        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-        ns = P.sequences[P.sequences.numSequences - 1];
+        ns = cloneSeq(s);
+        if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
         try { ns.name = o.name || (s.name + ' (' + o.label + ')'); } catch (e0) {}
         st = ns.getSettings();
         st.videoFrameWidth = W;
@@ -2042,8 +2063,7 @@ var RRFX = (function () {
         ns.setSettings(st);
         if (Number(ns.frameSizeHorizontal) !== W || Number(ns.frameSizeVertical) !== H) warnings.push('Taille du cadre \u00e0 v\u00e9rifier : S\u00e9quence > Param\u00e8tres de la s\u00e9quence');
         // La copie devient la sequence active : QE agit sur elle.
-        try { id = ns.sequenceID; if (P.openSequence) P.openSequence(id); } catch (e1) {}
-        if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+        if (!showSeq(ns)) return fail('Copie cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
         s = activeSeq();
         k = Math.max(W / oldW, H / oldH);
         over = overlayIds();
@@ -2173,7 +2193,7 @@ var RRFX = (function () {
     // o.copy : sur une copie de la sequence (l'original reste intact).
     function cutSilences(o) {
         var s = activeSeq(), P = app.project, t = speechTargets(s), f = tpf(s), ranges = [], merged = [], warnings = [], plan = [];
-        var i, j, k, a, b, r, x, list, it, removed = 0, moved = 0, refused = 0, total = 0, before, ns, others = [];
+        var i, j, k, a, b, r, x, list, it, removed = 0, moved = 0, refused = 0, total = 0, ns, others = [];
         if (!t.clips.length) return fail('S\u00e9lectionne dans la timeline les plans o\u00f9 l\'on parle.');
         for (i = 0; i < (o.ranges || []).length; i++) {
             a = Math.max(snap(o.ranges[i].a * TICKS, f), t.lo);
@@ -2189,13 +2209,10 @@ var RRFX = (function () {
         if (!ranges.length) return ok({ removed: 0, ranges: 0, seconds: 0, moved: 0, name: s.name, copy: false, warnings: [] });
         if (o.copy) {
             if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script : d\u00e9coche \u00ab Sur une copie \u00bb.');
-            before = P.sequences.numSequences;
-            s.clone();
-            if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-            ns = P.sequences[P.sequences.numSequences - 1];
+            ns = cloneSeq(s);
+            if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
             try { ns.name = s.name + (o.suffix || ' (sans silences)'); } catch (e0) {}
-            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e1) {}
-            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+            if (!showSeq(ns)) return fail('Copie cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
             s = activeSeq();
         }
         var qs = qeSeq();
@@ -2356,7 +2373,7 @@ var RRFX = (function () {
     // documentee dont RR FX se sert, puis supprime la copie. o.lutPath : petite LUT de test ;
     // o.folder, o.prefix : image exportee (le panneau verifie qu'elle arrive).
     function selfTest(o) {
-        var P = app.project, orig = activeSeq(), results = [], ns = null, before, i, adj, placed, comp, it, t0, t1, f, err, w0, h0, st, frame = '', list, n;
+        var P = app.project, orig = activeSeq(), results = [], ns = null, i, adj, placed, comp, it, t0, t1, f, err, w0, h0, st, frame = '', list, n;
         function add(id, label, okv, detail) { results.push({ id: id, label: label, ok: !!okv, detail: detail || '' }); return okv; }
         function attempt(id, label, fn) {
             try { var d = fn(); return add(id, label, d !== false, typeof d === 'string' ? d : ''); } catch (e) { return add(id, label, false, e.toString()); }
@@ -2364,15 +2381,12 @@ var RRFX = (function () {
         f = tpf(orig);
         // 1. Copie de la sequence (Formats, et terrain de test).
         if (!attempt('clone', 'Copier une s\u00e9quence', function () {
-            before = P.sequences.numSequences;
-            orig.clone();
-            if (P.sequences.numSequences <= before) return false;
-            ns = P.sequences[P.sequences.numSequences - 1];
+            ns = cloneSeq(orig);
+            if (!ns) return false;
             try { ns.name = 'RR FX \u00b7 Test (\u00e0 supprimer)'; } catch (e) {}
-            if (P.openSequence) P.openSequence(ns.sequenceID);
-            if (P.activeSequence !== ns) P.activeSequence = ns;
-            return activeSeq() === ns ? '' : false;
-        })) return ok({ results: results, frame: '' });
+            return showSeq(ns) ? '' : 'copie cr\u00e9\u00e9e, mais Premiere ne l\'a pas ouverte';
+        })) return ok({ results: results, frame: '', app: appVersion(), version: VERSION });
+        if (!sameSeq(activeSeq(), ns)) return ok({ results: results, frame: '', app: appVersion(), version: VERSION });
         var s = activeSeq();
         t0 = 0; t1 = snap(2 * TICKS, f);
         adjCache = null;
@@ -2428,8 +2442,7 @@ var RRFX = (function () {
         attempt('mogrt', 'Importer un mod\u00e8le de texte (.mogrt)', function () { return s.importMGT ? '' : false; });
         // Nettoyage : la sequence d'origine revient, la copie est supprimee.
         attempt('cleanup', 'Supprimer la s\u00e9quence de test', function () {
-            if (P.openSequence) P.openSequence(orig.sequenceID);
-            if (P.activeSequence !== orig) P.activeSequence = orig;
+            showSeq(orig);
             if (!P.deleteSequence) return '\u00e0 supprimer \u00e0 la main : \u00ab RR FX \u00b7 Test (\u00e0 supprimer) \u00bb';
             return P.deleteSequence(ns) === false ? '\u00e0 supprimer \u00e0 la main : \u00ab RR FX \u00b7 Test (\u00e0 supprimer) \u00bb' : '';
         });
@@ -2728,16 +2741,13 @@ var RRFX = (function () {
 
     // Extrait [o.a, o.b] (s) dans une copie de la sequence, recolle au debut : toutes les pistes.
     function extractCopy(o) {
-        var s = activeSeq(), P = app.project, f = tpf(s), A = snap(o.a * TICKS, f), B = snap(o.b * TICKS, f), ns, before, qs, i, j, k, list, it, x, warnings = [], refused = 0, kept = 0;
+        var s = activeSeq(), P = app.project, f = tpf(s), A = snap(o.a * TICKS, f), B = snap(o.b * TICKS, f), ns, qs, i, j, k, list, it, x, warnings = [], refused = 0, kept = 0;
         if (!(B - A >= f)) return fail('Extrait trop court');
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
-        before = P.sequences.numSequences;
-        s.clone();
-        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-        ns = P.sequences[P.sequences.numSequences - 1];
+        ns = cloneSeq(s);
+        if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
         try { ns.name = o.name || (s.name + ' \u00b7 Extrait'); } catch (e0) {}
-        try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e1) {}
-        if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+        if (!showSeq(ns)) return fail('Copie cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
         s = activeSeq();
         qs = qeSeq();
         // Coupes aux deux bords, sur toutes les pistes.
@@ -2859,32 +2869,28 @@ var RRFX = (function () {
     // Projet (sinon vide, aux reglages de la sequence active), au format o.width x o.height, avec
     // un calque de reglage sur toute la duree si o.adj. -> { name, id, clips, adjPlaced }
     function newFromTemplate(o) {
-        var P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], sel = [], i, ns = null, st, before, s, adj, dur, it, j, list, clips = 0, adjPlaced = false;
+        var P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], sel = [], i, ns = null, st, s, adj, dur, it, j, list, clips = 0, adjPlaced = false;
         // Rushs video selectionnes dans le panneau Projet.
         try {
             list = app.getCurrentProjectViewSelection ? app.getCurrentProjectViewSelection() : null;
             for (i = 0; list && i < list.length; i++) { it = list[i]; if (it.type === 1 && !(it.isSequence && it.isSequence()) && !isAdjustment(it)) sel.push(it); }
         } catch (e0) { sel = []; }
-        before = P.sequences.numSequences;
         if (sel.length && P.createNewSequenceFromClips) {
             try { ns = P.createNewSequenceFromClips(o.name, sel, P.rootItem); } catch (e1) { ns = null; }
         }
         if (!ns) {
             s = P.activeSequence;
             if (!s || !s.clone) return fail('S\u00e9lectionne tes rushs dans le panneau Projet (ou ouvre une s\u00e9quence \u00e0 copier).');
-            s.clone();
-            if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu cr\u00e9er la s\u00e9quence.');
-            ns = P.sequences[P.sequences.numSequences - 1];
+            ns = cloneSeq(s);
+            if (!ns) return fail('Premiere n\'a pas pu cr\u00e9er la s\u00e9quence.');
             try { ns.name = o.name; } catch (e2) {}
-            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e3) {}
-            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e4) {}
+            if (!showSeq(ns)) return fail('S\u00e9quence cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
             ns = activeSeq();
             // Copie videe : seulement ses reglages.
             for (j = 0; j < ns.videoTracks.numTracks; j++) { list = clipsOf(ns, j); for (i = 0; i < list.length; i++) { try { list[i].remove(false, false); } catch (e5) {} } }
             for (j = 0; j < ns.audioTracks.numTracks; j++) { list = audioItems(ns, j); for (i = 0; i < list.length; i++) { try { list[i].remove(false, false); } catch (e6) {} } }
         } else {
-            try { if (P.openSequence) P.openSequence(ns.sequenceID); } catch (e7) {}
-            if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e8) {}
+            showSeq(ns);
             ns = activeSeq();
         }
         if (W && H) {
@@ -3062,14 +3068,12 @@ var RRFX = (function () {
     // Version de la sequence active : copie figee rangee dans le chutier Versions ; on continue
     // sur la sequence d'origine.
     function versionSequence(o) {
-        var s = activeSeq(), P = app.project, before, ns;
+        var s = activeSeq(), P = app.project, ns;
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
-        before = P.sequences.numSequences;
-        s.clone();
-        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-        ns = P.sequences[P.sequences.numSequences - 1];
+        ns = cloneSeq(s);
+        if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
         try { ns.name = o.name || (s.name + ' v02'); } catch (e) {}
-        if (P.activeSequence !== s) { try { P.openSequence(s.sequenceID); } catch (e1) {} }
+        showSeq(s);
         try { if (ns.projectItem) ns.projectItem.moveBin(binPath(o.bin || 'Versions')); } catch (e2) {}
         return ok({ id: ns.sequenceID, name: ns.name, of: s.name, ofId: s.sequenceID });
     }

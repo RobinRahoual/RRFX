@@ -6,7 +6,7 @@
     // documentee dont RR FX se sert, puis supprime la copie. o.lutPath : petite LUT de test ;
     // o.folder, o.prefix : image exportee (le panneau verifie qu'elle arrive).
     function selfTest(o) {
-        var P = app.project, orig = activeSeq(), results = [], ns = null, before, i, adj, placed, comp, it, t0, t1, f, err, w0, h0, st, frame = '', list, n;
+        var P = app.project, orig = activeSeq(), results = [], ns = null, i, adj, placed, comp, it, t0, t1, f, err, w0, h0, st, frame = '', list, n;
         function add(id, label, okv, detail) { results.push({ id: id, label: label, ok: !!okv, detail: detail || '' }); return okv; }
         function attempt(id, label, fn) {
             try { var d = fn(); return add(id, label, d !== false, typeof d === 'string' ? d : ''); } catch (e) { return add(id, label, false, e.toString()); }
@@ -14,15 +14,12 @@
         f = tpf(orig);
         // 1. Copie de la sequence (Formats, et terrain de test).
         if (!attempt('clone', 'Copier une s\u00e9quence', function () {
-            before = P.sequences.numSequences;
-            orig.clone();
-            if (P.sequences.numSequences <= before) return false;
-            ns = P.sequences[P.sequences.numSequences - 1];
+            ns = cloneSeq(orig);
+            if (!ns) return false;
             try { ns.name = 'RR FX \u00b7 Test (\u00e0 supprimer)'; } catch (e) {}
-            if (P.openSequence) P.openSequence(ns.sequenceID);
-            if (P.activeSequence !== ns) P.activeSequence = ns;
-            return activeSeq() === ns ? '' : false;
-        })) return ok({ results: results, frame: '' });
+            return showSeq(ns) ? '' : 'copie cr\u00e9\u00e9e, mais Premiere ne l\'a pas ouverte';
+        })) return ok({ results: results, frame: '', app: appVersion(), version: VERSION });
+        if (!sameSeq(activeSeq(), ns)) return ok({ results: results, frame: '', app: appVersion(), version: VERSION });
         var s = activeSeq();
         t0 = 0; t1 = snap(2 * TICKS, f);
         adjCache = null;
@@ -78,8 +75,7 @@
         attempt('mogrt', 'Importer un mod\u00e8le de texte (.mogrt)', function () { return s.importMGT ? '' : false; });
         // Nettoyage : la sequence d'origine revient, la copie est supprimee.
         attempt('cleanup', 'Supprimer la s\u00e9quence de test', function () {
-            if (P.openSequence) P.openSequence(orig.sequenceID);
-            if (P.activeSequence !== orig) P.activeSequence = orig;
+            showSeq(orig);
             if (!P.deleteSequence) return '\u00e0 supprimer \u00e0 la main : \u00ab RR FX \u00b7 Test (\u00e0 supprimer) \u00bb';
             return P.deleteSequence(ns) === false ? '\u00e0 supprimer \u00e0 la main : \u00ab RR FX \u00b7 Test (\u00e0 supprimer) \u00bb' : '';
         });

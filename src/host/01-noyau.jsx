@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.10.1';
+    var VERSION = '2.10.2';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -92,6 +92,29 @@ var RRFX = (function () {
         var s = app.project.activeSequence;
         if (!s) throw new Error('Aucune s\u00e9quence active');
         return s;
+    }
+
+    // Meme sequence ? Premiere renvoie un nouvel objet a chaque lecture : on compare les identifiants.
+    function sameSeq(a, b) { return !!(a && b && a.sequenceID === b.sequenceID); }
+
+    // Rend s active. openSequence d'abord : activeSequence n'est pas modifiable dans toutes les
+    // versions (Premiere 26 : Write permission denied).
+    function showSeq(s) {
+        var P = app.project;
+        if (sameSeq(P.activeSequence, s)) return true;
+        try { if (P.openSequence) P.openSequence(s.sequenceID); } catch (e) {}
+        if (!sameSeq(P.activeSequence, s)) { try { P.activeSequence = s; } catch (e2) {} }
+        return sameSeq(P.activeSequence, s);
+    }
+
+    // Copie de s : la sequence dont l'identifiant n'existait pas avant (pas forcement la derniere
+    // de la liste), ou null.
+    function cloneSeq(s) {
+        var P = app.project, ids = {}, i, q;
+        for (i = 0; i < P.sequences.numSequences; i++) ids[P.sequences[i].sequenceID] = true;
+        s.clone();
+        for (i = P.sequences.numSequences - 1; i >= 0; i--) { q = P.sequences[i]; if (!ids[q.sequenceID]) return q; }
+        return null;
     }
 
     function seqById(id) {

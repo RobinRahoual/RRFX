@@ -101,8 +101,8 @@
         return { kind: 'ok', title: _T('Textes prêts'), detail: _T('Copie ce qui te plaît et retouche-le : l\'IA peut se tromper.') };
       }, true);
     }
-    const copyText = (t, what) => (navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject(new Error(_T('presse-papiers indisponible'))))
-      .then(() => app.status.finish('ok', what + _T(' copié'), ''), e => app.status.finish('warn', _T('Copie impossible'), app.errorMessage(e)));
+    const copyText = (t, what) => app.copyText(t).then(ok => ok ? app.status.finish('ok', what + _T(' copié'), '')
+      : app.status.finish('warn', _T('Copie impossible'), _T('Sélectionne le texte et copie-le à la main (Ctrl+C / ⌘C).')));
 
     app.extras.speech.push({
       id: 'publier', title: _T('Titre, description et hashtags (IA locale)'), nav: _T('Publier'), tool: [_T('Écrire les textes'), () => writePublish()],

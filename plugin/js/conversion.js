@@ -143,7 +143,7 @@
       const fx = await app.services.lumetriFx();
       const res = await Host.call('logConvert', { name, lutPath: file, fxNames: fx[0].names, scope: c.scope, adjNodeId: app.settings().adjNodeId });
       if (!res.ok) throw new Error(res.error);
-      if (file && !res.lutSet && navigator.clipboard) await navigator.clipboard.writeText(file).catch(() => {});
+      if (file && !res.lutSet) await app.copyText(file);
       return { res, title: 'Rec.709 · ' + label(cam), detail: app.plural(res.layers, _T('calque Lumetri'), _T('calques Lumetri')) + _T(' au-dessus des rushs. ') + lutResult(res, [file]) };
     }
 

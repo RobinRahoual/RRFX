@@ -246,12 +246,16 @@ function makeEnv(fps) {
   seq.audioTracks = coll([new Track(seq, 0), new Track(seq, 1)]);
   Object.defineProperty(seq.audioTracks, 'numTracks', { get: () => seq.audioTracks.length });
   Object.defineProperty(seq.videoTracks, 'numTracks', { get: () => seq.videoTracks.length });
-  project.activeSequence = seq;
+  // Comme dans Premiere 26 : activeSequence ne se modifie pas (Write permission denied),
+  // seul openSequence change la séquence active.
+  let active = seq;
+  // Et chaque lecture renvoie un nouvel objet pour la même séquence : comparer les identifiants.
+  Object.defineProperty(project, 'activeSequence', { get: () => active && new Proxy(active, {}), set: () => { throw new Error('Write permission denied'); } });
   const sequences = coll([seq]);
   Object.defineProperty(sequences, 'numSequences', { get: () => sequences.length });
   project.sequences = sequences;
   project.deleteSequence = sq => { const i = sequences.indexOf(sq); if (i < 0) return false; sequences.splice(i, 1); return true; };
-  project.openSequence = id => { const f = sequences.find(x => x.sequenceID === id); if (f) project.activeSequence = f; return !!f; };
+  project.openSequence = id => { const f = sequences.find(x => x.sequenceID === id); if (f) active = f; return !!f; };
 
   // ---------------- QE
   function qeItem(it) {

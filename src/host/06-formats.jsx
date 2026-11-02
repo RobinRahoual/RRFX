@@ -42,13 +42,11 @@
     }
 
     function formatCopy(o) {
-        var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, before, k, i, j, list, it, comp, sc, over, kind;
-        var reframed = 0, filled = 0, blurred = 0, faced = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080, id;
+        var s = activeSeq(), P = app.project, W = Math.round(o.width), H = Math.round(o.height), warnings = [], ns, st, k, i, j, list, it, comp, sc, over, kind;
+        var reframed = 0, filled = 0, blurred = 0, faced = 0, top, oldW = Number(s.frameSizeHorizontal) || 1920, oldH = Number(s.frameSizeVertical) || 1080;
         if (!s.clone || !P.sequences) return fail('Cette version de Premiere ne permet pas de dupliquer une s\u00e9quence par script.');
-        before = P.sequences.numSequences;
-        s.clone();
-        if (P.sequences.numSequences <= before) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
-        ns = P.sequences[P.sequences.numSequences - 1];
+        ns = cloneSeq(s);
+        if (!ns) return fail('Premiere n\'a pas pu dupliquer la s\u00e9quence.');
         try { ns.name = o.name || (s.name + ' (' + o.label + ')'); } catch (e0) {}
         st = ns.getSettings();
         st.videoFrameWidth = W;
@@ -56,8 +54,7 @@
         ns.setSettings(st);
         if (Number(ns.frameSizeHorizontal) !== W || Number(ns.frameSizeVertical) !== H) warnings.push('Taille du cadre \u00e0 v\u00e9rifier : S\u00e9quence > Param\u00e8tres de la s\u00e9quence');
         // La copie devient la sequence active : QE agit sur elle.
-        try { id = ns.sequenceID; if (P.openSequence) P.openSequence(id); } catch (e1) {}
-        if (P.activeSequence !== ns) try { P.activeSequence = ns; } catch (e2) {}
+        if (!showSeq(ns)) return fail('Copie cr\u00e9\u00e9e (\u00ab ' + ns.name + ' \u00bb), mais Premiere ne l\'a pas ouverte : ouvre-la et recommence.');
         s = activeSeq();
         k = Math.max(W / oldW, H / oldH);
         over = overlayIds();

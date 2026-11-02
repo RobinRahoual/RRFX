@@ -49,7 +49,7 @@ test('compatibility self-test: every check runs on a throwaway copy, which is th
   assert.ok(r.ok, r.error);
   const by = Object.fromEntries(r.results.map(x => [x.id, x]));
   ['clone', 'adj', 'place', 'lumetri', 'lut', 'insert', 'razor', 'disable', 'markers', 'frame', 'settings', 'reframe', 'mogrt', 'cleanup'].forEach(id => assert.ok(by[id] && by[id].ok, id + ' : ' + JSON.stringify(by[id])));
-  assert.strictEqual(env.ctx.app.project.activeSequence, env.seq, 'original sequence back');
+  assert.strictEqual(env.ctx.app.project.activeSequence.sequenceID, env.seq.sequenceID, 'original sequence back');
   assert.strictEqual(env.ctx.app.project.sequences.length, before, 'test copy deleted');
   assert.deepStrictEqual([env.seq.frameSizeHorizontal, env.seq.videoTracks.length], [1920, 3], 'original untouched');
   assert.match(r.frame, /rrfx-test-frame$/);
