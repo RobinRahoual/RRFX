@@ -51,7 +51,8 @@
       drawPreview();
       drawHisto(D.histogram(out.data, 128));
       if (V.curveDraw && st().open.curve) V.curveDraw();
-      if (final) pushLive();
+      // En direct dans Premiere : pendant le glissement (LUT légère, 17³), puis au relâcher (33³).
+      pushLive(!final);
     }
 
     // ---------------------------------------------------------------- en direct dans Premiere
@@ -68,16 +69,18 @@
       const el = V.view && V.view.querySelector('.lr-live');
       if (el) { el.className = 'note lr-live ' + kind; el.textContent = text; el.hidden = !text; }
     }
-    async function pushLive() {
-      if (LIVE.sent === null) { LIVE.sent = liveKey(); return; }
+    async function pushLive(fast) {
+      const size = fast ? 17 : 33;
+      if (LIVE.sent === null) { LIVE.sent = '33:' + liveKey(); return; }
       const c = app.S.ctx;
       if (!liveOn() || !c || !(c.selection > 0)) return;
-      const key = liveKey();
+      const key = size + ':' + liveKey();
+      // Un envoi à la fois ; pendant ce temps, seul le dernier réglage attend (les autres sont sautés).
+      if (LIVE.busy) { LIVE.again = fast ? 'fast' : 'final'; return; }
       if (key === LIVE.sent) return;
-      if (LIVE.busy) { LIVE.again = true; return; }
       LIVE.busy = true;
       try {
-        const cube = D.toCube(D.buildLut(P(), 33), st().name || 'RR FX');
+        const cube = D.toCube(D.buildLut(P(), size), st().name || 'RR FX');
         const dir = Store.path.join(Store.dir, 'Looks', 'En direct');
         Store.fs.mkdirSync(dir, { recursive: true });
         const file = Store.path.join(dir, 'RRFX live ' + A.hashText(cube) + '.cube');
@@ -98,7 +101,7 @@
         }
       } catch (e) { setLive('warn', app.errorMessage(e)); }
       LIVE.busy = false;
-      if (LIVE.again) { LIVE.again = false; pushLive(); }
+      if (LIVE.again) { const a = LIVE.again; LIVE.again = false; pushLive(a === 'fast'); }
     }
     // Autre plan sélectionné : son étalonnage partira au prochain réglage.
     app.contextListeners.push(c => { if (selKey(c) !== LIVE.sel && V.live && V.live.kind === 'ok') setLive('idle', c && c.selection ? _T('Nouveau plan sélectionné : bouge un réglage ou « Appliquer » pour l\'étalonner.') : ''); });
@@ -157,6 +160,7 @@
       const thumb = h('span', { class: 'lr-thumb' });
       const track = h('div', { class: 'lr-track', style: { background: o.grad || 'linear-gradient(90deg, #3a3a3a, #9a9a9a)' } }, thumb);
       const lab = h('span', { class: 'lr-label', title: _T('Double-clic : valeur par défaut') }, label);
+      track.title = _T('Double-clic : valeur par défaut');
       const el = h('div', { class: 'lr-row' }, lab, track, val);
       const pos = v => ((v - o.min) / (o.max - o.min) * 100) + '%';
       const show = v => { thumb.style.left = pos(v); val.textContent = sign(v, d); };
@@ -181,9 +185,11 @@
         track.addEventListener('pointermove', move);
         track.addEventListener('pointerup', up);
       });
+      // Double-clic sur le curseur (piste ou poignée) ou sur son nom : valeur par défaut, comme dans
+      // Lightroom. Sur la piste, le glissement capture la souris : le double-clic y arrive donc.
       const reset = () => set(o.def || 0, true);
       lab.addEventListener('dblclick', reset);
-      thumb.addEventListener('dblclick', reset);
+      track.addEventListener('dblclick', reset);
       val.addEventListener('click', () => {
         const input = h('input', { class: 'hot-input lr-input', value: String(o.get()).replace('.', ',') });
         val.replaceWith(input);
@@ -523,7 +529,7 @@
           const r = await Host.call('gradeClips', { lut: file, mark: 'RRFX', names: fx[0].names });
           if (!r.ok) return { kind: 'warn', title: _T('Aucun plan sélectionné'), detail: r.error };
           if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: 'Look · ' + name, entries: r.created });
-          LIVE.sent = liveKey();
+          LIVE.sent = '33:' + liveKey();
           (r.warnings || []).forEach(w => app.log(w, 'warn'));
           if (!r.graded) return { kind: 'warn', title: _T('Look non posé'), detail: (r.warnings || [])[0] || '' };
           return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: _T('Look posé · ') + app.plural(r.graded, _T('plan'), _T('plans')), detail: _T('Dans le Lumetri de chaque plan (LUT d\'entrée). Les prochains réglages s\'y appliquent en direct.') };

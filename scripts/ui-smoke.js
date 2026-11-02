@@ -755,6 +755,17 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     // Résultat dans le bloc d'état (libre) ou sur une ligne (une autre tâche l'occupe).
     await page.waitForSelector('#status:has-text("Long arrêté"), #tasks .task-row.done:has-text("Long arrêté")', { timeout: 3000 });
   });
+  await step('2.14.1 : double-clic sur un curseur de colorimétrie, valeur par défaut', async () => {
+    await goTab('color');
+    const row = '#view-color [data-panel=basic] .lr-row:has(.lr-label:text-is("Contraste"))';
+    await page.waitForSelector(row);
+    const box = await page.locator(row + ' .lr-track').boundingBox();
+    await page.mouse.click(box.x + box.width * 0.9, box.y + box.height / 2);
+    const moved = await page.textContent(row + ' .lr-val');
+    if (/^0$/.test(moved.trim())) throw new Error('le clic sur la piste aurait dû changer la valeur');
+    await page.mouse.dblclick(box.x + box.width * 0.9, box.y + box.height / 2);
+    await page.waitForFunction(sel => document.querySelector(sel + ' .lr-val').textContent.trim() === '0', row, { timeout: 2000 });
+  });
   await step('2.11 : couleur verrouillée sans plan sélectionné', async () => {
     await goTab('color');
     await page.waitForSelector('#view-color [data-panel=basic]');

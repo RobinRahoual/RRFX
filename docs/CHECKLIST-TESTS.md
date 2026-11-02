@@ -293,6 +293,8 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Deux plans sélectionnés : les deux changent ; ↶ Annuler retire le Lumetri ajouté
 - [ ] Aucun calque de réglage posé pour un plan ; *Toute la séquence* : un calque de réglage
 - [ ] *Exporter › En direct* décoché : plus rien ne part tant qu'on ne clique pas sur *Appliquer*
+- [ ] 🔴 Glisse *Exposition* sans relâcher : l'image change dans Premiere pendant le glissement
+- [ ] Double-clic sur un curseur (piste ou nom) : il revient à sa valeur par défaut, et Premiere aussi
 - [ ] Le look reste après fermeture et réouverture du projet (la LUT est dans Documents/RRFX/Looks/En direct)
 
 ---
