@@ -163,6 +163,7 @@
       track.title = _T('Double-clic : valeur par défaut');
       const el = h('div', { class: 'lr-row' }, lab, track, val);
       const pos = v => ((v - o.min) / (o.max - o.min) * 100) + '%';
+      const reset = () => set(o.def || 0, true);
       const show = v => { thumb.style.left = pos(v); val.textContent = sign(v, d); };
       const set = (v, fin) => {
         v = Math.min(o.max, Math.max(o.min, Math.round(v / o.step) * o.step));
@@ -172,8 +173,14 @@
         show(v);
         schedule(!!fin);
       };
+      // Double-clic sur la piste : deux appuis rapprochés (l'événement dblclick n'arrive pas pendant
+      // un glissement capturé).
+      let lastDown = 0;
       track.addEventListener('pointerdown', e => {
         e.preventDefault();
+        const now = Date.now();
+        if (now - lastDown < 400) { lastDown = 0; reset(); return; }
+        lastDown = now;
         const r = track.getBoundingClientRect(), v0 = o.get(), x0 = e.clientX;
         // Clic sur la piste : la valeur y saute ; puis glissement (Maj = fin).
         let base = Math.abs(e.clientX - (r.left + (v0 - o.min) / (o.max - o.min) * r.width)) < 8 ? v0 : o.min + (e.clientX - r.left) / r.width * (o.max - o.min);
@@ -186,10 +193,8 @@
         track.addEventListener('pointerup', up);
       });
       // Double-clic sur le curseur (piste ou poignée) ou sur son nom : valeur par défaut, comme dans
-      // Lightroom. Sur la piste, le glissement capture la souris : le double-clic y arrive donc.
-      const reset = () => set(o.def || 0, true);
+      // Lightroom.
       lab.addEventListener('dblclick', reset);
-      track.addEventListener('dblclick', reset);
       val.addEventListener('click', () => {
         const input = h('input', { class: 'hot-input lr-input', value: String(o.get()).replace('.', ',') });
         val.replaceWith(input);

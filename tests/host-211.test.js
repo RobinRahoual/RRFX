@@ -105,3 +105,13 @@ test('gradeClips: live grading on the selected clips, one Lumetri reused, no adj
   assert.strictEqual(lumetris(), 0, 'undo removes the Lumetri');
   env.v[0].setSelected(false);
 });
+
+test('adjustment layer found by name even with a decomposed accent (e + combining acute) or a non-clip type', () => {
+  const env = setup();
+  env.adj.name = 'Calque de réglage';
+  env.adj.type = 4;
+  const r = env.call('adjustmentInfo', {});
+  assert.ok(r.found, 'decomposed accent');
+  env.adj.name = 'Calque de réglage 2';
+  assert.ok(env.call('adjustmentInfo', {}).found);
+});

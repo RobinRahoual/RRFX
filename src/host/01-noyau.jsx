@@ -261,7 +261,7 @@ var RRFX = (function () {
 
     // ------------------------------------------------------------ adjustment layer
 
-    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione/i;
+    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione|camada de ajuste/i;
 
     function walk(item, fn) {
         var i, c;
@@ -277,9 +277,15 @@ var RRFX = (function () {
         return null;
     }
 
+    // Nom compare sans accents : Premiere peut ecrire le \u00e9 en deux caracteres (e + accent),
+    // et le type d'un calque de reglage n'est pas le meme partout (pas un chutier ni la racine).
     function isAdjustment(pi) {
+        var name;
         try { if (pi.isAdjustmentLayer && pi.isAdjustmentLayer()) return true; } catch (e) {}
-        return pi.type === 1 && ADJ_NAME.test(pi.name);
+        if (!pi || pi.type === 2 || pi.type === 3) return false;
+        try { if (pi.isSequence && pi.isSequence()) return false; } catch (e2) {}
+        name = String(pi.name || '').replace(/[\u0300-\u036f]/g, '');
+        return ADJ_NAME.test(name);
     }
 
     // ExtendScript ne sait pas creer de calque de reglage. Un projet modele (.prproj) qui en contient

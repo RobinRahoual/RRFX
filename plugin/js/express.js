@@ -137,7 +137,7 @@
     async function launch() {
       const c = await verify();
       if (!c.sequence) return app.status.finish('error', _T('Ouvre une séquence'), _T('Le montage express travaille sur la séquence active de Premiere.'));
-      if (!c.adj) return app.status.finish('error', _T('Il manque un calque de réglage'), _T('Une fois par projet : Fichier > Nouveau > Calque de réglage. RR FX le retrouve tout seul.'));
+      if (!c.adj) return app.status.finish('error', _T('Il manque un calque de réglage'), _T('Premiere ne laisse pas un plugin en créer un : crée-en un une seule fois (Fichier > Nouveau > Calque de réglage). RR FX le garde ensuite comme modèle pour tous tes projets.'));
       const r = recipe(), all = R.stepsOf(r), on = {};
       all.forEach(x => { on[x.id] = wants(r, x) && !blocker(x.id, c, r); });
       const steps = all.filter(x => x.id !== 'sfx' && on[x.id]);
@@ -239,7 +239,7 @@
       const music = all.some(q => wants(r, q) && R.needsMusic(q.id, r));
       const items = c ? [
         [c.sequence, _T('Séquence ouverte'), _T('Ouvre ta séquence dans Premiere')],
-        [c.adj, _T('Calque de réglage dans le projet'), _T('Fichier > Nouveau > Calque de réglage (une fois par projet)')],
+        [c.adj, _T('Calque de réglage dans le projet'), _T('Fichier > Nouveau > Calque de réglage (une seule fois : RR FX le garde comme modèle)')],
         music ? [!!c.music, c.music ? _T('Musique : ') + c.music : _T('Musique dans la séquence'), _T('Pose ta musique sur une piste audio')] : null,
         has('silences') ? [c.speech > 0, c.speech ? app.plural(c.speech, _T('plan parlé sélectionné'), _T('plans parlés sélectionnés')) : _T('Plans où l\'on parle sélectionnés'), _T('Sélectionne-les dans la timeline (sinon la coupe des silences est passée)'), true] : null,
         has('montage') ? [c.rushes > 0, c.rushes ? app.plural(c.rushes, _T('rush sélectionné'), _T('rushs sélectionnés')) + _T(' dans Projet') : _T('Rushs sélectionnés dans le panneau Projet'), _T('Pour le montage auto (sinon, il est passé)'), true] : null,

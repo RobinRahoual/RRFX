@@ -91,10 +91,12 @@
           file = Store.path.join(outDir(), L.nameFromUrl(c.url, ext));
           Store.fs.writeFileSync(file, Buffer.from(bytes));
         } else {
-          let exe = await findTool('yt-dlp', x.ytdlp);
+          // yt-dlp : un outil gratuit de RR FX, proposé à l'installation en un clic s'il manque.
+          let exe = x.ytdlp && Store.fs.existsSync(x.ytdlp) ? x.ytdlp : await findTool('yt-dlp', '');
+          if (!exe && app.tools) exe = await app.tools.need('ytdlp', _T('Pour YouTube, Vimeo, SoundCloud, Instagram… RR FX télécharge avec yt-dlp, un outil gratuit installé une fois.'));
           if (!exe) exe = await needYtdlp();
-          if (!exe) return { kind: 'warn', title: _T('yt-dlp nécessaire'), detail: _T('Installe yt-dlp (voir la fenêtre) puis relance l\'import.') };
-          const ffmpeg = await findTool('ffmpeg', x.ffmpeg);
+          if (!exe) return { kind: 'warn', title: _T('yt-dlp nécessaire'), detail: _T('Installe yt-dlp (Réglages › Outils gratuits) puis relance l\'import.') };
+          const ffmpeg = (app.tools && await app.tools.find('ffmpeg')) || await findTool('ffmpeg', x.ffmpeg);
           app.status.phase(_T('Téléchargement (yt-dlp)'));
           file = await runYtdlp(exe, L.ytdlpArgs({ url: c.url, mode: x.mode, out: outDir(), ffmpeg }), outDir());
         }

@@ -53,6 +53,17 @@
       how: { any: { type: 'wheel', pkg: 'imageio-ffmpeg', member: '^imageio_ffmpeg/binaries/ffmpeg-[^/]+$', rename: 'ffmpeg' } }
     },
     {
+      id: 'ytdlp', name: 'yt-dlp', icon: '🔗', license: 'Unlicense', mb: 18, site: 'https://github.com/yt-dlp/yt-dlp',
+      what: 'Télécharge une vidéo ou un son depuis YouTube, Vimeo, SoundCloud, Instagram, TikTok…',
+      uses: ['Bibliothèque › Importer depuis un lien (le son en MP3 ou la vidéo, posés à la tête de lecture)'],
+      exe: ['yt-dlp'],
+      // Toujours la dernière version : les sites changent souvent, yt-dlp suit.
+      how: {
+        win: { type: 'file', url: 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp.exe', rename: 'yt-dlp' },
+        mac: { type: 'file', url: 'https://github.com/yt-dlp/yt-dlp/releases/latest/download/yt-dlp_macos', rename: 'yt-dlp' }
+      }
+    },
+    {
       id: 'ollama', name: 'Ollama', icon: '🧠', license: 'MIT', mb: 1500, site: 'https://ollama.com',
       what: 'Une IA de texte et d\'image sur ton ordinateur (Qwen, Gemma, Mistral…), rien n\'est envoyé en ligne.',
       uses: ['Traduction des sous-titres', 'Titres des chapitres YouTube', 'Titre, description et hashtags', 'Choix des extraits pour les réseaux', 'Correction des sous-titres', 'Recherche dans les rushs et plans de coupe automatiques'],

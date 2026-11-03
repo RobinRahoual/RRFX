@@ -763,6 +763,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.mouse.click(box.x + box.width * 0.9, box.y + box.height / 2);
     const moved = await page.textContent(row + ' .lr-val');
     if (/^0$/.test(moved.trim())) throw new Error('le clic sur la piste aurait dû changer la valeur');
+    await page.waitForTimeout(700);
     await page.mouse.dblclick(box.x + box.width * 0.9, box.y + box.height / 2);
     await page.waitForTimeout(300);
     const back = (await page.textContent(row + ' .lr-val')).trim();
