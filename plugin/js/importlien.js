@@ -19,17 +19,9 @@
       Object.keys(d).forEach(k => { if (!(k in s.linkImport)) s.linkImport[k] = d[k]; });
       return s.linkImport;
     };
-    // Dossier de RR FX, quand le projet Premiere n'est pas encore enregistré.
-    const fallbackDir = () => { const d = Store.path.join(Store.dir, 'Téléchargements'); Store.fs.mkdirSync(d, { recursive: true }); return d; };
-    /* Où ranger le fichier : assets/VIDEOS ou assets/SFX à côté du .prproj (et le même chutier
-       dans le panneau Projet) ; sinon Documents/RRFX/Téléchargements. */
-    async function destination(audio) {
-      const ctx = await Host.call('getContext', {});
-      const a = ctx && ctx.ok ? L.assetsDir(ctx.projectPath, audio, Store.path) : null;
-      if (a) { Store.fs.mkdirSync(a.dir, { recursive: true }); return a; }
-      return { dir: fallbackDir(), bin: '', sub: '' };
-    }
-    const proc = () => (root.process || {});
+    // Rangement : dossier assets du projet (dossiers.js), sinon Documents/RRFX/Téléchargements.
+    const Dos = root.RRFXDossiers;
+    const destination = cat => app.assetsFolder.dirForNow(cat, { fallback: 'Téléchargements' });
 
     // Un outil (yt-dlp, ffmpeg) : réglage, puis PATH, puis emplacements habituels. → chemin ou ''.
     async function findTool(tool, saved) {
@@ -41,7 +33,9 @@
     }
 
     // Lancement de yt-dlp, progression suivie ligne par ligne. → chemin du fichier téléchargé.
+    let lastDuration = null;
     function runYtdlp(exe, args, dir) {
+      lastDuration = null;
       return new Promise((resolve, reject) => {
         const t0 = Date.now() - 2000, cp = Store.nodeRequire('child_process').spawn(exe, args, { windowsHide: true });
         cp.stdout.setEncoding('utf8');
@@ -52,7 +46,8 @@
         // --print rend yt-dlp silencieux : le chemin final sort sur stdout, la progression sur stderr.
         let last = '', errOut = '', buf = '', ebuf = '';
         const onProgress = line => { const p = L.progressOf(line); if (p !== null) app.status.progress(Math.round(p * 100), 100, _T('Téléchargement')); return p !== null; };
-        const onLine = line => { if (!onProgress(line) && line.trim() && !/^\[/.test(line)) last = line.trim(); };
+        // RRFXDUR=… : durée annoncée avant le téléchargement (rangement MUSIQUE / SFX).
+        const onLine = line => { const d = Dos ? Dos.durationOf(line) : null; if (d !== null) { lastDuration = d; return; } if (!onProgress(line) && line.trim() && !/^\[/.test(line)) last = line.trim(); };
         cp.stdout.on('data', d => { buf += d; const lines = buf.split(/\r?\n/); buf = lines.pop(); lines.forEach(onLine); });
         cp.stderr.on('data', d => { errOut += d; ebuf += d; const lines = ebuf.split(/[\r\n]+/); ebuf = lines.pop(); lines.forEach(onProgress); if (errOut.length > 20000) errOut = errOut.slice(-10000); });
         app.S.onCancel = () => { try { cp.kill(); } catch (e) { /* déjà fini */ } };
@@ -97,8 +92,9 @@
           const sig = String.fromCharCode.apply(null, bytes.slice(0, 12));
           const ext = c.ext || (/ftyp/.test(sig) ? 'mp4' : /^ID3|^\xff\xfb/.test(sig) ? 'mp3' : /^RIFF/.test(sig) ? 'wav' : x.mode === 'audio' ? 'mp3' : 'mp4');
           if (bytes.length < 1024 || /^<!doctype|^<html/i.test(sig.trim())) throw new Error(_T('Le lien renvoie une page web, pas un fichier (lien de partage privé ?).'));
-          dest = await destination(x.mode === 'audio' || L.isAudio(ext));
-          file = Store.path.join(dest.dir, L.nameFromUrl(c.url, ext));
+          const name = L.nameFromUrl(c.url, ext);
+          dest = await destination(x.mode === 'audio' && !Dos.isAudio(name) ? 'SFX' : Dos.categoryOf(name, { bytes: bytes.length }));
+          file = Store.path.join(dest.dir, name);
           Store.fs.writeFileSync(file, Buffer.from(bytes));
         } else {
           // yt-dlp : un outil gratuit de RR FX, proposé à l'installation en un clic s'il manque.
@@ -108,8 +104,17 @@
           if (!exe) return { kind: 'warn', title: _T('yt-dlp nécessaire'), detail: _T('Installe yt-dlp (Réglages › Outils gratuits) puis relance l\'import.') };
           const ffmpeg = (app.tools && await app.tools.find('ffmpeg')) || await findTool('ffmpeg', x.ffmpeg);
           app.status.phase(_T('Téléchargement (yt-dlp)'));
-          dest = await destination(x.mode === 'audio');
-          file = await runYtdlp(exe, L.ytdlpArgs({ url: c.url, mode: x.mode, out: dest.dir, ffmpeg }), dest.dir);
+          // Un son va d'abord dans SFX, puis en MUSIQUE s'il dure plus de 45 s (durée donnée par yt-dlp).
+          dest = await destination(x.mode === 'audio' ? 'SFX' : 'VIDEOS');
+          const args = L.ytdlpArgs({ url: c.url, mode: x.mode, out: dest.dir, ffmpeg });
+          args.splice(args.indexOf('--'), 0, ...Dos.DURATION_ARGS);
+          file = await runYtdlp(exe, args, dest.dir);
+          if (dest.inProject && Dos.isAudio(file)) {
+            let bytes = 0;
+            try { bytes = Store.fs.statSync(file).size; } catch (e) { /* taille inconnue */ }
+            const cat = Dos.categoryOf(file, { duration: lastDuration, bytes });
+            if (cat !== dest.sub) { file = app.assetsFolder.moveTo(file, cat); dest = Object.assign({}, dest, { sub: cat, bin: 'assets/' + cat }); }
+          }
         }
         app.status.phase(_T('Pose dans la timeline'));
         const ext = L.extOf(file), audioOnly = x.mode === 'audio' || L.isAudio(ext);
@@ -144,7 +149,7 @@
         input, hint,
         row(_T('Garder'), actionGroup([{ v: 'video', label: _T('🎬 Vidéo (MP4)') }, { v: 'audio', label: _T('🎵 Son (MP3)') }], x.mode, v => { x.mode = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, go),
-        h('div', { class: 'note' }, _T('Rangé à côté de ton projet Premiere : assets/VIDEOS pour les vidéos, assets/SFX pour les sons (mêmes chutiers dans le panneau Projet).')),
+        h('div', { class: 'note' }, _T('Rangé à côté de ton projet Premiere, dans assets : VIDEOS, MUSIQUE (sons de plus de 45 s), SFX, VOIX, IMAGES… (mêmes chutiers dans le panneau Projet).')),
         h('div', { class: 'note' }, _T('Posé à la tête de lecture, sur une piste libre. Uniquement des contenus dont tu as les droits : tes vidéos, musiques libres de droits ou Creative Commons, contenus fournis par ton client. Télécharger depuis YouTube sans autorisation est contraire à ses conditions d\'utilisation.'))
       ]);
     }

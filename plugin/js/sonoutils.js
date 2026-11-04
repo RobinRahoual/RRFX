@@ -79,7 +79,7 @@
         const w = Sons.wav(tail, 48000);
         let file = 'RRFX Réverb de fin.wav';
         if (Store.fs) {
-          const dir = Store.path.join(Store.dir, 'Sons');
+          const dir = app.assetsFolder ? app.assetsFolder.dirFor('SFX', { fallback: 'Sons' }).dir : Store.path.join(Store.dir, 'Sons');
           Store.fs.mkdirSync(dir, { recursive: true });
           file = Store.path.join(dir, 'RRFX Réverb de fin ' + Date.now().toString(36) + '.wav');
           Store.fs.writeFileSync(file, Buffer.from(w.buffer, w.byteOffset, w.byteLength));

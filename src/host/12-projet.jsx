@@ -331,3 +331,27 @@
     api.setProxies = guard(setProxies);
     api.deleteSequence = guard(deleteSequence);
 
+    // ------------------------------------------------------------ public: dossier assets du projet
+
+    // Fichiers deja utilises par le projet (le panneau ne deplace pas un fichier sans le relier).
+    function projectMedia(o) {
+        var out = [];
+        walkItems(app.project.rootItem, function (c) { if (c.type === 1) { var p = mediaPathOf(c); if (p) out.push(p); } });
+        return ok({ paths: out, projectPath: String(app.project.path || '') });
+    }
+
+    // Fichiers deplaces sur le disque (o.moves [{ from, to }]) : les elements du projet sont
+    // relies a leur nouvel emplacement. failed : ceux que Premiere a refuses.
+    function relinkMedia(o) {
+        var done = 0, failed = [], i, m, it;
+        for (i = 0; i < o.moves.length; i++) {
+            m = o.moves[i];
+            it = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), m.from); });
+            if (!it) continue;
+            try { if (it.changeMediaPath(m.to, true)) done++; else failed.push(m.from); } catch (e) { failed.push(m.from); }
+        }
+        return ok({ done: done, failed: failed });
+    }
+
+    api.projectMedia = guard(projectMedia);
+    api.relinkMedia = guard(relinkMedia);

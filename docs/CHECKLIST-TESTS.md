@@ -335,6 +335,16 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Un lien direct .mp3 : `assets/SFX` aussi
 - [ ] Nouveau projet jamais enregistré : `Documents/RRFX/Téléchargements` et message pour enregistrer le projet
 
+## 24. Dossier assets rangé tout seul (2.19)
+
+- [ ] 🔴 Import par lien d'une musique (🎵, plus de 45 s) : `assets/MUSIQUE`, chutier *assets › MUSIQUE* ; un bruitage court : `assets/SFX`
+- [ ] Voix off (Parole) : `assets/VOIX/Voix off` ; détourage d'un plan : `assets/VIDEOS/Détourages`
+- [ ] Effet avec whoosh : `assets/SFX/RRFX Whoosh.wav`, chutier *assets › SFX*
+- [ ] 🔴 Dépose en vrac dans `assets` une vidéo, une image, un .srt et une musique, *Ressources › Ranger le dossier assets* : chacun dans son dossier
+- [ ] 🔴 Un fichier en vrac déjà importé dans le projet : déplacé et toujours en ligne dans Premiere (relié)
+- [ ] Option *Ranger aussi ce que je dépose* : un fichier déposé se range dans les 20 s
+- [ ] *Ouvrir le dossier* ouvre `assets` dans l'Explorateur / le Finder
+
 ---
 
 ## Remonter un problème

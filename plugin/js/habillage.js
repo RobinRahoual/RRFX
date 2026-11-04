@@ -24,10 +24,10 @@
     const mmss = t => Math.floor(t / 60) + ':' + String(Math.floor(t % 60)).padStart(2, '0');
     const TICKS = 254016000000;
 
-    // Image PNG fabriquée dans le panneau → fichier dans Documents/RRFX/Images (ou nom en démo).
+    // Image PNG fabriquée dans le panneau → assets/IMAGES du projet, sinon Documents/RRFX/Images (ou nom en démo).
     function savePng(canvas, name) {
       if (!Store.fs) return name + '.png';
-      const dir = Store.path.join(Store.dir, 'Images'), file = Store.path.join(dir, name + '.png');
+      const dir = app.assetsFolder ? app.assetsFolder.dirFor('IMAGES', { fallback: 'Images' }).dir : Store.path.join(Store.dir, 'Images'), file = Store.path.join(dir, name + '.png');
       Store.fs.mkdirSync(dir, { recursive: true });
       Store.fs.writeFileSync(file, Buffer.from(canvas.toDataURL('image/png').split(',')[1], 'base64'));
       return file;

@@ -515,9 +515,19 @@
 
     // Element du projet pour un fichier (importe si besoin). stills : sequence d'images
     // numerotees, dont `path` est la premiere image.
+    // Un fichier du dossier assets du projet (.../assets/VIDEOS/...) va dans le chutier du meme
+    // nom (assets/VIDEOS) : le panneau Projet suit le rangement du disque.
+    function assetsBinOf(path) {
+        var parts = String(path).split(/[\\\/]/), i;
+        // Le dernier dossier " assets " suivi d'une categorie puis d'au moins un nom de fichier.
+        for (i = parts.length - 3; i >= 0; i--) if (/^assets$/i.test(parts[i]) && parts[i + 1]) return 'assets/' + parts[i + 1];
+        return '';
+    }
+
     function itemForPath(path, binName, stills) {
         var found = walk(app.project.rootItem, function (c) { return c.type === 1 && samePath(mediaPathOf(c), path); }), bin, before = {}, i;
         if (found) return found;
+        if (binName === 'RR FX Ressources' && assetsBinOf(path)) binName = assetsBinOf(path);
         bin = namedBin(binName);
         for (i = 0; i < bin.children.numItems; i++) before[bin.children[i].nodeId] = true;
         app.project.importFiles([path], true, bin, !!stills);

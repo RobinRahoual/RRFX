@@ -802,13 +802,14 @@
       ];
     }
 
-    // Sons fournis : fabriqués une fois dans Documents/RRFX/Sons.
+    // Sons fournis : fabriqués une fois par projet (assets/SFX), ou dans Documents/RRFX/Sons.
     const SFX_CHOICES = [{ v: 'none', label: _T('Aucun') }, { v: 'mix', label: _T('Whooshs variés + impacts sur les temps forts') }, { v: 'whoosh', label: 'Whoosh' }, { v: 'impact', label: _T('Hit court') }]
       .concat(Sons.SOUNDS.filter(x => !['whoosh', 'hit'].includes(x.id)).map(x => ({ v: x.id, label: x.name })));
     function ensureSound(id) {
       const snd = Sons.byId(id);
       if (!Store.fs) return 'RRFX ' + snd.name + '.wav';
-      const dir = Store.path.join(Store.dir, 'Sons'), file = Store.path.join(dir, 'RRFX ' + snd.name + '.wav');
+      // Dans assets/SFX du projet (le projet garde ses sons), sinon Documents/RRFX/Sons.
+      const dir = app.assetsFolder ? app.assetsFolder.dirFor('SFX', { fallback: 'Sons' }).dir : Store.path.join(Store.dir, 'Sons'), file = Store.path.join(dir, 'RRFX ' + snd.name + '.wav');
       if (!Store.fs.existsSync(file)) {
         Store.fs.mkdirSync(dir, { recursive: true });
         const w = Sons.wav(Sons.render(id));

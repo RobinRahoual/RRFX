@@ -2,7 +2,7 @@
 
 Généré par `node scripts/host-api.js` depuis `src/host/` : ne pas modifier à la main.
 
-**77 fonctions.**
+**79 fonctions.**
 
 Le panneau (HTML/JS) ne parle à Premiere que par `Host.call(nom, objet)` → `{ ok: true, … }` ou
 `{ ok: false, error }`. Toutes les fonctions ci-dessous sont dans `plugin/jsx/host.jsx` (ExtendScript, CEP).
@@ -130,6 +130,8 @@ comportement attendu de chacune.
 | `proxyStatus` | Avancement : jobs termines et proxies attaches. |
 | `setProxies` | Proxies actives ou non dans les moniteurs (comme le bouton " Activer les proxies "). |
 | `deleteSequence` | Version d'une sequence supprimee (jamais la sequence ouverte). |
+| `projectMedia` | Fichiers deja utilises par le projet (le panneau ne deplace pas un fichier sans le relier). |
+| `relinkMedia` | Fichiers deplaces sur le disque (o.moves [{ from, to }]) : les elements du projet sont relies a leur nouvel emplacement. failed : ceux que Premiere a refuses. |
 
 ## Raccords J/L-cut, coupes, credits, export en lot, archive (`13-raccords-livraison.jsx`)
 

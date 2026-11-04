@@ -154,6 +154,7 @@ function makeEnv(fps) {
       createBin(n) { const b = projItem(n, 2, 0); me.children.push(b); parents.set(b, me); return b; },
       deleteBin() { const parent = parents.get(me); if (parent) parent.children.splice(parent.children.indexOf(me), 1); return true; },
       getMediaPath() { return me.path || ''; },
+      changeMediaPath(p) { if (!disk.has(String(p))) return false; me.path = String(p); return true; },
       canProxy() { return me.type === 1 && /\.(mov|mp4)$/i.test(me.path || ''); },
       hasProxy() { return !!me.proxy; },
       attachProxy(p) { me.proxy = p; return true; },

@@ -29,8 +29,10 @@
       Object.keys(d).forEach(k => { if (!(k in s.libres)) s.libres[k] = d[k]; });
       return s.libres;
     };
-    // Dossier des fichiers fabriqués (ils restent : le projet Premiere s'en sert).
-    const outDir = sub => { const d = Store.path.join(Store.dir, 'Fabriqué', sub); Store.fs.mkdirSync(d, { recursive: true }); return d; };
+    /* Dossier des fichiers fabriqués (ils restent : le projet Premiere s'en sert) : dans le dossier
+       assets du projet, par catégorie (assets/VOIX/Voix off…), sinon Documents/RRFX/Fabriqué. */
+    const outDir = (sub, cat) => (app.assetsFolder ? app.assetsFolder.dirFor(cat, { sub, fallback: 'Fabriqué' }).dir
+      : (() => { const d = Store.path.join(Store.dir, 'Fabriqué', sub); Store.fs.mkdirSync(d, { recursive: true }); return d; })());
     const stamp = () => new Date().toISOString().replace(/[-:]/g, '').replace('T', '-').slice(0, 15);
     const base = n => L.safeName(String(n || 'plan').replace(/\.[a-z0-9]{2,5}$/i, ''), 'plan');
     const onlyPremiere = () => !Store.fs ? { kind: 'warn', title: _T('Disponible dans Premiere'), detail: _T('Cet outil tourne sur ton ordinateur, depuis Premiere (mode démo ici).') } : null;
@@ -167,7 +169,7 @@
         const studio = x.dnTool === 'studio';
         const exe = studio ? await T().need('voicefixer', _T('VoiceFixer restaure la voix : bruit, écho de la pièce, son de téléphone.'))
           : await T().need('deepfilter', _T('DeepFilterNet enlève le bruit de fond de la voix.'));
-        const dir = outDir(_T('Voix débruitées')), created = [], mute = [];
+        const dir = outDir(_T('Voix débruitées'), 'VOIX'), created = [], mute = [];
         let n = 0;
         for (const c of clips) {
           if (app.S.cancel) break;
@@ -212,7 +214,7 @@
         const exe = await T().need('piper', _T('Piper lit ton texte avec une voix de synthèse.'));
         const v = Lb.VOICES.find(q => q.id === x.voVoice) || Lb.VOICES[0];
         const model = await T().voice(v), tmp = T().work('voix-off'), txt = Store.path.join(tmp, 'texte.txt');
-        const out = Store.path.join(outDir(_T('Voix off')), _T('Voix off ') + stamp() + '.wav');
+        const out = Store.path.join(outDir(_T('Voix off'), 'VOIX'), _T('Voix off ') + stamp() + '.wav');
         try {
           Store.fs.writeFileSync(txt, text.replace(/([.!?…])\s+/g, '$1\n').split(/\n+/).map(l => l.trim()).filter(Boolean).join('\n'), 'utf8');
           app.status.phase(_T('Lecture du texte (Piper)'));
@@ -271,7 +273,7 @@
         if (!info.path) return { kind: 'error', title: _T('Fichier introuvable'), detail: info.name };
         const exe = await T().need('demucs', _T('Demucs sépare la voix, la batterie, la basse et le reste.'));
         const dur = (info.end - info.start) * (info.speed || 1), tmp = T().work('pistes'), wav = Store.path.join(tmp, 'source.wav');
-        const dir = outDir(_T('Pistes séparées')), name = base(info.name) + ' ' + stamp(), made = {};
+        const dir = outDir(_T('Pistes séparées'), 'MUSIQUE'), name = base(info.name) + ' ' + stamp(), made = {};
         try {
           app.status.phase(_T('Lecture du son'));
           await T().audioOf(info.path, { start: info.inPoint, dur, rate: 44100, channels: 2, out: wav });
@@ -362,7 +364,7 @@
           app.status.phase(_T('Détourage (rembg)'));
           const stop = T().watchCount(out, f.files.length, _T('Détourage'));
           try { await T().run(exe, Lb.rembgArgs({ input: f.dir, output: out, model: x.cutModel })); } finally { stop(); }
-          const mov = Store.path.join(outDir(_T('Détourages')), base(c.name) + _T(' (détouré) ') + stamp() + '.mov');
+          const mov = Store.path.join(outDir(_T('Détourages'), 'VIDEOS'), base(c.name) + _T(' (détouré) ') + stamp() + '.mov');
           app.status.phase(_T('Vidéo transparente'));
           await T().run(await T().find('ffmpeg'), Lb.ffEncode(out, mov, { fps: f.fps, alpha: true }));
           const created = await place('video', mov, c.start, { dur: f.dur });
@@ -401,7 +403,7 @@
           Store.fs.mkdirSync(out, { recursive: true });
           app.status.phase(_T('Images intermédiaires (RIFE)'));
           await ncnn(exe, Lb.rifeArgs({ input: f.dir, output: out, count, model }), out, count, 'RIFE');
-          const mp4 = Store.path.join(outDir(_T('Ralentis')), base(c.name) + ' (×' + x.slow + _T(' fluide) ') + stamp() + '.mp4');
+          const mp4 = Store.path.join(outDir(_T('Ralentis'), 'VIDEOS'), base(c.name) + ' (×' + x.slow + _T(' fluide) ') + stamp() + '.mp4');
           app.status.phase(_T('Vidéo du ralenti'));
           await T().run(await T().find('ffmpeg'), Lb.ffEncode(out, mp4, { fps: f.fps }));
           const created = await place('video', mp4, c.start);
@@ -437,7 +439,7 @@
           Store.fs.mkdirSync(out, { recursive: true });
           app.status.phase(_T('Agrandissement (Real-ESRGAN)'));
           await ncnn(exe, Lb.esrganArgs({ input: f.dir, output: out, models: Store.path.join(Store.path.dirname(exe), 'models') }), out, f.files.length, 'Real-ESRGAN');
-          const mp4 = Store.path.join(outDir(_T('Agrandis')), base(c.name) + ' (×' + x.up + ') ' + stamp() + '.mp4');
+          const mp4 = Store.path.join(outDir(_T('Agrandis'), 'VIDEOS'), base(c.name) + ' (×' + x.up + ') ' + stamp() + '.mp4');
           app.status.phase(_T('Vidéo agrandie'));
           await T().run(await T().find('ffmpeg'), Lb.ffEncode(out, mp4, { fps: f.fps, scale: x.up / 4 }));
           const created = await place('video', mp4, c.start);
@@ -503,7 +505,7 @@
           const masks = Store.path.join(f.work, 'masques');
           app.status.phase(_T('Suivi de l\'objet (SAM 2, premier usage : téléchargement du modèle)'));
           await T().runPy('vision', 'rrfx_sam.py', [f.dir, masks].concat(px, [Lb.byId('vision').hf[x.maskSize === 'small' ? 'samSmall' : 'sam']]), { dir: f.work, label: 'SAM 2' });
-          const iso = x.maskMode === 'isolate', file = Store.path.join(outDir(_T('Masques')), base(c.name) + ' (' + (MASK_MODES().find(m => m.v === x.maskMode) || {}).label + ') ' + stamp() + (iso ? '.mov' : '.mp4'));
+          const iso = x.maskMode === 'isolate', file = Store.path.join(outDir(_T('Masques'), 'VIDEOS'), base(c.name) + ' (' + (MASK_MODES().find(m => m.v === x.maskMode) || {}).label + ') ' + stamp() + (iso ? '.mov' : '.mp4'));
           app.status.phase(_T('Vidéo du masque'));
           await T().run(await T().find('ffmpeg'), Lb.ffMask(f.dir, masks, file, { mode: x.maskMode, fps: f.fps, blur: x.maskBlur * first.w / 1920 }));
           await placeVideo(file, c, f.dur, _T('Masque · '));
@@ -540,7 +542,7 @@
           const out = Store.path.join(f.work, 'out');
           app.status.phase(_T('Profondeur de chaque image (Depth Anything)'));
           await T().runPy('vision', 'rrfx_depth.py', [f.dir, out, String(x.bokeh), String(x.bokehFocus), Lb.byId('vision').hf.depth], { dir: f.work, label: _T('Flou d\'arrière-plan') });
-          const mp4 = Store.path.join(outDir(_T('Flou portrait')), base(c.name) + _T(' (flou portrait) ') + stamp() + '.mp4');
+          const mp4 = Store.path.join(outDir(_T('Flou portrait'), 'VIDEOS'), base(c.name) + _T(' (flou portrait) ') + stamp() + '.mp4');
           app.status.phase(_T('Vidéo floutée'));
           await T().run(await T().find('ffmpeg'), Lb.ffEncode(out, mp4, { fps: f.fps }));
           await placeVideo(mp4, c, f.dur, _T('Flou portrait · '));
@@ -571,7 +573,7 @@
         const no = onlyPremiere(); if (no) return no;
         const { c } = await oneVideo(_T('Le plan filmé en basse lumière.'));
         const ff = await T().need('ffmpeg', _T('ffmpeg débruite l\'image, sans perte de netteté.'));
-        const dur = (c.end - c.start) * (c.speed || 1), mp4 = Store.path.join(outDir(_T('Images débruitées')), base(c.name) + _T(' (débruité) ') + stamp() + '.mp4');
+        const dur = (c.end - c.start) * (c.speed || 1), mp4 = Store.path.join(outDir(_T('Images débruitées'), 'VIDEOS'), base(c.name) + _T(' (débruité) ') + stamp() + '.mp4');
         app.status.phase(_T('Débruitage de l\'image (lent, surtout en 4K)'));
         await T().run(ff, Lb.ffDenoise(c.path, mp4, { start: c.inPoint, dur, level: x.vidDenoise }), { label: _T('Débruitage'), progress: l => Lb.ffProgress(l, dur) });
         await placeVideo(mp4, c, 0, _T('Image débruitée · '));

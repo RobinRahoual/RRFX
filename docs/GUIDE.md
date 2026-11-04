@@ -601,9 +601,9 @@ défilement. L'index est gardé (`Documents/RRFX/ressources-index.json`) et relu
 **↻ Actualiser** le relit tout de suite. Un disque débranché garde son index (signalé dans la liste).
 
 **Importer depuis un lien** : colle un lien, choisis **Vidéo (MP4)** ou **Son (MP3)**, *Importer dans la
-timeline* : le fichier est téléchargé **à côté de ton projet Premiere**, dans un dossier `assets` : `assets/VIDEOS`
-pour les vidéos, `assets/SFX` pour les sons (créés au besoin), rangé dans les mêmes chutiers du panneau Projet
-(*assets › VIDEOS*, *assets › SFX*) et posé **à la tête de lecture** sur une piste libre (la vidéo et son son, ou
+timeline* : le fichier est téléchargé **à côté de ton projet Premiere**, dans son dossier `assets` (voir *Dossier
+assets du projet* ci-dessous) : `assets/VIDEOS` pour les vidéos ; pour les sons, `assets/MUSIQUE` s'ils durent plus
+de 45 s, `assets/SFX` sinon. Rangé dans les mêmes chutiers du panneau Projet (*assets › VIDEOS*…) et posé **à la tête de lecture** sur une piste libre (la vidéo et son son, ou
 le son seul). Projet jamais enregistré : le fichier va dans `Documents/RRFX/Téléchargements` (chutier « RR FX
 Ressources »).
 
@@ -617,6 +617,27 @@ Ressources »).
   Une seule vidéo à la fois (pas de playlist). *Arrêter* interrompt le téléchargement.
 - Uniquement pour des contenus **dont tu as les droits** : télécharger une vidéo YouTube sans autorisation est
   contraire à ses conditions d'utilisation, et la musique d'un autre reste protégée dans ton montage.
+
+**Dossier assets du projet** (onglet Ressources) : à côté du fichier `.prproj`, un dossier `assets` rangé par
+catégorie : `VIDEOS`, `MUSIQUE`, `SFX`, `VOIX`, `IMAGES`, `GRAPHIQUES` (.mogrt, .aep, .svg…), `SOUS-TITRES`, `LUTS`,
+`POLICES`, `DIVERS`. Tout ce que RR FX télécharge ou fabrique y va directement, avec le même chutier dans le
+panneau Projet :
+
+| Fichier | Dossier |
+|---|---|
+| Import par lien (vidéo) | `assets/VIDEOS` |
+| Import par lien (son) | `assets/MUSIQUE` (plus de 45 s) ou `assets/SFX` |
+| Whooshs, impacts, réverb de fin | `assets/SFX` |
+| Voix off, voix débruitées | `assets/VOIX/Voix off`, `assets/VOIX/Voix débruitées` |
+| Pistes séparées (Demucs) | `assets/MUSIQUE/Pistes séparées` |
+| Détourages, ralentis, agrandis, masques, flou portrait, images débruitées | `assets/VIDEOS/<outil>` |
+| Logos, barres et images du panneau | `assets/IMAGES` |
+
+**Ranger le dossier assets** classe les fichiers que tu as déposés en vrac dans `assets` (par type ; les sons
+d'après leur durée). Ceux que ton projet utilise déjà sont déplacés puis **reliés** dans Premiere : rien ne passe
+hors ligne (si Premiere refuse, le fichier reste à sa place). Option *Ranger aussi ce que je dépose dans assets* :
+toutes les 20 s, panneau ouvert, pour les fichiers pas encore importés. Projet jamais enregistré : les fichiers
+vont dans `Documents/RRFX`, comme avant.
 
 *Calque de réglage Lumetri* charge la LUT directement dans *Correction de base > LUT d'entrée* (si ta version de
 Premiere refuse, le chemin est copié : *LUT d'entrée > Parcourir…*). Les LUT et polices **installées** apparaissent

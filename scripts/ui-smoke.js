@@ -879,6 +879,16 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!/Source Text/.test(report) || !/modèle \.mogrt/.test(report)) throw new Error('rapport : ' + report.slice(0, 200));
     await page.click('.modal footer button');
   });
+  await step('2.19 : dossier assets du projet (Ressources)', async () => {
+    await goTab('assets');
+    const sec = '#view-assets .section:has(> .section-title:has-text("Dossier assets du projet"))';
+    await page.waitForSelector(sec, { timeout: 5000 });
+    if (await page.$(sec + '.folded')) await page.click(sec + ' > .section-title');
+    const txt = await page.textContent(sec);
+    if (!/MUSIQUE/.test(txt) || !/SOUS-TITRES/.test(txt) || !/45 s/.test(txt)) throw new Error('section : ' + txt.slice(0, 300));
+    await page.click(sec + ' .action:has-text("Ranger le dossier assets")');
+    await page.waitForSelector('#status.warn:has-text("Disponible dans Premiere")', { timeout: 5000 });
+  });
   await step('2.16 : effets, masquer un intégré et le remettre', async () => {
     await goTab('effects');
     await page.click('#grid .card >> nth=0');
