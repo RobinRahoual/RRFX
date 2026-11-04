@@ -797,7 +797,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('2.15 : capturer l\'animation d\'un texte de la timeline', async () => {
     await goTab('titles');
-    await page.click('#view-titles .section:has(.section-title:text-is("Animation")) .action:has-text("Capturer depuis la timeline")');
+    await page.click('#view-titles .section:has(> .section-title:has-text("Animation")) .action:has-text("Capturer depuis la timeline")');
     await page.waitForSelector('.modal input');
     await page.fill('.modal input', 'Ma pop capturée');
     await page.click('.modal .cta');
@@ -808,7 +808,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('2.16 : style de texte capturé, appliqué aux textes sélectionnés', async () => {
     await goTab('titles');
-    const styleSec = '#view-titles .section:has(.section-title:text-is("Style du texte"))';
+    const styleSec = '#view-titles .section:has(> .section-title:has-text("Style du texte"))';
     await page.click(styleSec + ' .action:has-text("Capturer depuis la timeline")');
     await page.waitForSelector('.modal input');
     await page.fill('.modal input', 'Rouge Impact');
@@ -825,7 +825,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('2.16 : gérer les animations (masquer, remettre, renommer, corbeille)', async () => {
     await goTab('titles');
-    const anim = '#view-titles .section:has(.section-title:text-is("Animation"))';
+    const anim = '#view-titles .section:has(> .section-title:has-text("Animation"))';
     await page.click(anim + ' .manage-btn');
     await page.waitForSelector('.modal .manage');
     // Masquer une intégrée : elle sort du menu.
