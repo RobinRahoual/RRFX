@@ -390,6 +390,20 @@ aperçu : police (nom PostScript, ex. `Montserrat-ExtraBold`), taille, couleur, 
 opacité, ombre, MAJUSCULES. *Enregistrer comme style…* le range dans Mes effets ; *Mettre à jour* modifie le tien.
 Le même choix existe pour les **sous-titres** et les **bandeaux** (onglet Parole).
 
+**Capturer depuis la timeline** (dans *Style du texte*) : sélectionne un texte que tu as stylé toi-même dans
+Premiere (police, taille, couleurs, contour, ombre, fond, et les effets posés dessus : lueur, ombre portée…). Tout
+est enregistré comme un style (★ ◎). **Appliquer aux textes sélectionnés** pose le style choisi (capturé, fourni
+ou le tien) sur tous les textes sélectionnés dans la timeline, en un clic : le texte lui-même ne change pas, les
+effets déjà présents sont réglés plutôt que doublés. Les textes que RR FX pose (titres, sous-titres, bandeaux)
+prennent aussi ce style.
+
+**Gérer…** (à côté des menus *Animation*, *Style du texte*, *Dégradé*, et dans les catégories de l'onglet Effets) :
+tes éléments se modifient (chargés dans l'éditeur, puis *Mettre à jour*), se renomment sur place (✎ ou double-clic),
+se dupliquent et se suppriment. Un élément supprimé va dans la **corbeille**, d'où il se restaure en un clic. Les
+intégrés ne se suppriment pas : ils se **masquent** (retirés des listes) et se **remettent** un par un, tous d'un
+coup (*Tout remettre*), ou depuis Mes effets (*Remettre les intégrés masqués*). Dans l'onglet Effets, l'effet
+choisi a aussi ⟳ (mettre à jour le preset), ✎, ✕ ou *Masquer*.
+
 Ce que Premiere laisse faire : police, taille et majuscules vont dans le texte du modèle ; couleur, contour, ombre
 et fond passent par les réglages que le modèle expose dans *Objets graphiques essentiels*. Sinon, la couleur passe
 par l'effet **Teinte** et l'ombre par **Ombre portée** ; le contour et le fond ne sont possibles que si le modèle les
@@ -623,6 +637,8 @@ Dans le même onglet, pour tenir le projet :
 Dès 6 éléments, la bibliothèque a une **recherche** et des **filtres par type** (Preset, Look, Style de texte,
 Dégradé…, avec leur nombre). Sur un panneau étroit, seul *Ouvrir* reste affiché : les autres actions (renommer,
 exporter, partager, publier, supprimer) apparaissent au survol. Double-clic sur un élément : il s'ouvre.
+Supprimer met dans la **Corbeille** (bouton sous la liste, 60 éléments gardés) : tout se restaure. **Remettre les
+intégrés masqués** fait revenir les effets, animations, styles et dégradés fournis que tu as masqués.
 
 - **Preset** : sur un effet, **＋ Preset** garde tes réglages (catégorie « Mes effets »).
 - **Capture** : monte n'importe quel effet dans Premiere (sur un clip ou un calque de réglage, avec tes images clés,

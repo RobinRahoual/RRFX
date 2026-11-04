@@ -2,7 +2,7 @@
 
 Généré par `node scripts/host-api.js` depuis `src/host/` : ne pas modifier à la main.
 
-**72 fonctions.**
+**74 fonctions.**
 
 Le panneau (HTML/JS) ne parle à Premiere que par `Host.call(nom, objet)` → `{ ok: true, … }` ou
 `{ ok: false, error }`. Toutes les fonctions ci-dessous sont dans `plugin/jsx/host.jsx` (ExtendScript, CEP).
@@ -47,6 +47,8 @@ comportement attendu de chacune.
 
 | Fonction | Rôle |
 |---|---|
+| `captureTextLook` | — |
+| `applyTextLook` | Style (o.look + o.fx, ou o.style + o.styleFx) sur les textes selectionnes dans la timeline. |
 | `captureTitle` | L'animation d'un texte deja monte dans la timeline : ses images cles du debut (entree) et de la fin (sortie), echantillonnees image par image, et les reglages fixes de ses effets (lueur, couleur...). Rejouee ensuite sur d'autres textes, quelle que soit leur duree. |
 | `placeTitle` | Un texte : modele .mogrt pose de start a end (s), texte remplace, animation (fx) ajoutee. |
 

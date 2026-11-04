@@ -37,7 +37,11 @@
       const a = Lib.titleById[id] || anim();
       return { a, params: Object.assign(Core.paramDefaults(a), t.params[a.id] || {}), inF: t.inF, outF: t.outF };
     }
-    const animOptions = () => Lib.TITLE_ANIMS.map(a => ({ v: a.id, label: a.name })).concat(userAnims().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
+    // Intégrées masquées (« Gérer… ») : hors de la liste, sauf celle qui est choisie.
+    const builtinAnims = keep => (app.manage ? app.manage.visible('titleAnim', Lib.TITLE_ANIMS, a => a.id, keep) : Lib.TITLE_ANIMS);
+    const animOptions = () => builtinAnims(st().anim).map(a => ({ v: a.id, label: a.name })).concat(userAnims().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
+    // Animation enregistrée chargée dans l'éditeur (« u:<id> ») : « Mettre à jour » la réécrit.
+    const loadedAnim = () => { const t = st(), it = t.from && app.S.lib.items.find(i => 'u:' + i.id === t.from); return it && !isCaptured(it.data) && it.data.anim === t.anim ? it : null; };
     const animParams = () => Object.assign(Core.paramDefaults(anim()), st().params[st().anim] || {});
 
     // ---------------------------------------------------------------- modèles .mogrt
@@ -110,8 +114,10 @@
       const t = st(), o = opts || {}, fps = app.fps(), created = [], warnings = [];
       const { a, params, inF, outF, captured } = resolveAnim(o.anim || t.anim);
       // Style de texte : celui demandé, sinon celui de l'onglet Textes ('' : celui du modèle).
-      const TS = app.textStyles, style = TS ? TS.styleById('style' in o ? o.style : t.style) : null;
+      const TS = app.textStyles, sid = 'style' in o ? o.style : t.style, style = TS ? TS.styleById(sid) : null;
       const styleFx = style ? TS.styleFx(style) : null;
+      // Style capturé dans la timeline : ses réglages et ses effets, tels quels.
+      const look = TS && TS.lookById ? TS.lookById(sid) : null, lookFx = look ? TS.lookFx(look) : null;
       let track = null;
       for (let i = 0; i < items.length; i++) {
         if (app.S.cancel) break;
@@ -121,7 +127,7 @@
         const fx = captured ? Core.titleSpecCaptured(captured, frames, app.registry()) : Core.titleSpec(a, params, frames, inF, outF, fps, app.registry());
         // Mot clé : effets en plus (couleur, taille) donnés par opts.keyFx.
         const all = it.key && o.keyFx ? fx.concat(o.keyFx) : fx;
-        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null, style, styleFx });
+        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null, style, styleFx, look, lookFx });
         if (!r.ok) {
           if (!created.length) return { created, track, warnings, error: r.error };
           warnings.push(it.text + ' : ' + r.error);
@@ -279,15 +285,27 @@
       const rebuild = () => { app.persist(); if (player) player.rebuild(); };
       // Une animation enregistrée se charge dans les réglages (modifiable, ré-enregistrable).
       const pickAnim = v => {
+        t.from = '';
         if (capturedOf(v)) { t.anim = v; app.persist(); return render(view); }
         if (v.indexOf('u:') === 0) {
           const it = app.S.lib.items.find(i => 'u:' + i.id === v);
-          if (it) { t.anim = it.data.anim; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; }
+          if (it) { t.anim = it.data.anim; t.from = v; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; }
           app.persist();
           return render(view);
         }
-        t.anim = v; renderParams(); rebuild();
+        t.anim = v; app.persist(); render(view);
       };
+      const loaded = loadedAnim();
+      const updateAnim = loaded ? h('button', { class: 'action', title: _T('Réécrire l\'animation enregistrée avec ces réglages') }, _T('Mettre à jour « ') + loaded.name + ' »') : null;
+      if (updateAnim) updateAnim.addEventListener('click', () => {
+        loaded.data = { anim: t.anim, params: Object.assign({}, animParams()), inF: t.inF, outF: t.outF };
+        app.persist();
+        app.status.finish('ok', _T('Animation « ') + loaded.name + _T(' » mise à jour'), _T('Partout où elle sert : textes, sous-titres, bandeaux.'));
+      });
+      const manageAnims = () => ({
+        title: _T('Gérer les animations de texte'), kind: 'titleAnim', itemType: 'titleAnim', prefix: '',
+        builtins: Lib.TITLE_ANIMS.map(a => ({ id: a.id, name: a.name })), use: pickAnim, after: () => render(view)
+      });
       // Capturer : l'animation d'un texte déjà monté dans la timeline (ses images clés, ses effets).
       const grab = h('button', { class: 'action', title: _T('Sélectionne dans la timeline un texte que tu as animé toi-même') }, _T('Capturer depuis la timeline'));
       grab.addEventListener('click', () => app.runTask(_T('Capture de l\'animation'), async () => {
@@ -311,12 +329,13 @@
       });
       if (app.textStyles) view.appendChild(app.textStyles.section(t, 'style', _T('Style du texte'), Core.splitLyrics(t.text, t.split)[0], { preview: false }));
       view.appendChild(section('Animation', [
-        row('Style', picker(animOptions(), t.anim, pickAnim)),
+        row('Style', app.manage ? app.manage.withManage(picker(animOptions(), loaded ? t.from : t.anim, pickAnim), manageAnims) : picker(animOptions(), t.anim, pickAnim)),
         capturedOf(t.anim) ? null : row(_T('Entrée'), hotText({ value: t.inF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.inF = v; if (fin) rebuild(); } })),
         capturedOf(t.anim) ? null : row(_T('Sortie'), hotText({ value: t.outF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.outF = v; if (fin) rebuild(); } })),
         params,
         h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, _T('Aperçu : animation et style')))),
-        h('div', { class: 'row-buttons' }, grab, capturedOf(t.anim) ? null : saveAnim)
+        h('div', { class: 'row-buttons' }, grab, capturedOf(t.anim) ? null : saveAnim),
+        updateAnim ? h('div', { class: 'row-buttons' }, updateAnim) : null
       ]));
       preview(cv);
       if (app.textStyles) view.appendChild(app.textStyles.colorsSection(() => render(view)));
@@ -330,7 +349,7 @@
     app.itemTypes.titleAnim = {
       icon: 'T', label: _T('Animation de texte'), valid: d => !!Lib.titleById[d.anim] || isCaptured(d),
       meta: it => (isCaptured(it.data) ? _T('Capturée dans la timeline') : Lib.titleById[it.data.anim].name + _T(' · entrée ') + (it.data.inF || 0) + _T(' i')),
-      open: it => { const t = st(); if (isCaptured(it.data)) { t.anim = 'u:' + it.id; app.persist(); app.switchTab('titles'); return; } t.anim = it.data.anim; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; app.persist(); app.switchTab('titles'); }
+      open: it => { const t = st(); t.from = ''; if (isCaptured(it.data)) { t.anim = 'u:' + it.id; app.persist(); app.switchTab('titles'); return; } t.anim = it.data.anim; t.from = 'u:' + it.id; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; app.persist(); app.switchTab('titles'); }
     };
     // Un modèle de texte importé depuis Mes effets > Importer… rejoint la liste des modèles.
     app.importers.push({

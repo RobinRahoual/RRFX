@@ -232,7 +232,7 @@
     // puis appelle framesEnd pour tout reactiver.
     function framesBegin(o) {
         var s = activeSeq(), f = tpf(s), q = qeSeq(), over = overlayIds(), files = [], off = [], i, j, k, list, it, t, kind, lvl = o.level || 1;
-        if (!q || !q.exportFramePNG) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
+        if (!q || (!q.exportFramePNG && !q.exportFrameJPEG)) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
         var times = [];
         for (i = 0; i < o.times.length; i++) times.push(snap(o.times[i] * TICKS, f));
         for (i = 0; i < s.videoTracks.numTracks; i++) {
@@ -251,9 +251,12 @@
                 }
             }
         }
-        for (i = 0; i < times.length; i++) {
-            files.push(o.folder + '/' + o.prefix + i);
-            q.exportFramePNG(timecodeOf(s, times[i]), files[i]);
+        try {
+            for (i = 0; i < times.length; i++) files.push(exportFrame(q, s, times[i], o.folder + '/' + o.prefix + i));
+        } catch (e) {
+            // Rien d'exporte : les calques desactives reviennent tout de suite.
+            framesEnd({ off: off });
+            throw e;
         }
         return ok({ files: files, off: off });
     }

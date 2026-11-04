@@ -45,7 +45,7 @@
         if (frame && frame.ok && r.frame && Store.fs) {
           let seen = false;
           for (let i = 0; i < 30 && !seen; i++) {
-            seen = [r.frame, r.frame + '.png'].some(f => Store.fs.existsSync(f) && Store.fs.statSync(f).size > 0);
+            seen = [r.frame, r.frame + '.png', r.frame + '.jpg'].some(f => Store.fs.existsSync(f) && Store.fs.statSync(f).size > 0);
             if (!seen) await new Promise(res => setTimeout(res, 200));
           }
           if (!seen) Object.assign(frame, { ok: false, detail: _T('Premiere n\'a pas écrit l\'image') });

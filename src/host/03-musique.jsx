@@ -351,11 +351,10 @@
     function grabFrames(o) {
         var s = activeSeq(), f = tpf(s), ph = snap(tk(s.getPlayerPosition()), f), ref = refClip(s), track = ref ? ref.track : 0, cut = nearestEdit(s, track, ph), q = qeSeq(), files = [], times, i;
         if (cut === null) cut = ph;
-        if (!q || !q.exportFramePNG) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
+        if (!q || (!q.exportFramePNG && !q.exportFrameJPEG)) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
         times = [Math.max(0, cut - f), cut];
         for (i = 0; i < times.length; i++) {
-            files.push(o.folder + '/' + o.prefix + i);
-            q.exportFramePNG(timecodeOf(s, times[i]), files[i]);
+            files.push(exportFrame(q, s, times[i], o.folder + '/' + o.prefix + i));
         }
         return ok({ files: files, cut: secs(cut) });
     }

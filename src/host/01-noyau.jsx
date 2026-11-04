@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.15.0';
+    var VERSION = '2.16.0';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -137,6 +137,40 @@ var RRFX = (function () {
     function timecodeOf(s, ticks) {
         var st = s.getSettings();
         return mkTime(ticks).getFormatted(st.videoFrameRate, st.videoDisplayFormat);
+    }
+
+    // Image de la timeline (QE exportFrame*). Sur Windows, Premiere 25-26 repond parfois
+    // "Unknown error exception" : chemin avec des /, timecode au format d'affichage, ou PNG
+    // refuse. On essaie plusieurs formes ; celle qui marche sert ensuite directement.
+    var frameWay = '';
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    function plainTimecode(s, ticks) {
+        var f = tpf(s), fps = Math.round(TICKS / f), n = Math.round(ticks / f), fr = n % fps, sec = Math.floor(n / fps);
+        return pad2(Math.floor(sec / 3600)) + ':' + pad2(Math.floor(sec / 60) % 60) + ':' + pad2(sec % 60) + ':' + pad2(fr);
+    }
+    function exportFrame(q, s, ticks, base) {
+        var tcs = [], paths = [], ways = [], errs = [], native = base, i, j, k, w, tc;
+        try { native = new File(base).fsName || base; } catch (e) {}
+        try { new Folder(String(native).replace(/[\\\/][^\\\/]*$/, '')).create(); } catch (e) {}
+        try { tcs.push(timecodeOf(s, ticks)); } catch (e) { errs.push(String(e)); }
+        tc = plainTimecode(s, ticks);
+        if (tc !== tcs[0]) tcs.push(tc);
+        paths.push(native);
+        if (native !== base) paths.push(base);
+        for (k = 0; k < 2; k++) for (j = 0; j < paths.length; j++) for (i = 0; i < tcs.length; i++) {
+            w = { m: k ? 'exportFrameJPEG' : 'exportFramePNG', p: j, t: i, key: k + '' + j + i };
+            if (!q[w.m]) continue;
+            if (w.key === frameWay) ways.unshift(w); else ways.push(w);
+        }
+        for (i = 0; i < ways.length; i++) {
+            w = ways[i];
+            try {
+                q[w.m](tcs[w.t], paths[w.p]);
+                frameWay = w.key;
+                return paths[w.p];
+            } catch (e) { errs.push(w.m + ' : ' + e); }
+        }
+        throw new Error(errs.length ? errs[0] + (errs.length > 1 ? ' (' + errs.length + ' essais)' : '') : 'Cette version de Premiere ne permet pas d\'exporter une image par script.');
     }
 
     // ------------------------------------------------------------ timeline helpers

@@ -141,6 +141,33 @@
     };
   }
 
+  /* Style capturé sur un texte de la timeline (look : réglages du modèle et effets) → style
+     RR FX approché, pour l'aperçu et l'éditeur. Les vraies valeurs sont dans le look. */
+  function styleFromLook(look) {
+    const st = {}, props = [].concat(...((look && look.graphics) || []).map(g => g.props || []));
+    props.forEach(p => {
+      const n = String(p.name || '');
+      if (p.kind === 'text') {
+        const v = p.value || {};
+        if (v.fontEditValue && !st.font) st.font = String(v.fontEditValue);
+        if (v.fontSizeEditValue && !st.size) st.size = +v.fontSizeEditValue;
+        if (v.fontFSAllCapsValue !== undefined) st.caps = !!v.fontFSAllCapsValue;
+      } else if (p.kind === 'color') {
+        const c = '#' + p.value;
+        if (/stroke|contour|kontur|trazo|traccia/i.test(n)) { if (!st.stroke) st.stroke = c; } else if (/shadow|ombre|schatten|sombra|ombra/i.test(n)) { /* couleur de l'ombre */ } else if (/background|fond|hintergrund|box|fondo|sfondo/i.test(n)) { if (!st.box) st.box = c; } else if (!st.fill) st.fill = c;
+      } else if (p.kind === 'bool') {
+        if (/shadow|ombre|schatten|sombra|ombra/i.test(n)) st.shadow = p.value;
+        if (/background|fond|box/i.test(n) && !p.value) st.box = '';
+        if (/stroke|contour/i.test(n) && !p.value) st.noStroke = true;
+      } else if (p.kind === 'num' && typeof p.value === 'number' && /stroke|contour/i.test(n) && /width|paisseur|largeur|size|taille/i.test(n)) st.strokeWidth = p.value;
+    });
+    if (st.noStroke) st.stroke = '';
+    if (st.box) st.boxOpacity = 80;
+    ((look && look.effects) || []).forEach(e => { if (/Drop Shadow|Shadow/i.test(e.matchName + ' ' + e.displayName)) st.shadow = true; });
+    delete st.noStroke;
+    return normStyle(st);
+  }
+
   // Styles proposés d'emblée (copiables en « Mes styles »).
   const STYLES = [
     { id: 'blanc', name: _T('Blanc propre'), style: { fill: '#ffffff', shadow: true } },
@@ -160,5 +187,5 @@
     { id: 'vignette', name: _T('Vignette chaude'), g: { type: 'radial', angle: 0, colors: ['#ffe8c2', '#2b1200'] } }
   ];
 
-  return { hex, rgb, toHex, parseColors, parseASE, writeASE, parseGradient, gradientCss, rampOf, normStyle, STYLE_DEFAULTS, STYLES, GRADIENTS };
+  return { hex, rgb, toHex, parseColors, parseASE, writeASE, parseGradient, gradientCss, rampOf, normStyle, styleFromLook, STYLE_DEFAULTS, STYLES, GRADIENTS };
 });

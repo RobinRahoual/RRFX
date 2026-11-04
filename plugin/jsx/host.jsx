@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.15.0';
+    var VERSION = '2.16.0';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -137,6 +137,40 @@ var RRFX = (function () {
     function timecodeOf(s, ticks) {
         var st = s.getSettings();
         return mkTime(ticks).getFormatted(st.videoFrameRate, st.videoDisplayFormat);
+    }
+
+    // Image de la timeline (QE exportFrame*). Sur Windows, Premiere 25-26 repond parfois
+    // "Unknown error exception" : chemin avec des /, timecode au format d'affichage, ou PNG
+    // refuse. On essaie plusieurs formes ; celle qui marche sert ensuite directement.
+    var frameWay = '';
+    function pad2(n) { return (n < 10 ? '0' : '') + n; }
+    function plainTimecode(s, ticks) {
+        var f = tpf(s), fps = Math.round(TICKS / f), n = Math.round(ticks / f), fr = n % fps, sec = Math.floor(n / fps);
+        return pad2(Math.floor(sec / 3600)) + ':' + pad2(Math.floor(sec / 60) % 60) + ':' + pad2(sec % 60) + ':' + pad2(fr);
+    }
+    function exportFrame(q, s, ticks, base) {
+        var tcs = [], paths = [], ways = [], errs = [], native = base, i, j, k, w, tc;
+        try { native = new File(base).fsName || base; } catch (e) {}
+        try { new Folder(String(native).replace(/[\\\/][^\\\/]*$/, '')).create(); } catch (e) {}
+        try { tcs.push(timecodeOf(s, ticks)); } catch (e) { errs.push(String(e)); }
+        tc = plainTimecode(s, ticks);
+        if (tc !== tcs[0]) tcs.push(tc);
+        paths.push(native);
+        if (native !== base) paths.push(base);
+        for (k = 0; k < 2; k++) for (j = 0; j < paths.length; j++) for (i = 0; i < tcs.length; i++) {
+            w = { m: k ? 'exportFrameJPEG' : 'exportFramePNG', p: j, t: i, key: k + '' + j + i };
+            if (!q[w.m]) continue;
+            if (w.key === frameWay) ways.unshift(w); else ways.push(w);
+        }
+        for (i = 0; i < ways.length; i++) {
+            w = ways[i];
+            try {
+                q[w.m](tcs[w.t], paths[w.p]);
+                frameWay = w.key;
+                return paths[w.p];
+            } catch (e) { errs.push(w.m + ' : ' + e); }
+        }
+        throw new Error(errs.length ? errs[0] + (errs.length > 1 ? ' (' + errs.length + ' essais)' : '') : 'Cette version de Premiere ne permet pas d\'exporter une image par script.');
     }
 
     // ------------------------------------------------------------ timeline helpers
@@ -1685,11 +1719,10 @@ var RRFX = (function () {
     function grabFrames(o) {
         var s = activeSeq(), f = tpf(s), ph = snap(tk(s.getPlayerPosition()), f), ref = refClip(s), track = ref ? ref.track : 0, cut = nearestEdit(s, track, ph), q = qeSeq(), files = [], times, i;
         if (cut === null) cut = ph;
-        if (!q || !q.exportFramePNG) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
+        if (!q || (!q.exportFramePNG && !q.exportFrameJPEG)) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
         times = [Math.max(0, cut - f), cut];
         for (i = 0; i < times.length; i++) {
-            files.push(o.folder + '/' + o.prefix + i);
-            q.exportFramePNG(timecodeOf(s, times[i]), files[i]);
+            files.push(exportFrame(q, s, times[i], o.folder + '/' + o.prefix + i));
         }
         return ok({ files: files, cut: secs(cut) });
     }
@@ -1802,7 +1835,7 @@ var RRFX = (function () {
         try { it.name = label; } catch (e) {}
         textSet = setMgtText(findItemAt(s, ti, a), o.text);
         if (!textSet) warnings.push('Texte non remplac\u00e9 : ce mod\u00e8le n\'a pas de champ texte modifiable');
-        if (o.style) { try { applyTextStyle(s, ti, a, o.style, o.styleFx || {}, warnings); } catch (e5) { warnings.push('Style du texte : ' + e5.toString()); } }
+        if (o.look) { try { applyLookTo(s, ti, a, o.look, o.lookFx || [], warnings); } catch (e6) { warnings.push('Style du texte : ' + e6.toString()); } } else if (o.style) { try { applyTextStyle(s, ti, a, o.style, o.styleFx || {}, warnings); } catch (e5) { warnings.push('Style du texte : ' + e5.toString()); } }
         // o.pos [x, y] (0 a 1) : position du texte dans l'image (bandeau en bas a gauche...).
         if (o.pos) {
             try { comp = componentByMatch(findItemAt(s, ti, a), 'AE.ADBE Motion'); comp.properties[0].setValue(o.pos, true); } catch (e4) { warnings.push('Position du texte non r\u00e9gl\u00e9e'); }
@@ -1894,6 +1927,168 @@ var RRFX = (function () {
         return ok({ name: it.name, fps: TICKS / f, frameW: s.frameSizeHorizontal, frameH: s.frameSizeVertical, 'in': sample(segIn), out: sample(segOut), skipped: skipped });
     }
 
+    // ------------------------------------------------------------ public: style d'un texte de la timeline
+
+    // Le " look " d'un texte deja monte : police, taille, majuscules (texte du modele), couleurs,
+    // cases et valeurs de ses reglages (Objets graphiques essentiels), et les effets poses dessus
+    // (lueur, ombre, contour...) avec leurs valeurs. Reapplique ensuite en un clic sur d'autres
+    // textes, ou sur ceux que RR FX pose.
+    function textJson(v) {
+        var obj = null;
+        if (typeof v !== 'string' || !/^\s*\{/.test(v)) return null;
+        try { obj = eval('(' + v + ')'); } catch (e) { return null; }
+        return obj && obj.textEditValue !== undefined ? obj : null;
+    }
+    function isGraphicComp(c) {
+        var i, v;
+        if (/Capsule|AE\.ADBE Text|Graphic/i.test(String(c.matchName))) return true;
+        for (i = 0; i < c.properties.numItems; i++) {
+            try { v = c.properties[i].getValue(); } catch (e) { continue; }
+            if (textJson(v)) return true;
+        }
+        return false;
+    }
+    function readLookProps(c, at) {
+        var out = [], i, p, nm, v, obj, k, st, col, pv;
+        for (i = 0; i < c.properties.numItems; i++) {
+            p = c.properties[i];
+            nm = String(p.displayName || '');
+            try { v = p.isTimeVarying() ? p.getValueAtTime(at) : p.getValue(); } catch (e) { continue; }
+            obj = textJson(v);
+            if (obj) {
+                st = {};
+                for (k in obj) {
+                    if (!obj.hasOwnProperty(k) || !/^font/.test(k) || k === 'fontTextRunLength') continue;
+                    st[k] = obj[k] instanceof Array ? obj[k][0] : obj[k];
+                }
+                out.push({ name: nm, kind: 'text', value: st });
+                continue;
+            }
+            if (typeof v === 'string') continue;
+            col = null;
+            if (isColorParam(p)) { try { col = p.getColorValue(); } catch (e2) { col = null; } }
+            if (col) { out.push({ name: nm, kind: 'color', value: hex2(col[1]) + hex2(col[2]) + hex2(col[3]) }); continue; }
+            if (typeof v === 'boolean') { out.push({ name: nm, kind: 'bool', value: v }); continue; }
+            pv = plainValue(v);
+            if (pv.ok) out.push({ name: nm, kind: 'num', value: pv.v });
+        }
+        return out;
+    }
+    function hex2(n) { n = Math.max(0, Math.min(255, Math.round(Number(n) || 0))); return (n < 16 ? '0' : '') + n.toString(16); }
+
+    function lookOfItem(it, s) {
+        var mid = (tk(it.start) + tk(it.end)) / 2, at = clipTime(it, mid), mgt = null, graphics = [], effects = [], comps = it.components, i, c, mn, props, pi, p, v;
+        try { mgt = it.getMGTComponent(); } catch (e) {}
+        if (mgt) graphics.push({ matchName: '#mgt', displayName: 'MGT', props: readLookProps(mgt, at) });
+        for (i = 0; i < comps.numItems; i++) {
+            c = comps[i];
+            mn = String(c.matchName);
+            if (mn === 'AE.ADBE Motion' || mn === 'AE.ADBE Opacity' || /time ?remap/i.test(mn)) continue;
+            if (isGraphicComp(c)) {
+                // Le composant du modele apparait aussi ici : deja lu par getMGTComponent.
+                if (!mgt) graphics.push({ matchName: mn, displayName: c.displayName, props: readLookProps(c, at) });
+                continue;
+            }
+            props = [];
+            for (pi = 0; pi < c.properties.numItems; pi++) {
+                p = c.properties[pi];
+                try { v = plainValue(p.isTimeVarying() ? p.getValueAtTime(at) : p.getValue()); } catch (e2) { continue; }
+                if (v.ok) props.push({ index: pi, name: p.displayName, 'static': v.v });
+            }
+            effects.push({ matchName: mn, displayName: c.displayName, props: props });
+        }
+        return { name: it.name, graphics: graphics, effects: effects, frameW: s.frameSizeHorizontal, frameH: s.frameSizeVertical };
+    }
+
+    function captureTextLook(o) {
+        var s = activeSeq(), sel = selectedVideo(s), look, i, n = 0;
+        if (!sel.length) return fail('S\u00e9lectionne dans la timeline le texte dont tu veux garder le style.');
+        look = lookOfItem(sel[0].item, s);
+        for (i = 0; i < look.graphics.length; i++) n += look.graphics[i].props.length;
+        if (!n && !look.effects.length) return fail('Ce clip n\'a ni r\u00e9glages de texte ni effets \u00e0 garder (s\u00e9lectionne un texte ou un mod\u00e8le .mogrt).');
+        return ok(look);
+    }
+
+    // Applique les reglages captures sur un composant : par nom, dans l'ordre (deux " Couleur "...).
+    function writeLookProps(c, props) {
+        var used = {}, i, j, sp, p, nm, v, obj, k, txt, done = 0;
+        for (i = 0; i < props.length; i++) {
+            sp = props[i];
+            p = null;
+            for (j = 0; j < c.properties.numItems; j++) {
+                nm = String(c.properties[j].displayName || '');
+                if (nm === sp.name && !used[j]) { p = c.properties[j]; used[j] = true; break; }
+            }
+            if (!p) continue;
+            try {
+                if (sp.kind === 'text') {
+                    obj = textJson(p.getValue());
+                    if (!obj) continue;
+                    txt = String(obj.textEditValue || '');
+                    // Un seul " run " de style pour tout le texte.
+                    for (k in obj) if (obj.hasOwnProperty(k) && /^font/.test(k) && obj[k] instanceof Array && obj[k].length > 1) obj[k] = [obj[k][0]];
+                    for (k in sp.value) if (sp.value.hasOwnProperty(k)) obj[k] = obj[k] instanceof Array || obj[k] === undefined ? [sp.value[k]] : sp.value[k];
+                    if (obj.fontTextRunLength !== undefined) obj.fontTextRunLength = [txt.length];
+                    p.setValue(str(obj), true);
+                } else if (sp.kind === 'color') {
+                    if (!setColorHex(p, '#' + sp.value)) continue;
+                } else {
+                    if (p.isTimeVarying()) continue;
+                    v = sp.value;
+                    p.setValue(v, true);
+                }
+                done++;
+            } catch (e) {}
+        }
+        return done;
+    }
+
+    function applyLookTo(s, ti, a, look, fx, warnings) {
+        var item = findItemAt(s, ti, a), i, g, c = null, n = 0, comp, j, f = tpf(s);
+        if (!item) return 0;
+        for (i = 0; i < (look.graphics || []).length; i++) {
+            g = look.graphics[i];
+            c = null;
+            if (g.matchName === '#mgt') { try { c = item.getMGTComponent(); } catch (e) {} }
+            if (!c) c = componentByMatch(item, g.matchName === '#mgt' ? 'AE.ADBE Text' : g.matchName);
+            if (!c) {
+                // Texte de Premiere (outil Texte) <-> modele .mogrt : le premier composant graphique.
+                for (j = 0; j < item.components.numItems && !c; j++) if (isGraphicComp(item.components[j])) c = item.components[j];
+                if (!c) { try { c = item.getMGTComponent(); } catch (e2) {} }
+            }
+            if (c) n += writeLookProps(c, g.props);
+        }
+        // Effets : reutilises s'ils sont deja sur le texte (pas de doublon), sinon ajoutes.
+        for (i = 0; i < (fx || []).length; i++) {
+            try {
+                item = findItemAt(s, ti, a);
+                comp = componentByMatch(item, fx[i].matchName) || addEffect(s, ti, a, fx[i], warnings);
+                if (comp) { setProps(s, findItemAt(s, ti, a), comp, fx[i], a, f, warnings); n++; }
+            } catch (err) { warnings.push(fx[i].names[0] + ' : ' + err.toString()); }
+        }
+        return n;
+    }
+
+    // Style (o.look + o.fx, ou o.style + o.styleFx) sur les textes selectionnes dans la timeline.
+    function applyTextLook(o) {
+        var s = activeSeq(), sel = selectedVideo(s), warnings = [], done = 0, i, a, ti, n;
+        if (!sel.length) return fail('S\u00e9lectionne dans la timeline les textes \u00e0 styler.');
+        for (i = 0; i < sel.length; i++) {
+            a = tk(sel[i].item.start);
+            ti = sel[i].track;
+            n = 0;
+            try {
+                if (o.look) n = applyLookTo(s, ti, a, o.look, o.fx || [], warnings);
+                else if (o.style) { applyTextStyle(s, ti, a, o.style, o.styleFx || {}, warnings); n = 1; }
+            } catch (e) { warnings.push(sel[i].item.name + ' : ' + e.toString()); }
+            if (n) done++;
+        }
+        if (!done) return fail('Aucun texte modifiable dans la s\u00e9lection (un texte ou un mod\u00e8le .mogrt).');
+        return ok({ done: done, total: sel.length, warnings: warnings });
+    }
+
+    api.captureTextLook = guard(captureTextLook);
+    api.applyTextLook = guard(applyTextLook);
     api.captureTitle = guard(captureTitle);
     api.placeTitle = guard(placeTitle);
 
@@ -2131,7 +2326,7 @@ var RRFX = (function () {
     // puis appelle framesEnd pour tout reactiver.
     function framesBegin(o) {
         var s = activeSeq(), f = tpf(s), q = qeSeq(), over = overlayIds(), files = [], off = [], i, j, k, list, it, t, kind, lvl = o.level || 1;
-        if (!q || !q.exportFramePNG) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
+        if (!q || (!q.exportFramePNG && !q.exportFrameJPEG)) return fail('Cette version de Premiere ne permet pas d\'exporter une image par script.');
         var times = [];
         for (i = 0; i < o.times.length; i++) times.push(snap(o.times[i] * TICKS, f));
         for (i = 0; i < s.videoTracks.numTracks; i++) {
@@ -2150,9 +2345,12 @@ var RRFX = (function () {
                 }
             }
         }
-        for (i = 0; i < times.length; i++) {
-            files.push(o.folder + '/' + o.prefix + i);
-            q.exportFramePNG(timecodeOf(s, times[i]), files[i]);
+        try {
+            for (i = 0; i < times.length; i++) files.push(exportFrame(q, s, times[i], o.folder + '/' + o.prefix + i));
+        } catch (e) {
+            // Rien d'exporte : les calques desactives reviennent tout de suite.
+            framesEnd({ off: off });
+            throw e;
         }
         return ok({ files: files, off: off });
     }
@@ -2627,9 +2825,9 @@ var RRFX = (function () {
             return '';
         });
         attempt('frame', 'Exporter une image de la timeline', function () {
-            if (!qeSeq().exportFramePNG) return false;
-            frame = o.folder + '/' + o.prefix + 'frame';
-            qeSeq().exportFramePNG(timecodeOf(s, 0), frame);
+            var q = qeSeq();
+            if (!q || (!q.exportFramePNG && !q.exportFrameJPEG)) return false;
+            frame = exportFrame(q, s, 0, o.folder + '/' + o.prefix + 'frame');
             return '';
         });
         attempt('settings', 'Changer la taille du cadre (Formats)', function () {

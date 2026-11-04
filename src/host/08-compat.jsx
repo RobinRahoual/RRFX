@@ -55,9 +55,9 @@
             return '';
         });
         attempt('frame', 'Exporter une image de la timeline', function () {
-            if (!qeSeq().exportFramePNG) return false;
-            frame = o.folder + '/' + o.prefix + 'frame';
-            qeSeq().exportFramePNG(timecodeOf(s, 0), frame);
+            var q = qeSeq();
+            if (!q || (!q.exportFramePNG && !q.exportFrameJPEG)) return false;
+            frame = exportFrame(q, s, 0, o.folder + '/' + o.prefix + 'frame');
             return '';
         });
         attempt('settings', 'Changer la taille du cadre (Formats)', function () {

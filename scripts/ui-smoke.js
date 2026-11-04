@@ -797,7 +797,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('2.15 : capturer l\'animation d\'un texte de la timeline', async () => {
     await goTab('titles');
-    await page.click('#view-titles .action:has-text("Capturer depuis la timeline")');
+    await page.click('#view-titles .section:has(.section-title:text-is("Animation")) .action:has-text("Capturer depuis la timeline")');
     await page.waitForSelector('.modal input');
     await page.fill('.modal input', 'Ma pop capturée');
     await page.click('.modal .cta');
@@ -805,6 +805,63 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     const sel = await page.evaluate(() => window.RRFXApp.settings().titles.anim);
     if (!/^u:/.test(sel)) throw new Error('animation capturée non choisie : ' + sel);
     if (!(await page.isVisible('#view-titles .note:has-text("rejouée telle quelle")'))) throw new Error('note de l\'animation capturée absente');
+  });
+  await step('2.16 : style de texte capturé, appliqué aux textes sélectionnés', async () => {
+    await goTab('titles');
+    const styleSec = '#view-titles .section:has(.section-title:text-is("Style du texte"))';
+    await page.click(styleSec + ' .action:has-text("Capturer depuis la timeline")');
+    await page.waitForSelector('.modal input');
+    await page.fill('.modal input', 'Rouge Impact');
+    await page.click('.modal .cta');
+    await page.waitForSelector('#status.ok:has-text("capturé")', { timeout: 5000 });
+    const it = await page.evaluate(() => { const A = window.RRFXApp, v = A.settings().titles.style, i = A.S.lib.items.find(x => 'u:' + x.id === v); return i ? { name: i.name, font: i.data.style.font, fill: i.data.style.fill, look: !!i.data.look } : null; });
+    if (!it || it.name !== 'Rouge Impact' || it.font !== 'Impact' || it.fill !== '#ff4d4d' || !it.look) throw new Error('style capturé : ' + JSON.stringify(it));
+    const calls = [];
+    await page.evaluate(() => { const H = window.RRFXHost; H._call2 = H.call; H.call = (fn, a) => { window.__calls = (window.__calls || []).concat([[fn, a]]); return H._call2(fn, a); }; });
+    await page.click(styleSec + ' .action:has-text("Appliquer aux textes sélectionnés")');
+    await page.waitForSelector('#status.ok:has-text("Style appliqué")', { timeout: 5000 });
+    calls.push(...await page.evaluate(() => { const H = window.RRFXHost; H.call = H._call2; return window.__calls.filter(c => c[0] === 'applyTextLook'); }));
+    if (!calls.length || !calls[0][1].look || !calls[0][1].fx.some(f => f.matchName === 'AE.ADBE Drop Shadow')) throw new Error('applyTextLook : ' + JSON.stringify(calls));
+  });
+  await step('2.16 : gérer les animations (masquer, remettre, renommer, corbeille)', async () => {
+    await goTab('titles');
+    const anim = '#view-titles .section:has(.section-title:text-is("Animation"))';
+    await page.click(anim + ' .manage-btn');
+    await page.waitForSelector('.modal .manage');
+    // Masquer une intégrée : elle sort du menu.
+    const first = await page.evaluate(() => window.RRFXLibrary.TITLE_ANIMS[0]);
+    await page.click('.modal .manage .list-item:has(.li-name:text-is("' + first.name + '")) .action:has-text("Masquer")');
+    // Renommer une des tiennes sur place.
+    await page.dblclick('.modal .manage .li-name:text-is("Ma pop capturée")');
+    await page.fill('.modal .manage-rename', 'Pop maison');
+    await page.press('.modal .manage-rename', 'Enter');
+    await page.waitForSelector('.modal .manage .li-name:text-is("Pop maison")');
+    // Supprimer : dans la corbeille, puis restaurée.
+    await page.click('.modal .manage .list-item:has(.li-name:text-is("Pop maison")) .action.danger');
+    await page.waitForSelector('.modal .manage .manage-head:has-text("Corbeille")');
+    await page.click('.modal .manage .list-item:has(.li-name:text-is("Pop maison")) .action:has-text("Restaurer")');
+    await page.waitForSelector('.modal .manage .list-item:has(.li-name:text-is("Pop maison")) .action:has-text("Modifier")');
+    await page.click('.modal footer button:has-text("Fermer")');
+    const opts = await page.$$eval(anim + ' select option', os => os.map(o => o.textContent));
+    if (opts.includes(first.name)) throw new Error('intégrée masquée encore dans le menu');
+    if (!opts.includes('★ Pop maison')) throw new Error('animation renommée absente : ' + opts.join(', '));
+    // Mes effets : « Remettre les intégrés masqués ».
+    await goTab('mine');
+    await page.click('#view-mine .action:has-text("Remettre les intégrés masqués")');
+    await page.waitForSelector('#status.ok:has-text("remis")');
+    await goTab('titles');
+    const back = await page.$$eval(anim + ' select option', os => os.map(o => o.textContent));
+    if (!back.includes(first.name)) throw new Error('intégrée non remise');
+  });
+  await step('2.16 : effets, masquer un intégré et le remettre', async () => {
+    await goTab('effects');
+    await page.click('#grid .card >> nth=0');
+    const key = await page.evaluate(() => window.RRFXApp.S.cur.key);
+    await page.click('#inspector .effect-tools .action:has-text("Masquer")');
+    if (await page.$('#grid .card[data-key="' + key + '"]')) throw new Error('effet masqué encore dans la grille');
+    await page.click('.grid-hidden .action:has-text("Remettre")');
+    await page.waitForSelector('#grid .card[data-key="' + key + '"]');
+    if (await page.$('.grid-hidden')) throw new Error('rappel encore affiché');
   });
   await step('2.11 : couleur verrouillée sans plan sélectionné', async () => {
     await goTab('color');

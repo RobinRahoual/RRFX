@@ -82,14 +82,23 @@
         box.innerHTML = '';
         const cv = h('canvas', { class: 'pv-canvas', width: 480, height: 200 });
         const redraw = () => draw(cv, x);
-        const opts = C.GRADIENTS.map(p => ({ v: 'b:' + p.id, label: p.name })).concat(userGradients().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
+        const cur = x.preset.indexOf(':') > 0 || x.preset === 'custom' ? x.preset : 'b:' + x.preset;
+        const builtins = app.manage ? app.manage.visible('gradient', C.GRADIENTS, p => 'b:' + p.id, cur) : C.GRADIENTS;
+        const opts = builtins.map(p => ({ v: 'b:' + p.id, label: p.name })).concat(userGradients().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
         if (x.preset === 'custom') opts.unshift({ v: 'custom', label: _T('Mon réglage') });
+        // Dégradé enregistré modifié : « Mettre à jour » le réécrit (x.from : celui chargé).
+        const loaded = x.from ? userGradients().find(i => 'u:' + i.id === x.from) : null;
         box.appendChild(h('div', { class: 'note' }, _T('Remplis un texte, une forme ou un logo d\'un dégradé : sélectionne-le dans la timeline, choisis les couleurs, puis « Appliquer le dégradé ».')));
-        box.appendChild(row(_T('Dégradé'), picker(opts, x.preset.indexOf(':') > 0 || x.preset === 'custom' ? x.preset : 'b:' + x.preset, v => {
+        const choose = v => {
           const p = v.indexOf('b:') === 0 ? C.GRADIENTS.find(q => 'b:' + q.id === v) : null, u = v.indexOf('u:') === 0 ? app.S.lib.items.find(i => 'u:' + i.id === v) : null;
-          if (p) x.g = JSON.parse(JSON.stringify(p.g)); else if (u) x.g = JSON.parse(JSON.stringify(u.data.g));
-          x.preset = v; app.persist(); refresh();
-        })));
+          if (p) x.g = JSON.parse(JSON.stringify(p.g)); else if (u) { x.g = JSON.parse(JSON.stringify(u.data.g)); if (u.data.opacity != null) x.opacity = u.data.opacity; }
+          x.preset = v; x.from = u ? v : ''; app.persist(); refresh();
+        };
+        const pick = picker(opts, cur, choose);
+        box.appendChild(row(_T('Dégradé'), app.manage ? app.manage.withManage(pick, () => ({
+          title: _T('Gérer les dégradés'), kind: 'gradient', itemType: 'gradient', prefix: '',
+          builtins: C.GRADIENTS.map(p => ({ id: 'b:' + p.id, name: p.name })), use: choose, after: refresh
+        })) : pick));
         box.appendChild(h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, _T('Aperçu')))));
         const custom = () => { x.preset = 'custom'; app.persist(); redraw(); };
         box.appendChild(row(_T('Couleur 1'), app.services.colorPick(x.g.colors[0], v => { x.g.colors[0] = v || '#ffffff'; custom(); })));
@@ -119,7 +128,10 @@
           if (!gr) return app.status.finish('warn', _T('Dégradé non reconnu'), _T('Il faut au moins deux couleurs.'));
           x.g = gr; x.preset = 'custom'; app.persist(); refresh();
         });
+        const update = loaded ? h('button', { class: 'action' }, _T('Mettre à jour « ') + loaded.name + ' »') : null;
+        if (update) update.addEventListener('click', () => { loaded.data = { g: JSON.parse(JSON.stringify(x.g)), opacity: x.opacity }; x.preset = x.from; app.persist(); refresh(); app.status.finish('ok', _T('Dégradé « ') + loaded.name + _T(' » mis à jour'), ''); });
         box.appendChild(h('div', { class: 'row-buttons' }, go, save, paste));
+        if (update) box.appendChild(h('div', { class: 'row-buttons' }, update));
         requestAnimationFrame(redraw);
       };
       refresh();
@@ -131,7 +143,7 @@
     app.itemTypes.gradient = {
       icon: '▤', label: _T('Dégradé'), valid: d => !!d.g && Array.isArray(d.g.colors) && d.g.colors.length >= 2,
       meta: it => it.data.g.colors.join(' → '),
-      open: it => { const x = st(); x.g = JSON.parse(JSON.stringify(it.data.g)); if (it.data.opacity != null) x.opacity = it.data.opacity; x.preset = 'u:' + it.id; app.persist(); app.switchTab('titles'); }
+      open: it => { const x = st(); x.g = JSON.parse(JSON.stringify(it.data.g)); if (it.data.opacity != null) x.opacity = it.data.opacity; x.preset = 'u:' + it.id; x.from = 'u:' + it.id; app.persist(); app.switchTab('titles'); }
     };
     app.gradients = { apply, fxOf };
   });

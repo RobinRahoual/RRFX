@@ -37,7 +37,13 @@
       shareAll.addEventListener('click', () => shareItems(S.lib.items, _T('Ma bibliothèque')));
       const paste = h('button', { class: 'action' }, _T('Coller un code…'));
       paste.addEventListener('click', pasteCode);
-      view.appendChild(section(_T('Ma bibliothèque'), [h('div', { id: 'mine-filter' }), h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), h('div', { class: 'note' }, _T('« Importer… » reconnaît tout seul ce que tu lui donnes : presets et exports RR FX (.json), packs (.rrfxpack), LUTs (.cube, .3dl…), nuanciers (.ase), modèles de texte (.mogrt). « Tout partager » donne un code à envoyer en message. Bibliothèque enregistrée dans : ') + Store.location)]));
+      // Corbeille et intégrés masqués : tout se récupère.
+      const nTrash = (S.lib.trash || []).length, nHidden = app.manage ? app.manage.hiddenCount() : 0;
+      const trashBtn = nTrash && app.manage ? h('button', { class: 'action quiet' }, '🗑 ' + _T('Corbeille') + ' (' + nTrash + ')') : null;
+      if (trashBtn) trashBtn.addEventListener('click', () => app.manage.openTrash(renderMineView));
+      const hiddenBtn = nHidden ? h('button', { class: 'action quiet', title: _T('Effets, animations, styles et dégradés intégrés que tu as masqués') }, '↺ ' + _T('Remettre les intégrés masqués') + ' (' + nHidden + ')') : null;
+      if (hiddenBtn) hiddenBtn.addEventListener('click', () => { const n = app.manage.restoreAll(); renderMineView(); status.finish('ok', plural(n, _T('intégré remis'), _T('intégrés remis')), _T('De nouveau dans leurs listes.')); });
+      view.appendChild(section(_T('Ma bibliothèque'), [h('div', { id: 'mine-filter' }), h('div', { id: 'mine-list' }), h('div', { class: 'row-buttons' }, imp, exp), h('div', { class: 'row-buttons' }, paste, shareAll), trashBtn || hiddenBtn ? h('div', { class: 'row-buttons' }, trashBtn, hiddenBtn) : null, h('div', { class: 'note' }, _T('« Importer… » reconnaît tout seul ce que tu lui donnes : presets et exports RR FX (.json), packs (.rrfxpack), LUTs (.cube, .3dl…), nuanciers (.ase), modèles de texte (.mogrt). « Tout partager » donne un code à envoyer en message. Bibliothèque enregistrée dans : ') + Store.location)]));
       if (app.stylePacks) view.appendChild(app.stylePacks.section());
       renderMineList();
     }
@@ -129,23 +135,23 @@
             btn('⤓', _T('Exporter'), () => exportItems([item], item.name.replace(/[^\w\-]+/g, '_') + '.rrfx.json')),
             btn('⇪', _T('Partager (code à copier-coller)'), () => shareItems([item], item.name)),
             btn('🌐', _T('Publier dans la bibliothèque en ligne'), () => publishItems([item], item.name)),
-            btn('✕', _T('Supprimer'), () => deleteItem(item), 'danger')));
+            btn('✕', _T('Supprimer (va dans la corbeille)'), () => deleteItem(item), 'danger')));
         li.addEventListener('dblclick', () => openItem(item));
         list.appendChild(li);
       });
     }
 
-    async function deleteItem(item) {
-      const yes = await modal(_T('Supprimer « ') + item.name + _T(' » ?'), h('p', null, _T('C\'est définitif. Exporte-le d\'abord pour le garder.')), [
-        { label: _T('Garder'), value: false }, { label: _T('Supprimer'), primary: true, value: true }]);
-      if (!yes) return;
-      S.lib.items = S.lib.items.filter(i => i !== item);
-      S.lib.favorites = S.lib.favorites.filter(k => k !== 'u:' + item.id);
-      // Gardé pour la synchro : supprimé ici, il l'est aussi sur tes autres ordinateurs.
-      (S.lib.removed || (S.lib.removed = [])).push(item.id);
+    // Supprimé : dans la corbeille (restaurable : « Corbeille » ci-dessous ou « Gérer… »).
+    function deleteItem(item) {
+      if (app.manage) app.manage.remove(item);
+      else {
+        S.lib.items = S.lib.items.filter(i => i !== item);
+        S.lib.favorites = S.lib.favorites.filter(k => k !== 'u:' + item.id);
+        (S.lib.removed || (S.lib.removed = [])).push(item.id);
+        persist();
+      }
       if (S.cur && S.cur.key === 'u:' + item.id) { S.cur = entries()[0]; S.params = defaultParams(S.cur); }
-      persist();
-      renderMineList();
+      if (S.tab === 'mine') renderMineView(); else renderMineList();
     }
 
     function openItem(item) {

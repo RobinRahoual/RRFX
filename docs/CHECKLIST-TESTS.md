@@ -306,6 +306,17 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] 🔴 *Textes › Capturer depuis la timeline* sur un texte animé à la main (entrée et sortie) : l'animation est enregistrée (★) ; pose d'autres textes avec : même entrée et même sortie, sur des durées différentes
 - [ ] Une animation capturée dans *Parole › Sous-titres* ou *Bandeau* : rejouée pareil
 
+## 21. Préréglages gérés, styles de texte capturés, image exportée (2.16)
+
+- [ ] 🔴 *Réglages › Tester mon Premiere* (surtout sur Windows) : « Exporter une image de la timeline » ✓
+- [ ] *Colorimétrie › Égaliser les rushs* ou *Aperçu réel* (Effets) : les images de la timeline arrivent
+- [ ] 🔴 *Textes › Style du texte › Capturer depuis la timeline* sur un texte stylé à la main (police, couleur, contour, ombre portée) : le style est enregistré (★ ◎)
+- [ ] 🔴 Sélectionne 2 autres textes, *Appliquer aux textes sélectionnés* : police, couleurs, contour et ombre suivent, le texte ne change pas ; recommencer ne double pas l'ombre portée
+- [ ] Pose des textes avec ce style capturé (Textes, Sous-titres) : le style est appliqué
+- [ ] 🔴 *Gérer…* à côté de l'animation : masquer une intégrée (elle quitte le menu), renommer une des tiennes, la supprimer puis la restaurer depuis la corbeille, *Tout remettre*
+- [ ] *Onglet Effets* : *Masquer* un effet intégré, puis *Remettre* sous la grille ; ⟳ sur un preset le met à jour
+- [ ] *Mes effets* : supprimer un élément → *Corbeille* le restaure ; *Remettre les intégrés masqués*
+
 ---
 
 ## Remonter un problème

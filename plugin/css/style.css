@@ -687,3 +687,15 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .lr-live.ok { color: var(--ok, #3fb950); }
 .lr-live.warn { color: var(--warn); }
 .lr-live[hidden] { display: none; }
+
+/* 2.16 · Gérer ses préréglages (gerer.js) */
+.pick-manage { display: flex; align-items: center; gap: 6px; min-width: 0; }
+.pick-manage .picker { flex: 1; min-width: 0; }
+.manage-btn { flex: none; white-space: nowrap; }
+.manage { max-height: 60vh; overflow-y: auto; min-width: min(420px, 80vw); }
+.manage-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin: 12px 0 4px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); }
+.manage-head:first-child, .manage .search-row + .manage-head { margin-top: 2px; }
+.manage .list-item.is-hidden .li-name { opacity: 0.55; }
+.manage .li-actions .action:not(.li-main) { display: inline-flex !important; }
+.manage .li-actions { opacity: 1; }
+.manage-rename { flex: 1; min-width: 0; height: 24px; }

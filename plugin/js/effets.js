@@ -14,7 +14,8 @@
 
     // ---------------------------------------------------------------- effets (entrées)
 
-    function entries() {
+    // all : y compris les intégrés masqués (« Gérer… »), pour retrouver une entrée par sa clé.
+    function entries(all) {
       const out = Lib.EFFECTS.map(def => ({ key: 'b:' + def.id, kind: 'builtin', name: def.name, cat: def.cat, def }));
       S.lib.items.forEach(item => {
         if (item.type === 'preset') {
@@ -27,10 +28,19 @@
       (settings().overlays || []).forEach(o => out.push({ key: 'o:' + o.id, kind: 'overlay', name: o.name, cat: 'overlay', def: null, overlay: o }));
       // Packs fournis : dessinés par RR FX, fabriqués en images à la première utilisation.
       Packs.ALL.forEach(d => out.push({ key: 'p:' + d.id, kind: 'overlay', name: d.name, cat: 'overlay', def: null, overlay: { id: 'pack:' + d.id, name: d.name, kind: 'sequence', pack: d.id, start: 'random' } }));
-      return out;
+      if (all === true || !app.manage) return out;
+      return app.manage.visible('effect', out, e => e.key, S.cur ? S.cur.key : undefined);
     }
 
-    const entryByKey = key => entries().find(e => e.key === key) || null;
+    const entryByKey = key => entries(true).find(e => e.key === key) || null;
+    const isBuiltinKey = key => /^[bp]:/.test(key);
+    // « Gérer… » des effets : tes presets et effets capturés, les intégrés (à masquer ou remettre).
+    const manageEffects = () => ({
+      title: _T('Gérer les effets'), kind: 'effect', itemType: ['preset', 'captured'], prefix: '',
+      builtins: entries(true).filter(e => isBuiltinKey(e.key)).map(e => ({ id: e.key, name: e.name + ' · ' + catLabel(e.cat) })),
+      use: key => { const e = entryByKey(key); if (e) { S.cat = e.kind === 'builtin' ? 'all' : 'mine'; selectEntry(e); renderEffectsView(); } },
+      after: () => { if (S.cur && !entryByKey(S.cur.key)) { S.cur = entries()[0]; S.params = defaultParams(S.cur); } renderEffectsView(); }
+    });
 
     function defaultParams(entry) {
       if (entry.kind === 'overlay') return { frames: 10, intensity: 85, curve: Core.curveValue('easeInOut'), start: entry.overlay.start || 'random' };
@@ -237,7 +247,7 @@
         const found = [];
         for (let t = 0; t < 40 && found.length < r.files.length; t++) {
           found.length = 0;
-          r.files.forEach(f => { const g = [f, f + '.png'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0); if (g) found.push(g); });
+          r.files.forEach(f => { const g = [f, f + '.png', f + '.jpg'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0); if (g) found.push(g); });
           if (found.length < r.files.length) await new Promise(res => setTimeout(res, 150));
         }
         if (found.length < r.files.length) return { kind: 'error', title: _T('Aperçu réel impossible'), detail: _T('Premiere n\'a pas écrit les images (') + dir + ').' };
@@ -271,7 +281,7 @@
         // Premiere écrit les images après coup (avec ou sans .png) : on les attend.
         const limit = 40 + r.files.length * 8;
         for (let t = 0; t < limit && found.some(f => !f); t++) {
-          r.files.forEach((f, i) => { if (!found[i]) found[i] = [f, f + '.png'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0) || null; });
+          r.files.forEach((f, i) => { if (!found[i]) found[i] = [f, f + '.png', f + '.jpg'].find(x => Store.fs.existsSync(x) && Store.fs.statSync(x).size > 0) || null; });
           if (onProgress) onProgress(found.filter(Boolean).length / found.length);
           if (found.some(f => !f)) await new Promise(res => setTimeout(res, 150));
         }
@@ -394,6 +404,7 @@
         });
         chips.appendChild(b);
       });
+      if (app.manage) chips.appendChild(app.manage.button(manageEffects));
       view.appendChild(chips);
       view.appendChild(h('div', { class: 'grid', id: 'grid' }));
       view.appendChild(h('div', { id: 'inspector' }));
@@ -427,6 +438,15 @@
           folder.addEventListener('click', () => addOverlays(true));
           grid.appendChild(folder);
         }
+      }
+      // Intégrés masqués : rappel discret pour les remettre.
+      const hidden = app.manage ? entries(true).filter(e => isBuiltinKey(e.key) && app.manage.isHidden('effect', e.key)).length : 0;
+      const oldNote = grid.parentNode && grid.parentNode.querySelector('.grid-hidden');
+      if (oldNote) oldNote.remove();
+      if (hidden && S.cat !== 'mine') {
+        const back = h('button', { class: 'action quiet' }, '↺ ' + _T('Remettre'));
+        back.addEventListener('click', () => { app.manage.restoreAll('effect'); renderEffectsView(); });
+        grid.after(h('div', { class: 'note grid-hidden' }, app.plural(hidden, _T('effet intégré masqué'), _T('effets intégrés masqués')) + ' · ', back));
       }
       if (!list.length) {
         if (S.cat === 'overlay') return;
@@ -548,10 +568,19 @@
       star.addEventListener('click', () => { toggleFav(e); star.textContent = isFav(e) ? '★' : '☆'; star.classList.toggle('on', isFav(e)); renderGrid(); });
       const save = h('button', { class: 'action quiet', title: e.kind === 'captured' ? _T('Dupliquer avec ces réglages') : _T('Enregistrer ces réglages comme preset') }, '＋ Preset');
       save.addEventListener('click', saveAsPreset);
+      const tool = (text, title, fn, cls) => { const b = h('button', { class: 'action quiet' + (cls ? ' ' + cls : ''), title }, text); b.addEventListener('click', fn); return b; };
+      // Tes presets : mettre à jour avec les réglages actuels, renommer, supprimer (corbeille).
+      // Les intégrés : masquer (se remettent par « Gérer… » ou « Remettre »).
+      const mine = e.item && app.manage ? [
+        e.kind === 'preset' ? tool('⟳', _T('Mettre à jour le preset avec ces réglages'), () => { e.item.data = { base: e.def.id, params: clone(S.params) }; persist(); status.finish('ok', _T('Preset « ') + e.item.name + _T(' » mis à jour'), ''); }) : null,
+        tool('✎', _T('Renommer'), async () => { const n = await promptName(_T('Renommer'), e.item.name); if (n) { e.item.name = n; e.name = n; persist(); renderGrid(); renderInspector(); } }),
+        tool('✕', _T('Supprimer (va dans la corbeille)'), () => { app.manage.remove(e.item); S.cur = entries()[0]; S.params = defaultParams(S.cur); renderGrid(); renderInspector(); }, 'danger')
+      ] : [];
+      const hide = app.manage && isBuiltinKey(e.key) ? tool(_T('Masquer'), _T('Retirer cet effet de la liste (« Gérer… » pour le remettre)'), () => { app.manage.setHidden('effect', e.key, true); S.cur = null; S.cur = entries()[0]; S.params = defaultParams(S.cur); renderEffectsView(); }) : null;
       ins.appendChild(h('div', { class: 'effect-head' },
         h('span', { class: 'effect-name' }, e.name),
         h('span', { class: 'badge' }, e.kind === 'captured' ? _T('capturé') : e.kind === 'overlay' ? 'overlay' : e.kind === 'preset' ? 'preset · ' + catLabel(e.cat) : catLabel(e.cat)),
-        h('div', { class: 'effect-tools' }, star, e.kind === 'overlay' ? null : save)));
+        h('div', { class: 'effect-tools' }, star, e.kind === 'overlay' ? null : save, ...mine, hide)));
       if (def && def.desc) ins.appendChild(h('div', { class: 'note' }, def.desc));
       if (def && def.face) ins.appendChild(h('div', { class: 'hint-box' }, def.track === 'object'
         ? _T('🎯 Au moment d\'appliquer, la première image du plan s\'affiche : entoure l\'objet, RR FX le suit dans tout le plan.')

@@ -139,3 +139,32 @@ test('captureTitle: a text animated in the timeline → entry and exit, replayed
   still.selected = true;
   assert.match(env.call('captureTitle', {}).error, /images cl/);
 });
+
+test('frame export: falls back when Premiere refuses the first form (Windows « Unknown error exception »)', () => {
+  const env = setup();
+  // PNG refusé partout : l'image part en JPEG, et cette forme sert directement ensuite.
+  env.setFrameFail(() => true);
+  let r = env.call('grabFrames', { folder: '/tmp/rrfx', prefix: 'pv' });
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(r.files.length, 2);
+  assert.ok(env.frames.slice(-2).every(f => f[2] === 'jpg'));
+  // Timecode au format d'affichage refusé : le timecode simple HH:MM:SS:FF est essayé.
+  env.setFrameFail(tc => /^T/.test(tc));
+  const n = env.frames.length;
+  r = env.call('selfTest', { folder: '/tmp/rrfx', prefix: 't-' });
+  const frame = r.results.find(x => x.id === 'frame');
+  assert.ok(frame.ok, JSON.stringify(frame));
+  assert.ok(env.frames.length > n);
+});
+
+test('frame export: clips switched off for clean frames come back if nothing can be exported', () => {
+  const env = setup();
+  const { seq, F, adj, Item } = env;
+  const look = seq.videoTracks[2].add(new Item(seq, adj, 0, 260 * F, 0, 'RR FX · Look Nuit POST'));
+  env.setFrameFail(() => true);
+  env.ctx.qe.project.getActiveSequence = (orig => () => { const q = orig(); delete q.exportFrameJPEG; return q; })(env.ctx.qe.project.getActiveSequence);
+  const r = env.call('framesBegin', { times: [2], level: 2, folder: '/tmp', prefix: 'x-' });
+  assert.ok(!r.ok);
+  assert.match(r.error, /Unknown error exception/);
+  assert.strictEqual(look.disabled, false);
+});

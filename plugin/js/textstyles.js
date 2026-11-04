@@ -111,10 +111,17 @@
     // ---------------------------------------------------------------- styles de texte
 
     const userStyles = () => app.S.lib.items.filter(i => i.type === 'textStyle');
-    /* Choix possibles : le style du modèle (rien n'est changé), les styles fournis, les tiens. */
-    const options = () => [{ v: '', label: _T('Celui du modèle .mogrt') }]
-      .concat(C.STYLES.map(x => ({ v: 'b:' + x.id, label: x.name })))
-      .concat(userStyles().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
+    /* Choix possibles : le style du modèle (rien n'est changé), les styles fournis (sauf ceux
+       masqués par « Gérer… », hors celui choisi : keep), les tiens. */
+    const builtinStyles = keep => (app.manage ? app.manage.visible('textStyle', C.STYLES, x => 'b:' + x.id, keep) : C.STYLES);
+    const options = keep => [{ v: '', label: _T('Celui du modèle .mogrt') }]
+      .concat(builtinStyles(keep).map(x => ({ v: 'b:' + x.id, label: x.name })))
+      .concat(userStyles().map(i => ({ v: 'u:' + i.id, label: '★ ' + (i.data.look ? '◎ ' : '') + i.name })));
+    /* Style capturé sur un texte de la timeline : réglages du modèle et effets, réappliqués tels
+       quels (look) ; data.style n'en est qu'une approche, pour l'aperçu. */
+    const itemOf = v => (v && v.indexOf('u:') === 0 ? app.S.lib.items.find(i => 'u:' + i.id === v) : null);
+    const lookById = v => { const it = itemOf(v); return it && it.data.look ? it.data.look : null; };
+    const lookFx = look => app.Core.compileCaptured({ components: look.effects || [], frameW: look.frameW, frameH: look.frameH }, 'full', 1, { mirror: false }, app.registry());
     function styleById(v) {
       if (!v) return null;
       if (v.indexOf('b:') === 0) { const b = C.STYLES.find(x => 'b:' + x.id === v); return b ? C.normStyle(b.style) : null; }
@@ -161,10 +168,41 @@
         box.innerHTML = '';
         const cur = owner[key] || '', st = styleById(cur) || C.normStyle({});
         const cv = h('canvas', { class: 'pv-canvas style-preview', width: 480, height: 200 });
-        box.appendChild(row('Style', picker(options(), cur, v => { owner[key] = v; draft = null; app.persist(); refresh(); })));
+        const choose = v => { owner[key] = v; draft = null; app.persist(); refresh(); };
+        const manage = () => ({
+          title: _T('Gérer les styles de texte'), kind: 'textStyle', itemType: 'textStyle', prefix: '',
+          builtins: C.STYLES.map(x => ({ id: 'b:' + x.id, name: x.name })),
+          // « Modifier » un des tiens : choisi et ouvert dans l'éditeur.
+          use: v => { owner[key] = v; draft = v.indexOf('u:') === 0 ? Object.assign({}, styleById(v) || C.normStyle({})) : null; app.persist(); refresh(); },
+          after: refresh
+        });
+        const pick = picker(options(cur), cur, choose);
+        box.appendChild(row('Style', app.manage ? app.manage.withManage(pick, manage) : pick));
         if (own || draft) { box.appendChild(cv); drawStyle(cv, draft || st, sample || _T('Ton texte ici')); }
         const edit = h('button', { class: 'action' }, draft ? _T('Fermer l\'éditeur') : (cur ? _T('Modifier / dupliquer…') : _T('Créer un style…')));
         edit.addEventListener('click', () => { draft = draft ? null : Object.assign({}, st); refresh(); });
+        // Capturer : le style d'un texte déjà monté (police, couleurs, contour, ombre, effets).
+        const grab = h('button', { class: 'action', title: _T('Sélectionne dans la timeline un texte que tu as stylé toi-même') }, _T('Capturer depuis la timeline'));
+        grab.addEventListener('click', () => app.runTask(_T('Capture du style'), async () => {
+          const r = await app.Host.call('captureTextLook', {});
+          if (!r.ok) return { kind: 'warn', title: _T('Rien à capturer'), detail: r.error };
+          const look = Object.assign({}, r);
+          delete look.ok;
+          const name = await app.promptName(_T('Nom du style'), String(r.name || _T('Mon style de texte')).replace(/\.[a-z0-9]+$/i, ''));
+          if (!name) return { kind: 'idle', title: _T('Prêt') };
+          app.services.addItems([{ type: 'textStyle', name, data: { style: C.styleFromLook(look), look } }]);
+          const it = userStyles().filter(i => i.name === name).pop();
+          if (it) owner[key] = 'u:' + it.id;
+          draft = null;
+          app.persist();
+          refresh();
+          const nfx = (look.effects || []).length;
+          return { kind: 'ok', title: _T('Style « ') + name + _T(' » capturé'), detail: _T('Police, couleurs et réglages du texte') + (nfx ? ' + ' + app.plural(nfx, _T('effet')) : '') + _T('. Sélectionne d\'autres textes puis « Appliquer aux textes sélectionnés », ou pose des textes avec ce style.') };
+        }));
+        // Appliquer : le style choisi sur les textes sélectionnés dans la timeline, en un clic.
+        const applySel = h('button', { class: 'action go', disabled: !cur, title: cur ? _T('Sélectionne des textes dans la timeline (titres, .mogrt)') : _T('Choisis d\'abord un style') }, _T('Appliquer aux textes sélectionnés'));
+        applySel.addEventListener('click', () => applyToSelection(cur));
+        box.appendChild(h('div', { class: 'row-buttons' }, applySel, grab));
         box.appendChild(h('div', { class: 'row-buttons' }, edit));
         if (draft) {
           const d = draft, redraw = () => drawStyle(cv, C.normStyle(d), sample || _T('Ton texte ici'));
@@ -192,9 +230,11 @@
             refresh();
             app.status.finish('ok', _T('Style « ') + name + _T(' » enregistré'), _T('Dans Mes effets : exportable et partageable.'));
           });
-          const mine = cur.indexOf('u:') === 0 ? app.S.lib.items.find(i => 'u:' + i.id === cur) : null;
+          const mine = itemOf(cur);
           const update = mine ? h('button', { class: 'action' }, _T('Mettre à jour « ') + mine.name + _T(' »')) : null;
-          if (update) update.addEventListener('click', () => { mine.data.style = C.normStyle(d); draft = null; app.persist(); refresh(); });
+          // Un style capturé mis à jour ici devient un style RR FX (les valeurs de l'éditeur).
+          if (update) update.addEventListener('click', () => { mine.data = { style: C.normStyle(d) }; draft = null; app.persist(); refresh(); app.status.finish('ok', _T('Style « ') + mine.name + _T(' » mis à jour'), ''); });
+          if (mine && mine.data.look) box.appendChild(h('div', { class: 'note' }, _T('Style capturé dans la timeline : appliqué tel quel (réglages du modèle et effets). « Mettre à jour » le remplace par les valeurs ci-dessus.')));
           box.appendChild(h('div', { class: 'row-buttons' }, saveNew, update));
           box.appendChild(h('div', { class: 'note' }, _T('Police, taille et majuscules : si le modèle .mogrt les laisse modifier. Couleur et ombre : par ses réglages, sinon par les effets Teinte et Ombre portée. Contour et fond : seulement si le modèle les propose.')));
         }
@@ -203,11 +243,23 @@
       return section(title || _T('Style du texte'), [box]);
     }
 
+    // Style sur les textes sélectionnés dans la timeline (capturé : tel quel ; sinon les réglages).
+    function applyToSelection(v) {
+      return app.runTask(_T('Style sur la sélection'), async () => {
+        const look = lookById(v), st = styleById(v);
+        if (!look && !st) return { kind: 'warn', title: _T('Choisis un style'), detail: _T('« Celui du modèle » ne change rien.') };
+        const r = await app.Host.call('applyTextLook', look ? { look, fx: lookFx(look) } : { style: st, styleFx: styleFx(st) });
+        if (!r.ok) return { kind: 'warn', title: _T('Style non appliqué'), detail: r.error };
+        (r.warnings || []).forEach(w => app.log(w, 'warn'));
+        return { kind: r.warnings && r.warnings.length ? 'warn' : 'ok', title: _T('Style appliqué') + ' · ' + app.plural(r.done, _T('texte')), detail: (r.done < r.total ? (r.total - r.done) + _T(' élément(s) sans réglages de texte ignoré(s). ') : '') + _T('Ctrl+Z dans Premiere pour revenir.') };
+      });
+    }
+
     // ---------------------------------------------------------------- bibliothèque
 
     app.itemTypes.textStyle = {
       icon: 'Aa', label: _T('Style de texte'), valid: d => !!d.style && typeof d.style === 'object',
-      meta: it => { const s = C.normStyle(it.data.style); return [s.font || _T('police du modèle'), s.fill].join(' · '); },
+      meta: it => { const s = C.normStyle(it.data.style); return [it.data.look ? _T('capturé dans la timeline') : null, s.font || _T('police du modèle'), s.fill].filter(Boolean).join(' · '); },
       open: it => { const t = app.settings().titles || (app.settings().titles = {}); t.style = 'u:' + it.id; app.persist(); app.switchTab('titles'); }
     };
     app.itemTypes.palette = {
@@ -217,7 +269,7 @@
     };
     app.importers.push({ exts: ['ase'], label: 'nuanciers', run: importAse });
 
-    app.textStyles = { section: styleSection, colorsSection, options, styleById, styleFx, colorPick, myColors, addColors, paint };
+    app.textStyles = { section: styleSection, colorsSection, options, styleById, styleFx, lookById, lookFx, applyToSelection, colorPick, myColors, addColors, paint };
     app.services.colorPick = colorPick;
   });
 })(typeof self !== 'undefined' ? self : this);

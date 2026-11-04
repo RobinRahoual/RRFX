@@ -307,13 +307,15 @@ function makeEnv(fps) {
     };
   }
   const frames = [], mgtCalls = [];
+  let frameFail = () => false;
   let mgtProps = null;
   let projectSelection = null;
   const qe = {
     project: {
       getActiveSequence() {
         return {
-          exportFramePNG(tc, path) { frames.push([Number(String(tc).slice(1)), path]); },
+          exportFramePNG(tc, path) { if (frameFail(tc, path)) throw new Error('Unknown error exception'); frames.push([Number(String(tc).slice(1)), path]); },
+          exportFrameJPEG(tc, path) { frames.push([Number(String(tc).slice(1)), path, 'jpg']); },
           getAudioTrackAt(i) { return qeTrack(project.activeSequence.audioTracks[i]); },
           getVideoTrackAt(i) { return qeTrack(project.activeSequence.videoTracks[i]); },
           _unused(i) {
@@ -406,7 +408,7 @@ function makeEnv(fps) {
     it.components = coll([comp('Internal Volume Stereo', 'Volume', [false, Math.pow(10, -15 / 20)], it)]);
     return it;
   };
-  return { ctx, encoder, folders, disk, exports, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
+  return { ctx, encoder, folders, disk, exports, seq, F, media, media2, adj, Item, audioItem, setRemovable: v => { removable = v; }, setSecondsOnly: v => { secondsOnly = v; }, setSpeedPercent: v => { speedPercent = v; }, setProjectSelection: l => { projectSelection = l; }, frames, setFrameFail: f => { frameFail = f; }, mgtCalls, setMgtProps: f => { mgtProps = f; }, song, projItem, imports, Param, subclipCalls: () => subclipCalls, root, bin, setParamNames: (mn, names) => { PARAM_NAMES[mn] = names; }, call: (fn, arg) => JSON.parse(vm.runInContext('RRFX.' + fn + '(' + JSON.stringify(JSON.stringify(arg || {})) + ')', ctx)) };
 }
 
 module.exports = { makeEnv, TICKS };
