@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.16.0';
+    var VERSION = '2.16.1';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -149,14 +149,14 @@ var RRFX = (function () {
         return pad2(Math.floor(sec / 3600)) + ':' + pad2(Math.floor(sec / 60) % 60) + ':' + pad2(sec % 60) + ':' + pad2(fr);
     }
     function exportFrame(q, s, ticks, base) {
-        var tcs = [], paths = [], ways = [], errs = [], native = base, i, j, k, w, tc;
-        try { native = new File(base).fsName || base; } catch (e) {}
-        try { new Folder(String(native).replace(/[\\\/][^\\\/]*$/, '')).create(); } catch (e) {}
+        var tcs = [], paths = [], ways = [], errs = [], nat = base, i, j, k, w, tc;
+        try { nat = new File(base).fsName || base; } catch (e) {}
+        try { new Folder(String(nat).replace(/[\\\/][^\\\/]*$/, '')).create(); } catch (e) {}
         try { tcs.push(timecodeOf(s, ticks)); } catch (e) { errs.push(String(e)); }
         tc = plainTimecode(s, ticks);
         if (tc !== tcs[0]) tcs.push(tc);
-        paths.push(native);
-        if (native !== base) paths.push(base);
+        paths.push(nat);
+        if (nat !== base) paths.push(base);
         for (k = 0; k < 2; k++) for (j = 0; j < paths.length; j++) for (i = 0; i < tcs.length; i++) {
             w = { m: k ? 'exportFrameJPEG' : 'exportFramePNG', p: j, t: i, key: k + '' + j + i };
             if (!q[w.m]) continue;
