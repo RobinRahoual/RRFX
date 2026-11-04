@@ -17,7 +17,8 @@
         if (!o.times || !o.times.length) return fail('Aucun endroit o\u00f9 poser.');
         if (o.kind === 'mogrt' && !s.importMGT) return fail('Cette version de Premiere ne permet pas d\'importer un mod\u00e8le de titre par script.');
         if (o.kind !== 'mogrt') {
-            pi = itemForPath(o.path, 'RR FX Ressources', false);
+            // o.bin : chutier voulu (ex. " assets/VIDEOS ", comme le dossier sur le disque).
+            pi = itemForPath(o.path, o.bin || 'RR FX Ressources', false);
             if (!pi) return fail('Premiere n\'a pas import\u00e9 ce fichier (format pris en charge ?)');
         }
         if (o.kind === 'video') src = videoSourceOf(pi);

@@ -56,3 +56,12 @@ test('libres: script tools, separate environment for CLAP, mask and denoise comm
   assert.ok(Lb.CUT_MODELS.some(m => m.id === 'birefnet-portrait'));
   assert.deepStrictEqual(Lb.rembgArgs({ input: 'i', output: 'o', model: 'birefnet-general' }), ['p', '-m', 'birefnet-general', 'i', 'o']);
 });
+
+test('liens: downloads go to assets/VIDEOS or assets/SFX next to the Premiere project', () => {
+  const L = require('../plugin/js/liens.js');
+  assert.deepStrictEqual(L.assetsDir('/Users/robin/Clients/Nike/Montage.prproj', false, path.posix), { dir: '/Users/robin/Clients/Nike/assets/VIDEOS', bin: 'assets/VIDEOS', sub: 'VIDEOS' });
+  assert.strictEqual(L.assetsDir('/Users/robin/Clients/Nike/Montage.prproj', true, path.posix).dir, '/Users/robin/Clients/Nike/assets/SFX');
+  assert.strictEqual(L.assetsDir('C:\\Projets\\Clip\\Clip final.prproj', false, path.win32).dir, 'C:\\Projets\\Clip\\assets\\VIDEOS');
+  assert.strictEqual(L.assetsDir('', false, path.posix), null, 'project never saved');
+  assert.strictEqual(L.assetsDir('Untitled', false, path.posix), null);
+});

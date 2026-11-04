@@ -45,7 +45,7 @@
 
     function getContext(o) {
         var s = app.project.activeSequence;
-        if (!s) return ok({ hasSequence: false, version: VERSION, app: appVersion() });
+        if (!s) return ok({ hasSequence: false, version: VERSION, app: appVersion(), projectPath: String(app.project.path || '') });
         var sel = selectedVideo(s), names = [], i, adj = null;
         for (i = 0; i < sel.length && i < 3; i++) names.push(sel[i].item.name);
         if (o && o.adj) {
@@ -53,7 +53,7 @@
             if (a) adj = { name: a.name, nodeId: a.nodeId };
         }
         return ok({
-            hasSequence: true, version: VERSION, app: appVersion(), name: s.name, seqId: s.sequenceID, fps: TICKS / tpf(s), project: String(app.project.name || '').replace(/\.prproj$/i, ''),
+            hasSequence: true, version: VERSION, app: appVersion(), name: s.name, seqId: s.sequenceID, fps: TICKS / tpf(s), project: String(app.project.name || '').replace(/\.prproj$/i, ''), projectPath: String(app.project.path || ''),
             frameW: s.frameSizeHorizontal, frameH: s.frameSizeVertical,
             playhead: tk(s.getPlayerPosition()) / TICKS,
             selection: sel.length, selectionNames: names, adj: adj, markers: markerTimes(s).length
@@ -499,13 +499,18 @@
         return String(a).replace(/\\/g, '/').toLowerCase() === String(b).replace(/\\/g, '/').toLowerCase();
     }
 
+    // Chutier par son nom, a la racine ; " assets/VIDEOS " : chutiers imbriques (crees si besoin).
     function namedBin(name) {
-        var root = app.project.rootItem, i, c;
-        for (i = 0; i < root.children.numItems; i++) {
-            c = root.children[i];
-            if (c.type === 2 && c.name === name) return c;
+        var parts = String(name).split('/'), bin = app.project.rootItem, i, j, c, next;
+        for (j = 0; j < parts.length; j++) {
+            next = null;
+            for (i = 0; i < bin.children.numItems; i++) {
+                c = bin.children[i];
+                if (c.type === 2 && c.name === parts[j]) { next = c; break; }
+            }
+            bin = next || bin.createBin(parts[j]);
         }
-        return root.createBin(name);
+        return bin;
     }
 
     // Element du projet pour un fichier (importe si besoin). stills : sequence d'images

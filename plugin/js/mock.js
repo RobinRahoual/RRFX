@@ -23,7 +23,7 @@
   const handlers = {
     compat: () => ({ ok: true, version: root.RRFXHost ? root.RRFXHost.VERSION : '?', app: _T('démo'), appPath: '', missing: [], optional: [] }),
     getContext: () => ({
-      ok: true, hasSequence: true, version: _T('démo'), app: _T('démo'), name: _T('Clip démo'), seqId: 'demo-1', project: _T('Projet démo'), fps: FPS, frameW: 1920, frameH: 1080,
+      ok: true, hasSequence: true, version: _T('démo'), app: _T('démo'), name: _T('Clip démo'), seqId: 'demo-1', project: _T('Projet démo'), projectPath: '/Projets/Projet démo.prproj', fps: FPS, frameW: 1920, frameH: 1080,
       playhead: 12.4, selection: 2, selectionNames: ['A001_C004.mov', 'A001_C007.mov'], markers: 4,
       adj: { name: _T('Calque de réglage'), nodeId: 'demo' }
     }),

@@ -61,3 +61,21 @@ test('a .mogrt title is placed as is; import only; errors are clear', () => {
   assert.strictEqual(env.imports.length, 2, 'a.wav imported once');
   assert.match(env.call('placeAsset', { path: '/x.wav', kind: 'audio', times: [] }).error, /Aucun endroit/);
 });
+
+test('link import: file placed in the project bin assets › VIDEOS, project path in the context', () => {
+  const env = setup();
+  env.ctx.app.project.path = '/Clients/Nike/Montage.prproj';
+  assert.strictEqual(env.call('getContext', {}).projectPath, '/Clients/Nike/Montage.prproj');
+  const v = env.call('placeAsset', { path: '/Clients/Nike/assets/VIDEOS/clip.mp4', kind: 'video', name: 'clip', times: [2], bin: 'assets/VIDEOS' });
+  assert.ok(v.ok, v.error);
+  const root = env.ctx.app.project.rootItem, kids = b => Array.from({ length: b.children.numItems }, (_, i) => b.children[i]);
+  const assets = kids(root).find(c => c.type === 2 && c.name === 'assets');
+  assert.ok(assets, 'bin assets');
+  const vids = kids(assets).find(c => c.type === 2 && c.name === 'VIDEOS');
+  assert.ok(vids && kids(vids).length === 1, 'clip in assets › VIDEOS');
+  // Un deuxième fichier réutilise les mêmes chutiers.
+  const s = env.call('placeAsset', { path: '/Clients/Nike/assets/SFX/whoosh.mp3', kind: 'audio', name: 'whoosh', times: [3], bin: 'assets/SFX' });
+  assert.ok(s.ok, s.error);
+  assert.strictEqual(kids(root).filter(c => c.type === 2 && c.name === 'assets').length, 1);
+  assert.deepStrictEqual(kids(assets).filter(c => c.type === 2).map(c => c.name).sort(), ['SFX', 'VIDEOS']);
+});

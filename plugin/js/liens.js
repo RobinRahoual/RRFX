@@ -64,6 +64,16 @@
     return args;
   }
 
+  /* Dossier des téléchargements : « assets » à côté du projet Premiere (.prproj), rangé en
+     sous-dossiers : SFX pour les sons, VIDEOS pour les vidéos. Projet jamais enregistré (pas de
+     chemin) : null, le panneau prend son dossier à lui. path : module path de Node. */
+  function assetsDir(projectPath, audio, path) {
+    const p = String(projectPath || '');
+    if (!/\.prproj$/i.test(p)) return null;
+    const sub = audio ? 'SFX' : 'VIDEOS';
+    return { dir: path.join(path.dirname(p), 'assets', sub), bin: 'assets/' + sub, sub };
+  }
+
   /* Progression d'une ligne de yt-dlp (« [download]  42.3% of … ») → 0 à 1, ou null. */
   function progressOf(line) {
     const m = /\[download\]\s+(\d+(?:\.\d+)?)%/.exec(String(line || ''));
@@ -87,5 +97,5 @@
     return ['/opt/homebrew/bin/' + exe, '/usr/local/bin/' + exe, '/usr/bin/' + exe, home && home + '/.local/bin/' + exe, home && home + '/Documents/RRFX/Outils/' + exe].filter(Boolean);
   }
 
-  return { VIDEO, AUDIO, classify, extOf, isAudio, isVideo, safeName, nameFromUrl, ytdlpArgs, progressOf, candidates };
+  return { VIDEO, AUDIO, classify, extOf, isAudio, isVideo, safeName, nameFromUrl, ytdlpArgs, assetsDir, progressOf, candidates };
 });

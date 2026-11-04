@@ -19,7 +19,16 @@
       Object.keys(d).forEach(k => { if (!(k in s.linkImport)) s.linkImport[k] = d[k]; });
       return s.linkImport;
     };
-    const outDir = () => { const d = Store.path.join(Store.dir, 'Téléchargements'); Store.fs.mkdirSync(d, { recursive: true }); return d; };
+    // Dossier de RR FX, quand le projet Premiere n'est pas encore enregistré.
+    const fallbackDir = () => { const d = Store.path.join(Store.dir, 'Téléchargements'); Store.fs.mkdirSync(d, { recursive: true }); return d; };
+    /* Où ranger le fichier : assets/VIDEOS ou assets/SFX à côté du .prproj (et le même chutier
+       dans le panneau Projet) ; sinon Documents/RRFX/Téléchargements. */
+    async function destination(audio) {
+      const ctx = await Host.call('getContext', {});
+      const a = ctx && ctx.ok ? L.assetsDir(ctx.projectPath, audio, Store.path) : null;
+      if (a) { Store.fs.mkdirSync(a.dir, { recursive: true }); return a; }
+      return { dir: fallbackDir(), bin: '', sub: '' };
+    }
     const proc = () => (root.process || {});
 
     // Un outil (yt-dlp, ffmpeg) : réglage, puis PATH, puis emplacements habituels. → chemin ou ''.
@@ -78,7 +87,7 @@
         if (!Store.fs) return { kind: 'warn', title: _T('Disponible dans Premiere'), detail: _T('Le téléchargement passe par Premiere (mode démo ici).') };
         const c = L.classify(x.url);
         if (!c.ok) return { kind: 'error', title: _T('Lien non reconnu'), detail: c.why };
-        let file;
+        let file, dest;
         if (c.kind === 'direct') {
           app.status.phase(_T('Téléchargement'));
           // http ou https selon le lien (et selon chaque redirection).
@@ -88,7 +97,8 @@
           const sig = String.fromCharCode.apply(null, bytes.slice(0, 12));
           const ext = c.ext || (/ftyp/.test(sig) ? 'mp4' : /^ID3|^\xff\xfb/.test(sig) ? 'mp3' : /^RIFF/.test(sig) ? 'wav' : x.mode === 'audio' ? 'mp3' : 'mp4');
           if (bytes.length < 1024 || /^<!doctype|^<html/i.test(sig.trim())) throw new Error(_T('Le lien renvoie une page web, pas un fichier (lien de partage privé ?).'));
-          file = Store.path.join(outDir(), L.nameFromUrl(c.url, ext));
+          dest = await destination(x.mode === 'audio' || L.isAudio(ext));
+          file = Store.path.join(dest.dir, L.nameFromUrl(c.url, ext));
           Store.fs.writeFileSync(file, Buffer.from(bytes));
         } else {
           // yt-dlp : un outil gratuit de RR FX, proposé à l'installation en un clic s'il manque.
@@ -98,20 +108,23 @@
           if (!exe) return { kind: 'warn', title: _T('yt-dlp nécessaire'), detail: _T('Installe yt-dlp (Réglages › Outils gratuits) puis relance l\'import.') };
           const ffmpeg = (app.tools && await app.tools.find('ffmpeg')) || await findTool('ffmpeg', x.ffmpeg);
           app.status.phase(_T('Téléchargement (yt-dlp)'));
-          file = await runYtdlp(exe, L.ytdlpArgs({ url: c.url, mode: x.mode, out: outDir(), ffmpeg }), outDir());
+          dest = await destination(x.mode === 'audio');
+          file = await runYtdlp(exe, L.ytdlpArgs({ url: c.url, mode: x.mode, out: dest.dir, ffmpeg }), dest.dir);
         }
         app.status.phase(_T('Pose dans la timeline'));
         const ext = L.extOf(file), audioOnly = x.mode === 'audio' || L.isAudio(ext);
         const m = await Host.call('markerList', {});
         const t = m.ok ? m.playhead : 0, created = [], warnings = [];
         for (const kind of audioOnly ? ['audio'] : ['video', 'audio']) {
-          const r = await Host.call('placeAsset', { kind, path: file, name: Store.path.basename(file), times: [t] });
+          const r = await Host.call('placeAsset', { kind, path: file, name: Store.path.basename(file), times: [t], bin: dest.bin || undefined });
           if (r.ok) { created.push(...r.created); warnings.push(...(r.warnings || [])); } else if (kind === 'video' || audioOnly) return { kind: 'error', title: _T('Fichier téléchargé mais non posé'), detail: r.error + ' · ' + file };
           else warnings.push(_T('Son de la vidéo non posé : ') + r.error);
         }
         if (created.length) app.pushHistory({ date: Date.now(), label: 'Import · ' + Store.path.basename(file), entries: created });
         warnings.forEach(w => app.log(w, 'warn'));
-        return { kind: warnings.length ? 'warn' : 'ok', title: (audioOnly ? _T('Son') : _T('Vidéo')) + _T(' importé') + (audioOnly ? '' : 'e') + _T(' à la tête de lecture'), detail: Store.path.basename(file) + _T(' · rangé dans Documents/RRFX/Téléchargements et dans le chutier « RR FX Ressources ».') };
+        return { kind: warnings.length ? 'warn' : 'ok', title: (audioOnly ? _T('Son') : _T('Vidéo')) + _T(' importé') + (audioOnly ? '' : 'e') + _T(' à la tête de lecture'), detail: Store.path.basename(file) + (dest.bin
+          ? _T(' · rangé dans le dossier du projet : assets/') + dest.sub + _T(' (et le chutier assets › ') + dest.sub + ').'
+          : _T(' · projet pas encore enregistré : rangé dans Documents/RRFX/Téléchargements (chutier « RR FX Ressources »). Enregistre ton projet pour que les prochains aillent dans son dossier assets.')) };
       }, true);
     }
 
@@ -131,6 +144,7 @@
         input, hint,
         row(_T('Garder'), actionGroup([{ v: 'video', label: _T('🎬 Vidéo (MP4)') }, { v: 'audio', label: _T('🎵 Son (MP3)') }], x.mode, v => { x.mode = v; app.persist(); })),
         h('div', { class: 'row-buttons' }, go),
+        h('div', { class: 'note' }, _T('Rangé à côté de ton projet Premiere : assets/VIDEOS pour les vidéos, assets/SFX pour les sons (mêmes chutiers dans le panneau Projet).')),
         h('div', { class: 'note' }, _T('Posé à la tête de lecture, sur une piste libre. Uniquement des contenus dont tu as les droits : tes vidéos, musiques libres de droits ou Creative Commons, contenus fournis par ton client. Télécharger depuis YouTube sans autorisation est contraire à ses conditions d\'utilisation.'))
       ]);
     }

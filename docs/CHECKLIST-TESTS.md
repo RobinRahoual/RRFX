@@ -328,6 +328,13 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] *Analyser le texte sélectionné* : rapport lisible, *Copier le rapport* marche
 - [ ] *Créer des textes (paroles)* : poser des paroles marche toujours (et depuis Express)
 
+## 23. Import par lien rangé dans le projet (2.18)
+
+- [ ] 🔴 Projet enregistré, *Importer depuis un lien* en 🎬 Vidéo (yt-dlp) : le fichier arrive dans `<dossier du projet>/assets/VIDEOS`, chutier *assets › VIDEOS*, posé à la tête de lecture
+- [ ] 🔴 Même chose en 🎵 Son : `assets/SFX`, chutier *assets › SFX*
+- [ ] Un lien direct .mp3 : `assets/SFX` aussi
+- [ ] Nouveau projet jamais enregistré : `Documents/RRFX/Téléchargements` et message pour enregistrer le projet
+
 ---
 
 ## Remonter un problème

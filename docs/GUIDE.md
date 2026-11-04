@@ -601,8 +601,11 @@ défilement. L'index est gardé (`Documents/RRFX/ressources-index.json`) et relu
 **↻ Actualiser** le relit tout de suite. Un disque débranché garde son index (signalé dans la liste).
 
 **Importer depuis un lien** : colle un lien, choisis **Vidéo (MP4)** ou **Son (MP3)**, *Importer dans la
-timeline* : le fichier est téléchargé dans `Documents/RRFX/Téléchargements`, rangé dans le chutier « RR FX
-Ressources » et posé **à la tête de lecture** sur une piste libre (la vidéo et son son, ou le son seul).
+timeline* : le fichier est téléchargé **à côté de ton projet Premiere**, dans un dossier `assets` : `assets/VIDEOS`
+pour les vidéos, `assets/SFX` pour les sons (créés au besoin), rangé dans les mêmes chutiers du panneau Projet
+(*assets › VIDEOS*, *assets › SFX*) et posé **à la tête de lecture** sur une piste libre (la vidéo et son son, ou
+le son seul). Projet jamais enregistré : le fichier va dans `Documents/RRFX/Téléchargements` (chutier « RR FX
+Ressources »).
 
 - **Liens directs** (fin en .mp4, .mov, .mp3, .wav, .m4a…), **Dropbox** et **Google Drive** (lien de partage
   public) : téléchargés par RR FX, rien à installer.
