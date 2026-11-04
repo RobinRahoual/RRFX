@@ -371,7 +371,20 @@ illisible, **Choisir un fichier…** : il est calé sur la musique de la séquen
 
 ### Onglet Textes
 
-Titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mot par texte), choisis le rythme
+**Textes de la timeline** (en haut, 2.17) : sélectionne tes textes dans la timeline (faits avec l'outil Texte, modèles
+`.mogrt`, sous-titres…), choisis une **animation** et un **style**, puis **Appliquer aux textes sélectionnés**.
+Chaque texte est animé sur place, quelle que soit sa durée : l'entrée au début, la sortie à la fin. Le mouvement
+est relatif (effet Transformer) : un texte en bas à gauche reste en bas à gauche. Appliquer une autre animation
+remplace la précédente au lieu de s'empiler. Les cases *Appliquer l'animation* et *Appliquer le style* choisissent
+ce qui est posé ; le compteur indique combien d'éléments sont sélectionnés.
+
+Ce que Premiere laisse faire : les **animations** marchent sur tous les textes (et sur n'importe quel clip). Pour
+le **style**, un modèle `.mogrt` qui expose ses réglages accepte police, taille, couleurs, contour, ombre et fond ;
+un texte fait avec l'outil Texte de Premiere n'expose pas sa police aux scripts : la couleur passe alors par l'effet
+**Teinte** et l'ombre par **Ombre portée**, et RR FX le signale. **Analyser le texte sélectionné** montre ce que
+Premiere laisse modifier sur un texte (rapport à copier et à envoyer si quelque chose ne passe pas).
+
+**Créer des textes (paroles)** (section repliée) : titres et **paroles animés** : colle les paroles (une ligne par texte, ou un mot par texte), choisis le rythme
 (*marqueurs*, *temps forts détectés* ou *durée fixe*) et l'animation (Fondu, Pop, Zoom flou, Glissement, Flou, Impact,
 réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèle de texte** `.mogrt` : ceux de
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >

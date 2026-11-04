@@ -107,3 +107,52 @@ test('manage: built-ins hidden then restored, deleted items go to a trash and co
   for (let i = 0; i < 70; i++) M.remove(lib, { id: 'n' + i, type: 'look', name: 'n' + i, data: {} });
   assert.strictEqual(lib.trash.length, 60, 'trash keeps the last 60');
 });
+
+const Lib = require('../plugin/js/library.js');
+const animFx = (id, frames) => Core.titleSpec(Lib.titleById[id], Core.paramDefaults(Lib.titleById[id]), frames, 8, 8, 25);
+// Effets dont se servent les animations de texte : retirés avant d'en poser une autre.
+const REPLACE = Array.from(new Set([].concat(...Lib.TITLE_ANIMS.map(a => Core.titleSpec(a, Core.paramDefaults(a), 40, 8, 8, 25).filter(f => !f.intrinsic).map(f => f.matchName)))));
+
+test('texts already in the timeline: animated where they are, a new animation replaces the old one', () => {
+  const env = setup();
+  env.setRemovable(true);
+  const a = place(env, 1), b = place(env, 10);
+  select(env, null);
+  assert.match(env.call('selectedTexts', {}).error, /Sélectionne/);
+  a.selected = true; b.selected = true;
+  const sel = env.call('selectedTexts', {});
+  assert.ok(sel.ok, sel.error);
+  assert.deepStrictEqual(sel.items.map(x => [x.frames, x.kind]), [[75, 'mgt'], [75, 'mgt']]);
+  const run = id => env.call('animateTexts', { replace: REPLACE, items: sel.items.map(x => ({ track: x.track, start: x.start, fx: animFx(id, x.frames) })) });
+  let r = run('zoom-blur');
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual([r.done, r.total], [2, 2]);
+  const fxOf = it => it.components.map(c => c.matchName).filter(m => m !== 'AE.ADBE Motion' && m !== 'AE.ADBE Opacity');
+  assert.deepStrictEqual(fxOf(a).sort(), ['AE.ADBE Gaussian Blur 2', 'AE.ADBE Geometry2'].sort(), fxOf(a).join());
+  const geo = () => a.components.find(c => c.matchName === 'AE.ADBE Geometry2');
+  const opacityKeys = () => geo().properties.find(p => /Opacit/i.test(p.displayName)).keys;
+  const F = env.F, t0 = a._in;
+  assert.ok(opacityKeys().some(k => k.t === t0) && opacityKeys().some(k => k.t === t0 + 74 * F), 'entry at the start, exit at the end');
+  r = run('slide-up');
+  assert.ok(r.ok, r.error);
+  assert.deepStrictEqual(fxOf(a).sort(), ['AE.ADBE Geometry2', 'AE.ADBE Motion Blur'].sort(), 'old blur removed, one Transform only: ' + fxOf(a).join());
+  // Une animation capturée (Opacité du clip) : ses images clés remplacent celles d'avant.
+  const cap = { frameW: 1920, frameH: 1080, in: { frames: 4, components: [{ matchName: 'AE.ADBE Opacity', displayName: 'Opacity', intrinsic: 'opacity', props: [{ index: 0, name: 'Opacity', values: [0, 30, 70, 100] }] }] }, out: null };
+  select(env, a);
+  r = env.call('animateTexts', { replace: REPLACE, items: [{ track: sel.items[0].track, start: sel.items[0].start, fx: Core.titleSpecCaptured(cap, 75) }] });
+  assert.ok(r.ok, r.error);
+  const op = a.components.find(c => c.matchName === 'AE.ADBE Opacity').properties[0];
+  assert.deepStrictEqual(op.keys.map(k => k.v), [0, 30, 70, 100]);
+});
+
+test('inspectText: a report of what Premiere shows for the selected text', () => {
+  const env = setup();
+  const a = place(env, 1);
+  select(env, a);
+  const r = env.call('inspectText', {});
+  assert.ok(r.ok, r.error);
+  assert.strictEqual(r.kind, 'mgt');
+  assert.ok(r.mgt.props.some(p => p.name === 'Source Text' && p.type === 'string' && /textEditValue/.test(p.value)));
+  assert.ok(r.mgt.props.some(p => p.name === 'Fill Color' && p.type === 'color'));
+  assert.ok(r.components.some(c => c.matchName === 'AE.ADBE Motion'));
+});

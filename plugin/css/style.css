@@ -699,3 +699,9 @@ textarea.share-code { word-break: break-all; white-space: pre-wrap; }
 .manage .li-actions .action:not(.li-main) { display: inline-flex !important; }
 .manage .li-actions { opacity: 1; }
 .manage-rename { flex: 1; min-width: 0; height: 24px; }
+
+/* 2.17 · Textes de la timeline */
+.sub-head { margin: 14px 0 4px; font-weight: 700; font-size: 11px; text-transform: uppercase; letter-spacing: 0.04em; color: var(--text-muted); border-top: 1px solid var(--border); padding-top: 10px; }
+.note.text-sel { font-weight: 600; }
+.note.text-sel.ok { color: var(--ok); }
+.text-apply { width: 100%; justify-content: center; }

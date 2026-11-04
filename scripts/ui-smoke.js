@@ -347,20 +347,23 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('textes', async () => {
     await goTab('titles');
-    await page.fill('textarea.lyrics', 'Premier\nDeuxième\nTroisième');
-    await page.click('#cta');
+    // Créer des textes à partir de paroles : section repliée, son propre bouton.
+    const lyr = '#view-titles .section:has(> .section-title:has-text("Créer des textes"))';
+    if (await page.$(lyr + '.folded')) await page.click(lyr + ' > .section-title');
+    await page.fill(lyr + ' textarea.lyrics', 'Premier\nDeuxième\nTroisième');
+    await page.click(lyr + ' .action:text-is("Poser les textes")');
     await page.waitForSelector('#status.ok:has-text("texte")', { timeout: 8000 });
     await snap('8-textes');
   });
   await step('style de texte et Mes couleurs', async () => {
     await goTab('titles');
-    await page.click('.section:has-text("Style du texte") .action:text-is("Créer un style…")');
+    await page.click('#view-titles .section:has(> .section-title:has-text("Textes de la timeline")) .action:text-is("Créer un style…")');
     await page.waitForSelector('.style-preview');
-    await page.click('.section:has-text("Style du texte") .action:text-is("Enregistrer comme style…")');
+    await page.click('#view-titles .section:has(> .section-title:has-text("Textes de la timeline")) .action:text-is("Enregistrer comme style…")');
     await page.fill('.modal input', 'Jaune gras');
     await page.click('.modal .cta');
     await page.waitForSelector('#status.ok:has-text("Jaune gras")', { timeout: 3000 });
-    const sel = await page.locator('.section:has-text("Style du texte") select >> nth=0').inputValue();
+    const sel = await page.locator('#view-titles .section:has(> .section-title:has-text("Textes de la timeline")) .row:has(> .row-label:text-is("Style")) select').inputValue();
     if (!/^u:/.test(sel)) throw new Error('style enregistré non choisi : ' + sel);
     await page.click('.section:has-text("Mes couleurs") .action:text-is("Coller des codes…")');
     await page.fill('.modal textarea', 'https://coolors.co/palette/264653-2a9d8f-e9c46a');
@@ -797,7 +800,7 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('2.15 : capturer l\'animation d\'un texte de la timeline', async () => {
     await goTab('titles');
-    await page.click('#view-titles .section:has(> .section-title:has-text("Animation")) .action:has-text("Capturer depuis la timeline")');
+    await page.click('#view-titles .grab-anim');
     await page.waitForSelector('.modal input');
     await page.fill('.modal input', 'Ma pop capturée');
     await page.click('.modal .cta');
@@ -808,8 +811,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
   });
   await step('2.16 : style de texte capturé, appliqué aux textes sélectionnés', async () => {
     await goTab('titles');
-    const styleSec = '#view-titles .section:has(> .section-title:has-text("Style du texte"))';
-    await page.click(styleSec + ' .action:has-text("Capturer depuis la timeline")');
+    const styleSec = '#view-titles .section:has(> .section-title:has-text("Textes de la timeline"))';
+    await page.click(styleSec + ' .action:has-text("Capturer depuis la timeline"):not(.grab-anim)');
     await page.waitForSelector('.modal input');
     await page.fill('.modal input', 'Rouge Impact');
     await page.click('.modal .cta');
@@ -818,14 +821,14 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     if (!it || it.name !== 'Rouge Impact' || it.font !== 'Impact' || it.fill !== '#ff4d4d' || !it.look) throw new Error('style capturé : ' + JSON.stringify(it));
     const calls = [];
     await page.evaluate(() => { const H = window.RRFXHost; H._call2 = H.call; H.call = (fn, a) => { window.__calls = (window.__calls || []).concat([[fn, a]]); return H._call2(fn, a); }; });
-    await page.click(styleSec + ' .action:has-text("Appliquer aux textes sélectionnés")');
-    await page.waitForSelector('#status.ok:has-text("Style appliqué")', { timeout: 5000 });
+    await page.click(styleSec + ' .text-apply');
+    await page.waitForSelector('#status.ok:has-text("textes stylés")', { timeout: 5000 });
     calls.push(...await page.evaluate(() => { const H = window.RRFXHost; H.call = H._call2; return window.__calls.filter(c => c[0] === 'applyTextLook'); }));
     if (!calls.length || !calls[0][1].look || !calls[0][1].fx.some(f => f.matchName === 'AE.ADBE Drop Shadow')) throw new Error('applyTextLook : ' + JSON.stringify(calls));
   });
   await step('2.16 : gérer les animations (masquer, remettre, renommer, corbeille)', async () => {
     await goTab('titles');
-    const anim = '#view-titles .section:has(> .section-title:has-text("Animation"))';
+    const anim = '#view-titles .row:has(> .row-label:text-is("Animation"))';
     await page.click(anim + ' .manage-btn');
     await page.waitForSelector('.modal .manage');
     // Masquer une intégrée : elle sort du menu.
@@ -852,6 +855,29 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await goTab('titles');
     const back = await page.$$eval(anim + ' select option', os => os.map(o => o.textContent));
     if (!back.includes(first.name)) throw new Error('intégrée non remise');
+  });
+  await step('2.17 : textes de la timeline, animation seule puis analyse', async () => {
+    await goTab('titles');
+    const sec = '#view-titles .section:has(> .section-title:has-text("Textes de la timeline"))';
+    if (!(await page.isVisible(sec + ' .note.text-sel'))) throw new Error('compteur de sélection absent');
+    await page.selectOption(sec + ' .row:has(> .row-label:text-is("Animation")) select', 'zoom-blur');
+    await page.click(sec + ' label.checkbox:has-text("Appliquer le style")');
+    await page.evaluate(() => { const H = window.RRFXHost; window.__calls = []; H._call3 = H.call; H.call = (fn, a) => { window.__calls.push([fn, a]); return H._call3(fn, a); }; });
+    await page.click('#cta');
+    await page.waitForSelector('#status.ok:has-text("textes animés")', { timeout: 5000 });
+    const calls = await page.evaluate(() => { window.RRFXHost.call = window.RRFXHost._call3; return window.__calls.map(c => [c[0], c[1]]); });
+    const anim = calls.find(c => c[0] === 'animateTexts');
+    if (!anim) throw new Error('animateTexts non appelé : ' + calls.map(c => c[0]).join());
+    if (calls.some(c => c[0] === 'applyTextLook')) throw new Error('style appliqué alors que décoché');
+    const it = anim[1].items[0];
+    if (!it.fx.some(f => f.matchName === 'AE.ADBE Geometry2') || !anim[1].replace.includes('AE.ADBE Geometry2')) throw new Error('animation : ' + JSON.stringify(anim[1]).slice(0, 300));
+    if (anim[1].items[0].start !== 0 || anim[1].items.length !== 2) throw new Error('textes : ' + JSON.stringify(anim[1].items.map(x => x.start)));
+    await page.click(sec + ' label.checkbox:has-text("Appliquer le style")');
+    await page.click(sec + ' .action:has-text("Analyser le texte sélectionné")');
+    await page.waitForSelector('.modal-title:has-text("Texte sélectionné")');
+    const report = await page.inputValue('.modal textarea');
+    if (!/Source Text/.test(report) || !/modèle \.mogrt/.test(report)) throw new Error('rapport : ' + report.slice(0, 200));
+    await page.click('.modal footer button');
   });
   await step('2.16 : effets, masquer un intégré et le remettre', async () => {
     await goTab('effects');

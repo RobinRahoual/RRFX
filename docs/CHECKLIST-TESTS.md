@@ -317,6 +317,17 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] *Onglet Effets* : *Masquer* un effet intégré, puis *Remettre* sous la grille ; ⟳ sur un preset le met à jour
 - [ ] *Mes effets* : supprimer un élément → *Corbeille* le restaure ; *Remettre les intégrés masqués*
 
+## 22. Textes de la timeline (2.17)
+
+- [ ] 🔴 Sélectionne 2 textes faits avec l'outil Texte, animation *Pop*, *Appliquer aux textes sélectionnés* : chacun entre et sort à sa place, sur sa propre durée
+- [ ] 🔴 Même chose sur des textes `.mogrt` posés en bas à gauche : ils restent en bas à gauche
+- [ ] Appliquer ensuite *Glissement* : l'animation est remplacée (un seul effet Transformer, plus de flou gaussien)
+- [ ] Animation capturée (★) appliquée à la sélection : rejouée sur chaque texte
+- [ ] 🔴 Style *Reels jaune* sur un `.mogrt` à réglages : police, couleur et contour changent, le texte reste le même
+- [ ] Style sur un texte de l'outil Texte : couleur par Teinte, ombre portée ; message pour la police
+- [ ] *Analyser le texte sélectionné* : rapport lisible, *Copier le rapport* marche
+- [ ] *Créer des textes (paroles)* : poser des paroles marche toujours (et depuis Express)
+
 ---
 
 ## Remonter un problème

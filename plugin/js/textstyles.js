@@ -114,7 +114,7 @@
     /* Choix possibles : le style du modèle (rien n'est changé), les styles fournis (sauf ceux
        masqués par « Gérer… », hors celui choisi : keep), les tiens. */
     const builtinStyles = keep => (app.manage ? app.manage.visible('textStyle', C.STYLES, x => 'b:' + x.id, keep) : C.STYLES);
-    const options = keep => [{ v: '', label: _T('Celui du modèle .mogrt') }]
+    const options = keep => [{ v: '', label: _T('Aucun (garder son style)') }]
       .concat(builtinStyles(keep).map(x => ({ v: 'b:' + x.id, label: x.name })))
       .concat(userStyles().map(i => ({ v: 'u:' + i.id, label: '★ ' + (i.data.look ? '◎ ' : '') + i.name })));
     /* Style capturé sur un texte de la timeline : réglages du modèle et effets, réappliqués tels
@@ -161,7 +161,7 @@
        éditeur repliable pour créer ou modifier un style. */
     function styleSection(owner, key, title, sample, opts) {
       // opts.preview === false : l'onglet a son propre aperçu, on ne montre le nôtre qu'en édition.
-      const own = !opts || opts.preview !== false;
+      const own = !opts || opts.preview !== false, inline = !!(opts && opts.inline);
       const box = h('div');
       let draft = null;
       const refresh = () => {
@@ -202,7 +202,8 @@
         // Appliquer : le style choisi sur les textes sélectionnés dans la timeline, en un clic.
         const applySel = h('button', { class: 'action go', disabled: !cur, title: cur ? _T('Sélectionne des textes dans la timeline (titres, .mogrt)') : _T('Choisis d\'abord un style') }, _T('Appliquer aux textes sélectionnés'));
         applySel.addEventListener('click', () => applyToSelection(cur));
-        box.appendChild(h('div', { class: 'row-buttons' }, applySel, grab));
+        // Intégré à « Textes de la timeline » (opts.inline) : le bouton principal applique tout.
+        box.appendChild(h('div', { class: 'row-buttons' }, inline ? null : applySel, grab));
         box.appendChild(h('div', { class: 'row-buttons' }, edit));
         if (draft) {
           const d = draft, redraw = () => drawStyle(cv, C.normStyle(d), sample || _T('Ton texte ici'));
@@ -240,14 +241,14 @@
         }
       };
       refresh();
-      return section(title || _T('Style du texte'), [box]);
+      return inline ? box : section(title || _T('Style du texte'), [box]);
     }
 
     // Style sur les textes sélectionnés dans la timeline (capturé : tel quel ; sinon les réglages).
     function applyToSelection(v) {
       return app.runTask(_T('Style sur la sélection'), async () => {
         const look = lookById(v), st = styleById(v);
-        if (!look && !st) return { kind: 'warn', title: _T('Choisis un style'), detail: _T('« Celui du modèle » ne change rien.') };
+        if (!look && !st) return { kind: 'warn', title: _T('Choisis un style'), detail: _T('« Aucun » ne change rien.') };
         const r = await app.Host.call('applyTextLook', look ? { look, fx: lookFx(look) } : { style: st, styleFx: styleFx(st) });
         if (!r.ok) return { kind: 'warn', title: _T('Style non appliqué'), detail: r.error };
         (r.warnings || []).forEach(w => app.log(w, 'warn'));

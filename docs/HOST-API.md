@@ -2,7 +2,7 @@
 
 Généré par `node scripts/host-api.js` depuis `src/host/` : ne pas modifier à la main.
 
-**74 fonctions.**
+**77 fonctions.**
 
 Le panneau (HTML/JS) ne parle à Premiere que par `Host.call(nom, objet)` → `{ ok: true, … }` ou
 `{ ok: false, error }`. Toutes les fonctions ci-dessous sont dans `plugin/jsx/host.jsx` (ExtendScript, CEP).
@@ -47,6 +47,9 @@ comportement attendu de chacune.
 
 | Fonction | Rôle |
 |---|---|
+| `selectedTexts` | Les clips selectionnes (video), avec leur duree en images. |
+| `animateTexts` | Anime des clips deja montes : o.items [{ track, start, fx }]. Une animation deja posee (effets o.replace animes : Transformer, flous...) est retiree avant, pour ne pas s'empiler ; les images cles de Trajectoire / Opacite sont remplacees si la nouvelle animation s'en sert. |
+| `inspectText` | Rapport sur le texte selectionne : ce que Premiere en montre aux scripts (pour comprendre pourquoi un style ne passe pas, et l'envoyer). |
 | `captureTextLook` | — |
 | `applyTextLook` | Style (o.look + o.fx, ou o.style + o.styleFx) sur les textes selectionnes dans la timeline. |
 | `captureTitle` | L'animation d'un texte deja monte dans la timeline : ses images cles du debut (entree) et de la fin (sortie), echantillonnees image par image, et les reglages fixes de ses effets (lueur, couleur...). Rejouee ensuite sur d'autres textes, quelle que soit leur duree. |

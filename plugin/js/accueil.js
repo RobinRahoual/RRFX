@@ -126,7 +126,7 @@
       act(_T('Importer des presets, LUTs, couleurs…'), 'Action', () => { app.switchTab('mine'); const b = Array.from(document.querySelectorAll('#view-mine .action')).find(x => x.textContent === _T('Importer…')); if (b) b.click(); });
       act(_T('Mes LUTs'), 'Action', () => reveal('color', '[data-panel=luts]'));
       act(_T('Dégradé sur un texte ou une forme'), 'Action', () => reveal('titles', '[data-sec=degrade]'));
-      act(_T('Style de texte et Mes couleurs'), 'Action', () => reveal('titles', null, false, 'Style du texte'));
+      act(_T('Animer et styler les textes sélectionnés'), 'Action', () => reveal('titles', null, false, 'Textes de la timeline'));
       act(_T('Historique des opérations RR FX'), 'Action', () => app.services.showHistory());
       act('Langue · Language (Français / English)', 'Action', () => reveal('settings', '[data-sec=lang]'));
       act(_T('Montage par le texte (.srt)'), 'Action', () => reveal('speech', '[data-sec=texte]'));

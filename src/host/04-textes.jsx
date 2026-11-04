@@ -49,6 +49,7 @@
                 obj = null;
                 try { obj = eval('(' + v + ')'); } catch (e2) { obj = null; }
                 if (obj && obj.textEditValue !== undefined) {
+                    done.text = true;
                     if (st.font && obj.fontEditValue !== undefined) obj.fontEditValue = [st.font];
                     if (st.size && obj.fontSizeEditValue !== undefined) obj.fontSizeEditValue = [st.size];
                     if (obj.fontFSAllCapsValue !== undefined) obj.fontFSAllCapsValue = [!!st.caps];
@@ -75,6 +76,7 @@
                 if (comp) { setProps(s, findItemAt(s, ti, a), comp, c, a, tpf(s), warnings); if (j) done.shadow = true; else done.fill = true; }
             } catch (e8) {}
         }
+        if ((st.font || st.size || st.caps) && !done.text) missing.push('police et taille (texte non modifiable par script : texte de l\'outil Texte, ou mod\u00e8le sans texte modifiable)');
         if (st.stroke && !done.stroke) missing.push('contour');
         if (st.box && !done.box) missing.push('fond');
         if (missing.length) warnings.push('Ce mod\u00e8le de texte ne propose pas : ' + missing.join(', ') + ' (ajoute-le dans ton .mogrt et expose-le dans Objets graphiques essentiels)');
@@ -349,6 +351,124 @@
         return ok({ done: done, total: sel.length, warnings: warnings });
     }
 
+    // ------------------------------------------------------------ public: textes deja dans la timeline
+
+    // Ce que Premiere laisse modifier sur un clip : 'mgt' (modele .mogrt avec ses reglages),
+    // 'graphic' (texte fait avec l'outil Texte de Premiere), 'clip' (autre : image, video...).
+    function textKindOf(it) {
+        var mgt = null, i;
+        try { mgt = it.getMGTComponent(); } catch (e) {}
+        if (mgt) return 'mgt';
+        for (i = 0; i < it.components.numItems; i++) if (isGraphicComp(it.components[i])) return 'graphic';
+        return 'clip';
+    }
+
+    // Les clips selectionnes (video), avec leur duree en images.
+    function selectedTexts(o) {
+        var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), out = [], i, it, a;
+        if (!sel.length) return fail('S\u00e9lectionne dans la timeline les textes \u00e0 animer ou \u00e0 styler.');
+        for (i = 0; i < sel.length; i++) {
+            it = sel[i].item;
+            a = tk(it.start);
+            out.push({ track: sel[i].track, start: a, frames: Math.max(1, Math.round((tk(it.end) - a) / f)), name: String(it.name), kind: textKindOf(it) });
+        }
+        return ok({ items: out, fps: TICKS / f });
+    }
+
+    function hasKeys(c) {
+        var i;
+        for (i = 0; i < c.properties.numItems; i++) { try { if (c.properties[i].isTimeVarying()) return true; } catch (e) {} }
+        return false;
+    }
+    function clearKeys(c) {
+        var i, p;
+        for (i = 0; i < c.properties.numItems; i++) {
+            p = c.properties[i];
+            try { if (p.isTimeVarying()) p.setTimeVarying(false); } catch (e) {}
+        }
+    }
+
+    // Anime des clips deja montes : o.items [{ track, start, fx }]. Une animation deja posee
+    // (effets o.replace animes : Transformer, flous...) est retiree avant, pour ne pas s'empiler ;
+    // les images cles de Trajectoire / Opacite sont remplacees si la nouvelle animation s'en sert.
+    function animateTexts(o) {
+        var s = activeSeq(), f = tpf(s), warnings = [], created = [], done = 0, i, j, k, x, it, comp, fx, entry, mn, removed, before;
+        var replace = o.replace || [];
+        for (i = 0; i < o.items.length; i++) {
+            x = o.items[i];
+            it = findItemAt(s, x.track, x.start);
+            if (!it) { warnings.push('Clip introuvable sur V' + (x.track + 1)); continue; }
+            entry = { kind: 'clip', track: x.track, start: x.start, name: it.name, added: [] };
+            removed = 0;
+            for (k = it.components.numItems - 1; k >= 0; k--) {
+                comp = it.components[k];
+                mn = String(comp.matchName);
+                for (j = 0; j < replace.length; j++) {
+                    if (mn !== replace[j] || !hasKeys(comp)) continue;
+                    if (typeof comp.remove === 'function') { try { comp.remove(); removed++; } catch (e0) { clearKeys(comp); } } else clearKeys(comp);
+                    break;
+                }
+            }
+            before = 0;
+            for (j = 0; j < x.fx.length; j++) {
+                fx = x.fx[j];
+                try {
+                    it = findItemAt(s, x.track, x.start);
+                    if (fx.intrinsic) {
+                        comp = componentByMatch(it, fx.intrinsic === 'motion' ? 'AE.ADBE Motion' : 'AE.ADBE Opacity');
+                        if (comp) clearKeys(comp);
+                    } else {
+                        comp = addEffect(s, x.track, x.start, fx, warnings);
+                        if (comp) entry.added.push(comp.matchName);
+                    }
+                    if (!comp) { warnings.push((fx.names[0] || fx.matchName) + ' : effet introuvable dans Premiere'); continue; }
+                    before += setProps(s, findItemAt(s, x.track, x.start), comp, fx, x.start, f, warnings);
+                } catch (err) {
+                    warnings.push(String(it.name) + ' \u00b7 ' + (fx.names[0] || fx.matchName) + ' : ' + err.toString());
+                }
+            }
+            if (before) { done++; created.push(entry); }
+        }
+        if (!done) return fail(warnings.length ? warnings[0] : 'Aucune animation pos\u00e9e.', { warnings: warnings });
+        return ok({ done: done, total: o.items.length, created: created, warnings: warnings });
+    }
+
+    // Rapport sur le texte selectionne : ce que Premiere en montre aux scripts (pour comprendre
+    // pourquoi un style ne passe pas, et l'envoyer).
+    function inspectText(o) {
+        var s = activeSeq(), sel = selectedVideo(s), it, out = [], mgt = null, i, c, j, p, v, t, list;
+        if (!sel.length) return fail('S\u00e9lectionne un texte dans la timeline.');
+        it = sel[0].item;
+        function describe(c) {
+            var props = [];
+            for (j = 0; j < c.properties.numItems; j++) {
+                p = c.properties[j];
+                t = '';
+                try {
+                    v = p.getValue();
+                    t = typeof v;
+                    if (v instanceof Array) t = 'array';
+                    if (isColorParam(p)) { t = 'color'; v = p.getColorValue(); }
+                    v = typeof v === 'string' ? v.substr(0, 400) : str(v);
+                } catch (e) { t = 'error'; v = e.toString(); }
+                var keyed = false;
+                try { keyed = p.isTimeVarying(); } catch (e2) {}
+                props.push({ name: String(p.displayName), type: t, keyed: keyed, value: String(v).substr(0, 400) });
+            }
+            return { matchName: String(c.matchName), displayName: String(c.displayName), props: props };
+        }
+        try { mgt = it.getMGTComponent(); } catch (e3) {}
+        list = it.components;
+        for (i = 0; i < list.numItems; i++) out.push(describe(list[i]));
+        return ok({
+            name: String(it.name), track: sel[0].track, kind: textKindOf(it), app: appVersion(),
+            projectItem: it.projectItem ? String(it.projectItem.name) : '', mgt: mgt ? describe(mgt) : null, components: out
+        });
+    }
+
+    api.selectedTexts = guard(selectedTexts);
+    api.animateTexts = guard(animateTexts);
+    api.inspectText = guard(inspectText);
     api.captureTextLook = guard(captureTextLook);
     api.applyTextLook = guard(applyTextLook);
     api.captureTitle = guard(captureTitle);

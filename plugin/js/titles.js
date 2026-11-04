@@ -6,14 +6,16 @@
 
   (root.RRFXFeatures = root.RRFXFeatures || []).push(function (app) {
     const { Core, Lib, Store, Host, Pv } = app;
-    const { h, hotText, actionGroup, picker, row, section, Player } = app.UI;
+    const { h, hotText, actionGroup, picker, row, section, Player, checkbox } = app.UI;
 
-    const DEFAULTS = { mogrt: '', style: '', text: '', split: 'lines', timing: 'markers', from: 'playhead', gap: 2, maxDur: 0, fixed: 1.5, anim: 'pop', inF: 6, outF: 5, params: {} };
+    const DEFAULTS = { mogrt: '', style: '', text: '', animFrom: '', applyAnim: true, applyStyle: true, split: 'lines', timing: 'markers', from: 'playhead', gap: 2, maxDur: 0, fixed: 1.5, anim: 'pop', inF: 6, outF: 5, params: {} };
     // Complète les réglages sans remplacer l'objet (l'interface garde une référence dessus).
     const st = () => {
       const s = app.settings();
       if (!s.titles || typeof s.titles !== 'object') s.titles = {};
       Object.keys(DEFAULTS).forEach(k => { if (!(k in s.titles)) s.titles[k] = k === 'params' ? {} : DEFAULTS[k]; });
+      // 2.16.0 rangeait l'animation chargée dans « from » (point de départ des paroles) : remis.
+      if (['playhead', 'selection', 'start'].indexOf(s.titles.from) < 0) s.titles.from = 'playhead';
       return s.titles;
     };
     const anim = () => Lib.titleById[st().anim] || Lib.titleById.pop;
@@ -41,7 +43,7 @@
     const builtinAnims = keep => (app.manage ? app.manage.visible('titleAnim', Lib.TITLE_ANIMS, a => a.id, keep) : Lib.TITLE_ANIMS);
     const animOptions = () => builtinAnims(st().anim).map(a => ({ v: a.id, label: a.name })).concat(userAnims().map(i => ({ v: 'u:' + i.id, label: '★ ' + i.name })));
     // Animation enregistrée chargée dans l'éditeur (« u:<id> ») : « Mettre à jour » la réécrit.
-    const loadedAnim = () => { const t = st(), it = t.from && app.S.lib.items.find(i => 'u:' + i.id === t.from); return it && !isCaptured(it.data) && it.data.anim === t.anim ? it : null; };
+    const loadedAnim = () => { const t = st(), it = t.animFrom && app.S.lib.items.find(i => 'u:' + i.id === t.animFrom); return it && !isCaptured(it.data) && it.data.anim === t.anim ? it : null; };
     const animParams = () => Object.assign(Core.paramDefaults(anim()), st().params[st().anim] || {});
 
     // ---------------------------------------------------------------- modèles .mogrt
@@ -156,6 +158,95 @@
       }, true);
     }
 
+    // ---------------------------------------------------------------- textes de la timeline
+
+    // Nombre d'éléments sélectionnés dans la timeline (relu toutes les 2 s par le panneau).
+    let selNote = null;
+    function drawSel() {
+      if (!selNote) return;
+      const n = app.S.ctx && app.S.ctx.selection;
+      selNote.textContent = n ? '✓ ' + app.plural(n, _T('élément sélectionné'), _T('éléments sélectionnés')) + _T(' dans la timeline.') : _T('Aucun texte sélectionné dans la timeline pour l\'instant.');
+      selNote.classList.toggle('ok', !!n);
+    }
+    app.contextListeners.push(() => { if (selNote && selNote.isConnected) drawSel(); });
+
+    /* Effets que posent les animations de texte (Transformer, flous…) : sur un texte qui en a
+       déjà d'animés, ils sont retirés avant d'en poser une autre (pas d'empilement). */
+    function animMatchNames() {
+      const out = new Set();
+      Lib.TITLE_ANIMS.forEach(a => { try { Core.titleSpec(a, Core.paramDefaults(a), 40, 8, 8, 25, app.registry()).forEach(f => { if (!f.intrinsic) out.add(f.matchName); }); } catch (e) { /* animation vide */ } });
+      app.S.lib.items.forEach(i => {
+        const c = i.type === 'titleAnim' && isCaptured(i.data) ? i.data.captured : null;
+        if (c) [c.in, c.out].forEach(part => (part && part.components || []).forEach(x => { if (!x.intrinsic) out.add(x.matchName); }));
+      });
+      return Array.from(out);
+    }
+
+    /* L'animation et le style choisis, sur les textes sélectionnés dans la timeline : chaque
+       texte garde sa place et sa durée (entrée au début, sortie à la fin). */
+    function applySelection() {
+      const t = st();
+      return app.runTask(_T('Textes sélectionnés'), async () => {
+        const sel = await Host.call('selectedTexts', {});
+        if (!sel.ok) return { kind: 'warn', title: _T('Aucun texte sélectionné'), detail: sel.error };
+        const TS = app.textStyles, sid = t.style;
+        const R = resolveAnim(t.anim);
+        const doAnim = t.applyAnim !== false && (R.captured || (R.a && R.a.id !== 'none'));
+        const doStyle = t.applyStyle !== false && !!sid && !!TS;
+        if (!doAnim && !doStyle) return { kind: 'warn', title: _T('Rien à appliquer'), detail: _T('Choisis une animation (autre que « Aucune ») ou un style, et coche ce qu\'il faut appliquer.') };
+        const done = [], warnings = [];
+        if (doAnim) {
+          app.status.phase(_T('Animation'));
+          const items = sel.items.map(x => ({ track: x.track, start: x.start, fx: R.captured ? Core.titleSpecCaptured(R.captured, x.frames, app.registry()) : Core.titleSpec(R.a, R.params, x.frames, R.inF, R.outF, sel.fps, app.registry()) }));
+          const r = await Host.call('animateTexts', { items, replace: animMatchNames() });
+          if (r.ok) {
+            done.push(app.plural(r.done, _T('texte animé'), _T('textes animés')));
+            if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: _T('Animation de texte'), entries: r.created });
+          } else warnings.push(_T('Animation : ') + r.error);
+          (r.warnings || []).forEach(w => { if (!r.ok && w === r.error) return; warnings.push(w); });
+        }
+        if (doStyle) {
+          app.status.phase('Style');
+          const look = TS.lookById(sid), sty = TS.styleById(sid);
+          const r = await Host.call('applyTextLook', look ? { look, fx: TS.lookFx(look) } : { style: sty, styleFx: TS.styleFx(sty) });
+          if (r.ok) done.push(app.plural(r.done, _T('texte stylé'), _T('textes stylés')));
+          else warnings.push(_T('Style : ') + r.error);
+          (r.warnings || []).forEach(w => warnings.push(w));
+        }
+        warnings.forEach(w => app.log(w, 'warn'));
+        const more = warnings.length > 2 ? ' (+' + (warnings.length - 2) + _T(' dans le journal)') : '';
+        if (!done.length) return { kind: 'error', title: _T('Rien n\'a été appliqué'), detail: warnings.slice(0, 2).join(' · ') + more + _T(' · « Analyser le texte sélectionné » montre ce que Premiere laisse modifier.') };
+        const kinds = Array.from(new Set(sel.items.map(x => x.kind)));
+        const hint = kinds.indexOf('clip') >= 0 ? _T(' Certains éléments ne sont pas des textes : seule l\'animation s\'y applique.') : '';
+        return { kind: warnings.length ? 'warn' : 'ok', title: done.join(' · '), detail: (warnings.length ? warnings.slice(0, 2).join(' · ') + more : _T('Ctrl+Z dans Premiere pour revenir.')) + hint };
+      });
+    }
+
+    // Rapport : ce que Premiere montre aux scripts du texte sélectionné (à copier et envoyer).
+    function inspect() {
+      return app.runTask(_T('Analyse du texte'), async () => {
+        const r = await Host.call('inspectText', {});
+        if (!r.ok) return { kind: 'warn', title: _T('Rien à analyser'), detail: r.error };
+        const KIND = { mgt: _T('modèle .mogrt (réglages exposés)'), graphic: _T('texte de l\'outil Texte de Premiere'), clip: _T('pas un texte (image, vidéo…)') };
+        const lines = ['RR FX ' + (Host.VERSION || '') + ' · Premiere ' + r.app, _T('Clip : ') + r.name + ' (V' + (r.track + 1) + ') · ' + (KIND[r.kind] || r.kind), ''];
+        const dump = (title, c) => {
+          lines.push('[' + title + '] ' + c.displayName + ' · ' + c.matchName);
+          c.props.forEach(p => lines.push('  - ' + p.name + ' (' + p.type + (p.keyed ? ', ' + _T('animé') : '') + ') : ' + p.value));
+        };
+        if (r.mgt) dump('MGT', r.mgt);
+        r.components.forEach(c => dump(_T('Composant'), c));
+        const text = lines.join('\n');
+        const field = h('textarea', { class: 'code', rows: 14, readonly: true, spellcheck: 'false' }, text);
+        const copy = h('button', { class: 'action' }, _T('Copier le rapport'));
+        copy.addEventListener('click', () => app.copyText(text).then(ok => { copy.textContent = ok ? _T('Copié ✓') : _T('Sélectionne et copie (Ctrl/Cmd+C)'); field.select(); }));
+        const verdict = r.kind === 'mgt' ? _T('Police, taille, couleurs : modifiables si le modèle les expose (voir les réglages ci-dessous).')
+          : r.kind === 'graphic' ? _T('Texte de l\'outil Texte : les animations marchent ; police et couleurs ne sont pas toutes accessibles aux scripts. La couleur passe par l\'effet Teinte, l\'ombre par Ombre portée.')
+            : _T('Ce clip n\'est pas un texte : seules les animations s\'y appliquent.');
+        app.modal(_T('Texte sélectionné'), h('div', null, h('div', { class: 'note' }, verdict), field, h('div', { class: 'row-buttons' }, copy), h('div', { class: 'note' }, _T('Si un style ou une animation ne passe pas, copie ce rapport et envoie-le à @robin.rahoual.'))), [{ label: _T('Fermer'), primary: true, value: true }]);
+        return { kind: 'ok', title: _T('Analyse prête'), detail: KIND[r.kind] || r.kind };
+      });
+    }
+
     // ---------------------------------------------------------------- aperçu
 
     function keysToValues(keys, N) {
@@ -226,45 +317,6 @@
       if (!found) found = scanMogrts();
       if (!t.mogrt && found.length) t.mogrt = found[0].path;
 
-      const add = h('button', { class: 'action' }, _T('Ajouter un .mogrt…'));
-      add.addEventListener('click', addMogrt);
-      const rescan = h('button', { class: 'action quiet' }, _T('Rafraîchir'));
-      rescan.addEventListener('click', () => { found = null; render(view); });
-      const opts = found.map(f => ({ v: f.path, label: f.name }));
-      if (t.mogrt && !opts.some(o => o.v === t.mogrt)) opts.unshift({ v: t.mogrt, label: Store.path ? Store.path.basename(t.mogrt) : t.mogrt });
-      view.appendChild(section(_T('Modèle de texte'), [
-        opts.length ? row(_T('Modèle'), picker(opts, t.mogrt, v => { t.mogrt = v; app.persist(); })) : h('div', { class: 'note' }, _T('Aucun modèle trouvé.')),
-        h('div', { class: 'row-buttons' }, add, rescan),
-        h('div', { class: 'note' }, _T('Pour utiliser ta police et ton style : crée un texte dans Premiere (outil Texte), règle-le dans « Objets graphiques essentiels », puis clic droit sur le clip > Exporter comme modèle d\'animations graphiques, et ajoute le fichier ici.'))
-      ]));
-
-      const ta = h('textarea', { class: 'code lyrics', rows: 6, spellcheck: 'true', placeholder: _T('Une ligne par texte (ou un mot par marqueur)…') }, t.text);
-      const count = h('div', { class: 'note' });
-      const updateCount = () => { count.textContent = app.plural(Core.splitLyrics(t.text, t.split).length, _T('texte')) + _T(' à poser.'); };
-      ta.addEventListener('input', () => { t.text = ta.value; updateCount(); app.persist(); });
-      updateCount();
-      view.appendChild(section(_T('Texte et paroles'), [
-        ta,
-        row(_T('Découpage'), actionGroup([{ v: 'lines', label: _T('Une ligne par texte') }, { v: 'words', label: _T('Un mot par texte') }], t.split, v => { t.split = v; updateCount(); app.persist(); })),
-        count
-      ]));
-
-      const fixedRow = row(_T('Durée de chaque texte'), hotText({ value: t.fixed, min: 0.2, max: 20, step: 0.1, unit: 's', onChange: v => { t.fixed = v; app.persist(); } }));
-      const timingPick = picker([
-        { v: 'markers', label: _T('Marqueurs de la séquence') },
-        { v: 'beats', label: _T('Temps forts détectés') },
-        { v: 'fixed', label: _T('Durée fixe') }
-      ], t.timing, v => { t.timing = v; fixedRow.classList.toggle('hidden', v !== 'fixed'); app.persist(); });
-      fixedRow.classList.toggle('hidden', t.timing !== 'fixed');
-      view.appendChild(section('Placement', [
-        row(_T('Un texte par'), timingPick),
-        fixedRow,
-        row(_T('À partir de'), picker([{ v: 'playhead', label: _T('La tête de lecture') }, { v: 'selection', label: _T('Début des clips sélectionnés') }, { v: 'start', label: _T('Début de la séquence') }], t.from, v => { t.from = v; app.persist(); })),
-        row(_T('Écart minimum'), hotText({ value: t.gap, min: 0, max: 50, step: 1, unit: 'i', onChange: v => { t.gap = v; app.persist(); } })),
-        row(_T('Durée max.'), hotText({ value: t.maxDur, min: 0, max: 30, step: 0.5, unit: 's', onChange: v => { t.maxDur = v; app.persist(); } }), { title: _T('0 = jusqu\'au temps suivant') }),
-        h('div', { class: 'note' }, _T('Écart : images laissées libres entre deux textes. Durée max. : 0 = chaque texte reste jusqu\'au suivant.'))
-      ]));
-
       const cv = h('canvas', { class: 'pv-canvas', width: 640, height: 360 });
       const params = h('div');
       const renderParams = () => {
@@ -285,11 +337,11 @@
       const rebuild = () => { app.persist(); if (player) player.rebuild(); };
       // Une animation enregistrée se charge dans les réglages (modifiable, ré-enregistrable).
       const pickAnim = v => {
-        t.from = '';
+        t.animFrom = '';
         if (capturedOf(v)) { t.anim = v; app.persist(); return render(view); }
         if (v.indexOf('u:') === 0) {
           const it = app.S.lib.items.find(i => 'u:' + i.id === v);
-          if (it) { t.anim = it.data.anim; t.from = v; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; }
+          if (it) { t.anim = it.data.anim; t.animFrom = v; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; }
           app.persist();
           return render(view);
         }
@@ -327,29 +379,89 @@
         app.status.finish('ok', _T('Animation « ') + name + _T(' » enregistrée'), _T('Dans la liste des animations (★), dans Mes effets, et pour les sous-titres et bandeaux.'));
         render(view);
       });
-      if (app.textStyles) view.appendChild(app.textStyles.section(t, 'style', _T('Style du texte'), Core.splitLyrics(t.text, t.split)[0], { preview: false }));
-      view.appendChild(section('Animation', [
-        row('Style', app.manage ? app.manage.withManage(picker(animOptions(), loaded ? t.from : t.anim, pickAnim), manageAnims) : picker(animOptions(), t.anim, pickAnim)),
+      const add = h('button', { class: 'action' }, _T('Ajouter un .mogrt…'));
+      add.addEventListener('click', addMogrt);
+      const rescan = h('button', { class: 'action quiet' }, _T('Rafraîchir'));
+      rescan.addEventListener('click', () => { found = null; render(view); });
+      const opts = found.map(f => ({ v: f.path, label: f.name }));
+      if (t.mogrt && !opts.some(o => o.v === t.mogrt)) opts.unshift({ v: t.mogrt, label: Store.path ? Store.path.basename(t.mogrt) : t.mogrt });
+      const lyricsBody = [
+        h('div', { class: 'note' }, _T('Crée de nouveaux textes à partir de paroles : un par marqueur, temps fort ou durée fixe, avec l\'animation et le style choisis ci-dessus.')),
+        opts.length ? row(_T('Modèle'), picker(opts, t.mogrt, v => { t.mogrt = v; app.persist(); })) : h('div', { class: 'note' }, _T('Aucun modèle trouvé.')),
+        h('div', { class: 'row-buttons' }, add, rescan),
+        h('div', { class: 'note' }, _T('Pour utiliser ta police et ton style : crée un texte dans Premiere (outil Texte), règle-le dans « Objets graphiques essentiels », puis clic droit sur le clip > Exporter comme modèle d\'animations graphiques, et ajoute le fichier ici.'))
+      ];
+
+      const ta = h('textarea', { class: 'code lyrics', rows: 6, spellcheck: 'true', placeholder: _T('Une ligne par texte (ou un mot par marqueur)…') }, t.text);
+      const count = h('div', { class: 'note' });
+      const updateCount = () => { count.textContent = app.plural(Core.splitLyrics(t.text, t.split).length, _T('texte')) + _T(' à poser.'); };
+      ta.addEventListener('input', () => { t.text = ta.value; updateCount(); app.persist(); });
+      updateCount();
+      lyricsBody.push(
+        ta,
+        row(_T('Découpage'), actionGroup([{ v: 'lines', label: _T('Une ligne par texte') }, { v: 'words', label: _T('Un mot par texte') }], t.split, v => { t.split = v; updateCount(); app.persist(); })),
+        count);
+
+      const fixedRow = row(_T('Durée de chaque texte'), hotText({ value: t.fixed, min: 0.2, max: 20, step: 0.1, unit: 's', onChange: v => { t.fixed = v; app.persist(); } }));
+      const timingPick = picker([
+        { v: 'markers', label: _T('Marqueurs de la séquence') },
+        { v: 'beats', label: _T('Temps forts détectés') },
+        { v: 'fixed', label: _T('Durée fixe') }
+      ], t.timing, v => { t.timing = v; fixedRow.classList.toggle('hidden', v !== 'fixed'); app.persist(); });
+      fixedRow.classList.toggle('hidden', t.timing !== 'fixed');
+      lyricsBody.push(
+        row(_T('Un texte par'), timingPick),
+        fixedRow,
+        row(_T('À partir de'), picker([{ v: 'playhead', label: _T('La tête de lecture') }, { v: 'selection', label: _T('Début des clips sélectionnés') }, { v: 'start', label: _T('Début de la séquence') }], t.from, v => { t.from = v; app.persist(); })),
+        row(_T('Écart minimum'), hotText({ value: t.gap, min: 0, max: 50, step: 1, unit: 'i', onChange: v => { t.gap = v; app.persist(); } })),
+        row(_T('Durée max.'), hotText({ value: t.maxDur, min: 0, max: 30, step: 0.5, unit: 's', onChange: v => { t.maxDur = v; app.persist(); } }), { title: _T('0 = jusqu\'au temps suivant') }),
+        h('div', { class: 'note' }, _T('Écart : images laissées libres entre deux textes. Durée max. : 0 = chaque texte reste jusqu\'au suivant.')));
+      const placeBtn = h('button', { class: 'action go' }, _T('Poser les textes'));
+      placeBtn.addEventListener('click', place);
+      lyricsBody.push(h('div', { class: 'row-buttons' }, placeBtn));
+
+      // Textes de la timeline : tout se règle sur les textes sélectionnés, là où ils sont.
+      grab.classList.add('grab-anim');
+      const go = h('button', { class: 'action go text-apply' }, _T('Appliquer aux textes sélectionnés'));
+      go.addEventListener('click', applySelection);
+      const inspectBtn = h('button', { class: 'action quiet', title: _T('Ce que Premiere laisse modifier sur le texte sélectionné (rapport à copier)') }, _T('Analyser le texte sélectionné'));
+      inspectBtn.addEventListener('click', inspect);
+      selNote = h('div', { class: 'note text-sel' });
+      drawSel();
+      view.appendChild(section(_T('Textes de la timeline'), [
+        h('div', { class: 'note' }, _T('Sélectionne des textes dans la timeline (outil Texte, modèles .mogrt, sous-titres…), choisis une animation et un style, puis « Appliquer » : ils sont animés et stylés sur place, quelle que soit leur durée.')),
+        selNote,
+        h('div', { class: 'sub-head' }, 'Animation'),
+        row('Animation', app.manage ? app.manage.withManage(picker(animOptions(), loaded ? t.animFrom : t.anim, pickAnim), manageAnims) : picker(animOptions(), t.anim, pickAnim)),
         capturedOf(t.anim) ? null : row(_T('Entrée'), hotText({ value: t.inF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.inF = v; if (fin) rebuild(); } })),
         capturedOf(t.anim) ? null : row(_T('Sortie'), hotText({ value: t.outF, min: 0, max: 60, step: 1, unit: 'i', onChange: (v, fin) => { t.outF = v; if (fin) rebuild(); } })),
         params,
-        h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, _T('Aperçu : animation et style')))),
         h('div', { class: 'row-buttons' }, grab, capturedOf(t.anim) ? null : saveAnim),
-        updateAnim ? h('div', { class: 'row-buttons' }, updateAnim) : null
+        updateAnim ? h('div', { class: 'row-buttons' }, updateAnim) : null,
+        app.textStyles ? h('div', { class: 'sub-head' }, _T('Style')) : null,
+        app.textStyles ? app.textStyles.section(t, 'style', _T('Style du texte'), Core.splitLyrics(t.text, t.split)[0], { preview: false, inline: true }) : null,
+        h('div', { class: 'preview' }, h('div', { class: 'pv-frame' }, cv, h('span', { class: 'pv-label' }, _T('Aperçu : animation et style')))),
+        h('div', { class: 'row-buttons wrap' },
+          checkbox(_T('Appliquer l\'animation'), t.applyAnim !== false, v => { t.applyAnim = v; app.persist(); }),
+          checkbox(_T('Appliquer le style'), t.applyStyle !== false, v => { t.applyStyle = v; app.persist(); })),
+        h('div', { class: 'row-buttons' }, go),
+        h('div', { class: 'row-buttons' }, inspectBtn)
       ]));
+      view.appendChild(section(_T('Créer des textes (paroles)'), lyricsBody, null, true));
       preview(cv);
       if (app.textStyles) view.appendChild(app.textStyles.colorsSection(() => render(view)));
       app.renderExtras('titles', view);
     }
 
     app.actions.titles = place;
+    app.actions.titlesSelection = applySelection;
     app.services.lyrics = () => String(st().text || '').trim();
     app.services.placeTexts = placeItems;
     app.services.titleAnimOptions = animOptions;
     app.itemTypes.titleAnim = {
       icon: 'T', label: _T('Animation de texte'), valid: d => !!Lib.titleById[d.anim] || isCaptured(d),
       meta: it => (isCaptured(it.data) ? _T('Capturée dans la timeline') : Lib.titleById[it.data.anim].name + _T(' · entrée ') + (it.data.inF || 0) + _T(' i')),
-      open: it => { const t = st(); t.from = ''; if (isCaptured(it.data)) { t.anim = 'u:' + it.id; app.persist(); app.switchTab('titles'); return; } t.anim = it.data.anim; t.from = 'u:' + it.id; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; app.persist(); app.switchTab('titles'); }
+      open: it => { const t = st(); t.animFrom = ''; if (isCaptured(it.data)) { t.anim = 'u:' + it.id; app.persist(); app.switchTab('titles'); return; } t.anim = it.data.anim; t.animFrom = 'u:' + it.id; t.params[it.data.anim] = Object.assign({}, it.data.params); if (it.data.inF != null) t.inF = it.data.inF; if (it.data.outF != null) t.outF = it.data.outF; app.persist(); app.switchTab('titles'); }
     };
     // Un modèle de texte importé depuis Mes effets > Importer… rejoint la liste des modèles.
     app.importers.push({
@@ -366,6 +478,6 @@
     });
     app.services.mogrt = () => st().mogrt || (found || (found = scanMogrts()))[0] && found[0].path || '';
     app.services.mogrtName = () => { const m = app.services.mogrt(); return m ? (Store.path ? Store.path.basename(m, Store.path.extname(m)) : m) : ''; };
-    app.tabs.titles = { render, cta: () => ({ label: _T('Poser les textes'), run: place, enabled: true }), leave: () => { if (player) { player.stop(); player = null; } } };
+    app.tabs.titles = { render, cta: () => ({ label: _T('Appliquer aux textes sélectionnés'), run: applySelection, enabled: true }), leave: () => { if (player) { player.stop(); player = null; } } };
   });
 })(typeof self !== 'undefined' ? self : this);
