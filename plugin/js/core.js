@@ -497,13 +497,37 @@
     const parts = [];
     if (inF) parts.push({ at: 0, spec: compileEffect(anim, params, 'post', inF, fps, registry) });
     if (outF) parts.push({ at: durFrames - outF, spec: compileEffect(anim, params, 'pre', outF, fps, registry) });
+    return mergeTitleParts(parts);
+  }
+
+  /* Animation de texte capturée sur un texte de la timeline (hôte captureTitle) : l'entrée
+     (cap.in, au début) et la sortie (cap.out, à la fin), à leur durée d'origine, rejouées sur un
+     texte de durFrames images (raccourcies si le texte est trop court). */
+  function titleSpecCaptured(cap, durFrames, registry) {
+    durFrames = Math.max(1, Math.round(durFrames));
+    const half = Math.max(1, Math.floor(durFrames / 2)), parts = [];
+    const one = (part, side) => {
+      if (!part || !part.components || !part.components.length) return null;
+      const N = Math.max(1, Math.min(part.frames || 1, side === 'post' ? half : durFrames - half));
+      return { N, spec: compileCaptured(Object.assign({ frameW: cap.frameW, frameH: cap.frameH }, part, { origin: side }), side, N, { mirror: false }, registry) };
+    };
+    const a = one(cap.in, 'post'), b = one(cap.out, 'pre');
+    if (a) parts.push({ at: 0, spec: a.spec });
+    if (b) parts.push({ at: durFrames - b.N, spec: b.spec });
+    return mergeTitleParts(parts);
+  }
+
+  // Les parties (entrée, sortie) réunies en un seul jeu d'images clés par effet et par paramètre.
+  function mergeTitleParts(parts) {
     const byType = new Map();
     parts.forEach(part => part.spec.forEach(fx => {
-      if (!byType.has(fx.type)) byType.set(fx.type, { fx: Object.assign({}, fx, { props: [] }), props: new Map() });
-      const slot = byType.get(fx.type);
+      const tk = fx.type === 'custom' ? 'custom:' + fx.matchName : fx.type;
+      if (!byType.has(tk)) byType.set(tk, { fx: Object.assign({}, fx, { props: [] }), props: new Map() });
+      const slot = byType.get(tk);
       fx.props.forEach(pr => {
-        if (!slot.props.has(pr.key)) slot.props.set(pr.key, Object.assign({}, pr, { keys: [], values: undefined, static: undefined, consts: [] }));
-        const acc = slot.props.get(pr.key);
+        const pk = pr.key || 'i' + pr.index;
+        if (!slot.props.has(pk)) slot.props.set(pk, Object.assign({}, pr, { keys: [], values: undefined, static: undefined, consts: [] }));
+        const acc = slot.props.get(pk);
         if (pr.values) pr.values.forEach((v, i) => acc.keys.push([part.at + i, v]));
         else acc.consts.push([part.at, pr.static]);
       });
@@ -651,7 +675,7 @@
   return {
     clamp, lerp, CURVE_PRESETS, curveValue, bezier, hash, smoothNoise,
     REGISTRY, FALLBACKS, EFFECT_PATTERNS, normName, resolveEffectNames, mergeRegistry, typeForMatchName, keyForIndex,
-    paramDefaults, makeCtx, compileEffect, keysFromValues, toWire, resampleValues, fitValues, compileCaptured,
+    paramDefaults, makeCtx, compileEffect, keysFromValues, toWire, resampleValues, fitValues, compileCaptured, titleSpecCaptured,
     compileOverlay, splitLyrics, titleTimeline, titleSpec, planAutoEdit,
     rampFunction, rampPieces, rampSourceFrames, RAMP_PRESETS
   };

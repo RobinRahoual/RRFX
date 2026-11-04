@@ -297,6 +297,15 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Double-clic sur un curseur (piste ou nom) : il revient à sa valeur par défaut, et Premiere aussi
 - [ ] Le look reste après fermeture et réouverture du projet (la LUT est dans Documents/RRFX/Looks/En direct)
 
+
+## 20. Annuler, courbe, animation de texte capturée (2.15)
+
+- [ ] 🔴 *Colorimétrie* : monte l'exposition, clique dans le panneau puis Ctrl+Z (Cmd+Z) : l'exposition revient, Premiere aussi ; Ctrl+Maj+Z la rétablit
+- [ ] Ctrl+Z dans un autre onglet du panneau : Premiere annule sa dernière action
+- [ ] 🔴 *Courbe des tonalités* (paramétrique) : clique sur la courbe à gauche et glisse vers le haut : les ombres montent, l'image suit
+- [ ] 🔴 *Textes › Capturer depuis la timeline* sur un texte animé à la main (entrée et sortie) : l'animation est enregistrée (★) ; pose d'autres textes avec : même entrée et même sortie, sur des durées différentes
+- [ ] Une animation capturée dans *Parole › Sous-titres* ou *Bandeau* : rejouée pareil
+
 ---
 
 ## Remonter un problème

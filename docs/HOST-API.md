@@ -2,7 +2,7 @@
 
 Généré par `node scripts/host-api.js` depuis `src/host/` : ne pas modifier à la main.
 
-**70 fonctions.**
+**72 fonctions.**
 
 Le panneau (HTML/JS) ne parle à Premiere que par `Host.call(nom, objet)` → `{ ok: true, … }` ou
 `{ ok: false, error }`. Toutes les fonctions ci-dessous sont dans `plugin/jsx/host.jsx` (ExtendScript, CEP).
@@ -47,6 +47,7 @@ comportement attendu de chacune.
 
 | Fonction | Rôle |
 |---|---|
+| `captureTitle` | L'animation d'un texte deja monte dans la timeline : ses images cles du debut (entree) et de la fin (sortie), echantillonnees image par image, et les reglages fixes de ses effets (lueur, couleur...). Rejouee ensuite sur d'autres textes, quelle que soit leur duree. |
 | `placeTitle` | Un texte : modele .mogrt pose de start a end (s), texte remplace, animation (fx) ajoutee. |
 
 ## Lumetri, conversion LOG -> Rec.709 (`05-couleur.jsx`)
@@ -141,6 +142,7 @@ comportement attendu de chacune.
 
 | Fonction | Rôle |
 |---|---|
+| `premiereUndo` | Ctrl+Z recu par le panneau : transmis a Premiere (o.redo : retablir). |
 | `nativeTransitions` | Transitions de Premiere sur les coupes : o.video (cle de VIDEO_TRANSITIONS ou ''), o.audio (cle de AUDIO_TRANSITIONS ou ''), o.frames, o.scope ('sequence' ou 'selection'), o.align (0 : apres la coupe, 0.5 : centree, 1 : avant). |
 | `sceneEdits` | Detection des changements de plan de Premiere sur la selection : des coupes ou des marqueurs a chaque changement de plan (un rendu, une video telechargee, un ancien montage). |
 | `nativeCaptions` | Sous-titres de Premiere : le .srt (deja corrige, traduit, recale par RR FX) devient une piste de sous-titres native, modifiable dans le panneau Texte de Premiere. |

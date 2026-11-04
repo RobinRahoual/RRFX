@@ -585,8 +585,12 @@
     });
   }
 
+  // Ctrl+Z / Cmd+Z (et rétablir) : reçus par le panneau quand il a la main (voir onKeyDown).
+  const UNDO_KEYS = Host.isMac
+    ? [6, 16].reduce((a, k) => a.concat([{ keyCode: k, metaKey: true }, { keyCode: k, metaKey: true, shiftKey: true }]), [])
+    : [90, 89].reduce((a, k) => a.concat([{ keyCode: k, ctrlKey: true }, { keyCode: k, ctrlKey: true, shiftKey: true }]), []);
   function registerKeys() {
-    Host.registerKeys(Keys.keyInterest(S.shortcuts, Host.isMac));
+    Host.registerKeys(Keys.keyInterest(S.shortcuts, Host.isMac).concat(UNDO_KEYS));
   }
 
   function onKeyDown(event) {
@@ -609,6 +613,13 @@
     }
     if (event.key === 'Escape' && focus && tasks.indexOf(focus) >= 0) { requestCancel(); return; }
     const tag = String((event.target && event.target.tagName) || '').toLowerCase();
+    // Ctrl+Z / Cmd+Z : le dernier réglage de l'onglet (colorimétrie) ; sinon, Premiere annule.
+    if ((event.ctrlKey || event.metaKey) && !event.altKey && /^[zy]$/i.test(event.key) && tag !== 'input' && tag !== 'textarea') {
+      event.preventDefault();
+      const redo = event.shiftKey || /^y$/i.test(event.key);
+      if (!(app.services.colorUndo && app.services.colorUndo(redo))) Host.call('premiereUndo', { redo });
+      return;
+    }
     if (tag === 'input' || tag === 'textarea' || tag === 'select') return;
     const action = Keys.actionFor(S.shortcuts, Keys.normalizeKey(event));
     if (action && actionFn(action)) { event.preventDefault(); runAction(action); }

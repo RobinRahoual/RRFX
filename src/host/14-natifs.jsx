@@ -156,6 +156,16 @@
         return ok({ name: item.name });
     }
 
+    // Ctrl+Z recu par le panneau : transmis a Premiere (o.redo : retablir).
+    function premiereUndo(o) {
+        try { app.enableQE(); } catch (e) {}
+        try {
+            if (o && o.redo) qe.project.redo(); else qe.project.undo();
+        } catch (e2) { return fail('Premiere n\'a pas annul\u00e9 : ' + e2.toString()); }
+        return ok({});
+    }
+    api.premiereUndo = guard(premiereUndo);
+
     api.nativeTransitions = guard(nativeTransitions);
     api.sceneEdits = guard(sceneEdits);
     api.nativeCaptions = guard(nativeCaptions);

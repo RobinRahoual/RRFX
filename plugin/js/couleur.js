@@ -51,9 +51,35 @@
       drawPreview();
       drawHisto(D.histogram(out.data, 128));
       if (V.curveDraw && st().open.curve) V.curveDraw();
+      if (final) remember();
       // En direct dans Premiere : pendant le glissement (LUT légère, 17³), puis au relâcher (33³).
       pushLive(!final);
     }
+
+    // ---------------------------------------------------------------- annuler / rétablir
+
+    /* Ctrl+Z / Cmd+Z quand le panneau a la main : le réglage d'avant (Ctrl+Maj+Z ou Ctrl+Y :
+       rétablir). Chaque réglage fini (curseur relâché, look, courbe…) est une étape ; Premiere suit
+       en direct. */
+    const HIST = { list: [], i: -1 };
+    function remember() {
+      const k = JSON.stringify(P());
+      if (HIST.list[HIST.i] === k) return;
+      HIST.list = HIST.list.slice(0, HIST.i + 1);
+      HIST.list.push(k);
+      if (HIST.list.length > 80) HIST.list.shift();
+      HIST.i = HIST.list.length - 1;
+    }
+    function stepHistory(d) {
+      const j = HIST.i + d;
+      if (j < 0 || j >= HIST.list.length) return false;
+      HIST.i = j;
+      st().params = JSON.parse(HIST.list[j]);
+      app.persist();
+      render();
+      return true;
+    }
+    app.services.colorUndo = redo => app.S.tab === 'color' && stepHistory(redo ? 1 : -1);
 
     // ---------------------------------------------------------------- en direct dans Premiere
 
@@ -304,8 +330,18 @@
       }
       const local = e => { const r = cv.getBoundingClientRect(), pad = 8; return [(e.clientX - r.left - pad) / (r.width - 2 * pad), 1 - (e.clientY - r.top - pad) / (r.height - 2 * pad)]; };
       const hit = (x, y) => pts().findIndex(q => Math.abs(q[0] - x) < 0.04 && Math.abs(q[1] - y) < 0.06);
+      // Courbe paramétrique, comme dans Lightroom : on attrape la courbe et on glisse vers le haut
+      // ou le bas ; la zone sous la souris (ombres, tons foncés, tons clairs, hautes lumières) suit.
+      const ZONES = ['pShadows', 'pDarks', 'pLights', 'pHighlights'];
+      let pdrag = null;
       cv.addEventListener('pointerdown', e => {
-        if (s.curveCh === 'param') return;
+        if (s.curveCh === 'param') {
+          const [x] = local(e), key = ZONES[Math.min(3, Math.max(0, Math.floor(Math.min(0.999, Math.max(0, x)) * 4)))];
+          pdrag = { key, y0: e.clientY, v0: Number(P()[key]) || 0, h: cv.getBoundingClientRect().height || 1 };
+          cv.setPointerCapture(e.pointerId);
+          e.preventDefault();
+          return;
+        }
         let [x, y] = local(e);
         x = Math.min(1, Math.max(0, x)); y = Math.min(1, Math.max(0, y));
         drag = hit(x, y);
@@ -319,6 +355,11 @@
         draw(); schedule(false);
       });
       cv.addEventListener('pointermove', e => {
+        if (pdrag) {
+          P()[pdrag.key] = Math.round(Math.max(-100, Math.min(100, pdrag.v0 + (pdrag.y0 - e.clientY) / pdrag.h * 200)));
+          draw(); schedule(false);
+          return;
+        }
         if (drag < 0 || s.curveCh === 'param') return;
         const list = pts(), [x, y] = local(e);
         const lo = drag === 0 ? 0 : list[drag - 1][0] + 0.01, hi = drag === list.length - 1 ? 1 : list[drag + 1][0] - 0.01;
@@ -326,7 +367,10 @@
         if (drag === list.length - 1 && list[drag][0] > 0.99) list[drag][0] = 1;
         draw(); schedule(false);
       });
-      const end = () => { if (drag >= 0) { drag = -1; draw(); schedule(true); } };
+      const end = () => {
+        if (pdrag) { pdrag = null; fill(); draw(); schedule(true); return; }
+        if (drag >= 0) { drag = -1; draw(); schedule(true); }
+      };
       cv.addEventListener('pointerup', end);
       cv.addEventListener('pointercancel', end);
       cv.addEventListener('dblclick', e => {

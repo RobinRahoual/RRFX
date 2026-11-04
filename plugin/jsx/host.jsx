@@ -5,7 +5,7 @@
 
 var RRFX = (function () {
     var TICKS = 254016000000;
-    var VERSION = '2.14.1';
+    var VERSION = '2.15.0';
     var adjCache = null;
     // Fonctions publiques : chaque partie ajoute les siennes (api.nom = guard(nom)).
     var api = { version: VERSION };
@@ -1818,6 +1818,83 @@ var RRFX = (function () {
         return ok({ created: [{ kind: 'adj', track: ti, start: a, name: label }], track: ti, warnings: warnings });
     }
 
+    // ------------------------------------------------------------ public: capturer une animation de texte
+
+    // L'animation d'un texte deja monte dans la timeline : ses images cles du debut (entree) et de la
+    // fin (sortie), echantillonnees image par image, et les reglages fixes de ses effets (lueur,
+    // couleur...). Rejouee ensuite sur d'autres textes, quelle que soit leur duree.
+    function captureTitle(o) {
+        var s = activeSeq(), f = tpf(s), sel = selectedVideo(s), it, S, E, mid, comps, ci, pi, c, mn, intrinsic, p, keys, j, kt, v, k, entry, animated;
+        var segIn = { a: null, b: null }, segOut = { a: null, b: null }, list = [], skipped = 0;
+        if (!sel.length) return fail('S\u00e9lectionne dans la timeline le texte anim\u00e9 \u00e0 enregistrer.');
+        it = sel[0].item;
+        S = tk(it.start);
+        E = tk(it.end);
+        mid = (S + E) / 2;
+        comps = it.components;
+        for (ci = 0; ci < comps.numItems; ci++) {
+            c = comps[ci];
+            mn = c.matchName;
+            if (/time ?remap/i.test(mn)) continue;
+            intrinsic = mn === 'AE.ADBE Motion' ? 'motion' : (mn === 'AE.ADBE Opacity' ? 'opacity' : null);
+            entry = { ci: ci, matchName: mn, displayName: c.displayName, intrinsic: intrinsic, anim: [], stat: [] };
+            for (pi = 0; pi < c.properties.numItems; pi++) {
+                p = c.properties[pi];
+                animated = false;
+                try {
+                    if (p.isTimeVarying()) {
+                        keys = p.getKeys();
+                        if (keys && keys.length) {
+                            animated = true;
+                            for (j = 0; j < keys.length; j++) {
+                                kt = tk(keys[j]) - tk(it.inPoint) + S;
+                                k = kt <= mid ? segIn : segOut;
+                                if (k.a === null || kt < k.a) k.a = kt;
+                                if (k.b === null || kt > k.b) k.b = kt;
+                            }
+                        }
+                    }
+                } catch (e) {}
+                if (animated) entry.anim.push(pi);
+                else if (!intrinsic) {
+                    // Reglage fixe d'un effet ajoute (lueur, couleur...) : garde tel quel.
+                    try {
+                        v = plainValue(p.getValue());
+                        if (v.ok) entry.stat.push({ index: pi, name: p.displayName, 'static': v.v }); else skipped++;
+                    } catch (e2) { skipped++; }
+                }
+            }
+            if (entry.anim.length || entry.stat.length) list.push(entry);
+        }
+        if (segIn.a === null && segOut.a === null) return fail('Ce texte n\'a pas d\'images cl\u00e9s : anime-le dans Premiere (Options d\'effet), puis recommence.');
+        function sample(sg) {
+            var out = [], D, i, x, props, n, pp, vals, jj, vv;
+            if (sg.a === null) return null;
+            sg.a = snap(sg.a, f);
+            sg.b = snap(sg.b, f);
+            D = Math.max(1, Math.round((sg.b - sg.a) / f) + 1);
+            for (i = 0; i < list.length; i++) {
+                x = list[i];
+                props = [];
+                for (n = 0; n < x.anim.length; n++) {
+                    pp = comps[x.ci].properties[x.anim[n]];
+                    vals = [];
+                    for (jj = 0; jj < D; jj++) {
+                        vv = plainValue(pp.getValueAtTime(clipTime(it, sg.a + jj * f)));
+                        if (!vv.ok) { vals = null; break; }
+                        vals.push(vv.v);
+                    }
+                    if (vals) props.push({ index: x.anim[n], name: pp.displayName, values: vals }); else skipped++;
+                }
+                for (n = 0; n < x.stat.length; n++) props.push(x.stat[n]);
+                if (props.length) out.push({ matchName: x.matchName, displayName: x.displayName, intrinsic: x.intrinsic, props: props });
+            }
+            return { frames: D, components: out };
+        }
+        return ok({ name: it.name, fps: TICKS / f, frameW: s.frameSizeHorizontal, frameH: s.frameSizeVertical, 'in': sample(segIn), out: sample(segOut), skipped: skipped });
+    }
+
+    api.captureTitle = guard(captureTitle);
     api.placeTitle = guard(placeTitle);
 
     // ============================================================ Lumetri, conversion LOG -> Rec.709
@@ -3784,6 +3861,16 @@ var RRFX = (function () {
         if (!s.createCaptionTrack(item, o.start || 0)) return fail('Premiere a refus\u00e9 la piste de sous-titres.');
         return ok({ name: item.name });
     }
+
+    // Ctrl+Z recu par le panneau : transmis a Premiere (o.redo : retablir).
+    function premiereUndo(o) {
+        try { app.enableQE(); } catch (e) {}
+        try {
+            if (o && o.redo) qe.project.redo(); else qe.project.undo();
+        } catch (e2) { return fail('Premiere n\'a pas annul\u00e9 : ' + e2.toString()); }
+        return ok({});
+    }
+    api.premiereUndo = guard(premiereUndo);
 
     api.nativeTransitions = guard(nativeTransitions);
     api.sceneEdits = guard(sceneEdits);

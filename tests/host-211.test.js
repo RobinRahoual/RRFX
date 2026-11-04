@@ -115,3 +115,27 @@ test('adjustment layer found by name even with a decomposed accent (e + combinin
   env.adj.name = 'Calque de réglage 2';
   assert.ok(env.call('adjustmentInfo', {}).found);
 });
+
+test('captureTitle: a text animated in the timeline → entry and exit, replayed on a text of another length', () => {
+  const Core = require('../plugin/js/core.js'), Lib = require('../plugin/js/library.js');
+  const env = setup(), F = env.F;
+  const T = env.seq.videoTracks[1].add(new env.Item(env.seq, env.media, 300 * F, 400 * F, 0, 'Mon titre'));
+  const put = (side, a, b) => env.call('apply', { target: 'clip', name: 'anim', targets: [{ side, clipTrack: 1, clipStart: 300 * F, start: a * F, end: b * F, name: 'anim', fx: Core.toWire(Core.compileEffect(Lib.byId['zoom-in'], {}, side, b - a, 25)) }] });
+  assert.ok(put('post', 300, 310).ok);
+  assert.ok(put('pre', 390, 400).ok);
+  assert.match(env.call('captureTitle', {}).error, /S.lectionne/);
+  T.selected = true;
+  const r = env.call('captureTitle', {});
+  assert.ok(r.ok, r.error);
+  assert.ok(r.in && r.out, 'entry and exit found');
+  assert.ok(r.in.frames >= 8 && r.in.frames <= 11 && r.out.frames >= 8 && r.out.frames <= 11, JSON.stringify([r.in.frames, r.out.frames]));
+  const spec = Core.titleSpecCaptured(JSON.parse(JSON.stringify(r)), 60);
+  const keyed = spec.flatMap(fx => fx.props).filter(p => p.keys && p.keys.length);
+  assert.ok(keyed.length, 'keyframes replayed');
+  const times = keyed.flatMap(p => p.keys.map(k => k[0]));
+  assert.ok(Math.min(...times) === 0 && Math.max(...times) === 59, 'entry at the start, exit at the end of the new text: ' + Math.min(...times) + '..' + Math.max(...times));
+  T.selected = false;
+  const still = env.seq.videoTracks[1].add(new env.Item(env.seq, env.media, 500 * F, 560 * F, 0, 'Fixe'));
+  still.selected = true;
+  assert.match(env.call('captureTitle', {}).error, /images cl/);
+});

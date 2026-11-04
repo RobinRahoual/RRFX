@@ -265,7 +265,11 @@ La colorimétrie comme en retouche photo, avec les panneaux et les réglages du 
 leur propre Lumetri (LUT d'entrée) : pas de calque de réglage, et un seul Lumetri par plan, réutilisé à chaque
 réglage. « ● En direct sur 2 plans » le confirme sous le sommaire. Un autre plan sélectionné reçoit le look au
 prochain réglage (ou avec *Appliquer*). ↶ Annuler retire le Lumetri. **Double-clic sur un curseur** : valeur par
-défaut, comme dans Lightroom. Pour régler sans toucher Premiere, décoche
+défaut, comme dans Lightroom.
+**Ctrl+Z** (Cmd+Z), le panneau ayant la main : annule le dernier réglage de colorimétrie (Premiere suit) ;
+**Ctrl+Maj+Z** ou **Ctrl+Y** le rétablit. Dans les autres onglets, Ctrl+Z est transmis à Premiere. **Courbe
+paramétrique** : clique sur la courbe et glisse vers le haut ou le bas ; la zone sous la souris (ombres, tons foncés,
+tons clairs, hautes lumières) suit. Pour régler sans toucher Premiere, décoche
 *Exporter › En direct*. *Toute la séquence* passe toujours par un calque de réglage.
 Sous l'aperçu, un **sommaire** reste en haut quand tu fais défiler : *Looks, Réglages, Courbe, Roues, Mes LUTs,
 Dégradés, LOG, Raccord, Exporter*. Un clic amène au panneau et l'ouvre. Chaque panneau se replie d'un clic sur son
@@ -373,6 +377,10 @@ réglable comme un effet, avec aperçu). Chaque texte est posé avec un **modèl
 Premiere sont trouvés automatiquement ; pour ta police et ton style, crée un texte dans Premiere, puis clic droit >
 *Exporter comme modèle d'animations graphiques* et **Ajouter un .mogrt…** (rangé dans `Documents/RRFX/Titres`).
 
+**Capturer depuis la timeline** : sélectionne un texte que tu as animé toi-même dans Premiere (images clés de position,
+échelle, rotation, opacité, effets) : son entrée (images clés du début) et sa sortie (celles de la fin) sont
+enregistrées avec les réglages de ses effets, puis rejouées sur tous tes textes, sous-titres et bandeaux, quelle
+que soit leur durée (★ dans la liste des animations).
 **Enregistrer l'animation…** garde l'animation choisie avec ses réglages (★ dans la liste des animations, ici et
 dans l'onglet Parole), exportable et partageable comme un effet.
 
