@@ -38,14 +38,21 @@
     return 'RRFX0:' + toB64url(utf8(json));
   }
 
+  // Un effet capturé avec beaucoup d'images clés tient en quelques Ko : marges larges.
+  const MAX_CODE = 60000, MAX_JSON = 4 * 1024 * 1024;
+
   function decode(code, zip) {
     // CUTFX : codes créés avant le changement de nom.
     const m = /(?:RRFX|CUTFX)([01]):([A-Za-z0-9_\-]+)/.exec(String(code || '').replace(/\s+/g, ''));
     if (!m) throw new Error(_T('Ce n\'est pas un code RR FX (il commence par « RRFX1: »).'));
+    // Un code vient parfois d'inconnus (bibliothèque en ligne) : longueur et taille décompressée
+    // bornées, pour qu'un code piégé ne fige pas le panneau.
+    if (m[2].length > MAX_CODE) throw new Error(_T('Code trop long : refusé.'));
     let bytes = fromB64url(m[2]);
     if (m[1] === '1') {
       if (!zip) throw new Error(_T('Décompression indisponible ici.'));
-      bytes = zip.inflate(bytes);
+      bytes = zip.inflate(bytes, MAX_JSON);
+      if (bytes.length > MAX_JSON) throw new Error(_T('Contenu trop gros une fois décompressé : refusé.'));
     }
     let data;
     try { data = JSON.parse(fromUtf8(bytes)); } catch (e) { throw new Error(_T('Code abîmé : copie-le en entier.')); }

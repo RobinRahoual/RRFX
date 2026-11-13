@@ -13,7 +13,8 @@
 
     const newToken = () => {
       const b = new Uint8Array(6);
-      (root.crypto || { getRandomValues: a => a.map(() => Math.floor(Math.random() * 256)) }).getRandomValues(b);
+      // Repli sans crypto : remplit le tableau reçu (map en rendrait un autre, et le jeton serait 000000000000).
+      (root.crypto || { getRandomValues: a => { for (let i = 0; i < a.length; i++) a[i] = Math.floor(Math.random() * 256); return a; } }).getRandomValues(b);
       return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
     };
     const st = () => {

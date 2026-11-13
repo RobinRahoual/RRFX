@@ -51,7 +51,27 @@
     // ---------------------------------------------------------------- silences
 
     let last = null; // dernière analyse { ranges, a, b, clips }
-    let lastCuts = []; // coupes faites (silences, euh) : [{ ranges, name }], pour recaler les sous-titres
+    /* Coupes faites (silences, euh) : [{ ranges, name, seqs }], pour recaler les sous-titres.
+       seqs : les séquences où la coupe est faite (la copie, et les copies faites ensuite depuis
+       elle) ; une coupe faite dans une autre séquence ne décale pas celle-ci. Sans seqs : partout. */
+    let lastCuts = [];
+
+    // Séquence active, lue à l'instant (S.ctx peut avoir 2 s de retard, juste après une copie).
+    async function activeSeq() {
+      const c = await Host.call('getContext', {}).catch(() => null);
+      if (c && c.ok && c.hasSequence) return { id: c.seqId, name: c.name };
+      return app.S.ctx && app.S.ctx.seqId ? { id: app.S.ctx.seqId, name: app.S.ctx.name } : null;
+    }
+    // Séquence inconnue ou coupe sans séquence notée : la coupe compte (comme avant).
+    const cutApplies = (c, seq) => !c.seqs || !seq || !seq.id || c.seqs.indexOf(seq.id) >= 0;
+    const cutsFor = seq => lastCuts.filter(c => cutApplies(c, seq));
+    // Note une coupe : seqBefore = séquence coupée, la séquence active après = celle qui en sort.
+    async function rememberCut(ranges, name, seqBefore) {
+      const after = await activeSeq(), id = after && after.id;
+      // Les coupes déjà faites dans la séquence de départ valent aussi pour sa copie.
+      if (id && seqBefore && seqBefore.id && seqBefore.id !== id) lastCuts.forEach(c => { if (c.seqs && c.seqs.indexOf(seqBefore.id) >= 0 && c.seqs.indexOf(id) < 0) c.seqs.push(id); });
+      lastCuts.push(Object.assign({ ranges: Sp.mergeRanges(ranges), name }, id ? { seqs: [id] } : {}));
+    }
 
     async function speechClips() {
       const info = await Host.call('speechInfo', {});
@@ -153,10 +173,11 @@
         }
         if (mode !== 'copy' && app.versions) await app.versions.beforeCut(_T('avant silences'));
         app.status.phase(_T('Coupe et recollage'));
+        const before = await activeSeq();
         const res = await Host.call('cutSilences', { ranges: r.ranges, copy: mode === 'copy', suffix: _T(' (sans silences)') });
         if (!res.ok) return { kind: 'error', title: _T('Silences non coupés'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        lastCuts.push({ ranges: r.ranges, name: res.name });
+        await rememberCut(r.ranges, res.name, before);
         last = null;
         return {
           kind: res.warnings && res.warnings.length ? 'warn' : 'ok',
@@ -189,13 +210,50 @@
         repeats = T.repeats().filter(inClips);
       } else {
         const cues = Sp.parseSubtitles(x.srt);
-        if (cues.length) repeats = Sp.repeats(cutAware(Sp.offset(cues, await startTime(x.capFrom))));
+        if (cues.length) repeats = Sp.repeats(await cutAware(Sp.offset(cues, await startTime(x.capFrom))));
       }
       return { fillers, repeats };
     }
 
-    // Sous-titres faits avant les coupes (silences, euh) recalés sur la séquence d'aujourd'hui.
-    const cutAware = items => lastCuts.reduce((acc, c) => Sp.remap(acc, c.ranges), items);
+    /* Sous-titres faits avant les coupes (silences, euh) recalés sur la séquence active : seules
+       les coupes faites dans cette séquence (ou celle d'où elle a été copiée) comptent.
+       minLen : voir Sp.remap (0 pour des mots). */
+    async function cutAware(items, minLen) {
+      const cuts = cutsFor(await activeSeq());
+      return cuts.reduce((acc, c) => Sp.remap(acc, c.ranges, minLen), items);
+    }
+    /* Temps d'avant les coupes → temps de la séquence active, coupe après coupe (chaque coupe est
+       notée dans les temps de la séquence d'avant elle). Un temps tombé dans une partie retirée
+       va à l'endroit de la coupe : une plage [a, b] recalée retire bien ce qui en reste.
+       Pour le montage par le texte, qui travaille sur les temps du .srt. */
+    const shift = (t, ranges) => t - ranges.reduce((s, r) => s + Math.min(Math.max(0, t - r.a), r.b - r.a), 0);
+    async function mapTimes(times) {
+      const cuts = cutsFor(await activeSeq());
+      return times.map(t => cuts.reduce((v, c) => shift(v, c.ranges), t));
+    }
+    // Plages recalées après le retrait de `removed` (même repère), les plages vidées en moins.
+    const through = (list, removed) => list.map(r => ({ a: shift(r.a, removed), b: shift(r.b, removed) })).filter(r => r.b - r.a > 1e-3);
+
+    /* Montage par le texte après des coupes : ranges = plages à retirer en temps du .srt posé
+       (séquence d'avant les coupes). → { ranges : à couper dans la séquence active, commit() : à
+       appeler une fois la coupe faite }. Le .srt est ensuite réécrit sans ces phrases (repère
+       d'avant les coupes, moins ces plages) : commit() exprime les coupes notées dans ce nouveau
+       repère, pour que les sous-titres se recalent encore juste. Retirer A puis B ou B puis A
+       donne le même montage : seules les coordonnées changent. */
+    async function textCutPlan(ranges) {
+      const seq = await activeSeq(), cuts = cutsFor(seq);
+      let r = Sp.mergeRanges(ranges);
+      const next = cuts.map(c => { const mine = through(c.ranges, r); r = through(r, c.ranges); return mine; });
+      return {
+        ranges: r,
+        commit: async () => {
+          cuts.forEach((c, i) => { c.ranges = next[i]; });
+          // Coupé sur une copie : les coupes notées valent aussi pour elle.
+          const after = await activeSeq();
+          if (after && after.id && seq && seq.id && after.id !== seq.id) cuts.forEach(c => { if (c.seqs && c.seqs.indexOf(after.id) < 0) c.seqs.push(after.id); });
+        }
+      };
+    }
 
     function cutFillers() {
       const x = st();
@@ -203,7 +261,8 @@
         app.status.phase(_T('Écoute du son'));
         const f = await findFillers();
         const exact = f.repeats.filter(r => r.exact), rough = f.repeats.filter(r => !r.exact);
-        const cut = f.fillers.concat(exact.map(r => ({ a: r.a, b: r.b }))).sort((p, q) => p.a - q.a);
+        // Plages réunies : un « euh » dans une répétition n'est compté qu'une fois.
+        const cut = Sp.mergeRanges(f.fillers.concat(exact.map(r => ({ a: r.a, b: r.b }))));
         if (!cut.length && !rough.length) return { kind: 'warn', title: _T('Aucun « euh » trouvé'), detail: _T('Essaie la sensibilité « Forte ». Les répétitions sont lues dans le .srt (onglet Parole > Sous-titres).') };
         const n = app.plural(f.fillers.length, _T('« euh »'), _T('« euh »')) + (f.repeats.length ? _T(' et ') + app.plural(f.repeats.length, _T('répétition')) : '');
         if (x.fillerMode === 'markers' || !cut.length) {
@@ -214,10 +273,11 @@
         }
         if (x.fillerMode !== 'copy' && app.versions) await app.versions.beforeCut(_T('avant euh'));
         app.status.phase(_T('Coupe et recollage'));
+        const before = await activeSeq();
         const res = await Host.call('cutSilences', { ranges: cut, copy: x.fillerMode === 'copy', suffix: _T(' (sans euh)') });
         if (!res.ok) return { kind: 'error', title: _T('Rien n\'a été coupé'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
-        lastCuts.push({ ranges: cut, name: res.name });
+        await rememberCut(cut, res.name, before);
         rough.forEach(r => app.log(_T('Répétition à vérifier (temps estimé) : « ') + r.text + _T(' »'), 'warn'));
         return {
           kind: rough.length || (res.warnings && res.warnings.length) ? 'warn' : 'ok',
@@ -296,6 +356,13 @@
     // ---------------------------------------------------------------- chapitres YouTube
 
     let chap = null;
+    /* Durée de la séquence active (fin de la séquence), pour écarter un dernier chapitre de
+       moins de 10 s. Illisible : fallback (fin du dernier sous-titre), ou 0 = pas de contrôle. */
+    async function seqDuration(fallback) {
+      const r = await Host.call('listSequences', {}).catch(() => null);
+      const s = r && r.ok && (r.sequences || []).find(q => q.id === r.active);
+      return (s && s.end > 0) ? s.end : (fallback || 0);
+    }
     function makeChapters(refresh) {
       const x = st();
       return app.runTask(_T('Chapitres YouTube'), async () => {
@@ -306,12 +373,12 @@
           // Les marqueurs posés par RR FX (temps forts, silences) ne sont pas des chapitres.
           const mk = m.markers.filter(q => !/^RR FX · /.test(q.name || '') || /chapitre/i.test(q.name || ''));
           if (!mk.length) return { kind: 'warn', title: _T('Aucun marqueur'), detail: _T('Pose un marqueur nommé au début de chaque partie (touche M, puis double-clic pour le nommer), ou choisis « Sous-titres ».') };
-          res = Sp.chapters({ markers: mk });
+          res = Sp.chapters({ markers: mk }, { duration: await seqDuration() });
         } else {
           const cues = Sp.parseSubtitles(x.srt);
           if (!cues.length) return { kind: 'warn', title: _T('Pas de sous-titres'), detail: _T('Importe ton .srt ci-dessus, ou choisis « Marqueurs ».') };
-          const timed = cutAware(Sp.offset(cues, await startTime(x.capFrom)));
-          res = Sp.chapters({ cues: timed });
+          const timed = await cutAware(Sp.offset(cues, await startTime(x.capFrom)));
+          res = Sp.chapters({ cues: timed }, { duration: await seqDuration(timed.length ? timed[timed.length - 1].end : 0) });
           // Titres écrits par l'IA locale d'après ce qui est dit dans chaque chapitre.
           if (x.chapAI && app.ia && res.list.length) {
             const list = await app.ia.chapters(res.list, timed, timed.length ? timed[timed.length - 1].end : 0);
@@ -383,7 +450,8 @@
         // Mots clés repérés (couleur, emoji) pendant le découpage.
         const marked = x.keys !== 'none' || x.emoji;
         let items = Sp.offset(marked ? Sp.highlight(cues, x.words, { emoji: x.emoji, list: String(x.keyList || '').split(/[,;\n]+/) }) : Sp.splitCues(cues, x.words), t0);
-        if (remap && lastCuts.length) { items = cutAware(items); app.log(_T('Sous-titres recalés sur ') + app.plural(lastCuts.length, _T('coupe')) + ' (' + lastCuts[lastCuts.length - 1].name + ')', 'info'); }
+        const cuts = remap ? cutsFor(await activeSeq()) : [];
+        if (cuts.length) { items = cuts.reduce((acc, c) => Sp.remap(acc, c.ranges), items); app.log(_T('Sous-titres recalés sur ') + app.plural(cuts.length, _T('coupe')) + ' (' + cuts[cuts.length - 1].name + ')', 'info'); }
         app.status.phase(_T('Pose des sous-titres'));
         const keyFx = x.keys === 'color' ? Core.toWire(Core.compileEffect({ params: [], build: () => [{ type: 'tint', props: { black: [0, 0, 0], white: rgb(x.keyColor), amount: 100 } }] }, {}, 'post', 1, app.fps(), app.registry())) : null;
         const r = await app.services.placeTexts(items, { anim: x.capAnim, label: _T('Sous-titres'), pos: [0.5, 0.78], keyFx, style: x.capStyle });
@@ -554,7 +622,7 @@
         row(_T('Son'), picker([{ v: 'auto', label: _T('Auto (pop, ding sur les emojis)') }, { v: 'pop', label: 'Pop' }, { v: 'ding', label: 'Ding' }, { v: 'clic', label: _T('Clic') }, { v: 'swish', label: _T('Swish court') }, { v: 'swoosh', label: 'Swoosh' }], x.popId, v => { x.popId = v; app.persist(); }), { title: _T('Calé sur le mot clé, pas seulement sur le début du sous-titre') }),
         row('Volume', hotText({ value: x.popVol, min: -24, max: 6, step: 1, unit: 'dB', onChange: v => { x.popVol = v; app.persist(); } })),
         row(_T('Départ du .srt'), picker([{ v: 'start', label: _T('Début de la séquence') }, { v: 'playhead', label: _T('Tête de lecture') }, { v: 'selection', label: _T('Début des clips sélectionnés') }], x.capFrom, v => { x.capFrom = v; app.persist(); })),
-        lastCuts.length ? h('div', { class: 'field' }, app.UI.checkbox(_T('Recaler sur les coupes (silences, euh) : .srt fait avant'), x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
+        cutsFor(app.S.ctx && app.S.ctx.seqId ? { id: app.S.ctx.seqId } : null).length ? h('div', { class: 'field' }, app.UI.checkbox(_T('Recaler sur les coupes (silences, euh) : .srt fait avant'), x.remap !== false, v => { x.remap = v; app.persist(); })) : null,
         h('div', { class: 'note' }, _T('Modèle de texte : ') + (model || 'aucun') + _T(' (onglet Textes).')),
         h('div', { class: 'row-buttons' }, capBtn, capNative)
       ]));
@@ -669,6 +737,8 @@
     // Pour les outils ajoutés à l'onglet.
     // Les sous-titres à leur place dans la séquence (départ choisi, recalés sur les coupes faites).
     const timedCues = async () => cutAware(Sp.offset(Sp.parseSubtitles(st().srt), await startTime(st().capFrom)));
-    app.speech = { clips: speechClips, readClip, settings: st, cues: () => Sp.parseSubtitles(st().srt), timedCues, lastCuts: () => lastCuts, captions, analyzeSilences: analyze, startTime };
+    /* cutsFor(seq) : les coupes qui valent pour une séquence ({ id }, ou null : toutes) ; mapTimes :
+       temps d'avant les coupes → temps de la séquence active. */
+    app.speech = { clips: speechClips, readClip, settings: st, cues: () => Sp.parseSubtitles(st().srt), timedCues, lastCuts: () => lastCuts, cutsFor, activeSeq, mapTimes, textCutPlan, captions, analyzeSilences: analyze, startTime };
   });
 })(typeof self !== 'undefined' ? self : this);

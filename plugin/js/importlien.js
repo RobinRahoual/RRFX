@@ -23,6 +23,7 @@
     const Dos = root.RRFXDossiers;
     const destination = cat => app.assetsFolder.dirForNow(cat, { fallback: 'Téléchargements' });
 
+    const proc = () => (root.process || {});
     // Un outil (yt-dlp, ffmpeg) : réglage, puis PATH, puis emplacements habituels. → chemin ou ''.
     async function findTool(tool, saved) {
       if (saved && Store.fs.existsSync(saved)) return saved;
@@ -85,20 +86,25 @@
         let file, dest;
         if (c.kind === 'direct') {
           app.status.phase(_T('Téléchargement'));
-          // http ou https selon le lien (et selon chaque redirection).
-          const net = { get: (u, o, cb) => Store.nodeRequire(/^http:/i.test(u) ? 'http' : 'https').get(u, o, cb) };
+          // http ou https selon le lien (et selon chaque redirection). Le nom donné par le serveur
+          // (Content-Disposition, Google Drive) est gardé.
+          let disposition = '';
+          const net = { get: (u, o, cb) => Store.nodeRequire(/^http:/i.test(u) ? 'http' : 'https').get(u, o, res => { if (res.statusCode === 200) disposition = res.headers['content-disposition'] || ''; cb(res); }) };
           const bytes = await I.download(net, c.url, p => app.status.progress(Math.round(p * 100), 100, _T('Téléchargement')));
           // Pas d'extension dans le lien (Google Drive) : devinée d'après le début du fichier.
           const sig = String.fromCharCode.apply(null, bytes.slice(0, 12));
           const ext = c.ext || (/ftyp/.test(sig) ? 'mp4' : /^ID3|^\xff\xfb/.test(sig) ? 'mp3' : /^RIFF/.test(sig) ? 'wav' : x.mode === 'audio' ? 'mp3' : 'mp4');
           if (bytes.length < 1024 || /^<!doctype|^<html/i.test(sig.trim())) throw new Error(_T('Le lien renvoie une page web, pas un fichier (lien de partage privé ?).'));
-          const name = L.nameFromUrl(c.url, ext);
+          const served = L.nameFromDisposition(disposition), servedExt = L.extOf(served);
+          const name = served && (L.isAudio(servedExt) || L.isVideo(servedExt)) ? L.safeName(served.slice(0, -servedExt.length - 1), 'import') + '.' + servedExt : L.nameFromUrl(c.url, ext);
           dest = await destination(x.mode === 'audio' && !Dos.isAudio(name) ? 'SFX' : Dos.categoryOf(name, { bytes: bytes.length }));
-          file = Store.path.join(dest.dir, name);
-          Store.fs.writeFileSync(file, Buffer.from(bytes));
+          // Nom déjà pris (même lien importé deux fois) : « (2) », jamais un média de la timeline écrasé.
+          file = Store.path.join(dest.dir, L.freeName(dest.dir, name, p => Store.fs.existsSync(p), Store.path));
+          Store.fs.writeFileSync(file, Buffer.from(bytes), { flag: 'wx' });
         } else {
           // yt-dlp : un outil gratuit de RR FX, proposé à l'installation en un clic s'il manque.
-          let exe = x.ytdlp && Store.fs.existsSync(x.ytdlp) ? x.ytdlp : await findTool('yt-dlp', '');
+          // Celui que RR FX a installé (Outils gratuits) d'abord, sinon le PATH et les emplacements habituels.
+          let exe = x.ytdlp && Store.fs.existsSync(x.ytdlp) ? x.ytdlp : (app.tools && await app.tools.find('ytdlp')) || await findTool('yt-dlp', '');
           if (!exe && app.tools) exe = await app.tools.need('ytdlp', _T('Pour YouTube, Vimeo, SoundCloud, Instagram… RR FX télécharge avec yt-dlp, un outil gratuit installé une fois.'));
           if (!exe) exe = await needYtdlp();
           if (!exe) return { kind: 'warn', title: _T('yt-dlp nécessaire'), detail: _T('Installe yt-dlp (Réglages › Outils gratuits) puis relance l\'import.') };

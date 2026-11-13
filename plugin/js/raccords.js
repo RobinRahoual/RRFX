@@ -108,9 +108,11 @@
       caps: _T('majuscule manquante'), spaces: _T('espaces en trop'), punct: _T('espace avant « : ; ! ? »')
     });
     let lastIssues = null, checkedFor = '';
+    // Langue des sous-titres : celle de la dernière traduction, sinon celle du panneau.
+    const subLang = () => { const tr = app.settings().translate; return (tr && tr.lang) || (root.RRFXI18n && root.RRFXI18n.lang) || 'fr'; };
     function checkNow() {
       const sp = app.speech.settings(), cues = Sp.parseSubtitles(sp.srt);
-      lastIssues = O.checkCues(cues, { lang: (root.RRFXI18n && root.RRFXI18n.lang) || 'fr' });
+      lastIssues = O.checkCues(cues, { lang: subLang() });
       checkedFor = sp.srt;
       app.settings().subsChecked = true;
       return { cues, issues: lastIssues };
@@ -118,8 +120,12 @@
     function fixAll(refresh) {
       const sp = app.speech.settings(), cues = Sp.parseSubtitles(sp.srt);
       if (!cues.length) return app.status.finish('warn', _T('Pas de sous-titres'), _T('Importe ou colle d\'abord un .srt (section Sous-titres).'));
-      const f = O.fixCues(cues, Tr.wrap, { lang: (root.RRFXI18n && root.RRFXI18n.lang) || 'fr' });
+      const f = O.fixCues(cues, Tr.wrap, { lang: subLang() });
+      const was = sp.srt;
       sp.srt = Tr.toSrt(f.cues);
+      // Traduction corrigée : elle reste « la traduction » (la prochaine ne la prend pas pour l'original).
+      const tr = app.settings().translate;
+      if (tr && tr.translated && tr.translated === was) tr.translated = sp.srt;
       app.persist();
       const left = checkNow().issues;
       if (refresh) refresh();
@@ -139,7 +145,12 @@
             const c = cues[p.i];
             if (!c) return;
             const b = h('button', { class: 'pf-item ' + (p.kind === 'fast' || p.kind === 'long' ? 'error' : 'warn'), title: _T('Aller à ') + mmss(c.start) }, h('span', { class: 'pf-icon' }, '!'), h('span', { class: 'pf-time' }, '#' + (p.i + 1) + ' · ' + mmss(c.start)), h('span', { class: 'pf-text' }, K[p.kind] + ' : ' + c.text.replace(/\s*\n\s*/g, ' / ').slice(0, 60)));
-            b.addEventListener('click', async () => { const t0 = await app.speech.startTime(app.speech.settings().capFrom).catch(() => 0); Host.call('setPlayhead', { t: t0 + c.start }); });
+            // Temps recalé sur les coupes faites (silences, euh) : le .srt vient d'avant.
+            b.addEventListener('click', async () => {
+              const t0 = await app.speech.startTime(app.speech.settings().capFrom).catch(() => 0);
+              const t = app.speech.mapTimes ? (await app.speech.mapTimes([t0 + c.start]).catch(() => [t0 + c.start]))[0] : t0 + c.start;
+              Host.call('setPlayhead', { t });
+            });
             list.appendChild(b);
           });
         };

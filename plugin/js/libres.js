@@ -77,7 +77,9 @@
       id: 'whisper', name: 'Whisper', icon: '🗣', license: 'MIT', mb: 10, site: 'https://github.com/ggml-org/whisper.cpp',
       what: 'Écrit tout ce qui est dit, mot par mot.',
       uses: ['Sous-titres (.srt) automatiques', '« Euh » et répétitions au mot près', 'Extraits, chapitres et textes par l\'IA'],
-      exe: ['whisper-cli', 'whisper-cpp', 'main', 'whisper'],
+      // « main » (ancien nom de whisper.cpp) : cherché seulement dans Documents/RRFX/Outils/whisper,
+      // jamais dans le PATH (n'importe quel programme peut s'appeler main).
+      exe: ['whisper-cli', 'whisper-cpp', 'whisper'], ownExe: ['main'],
       how: {
         win: { type: 'archive', url: GH('ggml-org/whisper.cpp', 'v1.7.6', 'whisper-bin-x64.zip') },
         mac: { type: 'brew', formula: 'whisper-cpp', fallback: { type: 'pip', pkg: 'openai-whisper', exe: 'whisper' } }
@@ -165,6 +167,9 @@
       uses: ['Bibliothèque › Masque qui suit un objet (isoler, flouter)', 'Bibliothèque › Flou d\'arrière-plan façon portrait'],
       exe: ['python'], script: true,
       how: { any: { type: 'pip', pkg: 'transformers>=4.56 torch torchvision pillow numpy' } },
+      // Désinstallé : transformers seul. torch, numpy, pillow… servent aussi à Demucs, Beat This!,
+      // VoiceFixer, rembg et Piper (même environnement Python).
+      uninstall: 'transformers',
       // Modèles de Hugging Face, téléchargés par transformers au premier usage.
       hf: { sam: 'facebook/sam2.1-hiera-tiny', samSmall: 'facebook/sam2.1-hiera-small', depth: 'depth-anything/Depth-Anything-V2-Small-hf' }
     },

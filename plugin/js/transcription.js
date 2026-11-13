@@ -55,20 +55,41 @@
       return app.runTask(_T('Modèle Whisper'), async () => {
         if (!Store.fs) return { kind: 'warn', title: _T('Disponible dans Premiere'), detail: _T('Le modèle se télécharge dans Documents/RRFX/Whisper.') };
         const https = Store.nodeRequire('https'), fs = Store.fs, out = modelPath(size), part = out + '.part', m = W.MODELS.find(q => q.id === size);
-        await new Promise((resolve, reject) => {
-          const get = (url, hops) => https.get(url, { headers: { 'User-Agent': 'RRFX' } }, res => {
-            if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hops < 6) { res.resume(); return get(new URL(res.headers.location, url).toString(), hops + 1); }
-            if (res.statusCode !== 200) { res.resume(); return reject(new Error(_T('Téléchargement refusé (') + res.statusCode + ').')); }
-            const total = Number(res.headers['content-length']) || m.mb * 1e6, file = fs.createWriteStream(part);
-            let got = 0;
-            app.S.onCancel = () => { res.destroy(new Error(_T('Arrêté'))); };
-            res.on('data', c => { got += c.length; app.status.progress(Math.round(got / total * 100), 100, _T('Modèle ') + size + ' · ' + Math.round(got / 1e6) + ' Mo'); });
-            res.pipe(file);
-            file.on('finish', () => { app.S.onCancel = null; resolve(); });
-            res.on('error', e => { file.destroy(); reject(e); });
-          }).on('error', reject);
-          get(W.modelUrl(size), 0);
-        });
+        let file = null, closed = true;
+        try {
+          await new Promise((resolve, reject) => {
+            let done = false;
+            const fail = e => { if (done) return; done = true; app.S.onCancel = null; reject(e); };
+            const get = (url, hops) => https.get(url, { headers: { 'User-Agent': 'RRFX' } }, res => {
+              if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && hops < 6) { res.resume(); return get(new URL(res.headers.location, url).toString(), hops + 1); }
+              if (res.statusCode !== 200) { res.resume(); return fail(new Error(_T('Téléchargement refusé (') + res.statusCode + ').')); }
+              const announced = Number(res.headers['content-length']) || 0, total = announced || m.mb * 1e6;
+              file = fs.createWriteStream(part);
+              closed = false;
+              file.on('close', () => { closed = true; });
+              let got = 0;
+              app.S.onCancel = () => { res.destroy(new Error(_T('Arrêté'))); };
+              res.on('data', c => { got += c.length; app.status.progress(Math.round(got / total * 100), 100, _T('Modèle ') + size + ' · ' + Math.round(got / 1e6) + ' Mo'); });
+              res.pipe(file);
+              // Connexion coupée en route : le fichier serait tronqué mais « fini ».
+              res.on('aborted', () => { file.destroy(); fail(new Error(_T('Téléchargement interrompu : réessaie.'))); });
+              res.on('error', e => { file.destroy(); fail(e); });
+              file.on('error', fail);
+              file.on('finish', () => {
+                if (announced && got !== announced) return fail(new Error(_T('Téléchargement incomplet : réessaie.')));
+                if (done) return;
+                done = true; app.S.onCancel = null; resolve();
+              });
+            }).on('error', fail);
+            get(W.modelUrl(size), 0);
+          });
+        } catch (e) {
+          // Un modèle tronqué ne doit jamais rester (ni passer pour prêt). Windows refuse d'effacer
+          // un fichier encore ouvert : on attend sa fermeture.
+          if (file && !closed) { file.destroy(); await new Promise(r => { file.once('close', r); setTimeout(r, 3000); }); }
+          try { fs.unlinkSync(part); } catch (e2) { /* déjà absent */ }
+          throw e;
+        }
         fs.renameSync(part, out);
         found = null;
         return { kind: 'ok', title: _T('Modèle « ') + size + _T(' » prêt'), detail: out };
@@ -103,13 +124,20 @@
       const x = st(), a = await app.speech.readClip(c);
       if (!a) return [];
       const base = Store.path.join(dir(), 'plan-' + i), wav = base + '.wav', pcm = W.to16k(a.samples, a.sr);
-      Store.fs.writeFileSync(wav, Buffer.from(Sons.wav(pcm, 16000)));
-      const lang = x.lang === 'auto' ? ((root.RRFXI18n && root.RRFXI18n.lang) === 'en' ? 'en' : 'fr') : x.lang;
-      const prompt = x.keepFillers ? W.PROMPTS[lang] || '' : '';
-      const cpus = (() => { try { return Store.nodeRequire('os').cpus().length; } catch (e) { return 4; } })();
-      await runTool(exe, W.args(exe, { model: modelPath(x.size), wav, out: base, lang: x.lang, threads: Math.max(2, Math.min(8, cpus - 1)), prompt, dir: dir(), size: x.size }), pcm.length / 16000);
-      const json = JSON.parse(Store.fs.readFileSync(W.isCpp(exe) ? base + '.json' : Store.path.join(dir(), Store.path.basename(wav).replace(/\.wav$/, '.json')), 'utf8'));
-      try { Store.fs.unlinkSync(wav); } catch (e) { /* fichier temporaire */ }
+      const jsonPath = W.isCpp(exe) ? base + '.json' : Store.path.join(dir(), Store.path.basename(wav).replace(/\.wav$/, '.json'));
+      let json;
+      // Fichiers temporaires effacés dans tous les cas (erreur, arrêt) : un .json resté d'avant
+      // ne doit pas être relu à la place d'une transcription ratée.
+      try {
+        Store.fs.writeFileSync(wav, Buffer.from(Sons.wav(pcm, 16000)));
+        const lang = x.lang === 'auto' ? ((root.RRFXI18n && root.RRFXI18n.lang) === 'en' ? 'en' : 'fr') : x.lang;
+        const prompt = x.keepFillers ? W.PROMPTS[lang] || '' : '';
+        const cpus = (() => { try { return Store.nodeRequire('os').cpus().length; } catch (e) { return 4; } })();
+        await runTool(exe, W.args(exe, { model: modelPath(x.size), wav, out: base, lang: x.lang, threads: Math.max(2, Math.min(8, cpus - 1)), prompt, dir: dir(), size: x.size }), pcm.length / 16000);
+        json = JSON.parse(Store.fs.readFileSync(jsonPath, 'utf8'));
+      } finally {
+        [wav, jsonPath].forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* fichier temporaire */ } });
+      }
       return W.parse(json).map(w => ({ text: w.text, start: a.toSeq(w.start), end: a.toSeq(w.end) })).filter(w => w.start < c.end + 0.05 && w.end > c.start - 0.05);
     }
 
@@ -170,8 +198,12 @@
     // Les mots de la transcription, recalés sur les coupes faites depuis (silences, euh).
     app.transcript = {
       words: () => {
-        const cuts = app.speech.lastCuts ? app.speech.lastCuts().slice(cutBase) : [];
-        return cuts.reduce((acc, c) => Sp.remap(acc, c.ranges), words);
+        let cuts = app.speech.lastCuts ? app.speech.lastCuts().slice(cutBase) : [];
+        // Seulement les coupes de la séquence active (S.ctx : lu ici sans attendre Premiere).
+        const seq = app.S.ctx && app.S.ctx.seqId ? { id: app.S.ctx.seqId } : null;
+        if (app.speech.cutsFor) { const ok = app.speech.cutsFor(seq); cuts = cuts.filter(c => ok.indexOf(c) >= 0); }
+        // minLen 0 : un mot court de Whisper (« a », « je ») n'est pas perdu.
+        return cuts.reduce((acc, c) => Sp.remap(acc, c.ranges, 0), words);
       },
       fillers: () => W.fillers(app.transcript.words()),
       repeats: () => W.repeats(app.transcript.words()),

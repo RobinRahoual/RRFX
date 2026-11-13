@@ -27,11 +27,16 @@
           '  try { postMessage({ id: d.id, faces: Y.detect(model, d.data, d.w, d.h) }); } catch (err) { postMessage({ id: d.id, error: String((err && err.message) || err) }); } };';
         const w = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
         w.onmessage = e => { const p = waiting.get(e.data.id); if (!p) return; waiting.delete(e.data.id); if (e.data.error) p.reject(new Error(e.data.error)); else p.resolve(e.data.faces); };
-        w.onerror = e => { waiting.forEach(p => p.reject(new Error((e && e.message) || 'Worker'))); waiting.clear(); worker = false; };
+        // Worker en erreur : arrêté (sinon il reste en mémoire avec le modèle).
+        w.onerror = e => { waiting.forEach(p => p.reject(new Error((e && e.message) || 'Worker'))); waiting.clear(); stopWorker(w); };
         w.postMessage({ model: YM });
         worker = w;
       } catch (e) { worker = false; }
       return worker;
+    }
+    function stopWorker(w) {
+      try { w.terminate(); } catch (e) { /* déjà arrêté */ }
+      if (worker === w) worker = false;
     }
     function yunetFaces(img) {
       const w = yunetWorker();
@@ -40,7 +45,12 @@
         const id = ++seq;
         waiting.set(id, { resolve, reject });
         // Pas de réponse en 10 s : le Worker est bloqué, on calcule ici.
-        setTimeout(() => { if (waiting.delete(id)) { worker = false; resolve(Y.detect(YM, img.data, img.width, img.height)); } }, 10000);
+        // Le Worker bloqué est arrêté (les autres demandes en attente finiront par leur propre délai).
+        setTimeout(() => {
+          if (!waiting.delete(id)) return;
+          stopWorker(w);
+          try { resolve(Y.detect(YM, img.data, img.width, img.height)); } catch (e) { reject(e); }
+        }, 10000);
         w.postMessage({ id, data: img.data, w: img.width, h: img.height });
       });
     }
@@ -124,17 +134,29 @@
       const box = await pickBox(frames[0]);
       if (!box) throw new Error(_T('Aucun objet choisi.'));
       const gray = frames.map(f => ({ g: F.luma(f.data, f.width, f.height), w: f.width, h: f.height }));
-      const faces = [];
-      let k = 0, lost = 0;
+      const faces = [], f0 = gray[0];
+      let k = 0, lost = 0, missing = 0;
       for (let i = 0; i < targets.length; i++) {
         app.status.progress(i, targets.length, _T('Suivi de l\'objet'));
-        const n = plan[i].at.length, pts = Tr.track(gray.slice(k, k + n), box);
+        const n = plan[i].at.length, seg = gray.slice(k, k + n);
         k += n;
+        // Le rectangle est tracé sur le premier plan : dans les suivants l'objet n'est pas au même
+        // endroit. Il y est cherché dans toute la première image avec le motif du plan 1 ; absent,
+        // ce plan n'est pas suivi (zoom par défaut) plutôt que de suivre ce qui se trouve là.
+        let start = box;
+        if (i > 0 && seg.length) {
+          const wide = Math.max(f0.w, f0.h) / Math.max(1, Math.max(box.w * f0.w, box.h * f0.h));
+          const hit = Tr.track([f0, seg[0]], box, { search: wide })[1];
+          start = hit && hit.score >= 0.5 ? { x: hit.x - box.w / 2, y: hit.y - box.h / 2, w: box.w, h: box.h } : null;
+        }
+        if (!start || !seg.length) { missing++; faces.push(null); continue; }
+        const pts = Tr.track(seg, start);
         lost += pts.filter(p => p.score < 0.5).length;
         faces.push(F.track(plan[i].at.map((at, j) => ({ at, eyes: pts[j].score >= 0.5 ? pts[j] : null })), targets[i].frames, FOLLOW[follow] || FOLLOW.smooth));
         await pause();
       }
       if (lost) app.log(_T('Objet perdu de vue sur ') + lost + _T(' image(s) : la dernière position connue est gardée.'), 'warn');
+      if (missing) app.log(_T('Objet entouré introuvable au début de ') + missing + _T(' plan(s) après le premier : pas de suivi sur ceux-là.'), 'warn');
       return { faces };
     }
 

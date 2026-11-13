@@ -13,7 +13,8 @@
 
   const FILE = 'RR FX - synchro.json';
   // Propres à chaque ordinateur : jamais envoyés, jamais remplacés.
-  const LOCAL = ['sync', 'remote', 'adjNodeId', 'welcomed', 'instagramOpened', 'toolsOffered', 'startWithPremiere', 'lang', 'watch', 'projet', 'timeTrack', 'saved', 'tips', 'livraison', 'tab', 'groupTab', 'compact', 'folded', 'assets'];
+  // adjTemplate, overlays : des chemins de fichiers, faux sur un autre ordinateur (Mac/Windows, autre compte).
+  const LOCAL = ['sync', 'remote', 'adjNodeId', 'adjTemplate', 'overlays', 'welcomed', 'instagramOpened', 'toolsOffered', 'startWithPremiere', 'lang', 'watch', 'projet', 'timeTrack', 'saved', 'tips', 'livraison', 'tab', 'groupTab', 'compact', 'folded', 'assets'];
   const MAX_REMOVED = 300;
 
   const clone = o => JSON.parse(JSON.stringify(o));
@@ -24,9 +25,12 @@
   }
 
   /* Contenu du fichier de synchro. */
-  function pack(lib, machine, now) {
+  /* sharedAt : dernier VRAI changement des réglages partagés ou des favoris sur cet ordinateur (0 :
+     jamais touchés depuis la mise en place de la synchro). C'est lui qui décide qui est le plus
+     récent, pas l'heure d'enregistrement (un simple changement d'onglet enregistre). */
+  function pack(lib, machine, now, sharedAt) {
     return {
-      rrfx: 1, kind: 'rrfx-sync', machine, savedAt: now,
+      rrfx: 1, kind: 'rrfx-sync', machine, savedAt: now, sharedAt: sharedAt === undefined ? now : sharedAt,
       items: clone(lib.items || []), favorites: clone(lib.favorites || []), removed: clone(lib.removed || []),
       settings: shared(lib.settings)
     };
@@ -36,11 +40,15 @@
     return !!remote && remote.kind === 'rrfx-sync' && Array.isArray(remote.items) && remote.settings && typeof remote.settings === 'object' && typeof remote.savedAt === 'number';
   }
 
+  // Date du dernier changement partagé d'un fichier reçu (anciens fichiers : savedAt).
+  const remoteShared = remote => (typeof remote.sharedAt === 'number' ? remote.sharedAt : remote.savedAt);
+
   /* Bibliothèque locale + fichier reçu → { lib, added, removed, settings (bool) }. La locale
-     n'est pas modifiée. localUpdated : dernière modification locale (ms). */
-  function merge(local, remote, localUpdated) {
+     n'est pas modifiée. localShared : dernier changement partagé local (ms, 0 = jamais). Égalité
+     (deux ordinateurs jamais touchés) : la locale est gardée. */
+  function merge(local, remote, localShared) {
     if (!valid(remote)) throw new Error(_T('Fichier de synchro illisible.'));
-    const lib = clone(local), newer = remote.savedAt > (localUpdated || 0);
+    const lib = clone(local), newer = remoteShared(remote) > (localShared || 0);
     const gone = new Set((lib.removed || []).concat(remote.removed || []));
     const before = new Set(lib.items.map(i => i.id));
     const byId = new Map(lib.items.map(i => [i.id, i]));
@@ -62,5 +70,8 @@
     return { lib, added, removed, settings: newer };
   }
 
-  return { FILE, LOCAL, pack, merge, valid };
+  /* Empreinte de ce qui est partagé (réglages hors LOCAL, favoris) : sert à dater les vrais changements. */
+  const signature = lib => JSON.stringify([shared(lib.settings), lib.favorites || []]);
+
+  return { FILE, LOCAL, pack, merge, valid, shared, signature, remoteShared };
 });

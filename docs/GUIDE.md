@@ -41,7 +41,7 @@ Tu peux aussi choisir ton propre projet modèle (*Réglages › Calques › Choi
 Afficher l'accueil*). Le bouton *Suivre @robin.rahoual sur Instagram* ouvre ma page
 [@robin.rahoual](https://www.instagram.com/robin.rahoual/) : rien ne s'ouvre sans clic.
 En haut du panneau, toujours visibles : le crédit, **🔍 la recherche rapide**, **▦ Fenêtres**, **⚙ Réglages**,
-**▴ Réduire**, les onglets, le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
+les onglets, le **bouton principal** (son action dépend de l'onglet) et le **bloc d'état**. Un clic
 sur le titre d'une section la replie (gardé d'une session à l'autre), et chaque onglet retrouve sa position quand
 on y revient.
 
@@ -814,8 +814,9 @@ pas le focus, tant que Premiere est ouvert. *Nouveau jeton* rend les anciennes a
 OneDrive ou Google Drive synchronise déjà. Fais pareil sur l'autre ordinateur. RR FX y écrit `RR FX - synchro.json`
 après chaque changement et reprend, au démarrage et toutes les minutes, ce qu'un autre ordinateur y a mis : tes
 effets, looks, styles, couleurs et modèles sont réunis (un élément supprimé d'un côté l'est aussi de l'autre), les
-réglages sont ceux de l'ordinateur modifié en dernier. Restent propres à chaque ordinateur : dossiers liés, calque
-de réglage, télécommande, langue. Aucun compte, aucun serveur RR FX.
+réglages sont ceux de l'ordinateur où un réglage a été changé en dernier (un ordinateur neuf, jamais réglé, reprend
+ceux de l'autre sans les écraser). Restent propres à chaque ordinateur : dossiers liés, calque de réglage et projet
+modèle, overlays importés, télécommande, langue. Aucun compte, aucun serveur RR FX.
 
 ### Langue du panneau
 

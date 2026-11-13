@@ -201,16 +201,18 @@
       const x = st();
       return app.runTask(_T('Archiver le projet'), async () => {
         if (!Store.fs) return { kind: 'warn', title: _T('Disponible dans Premiere'), detail: _T('L\'archive copie des fichiers sur le disque : rien à faire en mode démo.') };
+        // Sans dossier choisi, le chemin serait relatif au dossier de Premiere : on refuse.
+        if (!x.archiveDir || !Store.path.isAbsolute(x.archiveDir)) return { kind: 'warn', title: _T('Choisis le dossier de l\'archive'), detail: _T('Indique d\'abord où créer l\'archive (bouton « Dossier de l\'archive… »).') };
         const u = await Host.call('usedMedia', {});
         if (!u.ok) return { kind: 'error', title: _T('Archive impossible'), detail: u.error };
         const fs = Store.fs, P = Store.path;
         const name = (u.projectName || 'Projet').replace(/\.prproj$/i, ''), stamp = O.dayKey(new Date());
         const dir = P.join(x.archiveDir, name + ' - ' + _T('archive') + ' ' + stamp), media = P.join(dir, _T('Médias'));
         fs.mkdirSync(media, { recursive: true });
-        let bytes = 0, copied = 0, missing = [];
+        let bytes = 0, copied = 0, missing = [], stopped = false;
         const used = new Set();
         for (let i = 0; i < u.files.length; i++) {
-          if (app.S.cancel) break;
+          if (app.S.cancel) { stopped = true; break; }
           const f = u.files[i];
           app.status.progress(i, u.files.length, base(f.path));
           if (!fs.existsSync(f.path)) { missing.push(f.path); continue; }
@@ -223,12 +225,15 @@
           copied++;
         }
         if (u.project && fs.existsSync(u.project)) fs.copyFileSync(u.project, P.join(dir, base(u.project)));
-        const recap = [_T('Archive RR FX de « ') + name + ' » · ' + new Date().toLocaleString(), '',
+        // Arrêtée en cours de route : dit clairement dans le LISEZMOI et le bilan qu'il manque des médias.
+        const partial = stopped ? _T('ARCHIVE INCOMPLÈTE : arrêtée après ') + copied + _T(' médias copiés sur ') + u.files.length + _T('. Relance l\'archive pour avoir tous les médias.') : '';
+        const recap = [_T('Archive RR FX de « ') + name + ' » · ' + new Date().toLocaleString(), '', ...(partial ? [partial, ''] : []),
           app.plural(copied, _T('média copié'), _T('médias copiés')) + ' (' + (bytes / 1e9).toFixed(2).replace('.', ',') + _T(' Go)'),
           missing.length ? app.plural(missing.length, _T('média introuvable'), _T('médias introuvables')) + ' :' : '', ...missing, '',
           _T('Dans Premiere : ouvre le projet copié ; s\'il demande les médias, montre-lui le dossier « Médias » : il retrouve tous les autres.'), '',
           _T('Médias :'), ...u.files.map(f => '- ' + f.path)].filter((l, i, a) => l !== '' || a[i - 1] !== '');
         fs.writeFileSync(P.join(dir, _T('LISEZMOI - archive.txt')), recap.join('\r\n'), 'utf8');
+        if (partial) return { kind: 'warn', title: _T('Archive incomplète (arrêtée)'), detail: partial + ' · ' + dir };
         return { kind: missing.length ? 'warn' : 'ok', title: _T('Projet archivé · ') + app.plural(copied, _T('média'), _T('médias')), detail: (bytes / 1e9).toFixed(2).replace('.', ',') + _T(' Go dans ') + dir + (missing.length ? ' · ' + app.plural(missing.length, _T('introuvable'), _T('introuvables')) : '') + '.' };
       }, true);
     }

@@ -20,7 +20,9 @@
         if (!dir || !Store.fs || !I) return { ok: false, error: _T('Disponible dans Premiere.') };
         const file = Store.path.join(dir, 'CSXS', 'manifest.xml'), xml = Store.fs.readFileSync(file, 'utf8');
         const next = I.startOn(xml, settings().startWithPremiere !== false);
-        if (next !== xml) Store.fs.writeFileSync(file, next, 'utf8');
+        // Écrit à côté puis renommé : un manifeste à moitié écrit (plantage, disque plein) empêcherait
+        // le panneau de se charger.
+        if (next !== xml) { Store.fs.writeFileSync(file + '.tmp', next, 'utf8'); Store.fs.renameSync(file + '.tmp', file); }
         return { ok: true, changed: next !== xml };
       } catch (e) { return { ok: false, error: _T('Manifeste non modifié : ') + errorMessage(e) }; }
     }

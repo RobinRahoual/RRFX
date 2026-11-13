@@ -52,16 +52,24 @@
       app.status.phase(_T('Images de ') + app.plural(clips.length, _T('plan')));
       const frames = await app.services.grabClean(clips.map(c => (c.start + c.end) / 2 / TICKS), 2, 320, progress(_T('Export des images'), clips.length));
       app.status.phase(_T('Analyse'));
-      const groups = [];
+      const groups = [], fine = [];
       let evSum = 0, done = 0;
       clips.forEach((clip, i) => {
         const p = G.autoParams(G.analyze(frames[i].data), { exposure: f.exposure, wb: f.wb, levels: f.levels, strength: f.strength / 100 });
         const what = G.describe(p);
-        if (what === 'déjà juste') return;
+        // describe() rend un texte traduit : comparer au texte traduit, pas au français.
+        if (what === _T('déjà juste')) { fine.push(clip); return; }
         app.log(clip.name + ' : ' + what, 'info');
         evSum += p.ev; done++;
         groups.push({ name: 'RR FX · Auto ' + clip.name, lutPath: writeLut('Auto', 'Auto ' + clip.name, G.lutOf(G.correction(p), 33)), spans: [{ a: clip.start, b: clip.end, top: clip.track }] });
       });
+      // Plans désormais justes : l'ancien calque « RR FX · Auto <plan> » d'un passage précédent
+      // partirait sinon (placeGrades ne retire que sur les plans qu'il corrige). Nom et début du
+      // calque sont connus (un groupe par plan) : undo le retrouve sur toutes les pistes.
+      if (fine.length) {
+        const old = await Host.call('undo', { entries: fine.map(c => ({ kind: 'adj', track: c.track + 1, start: c.start, name: 'RR FX · Auto ' + c.name })) });
+        if (old.ok && old.removed) app.log(app.plural(old.removed, _T('ancien calque Auto retiré'), _T('anciens calques Auto retirés')), 'info');
+      }
       if (!groups.length) return { created: [], layers: 0, summary: _T('tous les plans sont déjà justes') };
       app.status.phase(_T('Calques au-dessus de la conversion'));
       const fx = await app.services.lumetriFx();

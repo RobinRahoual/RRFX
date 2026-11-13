@@ -73,6 +73,11 @@
     return out;
   }
 
+  // Seuls le texte (pack.json, .cube) est compressé dans un pack : 64 Mo suffisent largement.
+  const MAX_INFLATE = 64 * 1024 * 1024;
+  /* Chemin relatif sûr dans le dossier du pack : ni « .. », ni absolu, ni « C: », ni antislash. */
+  const safePath = n => typeof n === 'string' && n.length > 0 && !/[\\:\0]/.test(n) && !/^\//.test(n) && n.split('/').every(s => s !== '..' && s !== '.');
+
   /* Contenu d'un ZIP : [{ name, data }]. inflate sert aux entrées compressées (méthode 8). */
   function unzip(bytes, inflate) {
     const v = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength);
@@ -89,11 +94,16 @@
       const name = fromUtf8(bytes.subarray(p + 46, p + 46 + nlen));
       p += 46 + nlen + xlen + clen;
       if (/\/$/.test(name)) continue;
+      // Nom piégé (zip-slip) : « .. », chemin absolu, lecteur Windows ou antislash, refusé.
+      if (!safePath(name)) throw new Error(_T('Pack refusé : chemin de fichier invalide (') + name + ').');
+      const size = v.getUint32(p - nlen - xlen - clen - 46 + 24, true);
       const start = off + 30 + v.getUint16(off + 26, true) + v.getUint16(off + 28, true);
       let data = bytes.subarray(start, start + csize);
       if (method === 8) {
         if (!inflate) throw new Error(_T('Pack compressé : décompression indisponible ici.'));
-        data = inflate(data);
+        if (size > MAX_INFLATE) throw new Error(_T('Contenu trop gros une fois décompressé : refusé.'));
+        data = inflate(data, MAX_INFLATE);
+        if (data.length !== size) throw new Error(_T('Pack abîmé : « ') + name + _T(' » ne correspond pas.'));
       } else if (method !== 0) throw new Error(_T('Compression non prise en charge dans le pack (') + name + ').');
       if (crc32(data) !== crc) throw new Error(_T('Pack abîmé : « ') + name + _T(' » ne correspond pas.'));
       out.push({ name, data });
@@ -136,8 +146,8 @@
     if (!m || !m.rrfxpack) throw new Error(_T('Ce ZIP n\'est pas un pack RR FX.'));
     if (m.rrfxpack > VERSION) throw new Error(_T('Pack créé avec une version plus récente de RR FX : mets le plugin à jour.'));
     m.items = Array.isArray(m.items) ? m.items : [];
-    m.overlays = (Array.isArray(m.overlays) ? m.overlays : []).filter(o => o && files.has(o.file));
-    if (m.titles && m.titles.mogrt && !files.has(m.titles.mogrt)) m.titles.mogrt = '';
+    m.overlays = (Array.isArray(m.overlays) ? m.overlays : []).filter(o => o && safePath(o.file) && files.has(o.file));
+    if (m.titles && m.titles.mogrt && !(safePath(m.titles.mogrt) && files.has(m.titles.mogrt))) m.titles.mogrt = '';
     return { manifest: m, files };
   }
 
@@ -153,5 +163,5 @@
     ].filter(Boolean).join(', ') || 'vide';
   }
 
-  return { crc32, zip, zipChunks, unzip, build, read, summary, safeName, VERSION };
+  return { crc32, zip, zipChunks, unzip, build, read, summary, safeName, safePath, VERSION };
 });

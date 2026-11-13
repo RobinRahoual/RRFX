@@ -212,7 +212,7 @@
             try { sig = s.sequenceID + '|' + tk(s.getPlayerPosition()); } catch (e) { sig = s.sequenceID; }
             try { for (i = 0; i < s.videoTracks.numTracks; i++) n += s.videoTracks[i].clips.numItems; } catch (e1) {}
             try { for (i = 0; i < s.audioTracks.numTracks; i++) n += s.audioTracks[i].clips.numItems; } catch (e2) {}
-            try { sig += '|' + tk(s.end); } catch (e3) {}
+            sig += '|' + seqEnd(s);
             sig += '|' + n;
         }
         return ok({ project: P.name || '', path: P.path || '', sig: sig });

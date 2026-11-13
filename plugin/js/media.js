@@ -214,6 +214,18 @@
         const RATES = [96000, 88200, 64000, 48000, 44100, 32000, 24000, 22050, 16000, 12000, 11025, 8000, 7350];
         if (freqIndex === 15) { rate = ((a & 7) << 21) | (c & 0x7f) << 14 | (b[p + 2] << 6) | (b[p + 3] >> 2); ch = (b[p + 4] >> 3) & 15; } else rate = RATES[freqIndex];
         if (objectType === 31) objectType = 32 + (((a & 7) << 3) | (c >> 5));
+        // HE-AAC (SBR 5, PS 29) : la fréquence lue est celle du cœur, suivie de la fréquence SBR puis
+        // du type du cœur (presque toujours LC). L'en-tête ADTS décrit le cœur (profil LC) : le
+        // décodeur retrouve le SBR tout seul. Le profil 3 (LTP) qu'il recevait sinon est faux.
+        if (objectType === 5 || objectType === 29) {
+          let bit = 5 + 4 + (freqIndex === 15 ? 24 : 0) + 4;
+          const read = n => { let v = 0; for (let i = 0; i < n; i++, bit++) v = (v << 1) | ((b[p + (bit >> 3)] >> (7 - (bit & 7))) & 1); return v; };
+          // Fréquence SBR : celle du son décodé.
+          const ext = read(4), sbr = ext === 15 ? read(24) : RATES[ext];
+          if (sbr) rate = sbr;
+          const core = read(5);
+          objectType = core >= 1 && core <= 4 ? core : 2;
+        }
         return { objectType, freqIndex, rate, channels: ch };
       }
       p += l;

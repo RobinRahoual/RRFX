@@ -93,31 +93,87 @@
       return 'file://' + (u[0] === '/' ? '' : '/') + encodeURI(u).replace(/#/g, '%23').replace(/\?/g, '%3F');
     };
     const ovMedia = new Map();
-    // L'image ou la vidéo d'un overlay, chargée une fois (lecture en boucle, muette).
-    function overlayMedia(o, onReady) {
+    /* L'image d'un overlay, chargée une fois. Vidéo : une image fixe (canevas) est prise puis le
+       lecteur est rendu (Chromium plafonne vers 75 lecteurs : un par overlay gardé à vie finissait
+       par bloquer). Seul l'aperçu ouvert garde un vrai lecteur (live : lecture en boucle, muette). */
+    function overlayMedia(o, onReady, live) {
       let m = ovMedia.get(o.id);
       if (!m) {
-        const isImage = o.kind === 'image';
-        const el = isImage ? new Image() : document.createElement('video');
-        m = { el, ready: false, waiting: [] };
+        m = { el: null, video: null, ready: false, waiting: [] };
         ovMedia.set(o.id, m);
-        const ok = () => { m.ready = true; m.waiting.splice(0).forEach(f => f()); };
-        if (isImage) el.onload = ok;
-        else {
-          el.muted = true; el.loop = true; el.playsInline = true; el.preload = 'auto';
-          el.addEventListener('loadeddata', () => { try { el.currentTime = Math.min(1, (el.duration || 2) * 0.3); } catch (e) { /* lecture seule */ } ok(); }, { once: true });
-        }
-        el.onerror = () => { m.failed = true; };
-        el.src = o.url || fileURL(o.path);
+        if (o.kind === 'image') {
+          const img = new Image();
+          img.onload = () => { m.el = img; ready(m); };
+          img.onerror = () => { m.failed = true; };
+          img.src = o.url || fileURL(o.path);
+        } else stillOf(o, m);
       }
-      if (m.ready) onReady && onReady(m);
+      if (live && o.kind !== 'image' && !m.video) liveVideo(o, m, onReady);
+      else if (m.ready) onReady && onReady(m);
       else if (onReady) m.waiting.push(() => onReady(m));
       return m;
     }
+    function ready(m) { m.ready = true; m.waiting.splice(0).forEach(f => f()); }
+    function newVideo(o, preload) {
+      const v = document.createElement('video');
+      v.muted = true; v.loop = true; v.playsInline = true; v.preload = preload;
+      v.src = o.url || fileURL(o.path);
+      return v;
+    }
+    function releaseVideo(v) {
+      if (!v) return;
+      try { v.pause(); v.removeAttribute('src'); v.load(); } catch (e) { /* déjà libéré */ }
+    }
+    // Image fixe à 30 % de la vidéo (au plus 1 s), puis lecteur libéré.
+    function stillOf(o, m) {
+      const v = newVideo(o, 'metadata');
+      const done = () => { clearTimeout(timer); releaseVideo(v); };
+      const timer = setTimeout(() => { m.failed = !m.ready; done(); }, 15000);
+      v.addEventListener('loadedmetadata', () => { try { v.currentTime = Math.min(1, (v.duration || 2) * 0.3); } catch (e) { /* lecture seule */ } }, { once: true });
+      v.addEventListener('seeked', () => {
+        const w = v.videoWidth || 16, hh = v.videoHeight || 9, k = Math.min(1, 640 / w);
+        const c = document.createElement('canvas');
+        c.width = Math.max(1, Math.round(w * k)); c.height = Math.max(1, Math.round(hh * k));
+        try { c.getContext('2d').drawImage(v, 0, 0, c.width, c.height); } catch (e) { /* image illisible */ }
+        // Pour drawOverlayOn : mêmes dimensions que la vidéo.
+        c.videoWidth = w; c.videoHeight = hh;
+        m.still = c;
+        if (!m.video) m.el = c;
+        done();
+        ready(m);
+      }, { once: true });
+      v.onerror = () => { m.failed = true; done(); };
+    }
+    // Vrai lecteur pour l'aperçu ouvert ; rendu quand on passe à un autre (pauseOverlayVideos).
+    function liveVideo(o, m, onReady) {
+      const v = newVideo(o, 'auto');
+      m.video = v;
+      v.addEventListener('loadeddata', () => {
+        if (m.video !== v) return;
+        try { v.currentTime = Math.min(1, (v.duration || 2) * 0.3); } catch (e) { /* lecture seule */ }
+        m.el = v;
+        if (!m.ready) ready(m);
+        if (onReady) onReady(m);
+      }, { once: true });
+      v.onerror = () => { if (m.video === v) { m.video = null; releaseVideo(v); } };
+    }
 
-    // Les vidéos d'overlays ne tournent que pendant qu'on regarde leur aperçu.
+    // Les vidéos d'overlays ne tournent que pendant qu'on regarde leur aperçu : les autres lecteurs
+    // sont rendus (l'image fixe reprend leur place).
     function pauseOverlayVideos(except) {
-      ovMedia.forEach((m, id) => { if (id !== except && m.el.pause && !m.el.paused) m.el.pause(); });
+      ovMedia.forEach((m, id) => {
+        if (id === except || !m.video) return;
+        releaseVideo(m.video);
+        m.video = null;
+        m.el = m.still || null;
+        if (!m.el) m.ready = false;
+      });
+    }
+    // Overlay retiré de la liste : plus rien à garder.
+    function forgetOverlay(id) {
+      const m = ovMedia.get(id);
+      if (m) releaseVideo(m.video);
+      ovMedia.delete(id);
     }
 
     function blendCss(v) { return (BLENDS.find(b => b.v === Number(v)) || BLENDS[0]).css; }
@@ -173,7 +229,7 @@
         return;
       }
       const m = overlayMedia(entry.overlay);
-      if (!m.ready) return;
+      if (!m.ready || !m.el) return;
       const el = m.el;
       const iw = el.videoWidth || el.naturalWidth || 16, ih = el.videoHeight || el.naturalHeight || 9, k = Math.max(cw / iw, ch / ih);
       g.save();
@@ -261,7 +317,15 @@
        overlays coupés pendant l'export (level : on garde les étalonnages RR FX de niveau
        inférieur, 2 = conversion seule). Renvoie des ImageData de largeur w. Hors de Premiere :
        les plans de test. */
-    async function grabClean(times, level, w, onProgress) {
+    /* Une capture à la fois (tâches en parallèle depuis la 2.12) : framesEnd réactive les looks,
+       il ne doit pas le faire pendant l'export d'une autre tâche. */
+    let cleanLock = Promise.resolve();
+    function grabClean(times, level, w, onProgress) {
+      const run = cleanLock.then(() => grabCleanNow(times, level, w, onProgress));
+      cleanLock = run.catch(() => { /* l'erreur part à l'appelant */ });
+      return run;
+    }
+    async function grabCleanNow(times, level, w, onProgress) {
       w = w || 320;
       const toData = img => {
         const iw = img.naturalWidth || img.width, ih = img.naturalHeight || img.height, h2 = Math.max(1, Math.round(w * ih / iw));
@@ -273,10 +337,15 @@
       };
       const dir = Store.cacheDir();
       if (!dir || S.demo) return times.map((t, i) => toData(Pv.shots()[i % 2 ? 'B' : 'A']));
-      Store.listFiles(dir, /^rrfx-clean-/, 400, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
-      const r = await Host.call('framesBegin', { times, level, folder: dir.replace(/\\/g, '/'), prefix: 'rrfx-clean-' + uid() + '-' });
+      // Restes d'une capture interrompue : seulement ceux de plus de 10 min (pas ceux d'une autre tâche).
+      const stale = Date.now() - 10 * 60000;
+      Store.listFiles(dir, /^rrfx-clean-/, 400, 0).forEach(f => { try { if (Store.fs.statSync(f).mtimeMs < stale) Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
+      const prefix = 'rrfx-clean-' + uid() + '-';
+      const r = await Host.call('framesBegin', { times, level, folder: dir.replace(/\\/g, '/'), prefix });
       if (!r.ok) throw new Error(r.error);
       const found = new Array(r.files.length).fill(null);
+      // Nos images seulement (même préfixe), y compris celles écrites en retard après une erreur.
+      const dropOwn = () => Store.listFiles(dir, new RegExp('^' + prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')), 400, 0).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
       try {
         // Premiere écrit les images après coup (avec ou sans .png) : on les attend.
         const limit = 40 + r.files.length * 8;
@@ -290,10 +359,11 @@
       } finally {
         await Host.call('framesEnd', { off: r.off });
       }
-      if (found.some(f => !f)) throw new Error(_T('Premiere n\'a pas écrit toutes les images (') + dir + ').');
-      const imgs = await Promise.all(found.map(f => loadImage(fileURL(f) + '?' + Date.now())));
-      found.forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* déjà supprimé */ } });
-      return imgs.map(toData);
+      if (found.some(f => !f)) { dropOwn(); throw new Error(_T('Premiere n\'a pas écrit toutes les images (') + dir + ').'); }
+      try {
+        const imgs = await Promise.all(found.map(f => loadImage(fileURL(f) + '?' + Date.now())));
+        return imgs.map(toData);
+      } finally { dropOwn(); }
     }
     function useTestShots() {
       Pv.resetShots();
@@ -463,9 +533,11 @@
             e.def && e.def.target ? h('span', { class: 'tag', title: _T('Posé sur une copie du plan (un calque de réglage ne peut pas mélanger les images)') }, 'CLIP FX') : null,
             isFav(e) ? h('span', { class: 'fav-mark' }, '★') : null,
             settings().vary === 'chain' && settings().chain.keys.includes(e.key) ? h('span', { class: 'chain-mark', title: _T('Dans l\'enchaînement') }, String(settings().chain.keys.indexOf(e.key) + 1)) : null));
-        card.addEventListener('click', ev => (ev.shiftKey ? toggleChain(e) : selectEntry(e)));
+        // La carte déjà choisie garde les réglages modifiés dans l'inspecteur.
+        const same = () => !!(S.cur && S.cur.key === e.key);
+        card.addEventListener('click', ev => (ev.shiftKey ? toggleChain(e) : selectEntry(e, same())));
         // Double-clic : posé à la tête de lecture. Glisser dans la timeline : posé où il est lâché.
-        card.addEventListener('dblclick', ev => { if (ev.shiftKey) return; selectEntry(e); applyWhenIdle({ placement: 'playhead' }, e); });
+        card.addEventListener('dblclick', ev => { if (ev.shiftKey) return; selectEntry(e, same()); applyWhenIdle({ placement: 'playhead' }, e); });
         card.draggable = true;
         card.addEventListener('dragstart', ev => dragOut(ev, e));
         card.addEventListener('dragend', () => { dropped(); });
@@ -500,20 +572,51 @@
       drag = null;
       if (!d) return;
       let r = null;
-      // Premiere importe et pose le fichier juste après le lâcher : on l'attend jusqu'à 3 s.
+      // Premiere importe et pose le fichier juste après le lâcher : on l'attend jusqu'à 3 s. Une
+      // erreur (pas de séquence ouverte…) n'arrête pas : seul le dernier essai retire le fichier
+      // importé du panneau Projet.
       for (let i = 0; i < 12; i++) {
         await new Promise(res => setTimeout(res, 250));
         r = await Host.call('takeDrop', { tag: d.tag, last: i === 11 });
-        if (!r.ok || r.found) break;
+        if (r.ok && r.found) break;
       }
-      if (!r.ok) return status.finish('error', _T('Effet non posé'), r.error);
+      // Après le lâcher (pas pendant : Premiere gère encore le glisser) : les anciens restes.
+      if (r.ok) retryDrops();
+      if (!r.ok) {
+        // takeDrop demande une séquence ouverte : le fichier sera retiré au prochain glisser ou démarrage.
+        keepDrop(d.tag);
+        return status.finish('error', _T('Effet non posé'), r.error);
+      }
       if (!r.found) {
         if (r.inProject) status.finish('warn', _T('Effet non posé'), _T('Lâche l\'effet sur une piste de la timeline (ou double-clique dessus : il se pose à la tête de lecture).'));
         return;
       }
-      selectEntry(d.entry);
+      selectEntry(d.entry, !!(S.cur && S.cur.key === d.entry.key));
       applyWhenIdle({ placement: 'playhead', at: r.at, track: r.track }, d.entry);
     }
+    // Fichiers de glisser restés dans le projet (lâchés sans séquence ouverte) : nouvel essai plus tard.
+    function keepDrop(tag) {
+      const s = settings();
+      s.dropPending = (Array.isArray(s.dropPending) ? s.dropPending : []).concat(tag).slice(-20);
+      persist();
+    }
+    let retrying = false;
+    async function retryDrops() {
+      const s = settings();
+      if (retrying || S.demo || !Array.isArray(s.dropPending) || !s.dropPending.length) return;
+      retrying = true;
+      try {
+        const todo = s.dropPending.slice(), left = [];
+        for (const tag of todo) {
+          const r = await Host.call('takeDrop', { tag, last: true }).catch(() => ({ ok: false }));
+          if (!r.ok) left.push(tag);
+        }
+        // Liste relue : un glisser a pu en ajouter pendant ce temps.
+        s.dropPending = left.concat((s.dropPending || []).filter(t => todo.indexOf(t) < 0));
+        persist();
+      } finally { retrying = false; }
+    }
+    setTimeout(() => { retryDrops(); }, 8000);
     // Les tâches tournent en même temps : l'effet est posé tout de suite, même si une autre tourne.
     const applyWhenIdle = o => applyEffect(o);
 
@@ -627,7 +730,7 @@
       });
       buildStrip(strip);
       pauseOverlayVideos(e.kind === 'overlay' ? e.overlay.id : null);
-      if (e.kind === 'overlay' && !e.overlay.pack) overlayMedia(e.overlay, m => { if (m.el.play && S.cur === e) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } });
+      if (e.kind === 'overlay' && !e.overlay.pack) overlayMedia(e.overlay, m => { if (m.el && m.el.play && S.cur === e) { const p2 = m.el.play(); if (p2 && p2.catch) p2.catch(() => {}); } }, true);
       const real = h('button', { class: 'action quiet', title: Pv.isReal() ? _T('Revenir aux plans de test') : _T('Utiliser les images de ta séquence autour de la coupe la plus proche') }, Pv.isReal() ? _T('Plans de test') : _T('📷 Ma vraie image'));
       real.addEventListener('click', () => (Pv.isReal() ? useTestShots() : grabRealFrames()));
       ins.appendChild(h('div', { class: 'preview' },
@@ -677,6 +780,7 @@
         const remove = h('button', { class: 'action quiet danger' }, _T('Retirer de la liste'));
         remove.addEventListener('click', () => {
           st.overlays = st.overlays.filter(o => o.id !== e.overlay.id);
+          forgetOverlay(e.overlay.id);
           persist();
           S.cur = entries()[0];
           S.params = defaultParams(S.cur);

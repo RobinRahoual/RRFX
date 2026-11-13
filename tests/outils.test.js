@@ -153,11 +153,26 @@ test('correcteur de sous-titres : problèmes trouvés et corrigés', () => {
   assert.deepStrictEqual(kinds(2), []);
   const wrap = (t, m) => { const w = t.split(' '), l = []; let c = ''; w.forEach(x => { if (c && (c + ' ' + x).length > m) { l.push(c); c = x; } else c = c ? c + ' ' + x : x; }); l.push(c); return l.join('\n'); };
   const f = O.fixCues(cues, wrap);
-  assert.strictEqual(f.cues[0].text, 'Bonjour à tous !');
+  // Fine insécable avant « ! » (insécable normale avant « : »).
+  assert.strictEqual(f.cues[0].text, 'Bonjour à tous\u202f!');
   assert.ok(f.cues[0].end > 0.5 && f.cues[0].end <= 1.9, 'longer, without biting the next one');
   assert.ok(f.cues[1].text.split('\n').every(l => l.length <= 42));
   assert.strictEqual(f.fixed, 3, 'the 3rd one gets a non-breaking space before « : »');
   assert.deepStrictEqual(O.checkCues(f.cues).filter(x => x.kind !== 'fast' && x.kind !== 'short'), []);
+});
+
+test('correcteur de sous-titres : adresses, heures et espaces insécables gardés', () => {
+  const fix = t => O.fixCues([{ start: 0, end: 5, text: t }], null).cues[0].text;
+  // Rien dans une adresse ; la ponctuation qui la suit reçoit son espace.
+  assert.strictEqual(fix('Va sur https://rrfx.fr/aide?x=1 !'), 'Va sur https://rrfx.fr/aide?x=1\u202f!');
+  assert.strictEqual(fix('www.site.fr/a:b!'), 'www.site.fr/a:b\u202f!');
+  // Heure : pas d'espace dans « 12:30 ».
+  assert.strictEqual(fix('Rendez-vous à 12:30 : ok?'), 'Rendez-vous à 12:30\u00a0: ok\u202f?');
+  // Une espace insécable déjà là n'est pas remplacée.
+  assert.strictEqual(fix('Déjà\u202f; là\u00a0!'), 'Déjà\u202f; là\u00a0!');
+  assert.deepStrictEqual(O.checkCues([{ start: 0, end: 5, text: 'Va sur www.site.fr/a:b, à 12:30.' }]), []);
+  // En anglais : pas d'espace française.
+  assert.strictEqual(O.fixCues([{ start: 0, end: 5, text: 'Hello!' }], null, { lang: 'en' }).cues[0].text, 'Hello!');
 });
 
 test('export en lot : noms de fichiers', () => {

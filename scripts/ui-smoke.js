@@ -1071,7 +1071,8 @@ const url = 'file://' + path.join(__dirname, '..', 'plugin', 'index.html');
     await page.click('.section:has-text("Correcteur de sous-titres") .action.go');
     await page.waitForSelector('#status:has-text("sous-titres corrigés")', { timeout: 3000 });
     const srt = await page.evaluate(() => window.RRFXApp.speech.settings().srt);
-    if (!/Bonjour à tous !/.test(srt)) throw new Error('srt corrigé : ' + srt);
+    // Espace fine insécable avant « ! » (typographie française).
+    if (!/Bonjour à tous\u202f!/.test(srt)) throw new Error('srt corrigé : ' + srt);
   });
   await step('2.6 : rythme, export en lot, vérification de l\'image', async () => {
     await goTab('formats');

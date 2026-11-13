@@ -34,8 +34,7 @@
         var P = app.project, out = [], i, sq, a = P.activeSequence, end;
         for (i = 0; i < P.sequences.numSequences; i++) {
             sq = P.sequences[i];
-            end = 0;
-            try { end = tk(sq.end) / TICKS; } catch (e) {}
+            end = seqEnd(sq) / TICKS;
             out.push({ id: sq.sequenceID, name: sq.name, w: Number(sq.frameSizeHorizontal) || 0, h: Number(sq.frameSizeVertical) || 0, end: end });
         }
         return ok({ sequences: out, active: a ? a.sequenceID : '' });
@@ -71,16 +70,23 @@
         }
         for (j = 0; j < s.videoTracks.numTracks; j++) clean(clipsOf(s, j));
         for (j = 0; j < s.audioTracks.numTracks; j++) clean(audioItems(s, j));
-        // Tout recule de A (de gauche a droite : rien ne se chevauche).
+        // Tout recule de A (de gauche a droite : rien ne se chevauche). Les places sont notees
+        // avant de bouger quoi que ce soit : le son lie a pu suivre son image, il n'est decale
+        // que s'il n'est pas deja a sa place.
         if (A > 0) {
+            var plan = [];
             for (j = 0; j < s.videoTracks.numTracks; j++) {
                 list = clipsOf(s, j);
-                for (i = 0; i < list.length; i++) if (Math.abs(tk(list[i].start) - (tk(list[i].start) - A)) > 1 && tk(list[i].start) >= A - f / 2) { if (!shift(list[i], -A)) refused++; }
+                for (i = 0; i < list.length; i++) if (tk(list[i].start) >= A - f / 2) plan.push({ it: list[i], target: tk(list[i].start) - A });
             }
             for (j = 0; j < s.audioTracks.numTracks; j++) {
                 list = audioItems(s, j);
-                // Le son lie a pu suivre son image.
-                for (i = 0; i < list.length; i++) if (tk(list[i].start) >= A - f / 2) { if (!shift(list[i], -A)) refused++; }
+                for (i = 0; i < list.length; i++) if (tk(list[i].start) >= A - f / 2) plan.push({ it: list[i], target: tk(list[i].start) - A });
+            }
+            for (i = 0; i < plan.length; i++) {
+                x = tk(plan[i].it.start);
+                if (Math.abs(x - plan[i].target) <= 1) continue;
+                if (!shift(plan[i].it, plan[i].target - x)) refused++;
             }
         }
         if (refused) warnings.push(refused + ' morceau(x) que Premiere a refus\u00e9 de couper ou d\u00e9placer : v\u00e9rifie l\'extrait');
@@ -92,6 +98,7 @@
     function preflight(o) {
         var s = activeSeq(), f = tpf(s), issues = [], i, j, list, it, spans = [], end = 0, a, b, p, v, comp, pos, W, H, vertical, lo, hi, cur, tr, fps = TICKS / f;
         W = Number(s.frameSizeHorizontal) || 1920; H = Number(s.frameSizeVertical) || 1080; vertical = H > W;
+        var over = overlayIds();
         function add(level, t, where, text) { issues.push({ level: level, t: t / TICKS, where: where, text: text }); }
         function offline(item) { try { return item.projectItem && item.projectItem.isOffline && item.projectItem.isOffline(); } catch (e) { return false; } }
         function disabled(item) { try { return item.disabled === true; } catch (e) { return false; } }
@@ -105,7 +112,9 @@
                 end = Math.max(end, b);
                 if (offline(it)) add('error', a, 'V' + (j + 1), 'M\u00e9dia hors ligne : ' + it.name);
                 if (disabled(it)) add('warn', a, 'V' + (j + 1), 'Clip d\u00e9sactiv\u00e9 : ' + it.name);
-                if (!isAdj(it) && !/^RR FX/.test(String(it.name))) spans.push([a, b]);
+                // Image : tout sauf calques de reglage, titres (graphiques) et overlays RR FX. Les plans
+                // poses par RR FX (montage auto, copies du plan) sont de vraies images.
+                if (!isAdj(it) && !isGraphic(it) && !(/^RR FX/.test(String(it.name)) && convKind(it, over) === 'over')) spans.push([a, b]);
                 // Textes poses par RR FX : position dans la zone sure.
                 if (/^RR FX \u00b7 (Texte|Sous-titres|Bandeau)/.test(String(it.name)) || it.getMGTComponent) {
                     try {

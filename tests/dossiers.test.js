@@ -79,3 +79,17 @@ test('host: files under assets/<CAT>/ go to the bin assets › CAT; moved files 
   assert.deepStrictEqual([r.done, r.failed], [1, ['/P/assets/VIDEOS/Détourages/a (détouré).mov']]);
   assert.ok(byPath('/P/assets/MUSIQUE/Lofi (2).mp3'));
 });
+
+test('other projects in the folder; auto-sort waits for copies and spares older files when shared', () => {
+  assert.deepStrictEqual(D.otherProjects('/P/Montage.prproj', ['Montage.prproj', 'Teaser.PRPROJ', '._Teaser.prproj', 'assets', 'notes.txt']), ['Teaser.PRPROJ']);
+  assert.deepStrictEqual(D.otherProjects('C:\\P\\montage.prproj', ['Montage.prproj']), []);
+  const w = {};
+  const f = (name, bytes, mtime) => ({ name, bytes, mtime });
+  // Premier tour : rien (on ne sait pas encore ce qui est en copie).
+  assert.deepStrictEqual(D.readyToSort([f('old.mp4', 10, 1)], w, true), []);
+  // Un fichier arrive, un autre grossit encore : seul le fichier stable et nouveau est rangé.
+  assert.deepStrictEqual(D.readyToSort([f('old.mp4', 10, 1), f('new.mp4', 5, 2), f('copie.mov', 1, 3)], w, true), []);
+  assert.deepStrictEqual(D.readyToSort([f('old.mp4', 10, 1), f('new.mp4', 5, 2), f('copie.mov', 9, 4)], w, true), ['new.mp4']);
+  // Sans autre projet : les anciens fichiers aussi.
+  assert.deepStrictEqual(D.readyToSort([f('old.mp4', 10, 1), f('copie.mov', 9, 4)], w, false), ['old.mp4', 'copie.mov']);
+});

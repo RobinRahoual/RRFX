@@ -137,6 +137,20 @@ test('unsupported or broken files give a clear error', opt, async () => {
   await assert.rejects(M.probe(io(silent)), /piste son/);
 });
 
+test('HE-AAC (SBR) AudioSpecificConfig: ADTS gets the LC core, not LTP', () => {
+  // AOT 5, cœur à 24 kHz (index 6), stéréo, SBR à 48 kHz (index 3), cœur AOT 2.
+  const asc = [0x2b, 0x11, 0x88, 0x00];
+  const b = new Uint8Array([0, 0, 0, 0, 0x03, 22, 0, 0, 0, 0x04, 17].concat(new Array(13).fill(0), [0x05, asc.length], asc));
+  const r = M.parseAsc(b, { body: 0, end: b.length });
+  assert.strictEqual(r.objectType, 2);
+  assert.strictEqual(r.freqIndex, 6);
+  assert.strictEqual(r.channels, 2);
+  assert.strictEqual(r.rate, 48000);
+  const h = M.adtsHeader(r, 10);
+  assert.strictEqual((h[2] >> 6) + 1, 2, 'AAC LC');
+  assert.strictEqual((h[2] >> 2) & 15, 6, 'core rate');
+});
+
 test('ADTS header fields', () => {
   const h = M.adtsHeader({ objectType: 2, freqIndex: 3, channels: 2 }, 100);
   assert.strictEqual(h[0], 0xff);

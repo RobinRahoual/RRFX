@@ -123,8 +123,15 @@
         const created = [], warnings = [];
         for (const f of found) {
           if (!f.ranges.length) continue;
-          const r = await Host.call('gainKeys', { track: f.clip.track, start: f.clip.start, keys: SP.duckKeys(f.ranges, x.depth, 0.03), label: f.clip.name });
-          if (r.ok) { created.push(...r.created); warnings.push(...(r.warnings || [])); } else warnings.push(r.error);
+          // Le volume se règle sur le son : pour un plan vidéo, ses sons liés (clip.track y est
+          // la piste vidéo). Sans liste audio (ancien format) : le plan lui-même, comme avant.
+          const targets = Array.isArray(f.clip.audio) ? f.clip.audio : [{ track: f.clip.track, start: f.clip.start }];
+          if (!targets.length) { warnings.push(f.clip.name + _T(' : pas de son lié, volume non réglé')); continue; }
+          const keys = SP.duckKeys(f.ranges, x.depth, 0.03);
+          for (const t of targets) {
+            const r = await Host.call('gainKeys', { track: t.track, start: t.start, keys, label: f.clip.name });
+            if (r.ok) { created.push(...r.created); warnings.push(...(r.warnings || [])); } else warnings.push(r.error);
+          }
         }
         warnings.forEach(w => app.log(w, 'warn'));
         if (created.length) app.pushHistory({ date: Date.now(), label: _T('Respirations et clics'), entries: created });

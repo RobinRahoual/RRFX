@@ -80,8 +80,11 @@ function make(dir) {
   png(put('Overlays/Images/Light leak orange.png'), 320, 180, (x, y) => { const d = Math.hypot(x - 0.85, y - 0.2); const k = Math.max(0, 1 - d * 1.4); return [Math.round(255 * k), Math.round(140 * k * k), Math.round(30 * k * k * k)]; });
   png(put('Overlays/Images/Poussière.png'), 320, 180, (x, y) => { const v = (Math.sin(x * 913 + y * 377) * 43758.5453) % 1; return Math.abs(v) > 0.995 ? [230, 230, 230] : [0, 0, 0]; });
   png(put('Logos/Logo RR.png'), 240, 240, (x, y) => { const d = Math.hypot(x - 0.5, y - 0.5); return d < 0.42 ? (d > 0.36 ? [255, 255, 255] : [24, 24, 28]) : [75, 156, 245]; });
-  ffmpeg(['-f', 'lavfi', '-i', 'gradients=s=320x180:d=2:speed=0.04:c0=0xff7a00:c1=0x000000:c2=0xffc070:n=3', '-c:v', 'libvpx-vp9', '-b:v', '300k', put('Overlays/Vidéos/Light leak chaud.webm')]);
-  ffmpeg(['-f', 'lavfi', '-i', 'cellauto=s=320x180:rate=25,format=yuv420p', '-t', '2', '-c:v', 'libvpx-vp9', '-b:v', '300k', put('Overlays/Vidéos/Glitch.webm')]);
+  // format=yuv420p : les ffmpeg récents sortent « gradients » en gbrap, que libvpx-vp9 refuse.
+  // Un encodage raté ne laisse pas de fichier vide (la vignette échouerait au chargement).
+  const webm = (source, rel, extra) => { const f = put(rel); if (!ffmpeg(['-f', 'lavfi', '-i', source + ',format=yuv420p'].concat(extra || [], ['-c:v', 'libvpx-vp9', '-b:v', '300k', f]))) fs.rmSync(f, { force: true }); };
+  webm('gradients=s=320x180:d=2:speed=0.04:c0=0xff7a00:c1=0x000000:c2=0xffc070:n=3', 'Overlays/Vidéos/Light leak chaud.webm');
+  webm('cellauto=s=320x180:rate=25', 'Overlays/Vidéos/Glitch.webm', ['-t', '2']);
   fs.writeFileSync(put('Titres/Lower third néon.mogrt'), Buffer.from('PK\u0003\u0004 demo'));
   fs.writeFileSync(put('Titres/Titre clip.mogrt'), Buffer.from('PK\u0003\u0004 demo'));
   fs.writeFileSync(put('Presets/Zoom punch.prfpset'), '<?xml version="1.0"?><PremiereData Version="3"/>\n');

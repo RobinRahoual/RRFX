@@ -179,10 +179,11 @@
             if (o.target === 'overlay' && !t.name) t.name = o.name;
             if (o.target === 'clip') {
                 if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de clip pour ' + t.side.toUpperCase()); continue; }
-                track = t.clipTrack;
                 start = t.clipStart;
-                item = findItemAt(s, track, start);
-                if (!item) { warnings.push('Clip introuvable'); continue; }
+                placed = findClipAt(s, t.clipTrack, start, t.clipName);
+                if (!placed) { warnings.push('Clip introuvable'); continue; }
+                track = placed.track;
+                item = placed.item;
                 entry = { kind: 'clip', track: track, start: start, name: item.name, added: [] };
             } else if (o.target === 'overlay') {
                 placed = placeOverlay(s, o.overlay, t, i, warnings);
@@ -192,9 +193,12 @@
                 entry = { kind: 'adj', track: track, start: start, name: label };
             } else if (o.target === 'copy') {
                 if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de plan pour ' + t.side.toUpperCase()); continue; }
-                item = findClip(s, t.clipTrack, t.clipStart, t.clipName);
-                if (!item) { warnings.push('Plan introuvable'); continue; }
-                placed = placeCopy(s, item, t.clipTrack, t.start, t.end, label, o, warnings);
+                // Piste ou le plan est vraiment : une copie precedente a pu inserer une piste dessous.
+                placed = findClipAt(s, t.clipTrack, t.clipStart, t.clipName);
+                if (!placed) { warnings.push('Plan introuvable'); continue; }
+                try {
+                    placed = placeCopy(s, placed.item, placed.track, t.start, t.end, label, o, warnings);
+                } catch (eC) { warnings.push(label + ' : ' + eC.toString()); continue; }
                 track = placed.track;
                 start = t.start;
                 entry = { kind: 'adj', track: track, start: start, name: label };
@@ -219,6 +223,8 @@
                     comp = addEffect(s, track, start, t.fx[j], warnings);
                     if (!comp) continue;
                     if (entry.added && !t.fx[j].intrinsic) entry.added.push(comp.matchName);
+                    // Trajectoire / Opacite du clip : leur etat d'avant est garde pour l'annulation.
+                    if (entry.added && t.fx[j].intrinsic) keepComp(entry, comp);
                     item = findItemAt(s, track, start);
                     n += setProps(s, item, comp, t.fx[j], t.start, f, warnings);
                     // Look ou conversion : la LUT .cube va dans la " LUT d'entree " de Lumetri.
@@ -250,8 +256,63 @@
         return n;
     }
 
+    // Etat d'un effet (valeurs fixes et images cles) pour le remettre a l'annulation ; null si
+    // une valeur animee est illisible.
+    function snapComp(c) {
+        var out = [], i, p, keys, j, v, ks;
+        for (i = 0; i < c.properties.numItems; i++) {
+            p = c.properties[i];
+            try {
+                if (p.isTimeVarying()) {
+                    keys = p.getKeys();
+                    ks = [];
+                    for (j = 0; keys && j < keys.length; j++) {
+                        v = plainValue(p.getValueAtKey(keys[j]));
+                        if (!v.ok) return null;
+                        ks.push([tk(keys[j]), v.v]);
+                    }
+                    out.push({ i: i, keys: ks });
+                } else {
+                    v = plainValue(p.getValue());
+                    if (v.ok) out.push({ i: i, v: v.v });
+                }
+            } catch (e) { return null; }
+        }
+        return out;
+    }
+
+    function restoreComp(c, snap) {
+        var i, j, sp, p, t, last;
+        for (i = 0; i < snap.length; i++) {
+            sp = snap[i];
+            p = c.properties[sp.i];
+            if (!p) continue;
+            if (p.isTimeVarying()) p.setTimeVarying(false);
+            if (sp.keys) {
+                if (!sp.keys.length) continue;
+                p.setTimeVarying(true);
+                last = sp.keys.length - 1;
+                for (j = 0; j <= last; j++) {
+                    t = mkTime(sp.keys[j][0]);
+                    p.addKey(t);
+                    p.setValueAtKey(t, sp.keys[j][1], j === last);
+                }
+            } else p.setValue(sp.v, true);
+        }
+    }
+
+    // Entree d'historique d'un clip : etat d'un effet intrinseque avant modification (une fois),
+    // ou `lost` s'il ne peut pas etre remis.
+    function keepComp(entry, comp) {
+        var i, snap;
+        entry.restore = entry.restore || [];
+        for (i = 0; i < entry.restore.length; i++) if (entry.restore[i].mn === comp.matchName) return;
+        snap = snapComp(comp);
+        if (snap) entry.restore.push({ mn: comp.matchName, props: snap }); else entry.lost = (entry.lost || 0) + 1;
+    }
+
     function undo(o) {
-        var s = useSeq(o.seq), removed = 0, skipped = 0, effects = 0, i, e, it, r;
+        var s = useSeq(o.seq), removed = 0, skipped = 0, effects = 0, i, k, e, it, r, n, c;
         // Newest first: effects stacked on the same clip come off in reverse order.
         for (i = o.entries.length - 1; i >= 0; i--) {
             e = o.entries[i];
@@ -292,6 +353,13 @@
                 removed += multicamEnable(s, e.tracks, e.a, e.b) ? 1 : 0;
                 continue;
             }
+            if (e.kind === 'afx') {
+                // Effet audio ajoute (debruitage de la voix) : retire s'il est toujours le dernier.
+                it = findAudioAt(s, e.track, e.start);
+                r = it ? removeAddedEffects(it, e.added || []) : 0;
+                if (r) effects += r; else skipped++;
+                continue;
+            }
             if (e.kind === 'level') {
                 // Volume remis comme avant (musique baissee sous la voix, niveau de la voix).
                 it = findAudioAt(s, e.track, e.start);
@@ -300,14 +368,27 @@
                 continue;
             }
             it = e.kind === 'adj' ? findNamed(s, e.track, e.start, e.name) : findItemAt(s, e.track, e.start);
+            // Clip : une piste a pu etre inseree dessous depuis, on le cherche ailleurs par son nom.
+            if (!it && e.kind !== 'adj' && e.name) it = findNamed(s, e.track, e.start, e.name);
             if (e.kind === 'adj') {
                 if (it && it.name === e.name) {
                     it.remove(false, false);
                     removed++;
                 } else skipped++;
-            } else {
-                r = it && e.added && e.added.length ? removeAddedEffects(it, e.added) : 0;
-                if (r) effects += r; else skipped++;
+            } else if (!it) skipped++;
+            else {
+                r = e.added && e.added.length ? removeAddedEffects(it, e.added) : 0;
+                if (e.added && e.added.length && !r) skipped++;
+                // Trajectoire / Opacite remises comme avant.
+                n = 0;
+                for (k = 0; e.restore && k < e.restore.length; k++) {
+                    c = componentByMatch(it, e.restore[k].mn);
+                    try { if (c) { restoreComp(c, e.restore[k].props); n++; } else skipped++; } catch (eR) { skipped++; }
+                }
+                effects += r + n;
+                // Effets remplaces ou images cles effacees qui ne peuvent pas etre remis : pas annule.
+                if (e.lost) skipped++;
+                else if (!r && !n && !(e.added && e.added.length) && !(e.restore && e.restore.length)) skipped++;
             }
         }
         return ok({ removed: removed, effects: effects, skipped: skipped });
@@ -353,7 +434,7 @@
                         if (keys && keys.length) {
                             pe.animated = true;
                             for (j = 0; j < keys.length; j++) {
-                                kt = tk(keys[j]) - tk(it.inPoint) + S;
+                                kt = seqTimeOf(it, tk(keys[j]));
                                 if (k0 === null || kt < k0) k0 = kt;
                                 if (k1 === null || kt > k1) k1 = kt;
                             }

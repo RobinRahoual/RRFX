@@ -114,6 +114,8 @@
 
   // ---------------------------------------------------------------- tempo
 
+  // Bruit faible mesuré vers 0,06 ; une musique rythmée bien au-dessus.
+  const MIN_TEMPO_CONFIDENCE = 0.1;
   function estimateTempo(o, rate, opts) {
     opts = opts || {};
     const minBpm = opts.min || 70, maxBpm = opts.max || 180, n = o.length;
@@ -146,7 +148,11 @@
       for (let t = p; t < n; t += Lf) s += o[Math.round(t)] || 0;
       if (s > phaseScore) { phaseScore = s; phase = p; }
     }
-    return { bpm: 60 * rate / Lf, period: Lf / rate, phase: phase / rate, confidence: r0 > 0 ? r[best] * n / r0 : 0 };
+    // Silence ou bruit sans pulsation : pas de tempo (sinon 181,8 BPM « trouvés » dans le vide, et
+    // une grille de temps forts posée sur du silence).
+    const confidence = r0 > 0 ? r[best] * n / r0 : 0;
+    if (!(confidence >= MIN_TEMPO_CONFIDENCE)) return null;
+    return { bpm: 60 * rate / Lf, period: Lf / rate, phase: phase / rate, confidence };
   }
 
   function gridTimes(tempo, t0, t1) {

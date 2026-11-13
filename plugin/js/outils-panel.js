@@ -97,9 +97,16 @@
     function work(name) {
       return mkdir(Store.path.join(Store.cacheDir(), 'outils', String(name).replace(/[^\w-]+/g, '-') + '-' + Date.now().toString(36)));
     }
-    // Node 12 (Premiere 2021) n'a pas encore fs.rmSync.
+    // Node 12.3 (Premiere 2021) n'a ni fs.rmSync ni rmdirSync récursif (12.10) : suppression à la main.
+    // Les liens symboliques sont retirés sans suivre leur cible.
+    function rmTree(p) {
+      const fs = Store.fs;
+      let st;
+      try { st = fs.lstatSync(p); } catch (e) { return; }
+      if (st.isDirectory()) { fs.readdirSync(p).forEach(n => rmTree(Store.path.join(p, n))); fs.rmdirSync(p); } else fs.unlinkSync(p);
+    }
     function clean(dir) {
-      try { if (Store.fs.rmSync) Store.fs.rmSync(dir, { recursive: true, force: true }); else Store.fs.rmdirSync(dir, { recursive: true }); } catch (e) { /* pas grave */ }
+      try { if (Store.fs.rmSync) Store.fs.rmSync(dir, { recursive: true, force: true }); else rmTree(dir); } catch (e) { /* pas grave */ }
     }
     // Fichiers d'un dossier, triés (images numérotées).
     const listDir = (dir, re) => { try { return Store.fs.readdirSync(dir).filter(n => !re || re.test(n)).sort().map(n => Store.path.join(dir, n)); } catch (e) { return []; } };
@@ -111,43 +118,78 @@
 
     // ---------------------------------------------------------------- téléchargements
 
-    function getUrl(url, onRes, hops) {
-      const lib = node(/^http:/i.test(url) ? 'http' : 'https');
-      return lib.get(url, { headers: { 'User-Agent': 'RRFX' } }, res => {
-        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location && (hops || 0) < 8) {
+    /* GET en https seulement, redirections comprises : ce qui est téléchargé ici est exécuté
+       ensuite (outils, Python), une redirection vers http:// pourrait être modifiée en route.
+       onErr reçoit aussi les erreurs des requêtes suivantes (redirections). */
+    function getUrl(url, onRes, onErr, hops) {
+      const n = hops || 0;
+      if (!/^https:/i.test(url)) return onErr(Object.assign(new Error(_T('Adresse refusée (pas en https) : ') + url), { refused: true }));
+      const req = node('https').get(url, { headers: { 'User-Agent': 'RRFX' } }, res => {
+        if (res.statusCode >= 300 && res.statusCode < 400 && res.headers.location) {
           res.resume();
-          return getUrl(new URL(res.headers.location, url).toString(), onRes, (hops || 0) + 1);
+          if (n >= 8) return onErr(Object.assign(new Error(_T('Trop de redirections.')), { refused: true }));
+          let next = '';
+          try { next = new URL(res.headers.location, url).toString(); } catch (e) { return onErr(e); }
+          return getUrl(next, onRes, onErr, n + 1);
         }
         onRes(res);
       });
+      req.on('error', onErr);
+      return req;
     }
-    // Fichier téléchargé au fil de l'eau (jusqu'à plusieurs Go), sans tout garder en mémoire.
-    function download(url, file, label, mb) {
+    const noConnection = (url, e) => (e && e.refused ? e : new Error(_T('Pas de connexion à ') + new URL(url).host + ' (' + ((e && (e.code || e.message)) || '') + ')'));
+    /* Fichier téléchargé au fil de l'eau (jusqu'à plusieurs Go), sans tout garder en mémoire.
+       sha256 : empreinte attendue (PyPI), vérifiée avant de garder le fichier. Un téléchargement
+       coupé, incomplet ou arrêté ne laisse rien (le .part est effacé). */
+    function download(url, file, label, mb, sha256) {
       return new Promise((resolve, reject) => {
-        const part = file + '.part';
-        const req = getUrl(url, res => {
-          if (res.statusCode !== 200) { res.resume(); return reject(new Error(_T('Téléchargement refusé (') + res.statusCode + ') : ' + url)); }
-          const total = Number(res.headers['content-length']) || (mb || 0) * 1e6, out = Store.fs.createWriteStream(part);
+        const part = file + '.part', c = ctl();
+        let done = false, out = null;
+        const removePart = () => { try { Store.fs.unlinkSync(part); } catch (e) { /* pas encore écrit */ } };
+        const fail = e => {
+          if (done) return;
+          done = true;
+          c.onCancel = null;
+          // Fichier encore ouvert : effacé une fois fermé (Windows).
+          if (out && !out.destroyed) { out.once('close', removePart); out.destroy(); } else removePart();
+          reject(e);
+        };
+        getUrl(url, res => {
+          if (res.statusCode !== 200) { res.resume(); return fail(new Error(_T('Téléchargement refusé (') + res.statusCode + ') : ' + url)); }
+          const announced = Number(res.headers['content-length']) || 0, total = announced || (mb || 0) * 1e6;
+          const hash = sha256 ? node('crypto').createHash('sha256') : null;
+          out = Store.fs.createWriteStream(part);
           let got = 0;
-          const c = ctl();
           c.onCancel = () => res.destroy(new Error(_T('Arrêté')));
-          res.on('data', c => { got += c.length; if (total) stat().progress(Math.min(got, total), total, label + ' · ' + Lb.size(got / 1e6)); });
-          res.on('error', e => { out.destroy(); reject(e); });
-          out.on('error', reject);
-          out.on('finish', () => { c.onCancel = null; try { Store.fs.renameSync(part, file); resolve(file); } catch (e) { reject(e); } });
+          res.on('data', d => { got += d.length; if (hash) hash.update(d); if (total) stat().progress(Math.min(got, total), total, label + ' · ' + Lb.size(got / 1e6)); });
+          // Connexion coupée en cours de route : Node peut quand même finir le fichier, il serait tronqué.
+          res.on('aborted', () => fail(new Error(_T('Téléchargement interrompu : ') + new URL(url).host)));
+          res.on('error', fail);
+          out.on('error', fail);
+          out.on('finish', () => {
+            if (done) return;
+            if (announced && got !== announced) return fail(new Error(_T('Téléchargement incomplet (') + Lb.size(got / 1e6) + ' / ' + Lb.size(announced / 1e6) + ') : ' + url));
+            if (hash && hash.digest('hex') !== String(sha256).toLowerCase()) return fail(new Error(_T('Fichier refusé : son empreinte SHA-256 ne correspond pas à celle annoncée (') + Store.path.basename(file) + ').'));
+            try { Store.fs.renameSync(part, file); } catch (e) { return fail(e); }
+            done = true;
+            c.onCancel = null;
+            resolve(file);
+          });
           res.pipe(out);
-        });
-        req.on('error', e => reject(new Error(_T('Pas de connexion à ') + new URL(url).host + ' (' + (e.code || e.message) + ')')));
+        }, e => fail(noConnection(url, e)));
       });
     }
     function getJSON(url) {
       return new Promise((resolve, reject) => {
         getUrl(url, res => {
+          if (res.statusCode !== 200) { res.resume(); return reject(new Error(_T('Téléchargement refusé (') + res.statusCode + ') : ' + url)); }
           let t = '';
           res.setEncoding('utf8');
           res.on('data', d => { t += d; });
+          res.on('aborted', () => reject(new Error(_T('Téléchargement interrompu : ') + new URL(url).host)));
+          res.on('error', reject);
           res.on('end', () => { try { resolve(JSON.parse(t)); } catch (e) { reject(new Error(_T('Réponse illisible de ') + url)); } });
-        }).on('error', reject);
+        }, e => reject(noConnection(url, e)));
       });
     }
     // Décompression par tar (fourni avec Windows 10+ et macOS : .zip, .tar.gz, .tar.bz2, .whl).
@@ -155,6 +197,21 @@
       const tar = win() ? Store.path.join((proc().env || {}).SystemRoot || 'C:\\Windows', 'System32', 'tar.exe') : '/usr/bin/tar';
       mkdir(dir);
       return run(tar, ['-xf', archive, '-C', dir], { label: _T('Décompression') });
+    }
+    /* Décompressé à part (même disque), puis déplacé dans dir seulement si tout s'est bien passé :
+       une décompression arrêtée ou ratée ne laisse pas un outil (ou un modèle) à moitié là. */
+    async function extractInto(archive, dir) {
+      const stage = Store.path.join(base(), '.decompression-' + Date.now().toString(36));
+      try {
+        await extract(archive, stage);
+        stopped();
+        mkdir(dir);
+        Store.fs.readdirSync(stage).forEach(n => {
+          const to = Store.path.join(dir, n);
+          if (exists(to)) { if (Store.fs.statSync(to).isDirectory()) clean(to); else Store.fs.unlinkSync(to); }
+          Store.fs.renameSync(Store.path.join(stage, n), to);
+        });
+      } finally { clean(stage); }
     }
     // Mac : exécutables autorisés à se lancer.
     async function unlock(dir, files) {
@@ -182,7 +239,8 @@
       if (!Store.fs) return '';
       const t = Lb.byId(id), x = st().tools[id] || {};
       if (!t) return '';
-      if (exists(x.exe)) return x.exe;
+      // Outil indiqué à la main : ffmpeg doit quand même être dans le PATH des commandes lancées.
+      if (exists(x.exe)) { if (id === 'ffmpeg') ffmpegDir = Store.path.dirname(x.exe); return x.exe; }
       if (found[id] && exists(found[id])) return found[id];
       if (t.script) {
         const py = Lb.venv(venvDir(t.venv), win()).python;
@@ -190,7 +248,8 @@
       }
       let exe = '';
       const d = toolDir(id);
-      if (exists(d)) exe = Lb.findExe(Store.listFiles(d, /./, 5000, 6), t.exe, win());
+      // ownExe (« main » de whisper.cpp) : un nom trop courant, accepté seulement dans le dossier de RR FX.
+      if (exists(d)) exe = Lb.findExe(Store.listFiles(d, /./, 5000, 6), t.exe.concat(t.ownExe || []), win());
       if (!exe && exists(venvDir())) { const v = Lb.venv(venvDir(), win()); exe = t.exe.map(n => v.exe(n)).find(exists) || ''; }
       for (const n of t.exe) {
         if (exe) break;
@@ -263,9 +322,10 @@
       const name = m.url.replace(/^.*\//, '');
       if (m.extract) {
         const tmp = work('modele'), a = Store.path.join(tmp, name);
-        await download(m.url, a, _T('Modèle'), m.mb);
-        await extract(a, dir);
-        clean(tmp);
+        try {
+          await download(m.url, a, _T('Modèle'), m.mb);
+          await extractInto(a, dir);
+        } finally { clean(tmp); }
       } else await download(m.url, target, _T('Modèle'), m.mb);
       if (!exists(target)) throw new Error(_T('Modèle introuvable après téléchargement : ') + m.file);
       return target;
@@ -284,26 +344,33 @@
         await unlock(dir, [f]);
       } else if (how.type === 'archive') {
         const tmp = work(t.id), a = Store.path.join(tmp, how.url.replace(/^.*\//, ''));
-        await download(how.url, a, t.name, t.mb);
-        stopped();
-        await extract(a, dir);
-        clean(tmp);
-        await unlock(dir, Store.listFiles(dir, /./, 5000, 6).filter(f => t.exe.indexOf(Store.path.basename(f)) >= 0));
+        try {
+          await download(how.url, a, t.name, t.mb);
+          stopped();
+          await extractInto(a, dir);
+        } finally { clean(tmp); }
+        const names = t.exe.concat(t.ownExe || []);
+        await unlock(dir, Store.listFiles(dir, /./, 5000, 6).filter(f => names.indexOf(Store.path.basename(f)) >= 0));
       } else if (how.type === 'wheel') {
         stat().phase(t.name + _T(' : recherche de la dernière version'));
         const meta = await getJSON('https://pypi.org/pypi/' + how.pkg + '/json'), w = Lb.pickWheel(meta.urls, P());
         if (!w) throw new Error(t.name + _T(' : aucun paquet pour ce système.'));
+        // Empreinte publiée par PyPI : le paquet téléchargé doit être exactement celui-là.
+        const sha = w.digests && w.digests.sha256;
+        if (!sha || !/^[0-9a-f]{64}$/i.test(sha)) throw new Error(t.name + _T(' : empreinte du paquet absente sur PyPI, installation refusée.'));
         const tmp = work(t.id), a = Store.path.join(tmp, w.filename);
-        await download(w.url, a, t.name, (w.size || 0) / 1e6);
-        const x = mkdir(Store.path.join(tmp, 'x'));
-        await extract(a, x);
-        const re = new RegExp(how.member), files = Store.listFiles(x, /./, 20000, 8);
-        const member = files.find(f => re.test(Store.path.relative(x, f).split(Store.path.sep).join('/')));
-        if (!member) throw new Error(t.name + _T(' : exécutable absent du paquet ') + w.filename);
-        const f = Store.path.join(dir, how.rename ? Lb.exeName(how.rename, win()) : Store.path.basename(member));
-        Store.fs.copyFileSync(member, f);
-        clean(tmp);
-        await unlock(dir, [f]);
+        try {
+          await download(w.url, a, t.name, (w.size || 0) / 1e6, sha);
+          const x = mkdir(Store.path.join(tmp, 'x'));
+          await extract(a, x);
+          stopped();
+          const re = new RegExp(how.member), files = Store.listFiles(x, /./, 20000, 8);
+          const member = files.find(f => re.test(Store.path.relative(x, f).split(Store.path.sep).join('/')));
+          if (!member) throw new Error(t.name + _T(' : exécutable absent du paquet ') + w.filename);
+          const f = Store.path.join(dir, how.rename ? Lb.exeName(how.rename, win()) : Store.path.basename(member));
+          Store.fs.copyFileSync(member, f);
+          await unlock(dir, [f]);
+        } finally { clean(tmp); }
       } else if (how.type === 'pip') {
         await pipInstall(how.pkg, t.name, t.minPy, t.venv);
         if (t.script) Store.fs.writeFileSync(marker(t), how.pkg + '\n' + new Date().toISOString() + '\n');
@@ -353,11 +420,19 @@
         // Ollama lancé par RR FX : arrêté d'abord, sinon ses fichiers restent verrouillés (Windows).
         try { await (win() ? Store.execFile('taskkill', ['/IM', 'ollama.exe', '/F']) : Store.execFile('pkill', ['-x', 'ollama'])); } catch (e) { /* pas lancé */ }
       }
-      if (how && how.type === 'pip') {
+      // Paquets Python : d'après l'endroit où l'outil est vraiment (Whisper sur Mac : Homebrew, ou
+      // pip en secours dans l'environnement de RR FX), pas d'après la façon d'installer prévue.
+      const pipHow = [how, how && how.fallback].find(w => w && w.type === 'pip');
+      const exe = pipHow ? await find(id).catch(() => '') : '';
+      const vroot = Store.path.resolve(venvDir(t.venv)) + Store.path.sep;
+      const inVenv = !!exe && Store.path.resolve(exe).indexOf(vroot) === 0;
+      if (pipHow && (t.script || inVenv)) {
         if (t.venv) clean(venvDir(t.venv));
         else {
           const v = Lb.venv(venvDir(), win());
-          if (exists(v.python)) { stat().phase(_T('Désinstallation de ') + t.name); await run(v.python, Lb.pipUninstallArgs(how.pkg), { label: t.name }); }
+          // t.uninstall : seulement ses paquets à lui (l'environnement est partagé avec d'autres outils).
+          const pkgs = t.uninstall !== undefined ? t.uninstall : pipHow.pkg;
+          if (pkgs && exists(v.python)) { stat().phase(_T('Désinstallation de ') + t.name); await run(v.python, Lb.pipUninstallArgs(pkgs), { label: t.name }); }
           if (t.script) { try { Store.fs.unlinkSync(marker(t)); } catch (e) { /* déjà retiré */ } }
         }
       }
