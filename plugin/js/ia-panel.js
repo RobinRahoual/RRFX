@@ -72,7 +72,11 @@
         const before = cues.map(c => Tr.oneLine(c.text)), after = await correct(before);
         const changed = after.filter((t, i) => t !== before[i]).length;
         if (changed) {
+          const was = sp.srt;
           sp.srt = Tr.toSrt(Tr.apply(cues, after));
+          // Traduction corrigée : elle reste « la traduction » (la prochaine ne la prend pas pour l'original).
+          const tr = app.settings().translate;
+          if (tr && tr.translated && tr.translated === was) tr.translated = sp.srt;
           app.persist();
         }
         if (refresh) refresh();

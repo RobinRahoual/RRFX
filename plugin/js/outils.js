@@ -234,6 +234,28 @@
 
   // ---------------------------------------------------------------- 2.6 : correcteur de sous-titres
 
+  /* Adresses (http…, www.…) et heures (12:30, 1:02:03) mises de côté : la ponctuation française
+     ne s'y applique pas. La ponctuation qui suit une adresse n'en fait pas partie.
+     → { text (avec des repères \u0000n\u0000), back (texte → texte remis) } */
+  const PROTECT = /(?:https?:\/\/|www\.)\S*[^\s.,;:!?»)"”]|\b\d{1,2}(?::\d{2}){1,2}\b/gi;
+  function protect(text) {
+    const kept = [];
+    const out = String(text).replace(PROTECT, m => { kept.push(m); return '\u0000' + (kept.length - 1) + '\u0000'; });
+    return { text: out, back: t => t.replace(/\u0000(\d+)\u0000/g, (m, k) => kept[+k]) };
+  }
+  /* Espaces françaises : fine insécable (\u202f) avant « ; ! ? », insécable (\u00a0) avant « : »
+     et dans les guillemets. Une espace insécable déjà là est gardée ; rien entre deux signes (« !? »). */
+  function frenchSpaces(text) {
+    const p = protect(text);
+    const t = p.text.replace(/(\S)(\s*)([:;!?»])/g, (m, a, sp, q) => {
+      if (/[\u00a0\u202f]/.test(sp) || /[:;!?]/.test(a)) return m;
+      // « 3: » collé (score, ratio) : laissé tel quel.
+      if (/\d/.test(a) && q === ':' && !sp) return m;
+      return a + (q === ':' || q === '»' ? '\u00a0' : '\u202f') + q;
+    }).replace(/«(\s*)/g, (m, sp) => (/[\u00a0\u202f]/.test(sp) ? m : '«\u00a0'));
+    return p.back(t);
+  }
+
   /* Problèmes des sous-titres : lignes trop longues, lecture trop rapide (caractères par seconde),
      trop courts, majuscule manquante, espaces en trop, ponctuation collée (français).
      → [{ i, kind, text }] (kind : long, fast, short, caps, spaces, punct) */
@@ -247,7 +269,7 @@
       const prev = cues[i - 1], ends = !prev || /[.!?…]["»”)]?\s*$/.test(prev.text);
       if (ends && /^[a-zàâçéèêëîïôûùüÿœ]/.test(flat)) out.push({ i, kind: 'caps' });
       if (/ {2,}|^\s|\s$/m.test(c.text)) out.push({ i, kind: 'spaces' });
-      if (opt.lang === 'fr' && /[^\s  ][:;!?»]/.test(flat.replace(/https?:\S+|\d+:\d+/g, ''))) out.push({ i, kind: 'punct' });
+      if (opt.lang === 'fr' && /[^\s\u00a0\u202f][:;!?»]/.test(protect(flat).text)) out.push({ i, kind: 'punct' });
     });
     return out;
   }
@@ -260,10 +282,12 @@
     const out = cues.map(c => Object.assign({}, c));
     out.forEach((c, i) => {
       const before = c.text + '|' + c.end;
-      let t = String(c.text).split('\n').map(l => l.replace(/\s+/g, ' ').trim()).filter(Boolean).join('\n');
-      if (opt.lang === 'fr') t = t.replace(/(\S)\s*([:;!?»])/g, (m, a, p) => (/\d/.test(a) && p === ':' ? a + p : a + ' ' + p)).replace(/«\s*/g, '« ');
+      // Espaces réduites, mais une espace insécable déjà là reste insécable.
+      let t = String(c.text).split('\n').map(l => l.replace(/\s+/g, m => (/[\u00a0\u202f]/.exec(m) || [' '])[0]).trim()).filter(Boolean).join('\n');
+      if (opt.lang === 'fr') t = frenchSpaces(t);
       const prev = out[i - 1];
-      if ((!prev || /[.!?…]["»”)]?\s*$/.test(prev.text)) && /^[a-zàâçéèêëîïôûùüÿœ]/.test(t)) t = t.charAt(0).toUpperCase() + t.slice(1);
+      // Majuscule en début de phrase, sauf sur une adresse (www.…).
+      if ((!prev || /[.!?…]["»”)]?\s*$/.test(prev.text)) && /^[a-zàâçéèêëîïôûùüÿœ]/.test(t) && !/^(https?:|www\.)/i.test(t)) t = t.charAt(0).toUpperCase() + t.slice(1);
       if (t.split('\n').some(l => l.length > opt.maxLine) || t.split('\n').length > 2) t = wrapFn ? wrapFn(t.replace(/\n/g, ' '), opt.maxLine) : t;
       c.text = t;
       // Durée : assez pour lire, sans mordre sur le suivant (0,1 s d'écart).

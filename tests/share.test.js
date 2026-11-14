@@ -41,3 +41,10 @@ test('codes made under the former name (CUTFX1) still open', () => {
   const zipped = Share.encode([{ type: 'ramp', name: 'Old', data: { points: [] } }], null).replace(/^RRFX/, 'CUTFX');
   assert.strictEqual(Share.decode(zipped, null)[0].name, 'Old');
 });
+
+test('a share code that inflates to a huge text is refused', () => {
+  const huge = new Uint8Array(zlib.deflateRawSync(Buffer.alloc(6 * 1024 * 1024, 32)));
+  const code = 'RRFX1:' + Buffer.from(huge).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  assert.throws(() => Share.decode(code, zip), /trop gros/);
+  assert.throws(() => Share.decode('RRFX1:' + 'A'.repeat(70000), zip), /trop long/);
+});

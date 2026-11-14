@@ -55,3 +55,20 @@ test('damaged or foreign files are refused with a clear message', () => {
   assert.throws(() => P.read(future), /plus récente/);
   assert.strictEqual(P.crc32(new TextEncoder().encode('123456789')), 0xcbf43926);
 });
+
+test('a pack cannot write outside its folder (zip-slip) nor inflate a bomb', () => {
+  const enc = s => new TextEncoder().encode(s);
+  const evil = '../../../../AppData/Roaming/Microsoft/Windows/Start Menu/Programs/Startup/x.bat';
+  const bytes = P.zip([
+    { name: 'pack.json', data: enc(JSON.stringify({ rrfxpack: 1, name: 'x', overlays: [{ name: 'o', file: evil }] })) },
+    { name: evil, data: enc('echo pwned') }
+  ]);
+  assert.throws(() => P.read(bytes, inflate), /chemin/);
+  ['/etc/x', 'C:/x', 'a\\..\\b', 'a/../b', './a'].forEach(n => assert.strictEqual(P.safePath(n), false, n));
+  assert.strictEqual(P.safePath('overlays/Leak chaud.mov'), true);
+  // Entrée compressée annoncée énorme : refusée avant décompression.
+  const big = P.zip([{ name: 'pack.json', data: enc(' '.repeat(300) + JSON.stringify({ rrfxpack: 1, name: 'b' })) }], deflate);
+  const v = new DataView(big.buffer);
+  for (let i = big.length - 22; i >= 0; i--) if (v.getUint32(i, true) === 0x02014b50) { v.setUint32(i + 24, 900 * 1024 * 1024, true); break; }
+  assert.throws(() => P.read(big, inflate), /trop gros/);
+});

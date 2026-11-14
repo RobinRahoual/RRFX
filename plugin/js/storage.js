@@ -29,6 +29,8 @@
     out.items = out.items.filter(i => i && typeof i === 'object' && i.data && typeof i.name === 'string');
     if (!Array.isArray(out.favorites)) out.favorites = [];
     if (!Array.isArray(out.history)) out.history = [];
+    // Une opération sans liste d'éléments empêcherait le panneau de démarrer (bouton Annuler).
+    out.history = out.history.filter(op => op && typeof op === 'object' && Array.isArray(op.entries));
     if (!out.settings || typeof out.settings !== 'object') out.settings = {};
     return out;
   }
@@ -47,13 +49,20 @@
   function load() {
     if (fs) {
       migrate();
-      if (!fs.existsSync(FILE)) return empty();
-      const text = fs.readFileSync(FILE, 'utf8');
+      // Fichier absent : bibliothèque neuve. Fichier présent mais illisible pour une autre raison
+      // (verrouillé, OneDrive hors ligne, disque réseau absent) : on n'enregistre RIEN pendant cette
+      // session, sinon une bibliothèque vide écraserait la vraie.
+      let text;
+      try { text = fs.readFileSync(FILE, 'utf8'); } catch (e) {
+        if (e && e.code === 'ENOENT') return empty();
+        locked = true;
+        throw e;
+      }
       try {
         return normalize(JSON.parse(text));
       } catch (e) {
-        // Keep the unreadable file instead of overwriting the user's work.
-        fs.renameSync(FILE, path.join(DIR, 'library.unreadable-' + Date.now() + '.json'));
+        // JSON abîmé : gardé à part, jamais écrasé.
+        try { fs.renameSync(FILE, path.join(DIR, 'library.unreadable-' + Date.now() + '.json')); } catch (e2) { locked = true; throw e2; }
         return empty();
       }
     }
@@ -65,7 +74,9 @@
     }
   }
 
+  let locked = false;
   function save(lib) {
+    if (locked) throw new Error(_T('library.json n\'a pas pu être lu au démarrage : rien n\'est enregistré pour ne pas l\'écraser. Vérifie le dossier Documents/RRFX (OneDrive, disque réseau) puis redémarre Premiere.'));
     const text = JSON.stringify(lib, null, 1);
     if (fs) {
       fs.mkdirSync(DIR, { recursive: true });
@@ -174,7 +185,20 @@
     if (!nodeRequire) return null;
     try {
       const z = nodeRequire('zlib');
-      return { deflate: b => new Uint8Array(z.deflateRawSync(Buffer.from(b))), inflate: b => new Uint8Array(z.inflateRawSync(Buffer.from(b))) };
+      // Taille décompressée plafonnée (bombe de décompression dans un code ou un pack reçu) :
+      // maxOutputLength arrête zlib à temps depuis Node 14.10 ; Node 12 l'ignore, la taille est
+      // alors vérifiée après coup.
+      const inflate = (b, max) => {
+        const lim = max || 64 * 1024 * 1024;
+        let out;
+        try { out = z.inflateRawSync(Buffer.from(b), { maxOutputLength: lim }); } catch (e) {
+          if (e && (e.code === 'ERR_BUFFER_TOO_LARGE' || /maxOutputLength|too large/i.test(e.message || ''))) throw new Error(_T('Contenu trop gros une fois décompressé : refusé.'));
+          throw e;
+        }
+        if (out.length > lim) throw new Error(_T('Contenu trop gros une fois décompressé : refusé.'));
+        return new Uint8Array(out.buffer, out.byteOffset, out.byteLength);
+      };
+      return { deflate: b => new Uint8Array(z.deflateRawSync(Buffer.from(b))), inflate };
     } catch (e) { return null; }
   })();
 

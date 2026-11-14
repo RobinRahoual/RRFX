@@ -160,38 +160,65 @@
 
   // ---------------------------------------------------------------- LUT .cube
 
-  /* LUT .cube (Resolve / Adobe) : 3D (LUT_3D_SIZE) ou 1D (LUT_1D_SIZE). */
+  /* LUT .cube (Resolve / Adobe) : 3D (LUT_3D_SIZE), 1D (LUT_1D_SIZE), ou les deux (format Resolve :
+     table 1D « shaper » d'abord, puis la 3D). Avec les deux, le résultat est la 3D et la 1D va dans
+     lut.shaper (appliquée avant par applyLut). *_INPUT_RANGE min max = DOMAIN_MIN / DOMAIN_MAX. */
   function parseCube(text) {
     const lut = { title: '', size: 0, dim: 3, min: [0, 0, 0], max: [1, 1, 1], data: null };
     const values = [];
+    let n1 = 0, n3 = 0, dom = null, r1 = null, r3 = null;
     String(text).split(/\r?\n/).forEach(line => {
       const l = line.trim();
       if (!l || l[0] === '#') return;
       let m;
       if ((m = /^TITLE\s+"?([^"]*)"?/i.exec(l))) lut.title = m[1];
-      else if ((m = /^LUT_3D_SIZE\s+(\d+)/i.exec(l))) { lut.size = +m[1]; lut.dim = 3; }
-      else if ((m = /^LUT_1D_SIZE\s+(\d+)/i.exec(l))) { lut.size = +m[1]; lut.dim = 1; }
-      else if ((m = /^DOMAIN_MIN\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(l))) lut.min = [+m[1], +m[2], +m[3]];
-      else if ((m = /^DOMAIN_MAX\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(l))) lut.max = [+m[1], +m[2], +m[3]];
+      else if ((m = /^LUT_3D_SIZE\s+(\d+)/i.exec(l))) n3 = +m[1];
+      else if ((m = /^LUT_1D_SIZE\s+(\d+)/i.exec(l))) n1 = +m[1];
+      else if ((m = /^DOMAIN_MIN\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(l))) (dom = dom || {}).min = [+m[1], +m[2], +m[3]];
+      else if ((m = /^DOMAIN_MAX\s+(\S+)\s+(\S+)\s+(\S+)/i.exec(l))) (dom = dom || {}).max = [+m[1], +m[2], +m[3]];
+      else if ((m = /^LUT_3D_INPUT_RANGE\s+(\S+)\s+(\S+)/i.exec(l))) r3 = { min: [+m[1], +m[1], +m[1]], max: [+m[2], +m[2], +m[2]] };
+      else if ((m = /^LUT_1D_INPUT_RANGE\s+(\S+)\s+(\S+)/i.exec(l))) r1 = { min: [+m[1], +m[1], +m[1]], max: [+m[2], +m[2], +m[2]] };
       else if (/^[-+.\d]/.test(l)) {
         const v = l.split(/\s+/).map(Number);
         if (v.length >= 3 && v.slice(0, 3).every(isFinite)) values.push(v[0], v[1], v[2]);
       }
     });
-    const need = lut.dim === 3 ? lut.size * lut.size * lut.size * 3 : lut.size * 3;
-    if (!(lut.size >= 2) || values.length < need) throw new Error(_T('LUT .cube illisible'));
-    if (lut.size > 256) throw new Error(_T('LUT trop grande'));
-    lut.data = Float32Array.from(values.slice(0, need));
+    if (n1 > 256 || n3 > 256) throw new Error(_T('LUT trop grande'));
+    const need1 = n1 * 3, need3 = n3 * n3 * n3 * 3;
+    if (!(n1 >= 2 || n3 >= 2) || (n1 && n1 < 2) || (n3 && n3 < 2) || values.length < need1 + need3) throw new Error(_T('LUT .cube illisible'));
+    const range = (r, d) => ({ min: (r || d || {}).min || [0, 0, 0], max: (r || d || {}).max || [1, 1, 1] });
+    if (n3) {
+      // DOMAIN_* sans précision de table : il décrit la 3D (l'entrée de la LUT dans un fichier 3D seul).
+      const r = range(r3, n1 ? null : dom);
+      Object.assign(lut, { size: n3, dim: 3, min: r.min, max: r.max, data: Float32Array.from(values.slice(need1, need1 + need3)) });
+      if (n1) { const s = range(r1, dom); lut.shaper = { size: n1, min: s.min, max: s.max, data: Float32Array.from(values.slice(0, need1)) }; }
+    } else {
+      const r = range(r1, dom);
+      Object.assign(lut, { size: n1, dim: 1, min: r.min, max: r.max, data: Float32Array.from(values.slice(0, need1)) });
+    }
     return lut;
   }
 
   /* Applique la LUT aux pixels RVBA (Uint8ClampedArray), sur place. Interpolation trilinéaire. */
   function applyLut(px, lut) {
     const N = lut.size, d = lut.data, mn = lut.min, mx = lut.max, M = N - 1;
-    const sc = [0, 1, 2].map(c => M / Math.max(1e-6, mx[c] - mn[c]) / 255), off = [0, 1, 2].map(c => -mn[c] * M / Math.max(1e-6, mx[c] - mn[c]));
     const cl = v => (v < 0 ? 0 : v > M ? M : v);
+    // Position dans la table pour chaque valeur 0..255 de chaque canal (shaper 1D d'abord s'il y en a un).
+    const sh = lut.shaper, pos = [0, 1, 2].map(c => {
+      const t = new Float32Array(256), span = Math.max(1e-6, mx[c] - mn[c]);
+      for (let v = 0; v < 256; v++) {
+        let x = v / 255;
+        if (sh) {
+          const S = sh.size - 1, k = Math.min(S, Math.max(0, (x - sh.min[c]) / Math.max(1e-6, sh.max[c] - sh.min[c]) * S));
+          const i0 = Math.floor(k), i1 = Math.min(S, i0 + 1), u = k - i0;
+          x = sh.data[i0 * 3 + c] * (1 - u) + sh.data[i1 * 3 + c] * u;
+        }
+        t[v] = cl((x - mn[c]) / span * M);
+      }
+      return t;
+    });
     for (let p = 0; p < px.length; p += 4) {
-      const r = cl(px[p] * sc[0] + off[0]), g = cl(px[p + 1] * sc[1] + off[1]), b = cl(px[p + 2] * sc[2] + off[2]);
+      const r = pos[0][px[p]], g = pos[1][px[p + 1]], b = pos[2][px[p + 2]];
       if (lut.dim === 1) {
         const ch = [r, g, b];
         for (let c = 0; c < 3; c++) {

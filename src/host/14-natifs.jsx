@@ -97,7 +97,7 @@
         if (o.scope === 'selection' && !cuts.length) return fail('S\u00e9lectionne au moins deux plans qui se suivent.');
         if (vt) for (i = 0; i < cuts.length; i++) {
             q = qeItemAt(qs.getVideoTrackAt(cuts[i].track), cuts[i].t, f);
-            if (!q || typeof q.addTransition !== 'function') { warnings.push('Coupe ' + (i + 1) + ' passee'); continue; }
+            if (!q || typeof q.addTransition !== 'function') { warnings.push('Coupe ' + (i + 1) + ' pass\u00e9e'); continue; }
             try { q.addTransition(vt, true, dur, zero, align, false, true); created.push({ kind: 'trans', video: true, track: cuts[i].track, start: cuts[i].t }); n++; } catch (e) { warnings.push('Coupe ' + (i + 1) + ' : ' + e); }
         }
         if (at) {

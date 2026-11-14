@@ -50,6 +50,16 @@ test('install replaces the panel files, keeps a backup, and rolls back on failur
   assert.throws(() => I.install(fs, path, dir, files, backup), /annulée/);
   assert.strictEqual(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>2.0.0', 'rolled back');
   assert.throws(() => I.install(fs, path, path.join(tmp, 'nope'), files, backup), /introuvable/);
+  // Node 12 (Premiere 2021) : pas de fs.rmSync, l'ancienne sauvegarde est quand même remplacée.
+  fs.rmSync(path.join(dir, 'js', 'main.js'), { recursive: true });
+  fs.mkdirSync(path.join(backup, 'vieux', 'sous-dossier'), { recursive: true });
+  fs.writeFileSync(path.join(backup, 'vieux', 'sous-dossier', 'reste.txt'), 'x');
+  const node12 = Object.create(fs);
+  node12.rmSync = undefined;
+  assert.strictEqual(I.install(node12, path, dir, files, backup), 4);
+  assert.strictEqual(fs.readFileSync(path.join(dir, 'index.html'), 'utf8'), '<html>2.1.0');
+  assert.ok(!fs.existsSync(path.join(backup, 'vieux')), 'old backup removed');
+  assert.strictEqual(fs.readFileSync(path.join(backup, 'index.html'), 'utf8'), '<html>2.0.0');
   fs.rmSync(tmp, { recursive: true, force: true });
 });
 
@@ -69,10 +79,13 @@ test('verifySignature: a pack signed with the RR FX key passes, anything else is
   assert.strictEqual(I.verifySignature(crypto, bytes, '', ''), true);
 });
 
-test('installer-mac.sh: valid shell, downloads the pack name that package.js builds, runs the .command', () => {
+test('installer-mac.sh: valid shell, downloads the pack name that package.js builds, runs the .command', t => {
   const cp = require('child_process');
   const src = fs.readFileSync(path.join(__dirname, '..', 'installer-mac.sh'), 'utf8');
-  assert.strictEqual(cp.spawnSync('sh', ['-n', '-c', src]).status, 0);
+  // Windows sans Git Bash dans le PATH : pas de « sh », la syntaxe ne peut pas être vérifiée ici.
+  const sh = cp.spawnSync('sh', ['-n', '-c', src]);
+  if (sh.error && sh.error.code === 'ENOENT') t.diagnostic('sh absent : syntaxe du script non vérifiée');
+  else assert.strictEqual(sh.status, 0);
   assert.match(src, /ZIP="RRFX-\$VERSION-installation\.zip"/);
   assert.match(fs.readFileSync(path.join(__dirname, '..', 'scripts', 'package.js'), 'utf8'), /'-installation\.zip'/);
   assert.ok(src.indexOf("'Installer RR FX (Mac).command'") > 0);

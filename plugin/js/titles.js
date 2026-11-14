@@ -120,6 +120,10 @@
       const styleFx = style ? TS.styleFx(style) : null;
       // Style capturé dans la timeline : ses réglages et ses effets, tels quels.
       const look = TS && TS.lookById ? TS.lookById(sid) : null, lookFx = look ? TS.lookFx(look) : null;
+      // Le modèle choisi, sinon le premier trouvé (comme le vérifie l'onglet Parole) : les
+      // sous-titres se posent même si l'onglet Textes n'a jamais été ouvert.
+      const mogrt = app.services.mogrt();
+      if (!mogrt) return { created, track: null, warnings, error: _T('Choisis un modèle de texte (onglet Textes > Modèle de texte).') };
       let track = null;
       for (let i = 0; i < items.length; i++) {
         if (app.S.cancel) break;
@@ -129,7 +133,7 @@
         const fx = captured ? Core.titleSpecCaptured(captured, frames, app.registry()) : Core.titleSpec(a, params, frames, inF, outF, fps, app.registry());
         // Mot clé : effets en plus (couleur, taille) donnés par opts.keyFx.
         const all = it.key && o.keyFx ? fx.concat(o.keyFx) : fx;
-        const r = await Host.call('placeTitle', { mogrt: t.mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null, style, styleFx, look, lookFx });
+        const r = await Host.call('placeTitle', { mogrt, start: it.start, end: it.end, text: it.text, fx: all, track, spanEnd: items[items.length - 1].end, minTrack: 1, pos: o.pos || null, style, styleFx, look, lookFx });
         if (!r.ok) {
           if (!created.length) return { created, track, warnings, error: r.error };
           warnings.push(it.text + ' : ' + r.error);
@@ -147,7 +151,7 @@
     function place() {
       const t = st();
       return app.runTask(_T('Textes'), async () => {
-        if (!t.mogrt) return { kind: 'error', title: _T('Choisis un modèle de texte'), detail: _T('Section « Modèle de texte » : un .mogrt (Premiere en fournit, ou exporte le tien).') };
+        if (!app.services.mogrt()) return { kind: 'error', title: _T('Choisis un modèle de texte'), detail: _T('Section « Modèle de texte » : un .mogrt (Premiere en fournit, ou exporte le tien).') };
         app.status.phase(_T('Calcul des temps'));
         const items = await timeline();
         if (!items.length) return { kind: 'warn', title: _T('Aucun texte posé'), detail: _T('Pas de temps disponible.') };

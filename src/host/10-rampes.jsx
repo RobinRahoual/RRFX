@@ -60,8 +60,11 @@
     function rampApply(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], item, S, I, s0 = 1, R0 = o.regionStart, R1, K = o.pieces.length;
         var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'RR FX \u00b7 Rampe';
-        item = findClip(s, o.track, o.clipStart, o.clipName);
+        item = findClipAt(s, o.track, o.clipStart, o.clipName);
         if (!item) return fail('Clip introuvable : il a boug\u00e9 depuis l\'analyse. R\u00e9essaie.');
+        // La piste ou le clip est vraiment : une piste a pu etre inseree dessous depuis l'analyse.
+        var srcTrack = item.track;
+        item = item.item;
         S = tk(item.start); I = tk(item.inPoint);
         try { s0 = item.getSpeed(); } catch (e) {}
         if (!(s0 > 0)) s0 = 1;
@@ -91,13 +94,20 @@
             reach = Math.max(reach, bnd[k] + L[k]);
             srcK += L[k];
         }
-        ti = layerTrack(s, o.track, R0, reach, warnings);
+        ti = layerTrack(s, srcTrack, R0, reach, warnings);
 
         // Dans l'ordre : chaque morceau est pose a 100 % puis mis a sa vitesse, ce qui le
         // ramene exactement a sa place ; la place du suivant est encore libre.
         for (k = 0; k < K; k++) {
             placeOn(s, ti, src, plan[k].a, plan[k].inT, plan[k].outT);
-            setSpeedAt(s, ti, plan[k].a, plan[k].speed);
+            try { setSpeedAt(s, ti, plan[k].a, plan[k].speed); } catch (eS) {
+                // Vitesse refusee : les morceaux deja poses (et celui-ci) sont retires.
+                for (var m = 0; m <= k; m++) {
+                    it = findItemAt(s, ti, plan[m].a);
+                    try { if (it && (m === k || it.name === label)) it.remove(false, false); } catch (eR) {}
+                }
+                return fail(eS.toString(), { warnings: warnings });
+            }
             it = findItemAt(s, ti, plan[k].a);
             try { setSource(it, plan[k].inT, plan[k].outT); } catch (e4) {}
             fixSpan(it, plan[k].a, plan[k].b);

@@ -41,28 +41,31 @@
 
     // ---------------------------------------------------------------- plans de coupe
 
-    function brollFind() {
-      const x = st(), media = app.services.resourceMedia ? app.services.resourceMedia() : [], cues = app.speech.cues();
+    // cues : les sous-titres à leur place dans la séquence (sinon ceux du .srt, temps du fichier).
+    function brollFind(timed) {
+      const x = st(), media = app.services.resourceMedia ? app.services.resourceMedia() : [], cues = timed || app.speech.cues();
       return { media, cues, plan: Mo.brollPlan(cues, media, { dur: x.brDur, gap: x.brGap, max: x.brMax }) };
     }
 
     function broll() {
       return app.runTask(_T('Plans de coupe'), async () => {
-        const f = brollFind();
+        // Sous-titres recalés sur les coupes faites (silences, euh) et décalés au départ choisi :
+        // les temps sont ceux de la séquence d'aujourd'hui.
+        const f = brollFind(app.speech.cues().length ? await app.speech.timedCues() : null);
         if (!f.cues.length) return { kind: 'error', title: _T('Pas de sous-titres'), detail: _T('Il faut un .srt (section Sous-titres) : c\'est lui qui dit quand chaque mot est prononcé.') };
         if (!f.media.length) return { kind: 'error', title: _T('Aucune vidéo ni image liée'), detail: _T('Lie le dossier de tes plans de coupe (onglet Ressources) : les noms de fichiers servent de mots clés (« cafe_terrasse.mp4 »).') };
         if (!f.plan.length) return { kind: 'warn', title: _T('Aucun mot ne correspond'), detail: _T('Aucun mot des sous-titres ne se retrouve dans le nom de tes fichiers (4 lettres et plus).') };
-        const t0 = await app.speech.startTime(app.speech.settings().capFrom).catch(() => 0), x = st(), created = [], warnings = [];
+        const x = st(), created = [], warnings = [];
         for (let i = 0; i < f.plan.length; i++) {
           if (app.S.cancel) break;
           const p = f.plan[i], m = p.media;
           app.status.progress(i, f.plan.length, p.word + ' → ' + m.name);
-          const r = await Host.call('placeAsset', { kind: m.type, path: m.path, name: m.name, times: [t0 + p.t], dur: p.dur, imageDur: x.brDur });
+          const r = await Host.call('placeAsset', { kind: m.type, path: m.path, name: m.name, times: [p.t], dur: p.dur, imageDur: x.brDur });
           if (r.ok) { created.push(...r.created); warnings.push(...(r.warnings || [])); } else warnings.push(m.name + ' : ' + r.error);
         }
         if (created.length) app.pushHistory({ date: Date.now(), label: _T('Plans de coupe × ') + created.length, entries: created });
         warnings.forEach(w => app.log(w, 'warn'));
-        return { kind: warnings.length ? 'warn' : 'ok', title: app.plural(created.length, _T('plan de coupe posé'), _T('plans de coupe posés')), detail: f.plan.slice(0, 4).map(p => _T('« ') + p.word + _T(' » ') + mmss(t0 + p.t)).join(', ') + (f.plan.length > 4 ? '…' : '') + _T('. Au-dessus des plans, image seule.') };
+        return { kind: warnings.length ? 'warn' : 'ok', title: app.plural(created.length, _T('plan de coupe posé'), _T('plans de coupe posés')), detail: f.plan.slice(0, 4).map(p => _T('« ') + p.word + _T(' » ') + mmss(p.t)).join(', ') + (f.plan.length > 4 ? '…' : '') + _T('. Au-dessus des plans, image seule.') };
       }, true);
     }
     app.extras.speech.push({

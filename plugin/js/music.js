@@ -77,6 +77,8 @@
         } finally { app.tools.clean(Store.path.dirname(wav)); }
       }
     }
+    // Dernier fichier décodé en entier (MP3, AIFF…) : { src, size, d: { samples, sampleRate } }.
+    const fullCache = { src: null, size: 0, d: null, timer: 0 };
     async function readDirect(src, t0, t1) {
       const io = ioFor(src);
       t0 = Math.max(0, t0 || 0);
@@ -90,13 +92,24 @@
           try { d = await decodeBytes(w.adts); } catch (e) {
             throw new Error(_T('Le son AAC de ce fichier ne peut pas être décodé ici : exporte-le en WAV, ou utilise Clip > Synchroniser de Premiere.'));
           }
-          const off = Math.max(0, Math.round((t0 - w.start) * d.sampleRate)), len = Math.round((end - t0) * d.sampleRate);
-          return { samples: d.samples.subarray(off, off + len), sampleRate: d.sampleRate, start: t0, duration: info.duration };
+          // Première trame décodée après t0 (son qui commence plus tard, décalage d'édition) : le
+          // début rendu est celui des échantillons, sinon la synchro serait décalée d'autant.
+          const off = Math.max(0, Math.round((t0 - w.start) * d.sampleRate)), start = w.start + off / d.sampleRate;
+          const len = Math.max(0, Math.round((end - start) * d.sampleRate));
+          return { samples: d.samples.subarray(off, off + len), sampleRate: d.sampleRate, start, duration: info.duration };
         }
-        // MP3, AIFF, FLAC… : le navigateur décode le fichier entier.
+        // MP3, AIFF, FLAC… : le navigateur décode le fichier entier. Gardé pour les appels suivants
+        // (la synchro lit minute par minute : sans cela, le fichier entier était décodé à chaque minute).
         const size = await io.size();
         if (size > 400 * 1024 * 1024) throw new Error(_T('Fichier trop gros pour être décodé en entier : exporte le son en WAV.'));
-        const d = await decodeBytes(await io.read(0, size));
+        let d = fullCache.src === src && fullCache.size === size ? fullCache.d : null;
+        if (!d) {
+          d = await decodeBytes(await io.read(0, size));
+          Object.assign(fullCache, { src, size, d });
+        }
+        // Libéré après 2 min sans usage (un long morceau décodé pèse des centaines de Mo).
+        clearTimeout(fullCache.timer);
+        fullCache.timer = setTimeout(() => Object.assign(fullCache, { src: null, size: 0, d: null }), 120000);
         const a = Math.round(t0 * d.sampleRate), b = t1 == null ? d.samples.length : Math.round(t1 * d.sampleRate);
         return { samples: d.samples.subarray(a, b), sampleRate: d.sampleRate, start: t0, duration: d.samples.length / d.sampleRate };
       } finally {
@@ -237,6 +250,23 @@
       const z = await zone();
       detect(z);
       return M.beats.times.map(t => fileToSeq(M.info, t)).filter(t => t >= z.from - 1e-6 && t <= z.to + 1e-6);
+    }
+
+    /* Tous les temps de la musique de la séquence, en secondes de séquence, sans la zone ni le
+       « un sur N » de l'onglet Musique (Musique à la durée cherche sa coupe sur tout le morceau).
+       Ne touche pas M.beats / M.zone (affichés par l'onglet). */
+    async function allBeatTimes() {
+      await ensureMusic(false);
+      if (isAi()) await ensureAi();
+      const b = st().beats, info = M.info;
+      let times;
+      if (isAi() && M.ai && M.ai.key === M.key) times = M.ai.beats.slice();
+      else {
+        const r = Audio.detectBeats(M.an, { mode: isAi() ? 'tempo' : b.mode, sensitivity: b.sensitivity, minGap: b.minGap / 1000, every: 1 });
+        times = r.times.map(t => t + M.t0);
+      }
+      const to = info.manual ? M.duration : info.end;
+      return times.map(t => fileToSeq(info, t)).filter(t => t >= info.start - 1e-6 && t <= to + 1e-6);
     }
 
     // ---------------------------------------------------------------- services pour les autres onglets
@@ -643,7 +673,7 @@
     }
 
     // Pour les outils ajoutés à l'onglet (risers, réverb de fin…).
-    app.musicData = { M, ensure: ensureMusic, beatTimes, seqToFile, fileToSeq, zone };
+    app.musicData = { M, ensure: ensureMusic, beatTimes, allBeatTimes, seqToFile, fileToSeq, zone };
     app.tabs.music = { render, cta: () => ({ label: _T('Poser les marqueurs des temps forts'), run: placeMarkers, enabled: true }), redraw: drawWave };
     app.actions.beats = placeMarkers;
     app.actions.sync = sync;

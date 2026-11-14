@@ -84,7 +84,9 @@
         const save = file => {
           const data = pack.files.get(file);
           if (dir) {
-            const out = Store.path.join(dir, file);
+            // Le fichier reste dans le dossier du pack, quel que soit le nom écrit dans pack.json.
+            const out = Store.path.resolve(dir, file);
+            if (!P.safePath(file) || out.indexOf(Store.path.resolve(dir) + Store.path.sep) !== 0) throw new Error(_T('Pack refusé : chemin de fichier invalide (') + file + ').');
             Store.fs.mkdirSync(Store.path.dirname(out), { recursive: true });
             Store.fs.writeFileSync(out, Buffer.from(data.buffer, data.byteOffset, data.byteLength));
             return out;

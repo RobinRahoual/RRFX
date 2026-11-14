@@ -133,8 +133,15 @@
     const KEEP = ['placement', 'side', 'vary', 'alternate', 'chain', 'sfx', 'beats', 'autoEdit', 'titles', 'color', 'logconv', 'correction', 'formats', 'speech'];
     const OBJECTS = ['beats', 'autoEdit', 'titles', 'color', 'logconv', 'correction', 'formats', 'speech'];
 
-    let report = [];
+    let report = [], running = false;
+    /* Un seul montage express à la fois : un double clic en lançait deux, et le second
+       « remettait » ensuite les réglages de l'Express à la place des tiens. */
     async function launch() {
+      if (running) return app.status.finish('warn', _T('Montage express déjà en cours'), _T('Attends la fin, ou Arrêter.'));
+      running = true;
+      try { return await launchOnce(); } finally { running = false; }
+    }
+    async function launchOnce() {
       const c = await verify();
       if (!c.sequence) return app.status.finish('error', _T('Ouvre une séquence'), _T('Le montage express travaille sur la séquence active de Premiere.'));
       if (!c.adj) return app.status.finish('error', _T('Il manque un calque de réglage'), _T('Premiere ne laisse pas un plugin en créer un : crée-en un une seule fois (Fichier > Nouveau > Calque de réglage). RR FX le garde ensuite comme modèle pour tous tes projets.'));
@@ -160,6 +167,8 @@
           if (app.S.cancel) { report.push({ id: 'stop', label: _T('Arrêté'), kind: 'warn', title: _T('Les étapes suivantes n\'ont pas été faites') }); break; }
           // Sans temps forts, montage ou coupe des silences, la suite n'a pas de sens.
           if ((!res || res.kind === 'error') && (step.id === 'beats' || step.id === 'montage' || step.id === 'silences')) break;
+          // Aucun temps fort trouvé (musique calme) : la suite travaillerait sur d'anciens marqueurs.
+          if (step.id === 'beats' && res.kind !== 'ok') { report.push({ id: 'stop', label: _T('Arrêté'), kind: 'warn', title: _T('Pas de temps forts : les étapes suivantes n\'ont pas été faites') }); break; }
         }
       } finally {
         Object.keys(saved).forEach(k => {

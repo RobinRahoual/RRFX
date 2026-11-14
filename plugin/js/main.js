@@ -128,7 +128,24 @@
      status.phase / status.progress : ils visent SA tâche, grâce au contexte asynchrone de Node dans
      Premiere (AsyncLocalStorage) ; ailleurs (aperçu dans un navigateur), la plus récente. */
   const ALS = (() => {
-    try { const A = typeof require === 'function' ? require('async_hooks').AsyncLocalStorage : null; return A ? new A() : null; } catch (e) { return null; }
+    try {
+      const ah = typeof require === 'function' ? require('async_hooks') : null;
+      if (!ah) return null;
+      if (ah.AsyncLocalStorage) return new ah.AsyncLocalStorage();
+      // Node 12.3 (Premiere 2021) : pas encore d'AsyncLocalStorage. Même principe, à la main : chaque
+      // ressource asynchrone hérite de la tâche qui l'a créée. Sans cela, « Arrêter » et la
+      // progression d'une tâche visaient la plus récente, pas la leur.
+      if (!ah.createHook || !ah.AsyncResource) return null;
+      const stores = new Map();
+      ah.createHook({
+        init(id) { const s = stores.get(ah.executionAsyncId()); if (s !== undefined) stores.set(id, s); },
+        destroy(id) { stores.delete(id); }
+      }).enable();
+      return {
+        run(store, fn) { const r = new ah.AsyncResource('RRFXTask'); stores.set(r.asyncId(), store); try { return r.runInAsyncScope(fn); } finally { stores.delete(r.asyncId()); } },
+        getStore() { return stores.get(ah.executionAsyncId()); }
+      };
+    } catch (e) { return null; }
   })();
   const tasks = [];
   let focus = null, taskSeq = 0;
@@ -360,14 +377,21 @@
 
   // ---------------------------------------------------------------- fenêtres
 
+  let closeModal = null;
   function modal(title, body, buttons) {
+    // Une fenêtre ouverte par-dessus une autre (menu du panneau) : la première est fermée « sans
+    // réponse », son écouteur clavier retiré.
+    if (closeModal) closeModal(null);
     return new Promise(resolve => {
       const root = $('modal-root');
-      const close = v => { root.innerHTML = ''; document.removeEventListener('keydown', onKey, true); resolve(v); };
+      const close = v => { if (closeModal !== close) return; closeModal = null; root.innerHTML = ''; document.removeEventListener('keydown', onKey, true); resolve(v); };
+      closeModal = close;
       const primary = buttons.find(b => b.primary);
       const onKey = e => {
         if (e.key === 'Escape') { e.stopPropagation(); close(null); }
-        if (e.key === 'Enter' && primary) { e.stopPropagation(); e.preventDefault(); close(typeof primary.value === 'function' ? primary.value() : primary.value); }
+        // Entrée sur un bouton (« Garder » atteint par Tab) : c'est ce bouton qui compte, pas le principal.
+        const tag = String((e.target && e.target.tagName) || '').toLowerCase();
+        if (e.key === 'Enter' && primary && tag !== 'button' && tag !== 'textarea') { e.stopPropagation(); e.preventDefault(); close(typeof primary.value === 'function' ? primary.value() : primary.value); }
       };
       const box = h('div', { class: 'modal' },
         h('div', { class: 'modal-title' }, title),
@@ -448,6 +472,7 @@
 
   function pushHistory(op) {
     const list = S.lib.history;
+    if (!Array.isArray(op.entries)) op.entries = [];
     // Séquence de l'opération : l'annuler plus tard la rouvre si besoin.
     if (S.ctx && S.ctx.seqId && !op.seq) { op.seq = S.ctx.seqId; op.seqName = S.ctx.name; }
     list.push(op);
@@ -550,7 +575,8 @@
       status.phase(_T('Retrait des éléments RR FX'));
       const r = await Host.call('clearAll', { scope: o.scope, markers: o.markers, multicam: true });
       if (!r.ok) return { kind: 'error', title: _T('Nettoyage impossible'), detail: r.error };
-      if (o.scope === 'sequence') { S.lib.history = []; persist(); renderUndo(); }
+      // Seules les opérations de cette séquence disparaissent : celles des autres restent annulables.
+      if (o.scope === 'sequence') { const seq = S.ctx && S.ctx.seqId; S.lib.history = seq ? S.lib.history.filter(op => op.seq && op.seq !== seq) : []; persist(); renderUndo(); }
       const parts = [plural(r.removed, _T('élément retiré'), _T('éléments retirés'))];
       if (o.markers) parts.push(plural(r.markers, _T('marqueur retiré'), _T('marqueurs retirés')));
       log(_T('Nettoyage ') + where + ' : ' + parts.join(', '), 'ok');
@@ -611,8 +637,9 @@
       renderShortcuts();
       return;
     }
-    if (event.key === 'Escape' && focus && tasks.indexOf(focus) >= 0) { requestCancel(); return; }
     const tag = String((event.target && event.target.tagName) || '').toLowerCase();
+    // Échap dans un champ abandonne la saisie, il n'arrête pas la tâche en cours.
+    if (event.key === 'Escape' && tag !== 'input' && tag !== 'textarea' && tag !== 'select' && focus && tasks.indexOf(focus) >= 0) { requestCancel(); return; }
     // Ctrl+Z / Cmd+Z : le dernier réglage de l'onglet (colorimétrie) ; sinon, Premiere annule.
     if ((event.ctrlKey || event.metaKey) && !event.altKey && /^[zy]$/i.test(event.key) && tag !== 'input' && tag !== 'textarea') {
       event.preventDefault();

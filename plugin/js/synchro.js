@@ -13,7 +13,7 @@
     const st = () => {
       const s = app.settings();
       if (!s.sync || typeof s.sync !== 'object') s.sync = {};
-      const d = { dir: '', machine: '', lastPush: 0, lastPull: 0, seen: 0 };
+      const d = { dir: '', machine: '', lastPush: 0, lastPull: 0, seen: 0, sharedAt: 0, sig: '' };
       Object.keys(d).forEach(k => { if (!(k in s.sync)) s.sync[k] = d[k]; });
       if (!s.sync.machine) s.sync.machine = ((Store.os && Store.os.hostname && Store.os.hostname()) || _T('ordinateur')) + ' · ' + Math.random().toString(36).slice(2, 6);
       return s.sync;
@@ -22,13 +22,23 @@
     const machineName = m => String(m || '').replace(/ · [a-z0-9]{4}$/, '');
     const hhmm = t => { if (!t) return _T('jamais'); const d = new Date(t); return d.toLocaleDateString() + ' ' + String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0'); };
 
+    /* Date du dernier vrai changement partagé : mise à jour seulement quand l'empreinte des réglages
+       partagés et des favoris change. Première fois : empreinte notée, date 0 (cet ordinateur n'a
+       encore rien changé, un fichier reçu passe devant ses réglages par défaut). */
+    function noteShared() {
+      const x = st(), sig = SD.signature(app.S.lib);
+      if (!x.sig) { x.sig = sig; return; }
+      if (sig !== x.sig) { x.sig = sig; x.sharedAt = Date.now(); }
+    }
+
     let pushTimer = 0, writing = false;
     function push(now) {
       const f = file();
       if (!f) return false;
       writing = true;
       try {
-        const data = SD.pack(app.S.lib, st().machine, Date.now());
+        noteShared();
+        const data = SD.pack(app.S.lib, st().machine, Date.now(), st().sharedAt);
         const tmp = f + '.tmp';
         Store.fs.writeFileSync(tmp, JSON.stringify(data), 'utf8');
         Store.fs.renameSync(tmp, f);
@@ -61,12 +71,16 @@
       if (!SD.valid(remote)) return '';
       const x = st();
       if (!force && (remote.machine === x.machine || remote.savedAt <= x.seen)) return '';
-      const lib = app.S.lib, r = SD.merge({ items: lib.items, favorites: lib.favorites, removed: lib.removed || [], settings: lib.settings }, remote, lib.updated || 0);
+      noteShared();
+      const lib = app.S.lib, r = SD.merge({ items: lib.items, favorites: lib.favorites, removed: lib.removed || [], settings: lib.settings }, remote, x.sharedAt || 0);
       lib.items.splice(0, lib.items.length, ...r.lib.items);
       lib.removed = r.lib.removed;
       if (r.settings) {
         lib.favorites.splice(0, lib.favorites.length, ...r.lib.favorites);
         intoPlace(lib.settings, r.lib.settings);
+        // Réglages repris : ils ne comptent pas comme un changement fait ici.
+        x.sig = SD.signature(lib);
+        x.sharedAt = SD.remoteShared(remote);
       }
       x.seen = remote.savedAt;
       x.lastPull = Date.now();
@@ -88,6 +102,7 @@
 
     app.afterSave.push(() => {
       if (!file() || writing) return;
+      noteShared();
       clearTimeout(pushTimer);
       pushTimer = setTimeout(() => push(false), 3000);
     });

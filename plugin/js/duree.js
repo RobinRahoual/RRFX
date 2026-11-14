@@ -33,7 +33,8 @@
         app.status.phase(_T('Temps forts de la musique'));
         const md = app.musicData;
         let beats = [];
-        try { await md.ensure(false); beats = await md.beatTimes(); } catch (e) { app.log(_T('Temps forts illisibles : coupe nette à la fin de la vidéo (') + app.errorMessage(e) + ')', 'warn'); }
+        // Tous les temps du morceau : la zone et le « un sur N » de l'onglet Musique ne s'appliquent pas ici.
+        try { beats = await md.allBeatTimes(); } catch (e) { app.log(_T('Temps forts illisibles : coupe nette à la fin de la vidéo (') + app.errorMessage(e) + ')', 'warn'); }
         const f = O.fitPlan(beats, m.start, m.end, target);
         if (f.error) return { kind: 'warn', title: _T('Rien à couper'), detail: _T('La musique finit déjà avec la vidéo.') };
         if (x.keep && app.versions) {
@@ -72,7 +73,7 @@
             info.textContent = _T('Musique : ') + mmss(p.music.end - p.music.start) + _T(' · vidéo : ') + mmss(p.videoEnd) + (d > 0.05 ? _T(' · ') + mmss(d) + _T(' à retirer.') : d < -0.05 ? _T(' · musique trop courte.') : _T(' · déjà à la bonne durée.'));
             if (d > 0.05) {
               let beats = [];
-              try { await app.musicData.ensure(false); beats = await app.musicData.beatTimes(); } catch (e) { beats = []; }
+              try { beats = await app.musicData.allBeatTimes(); } catch (e) { beats = []; }
               const f = O.fitPlan(beats, p.music.start, p.music.end, p.videoEnd);
               if (!f.error) info.textContent += ' ' + (f.removed ? _T('Coupe prévue : de ') + mmss(f.a) + _T(' à ') + mmss(f.b) + (f.trim ? _T(', fin à ') + mmss(f.trim) : '') + '.' : _T('Pas de temps forts nets : coupe à la fin de la vidéo.'));
             }

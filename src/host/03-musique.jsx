@@ -191,8 +191,11 @@
         var s = activeSeq(), f = tpf(s), moved = 0, warnings = [], i, k, mv, it, a, b, d, audio, linked;
         for (i = 0; i < o.moves.length; i++) {
             mv = o.moves[i];
-            it = findClip(s, mv.track, snap(mv.start * TICKS, f), mv.name);
+            it = findClipAt(s, mv.track, snap(mv.start * TICKS, f), mv.name);
             if (!it) { warnings.push(mv.name + ' : introuvable'); continue; }
+            // La piste ou il est vraiment (une piste a pu etre inseree dessous).
+            mv = { track: it.track, name: mv.name, delta: mv.delta };
+            it = it.item;
             d = snap(mv.delta * TICKS, f);
             if (!d) { moved++; continue; }
             a = tk(it.start); b = tk(it.end);

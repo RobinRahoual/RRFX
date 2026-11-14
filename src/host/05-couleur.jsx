@@ -136,7 +136,11 @@
         all = mergeSpans(all, f);
         for (k = 0; k < all.length; k++) replaced += cutLayers(s, all[k].a, all[k].b, G.re, warnings);
         jobs.sort(function (x, y) { return x.a - y.a; });
+        // Un calque qui echoue ne fait pas perdre les autres (ni leur annulation) : averti, on continue.
         for (k = 0; k < jobs.length; k++) {
+            try { placeGrade(k); } catch (eJ) { warnings.push(jobs[k].name + ' : ' + eJ.toString()); }
+        }
+        function placeGrade(k) {
             a = jobs[k].a; b = jobs[k].b; top = jobs[k].top;
             // Au-dessus des copies RR FX du plan (rampes...) et des etalonnages d'un niveau inferieur.
             for (i = top + 1; i < s.videoTracks.numTracks; i++) {
@@ -176,6 +180,7 @@
                 }
             }
         }
+        if (!created.length) return fail(warnings.length ? warnings[warnings.length - 1] : 'Aucun plan \u00e0 traiter.', { created: created, replaced: replaced, warnings: warnings });
         if (below) warnings.push(below + ' look(s), titre(s) ou overlay(s) sous le calque : remonte-les au-dessus pour qu\'ils ne soient pas modifi\u00e9s.');
         return ok({ created: created, layers: created.length, replaced: replaced, lutSet: lutSet, warnings: warnings });
     }

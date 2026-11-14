@@ -80,11 +80,16 @@
   function normalizeKey(event) {
     if (!event || event.ctrlKey || event.metaKey || event.altKey) return null;
     const key = String(event.key || ''), shift = event.shiftKey ? 'Shift+' : '';
-    // Clavier AZERTY : les chiffres donnent & é " ' ( … (sans Maj) ; on se rabat sur le code physique.
-    const code = /^(?:Key([A-Z])|Digit([0-9]))$/.exec(String(event.code || ''));
-    if (code) return shift + (code[1] || code[2]);
-    if (/^[a-z0-9]$/i.test(key)) return shift + key.toUpperCase();
-    return null;
+    // Lettres : la touche affichée (event.key), comme le code que Premiere transmet sous Windows ;
+    // le code physique (KeyQ…) suit la disposition QWERTY et inverserait A/Q, Z/W, M sur AZERTY.
+    if (/^[a-z]$/i.test(key)) return shift + key.toUpperCase();
+    // Chiffres : AZERTY donne & é " ' ( … sans Maj, on se rabat sur le code physique.
+    const digit = /^Digit([0-9])$/.exec(String(event.code || ''));
+    if (digit) return shift + digit[1];
+    if (/^[0-9]$/.test(key)) return shift + key;
+    // Lettre avec Maj sur une disposition qui donne autre chose (rare) : code physique en dernier recours.
+    const letter = /^Key([A-Z])$/.exec(String(event.code || ''));
+    return letter ? shift + letter[1] : null;
   }
 
   /* Touche à afficher : « Maj+A » (« Shift+A » en anglais). */
@@ -96,6 +101,12 @@
     if (saved && typeof saved === 'object') {
       Object.keys(ACTIONS).forEach(action => {
         if (action in saved) map[action] = KEY.test(saved[action]) ? saved[action] : '';
+      });
+      // Touche par défaut ajoutée dans une version plus récente, déjà prise par une touche choisie
+      // à la main : la tienne reste, le défaut est retiré.
+      Object.keys(DEFAULTS).forEach(action => {
+        if (action in saved || !map[action]) return;
+        if (Object.keys(saved).some(o => o !== action && saved[o] === map[action])) map[action] = '';
       });
     }
     return map;

@@ -31,11 +31,17 @@
         if (!picked.length) return { kind: 'warn', title: _T('Aucune phrase barrée'), detail: _T('Clique sur ✕ à côté des phrases à retirer.') };
         const t0 = await app.speech.startTime(x.capFrom);
         const ranges = O.textCuts(list, picked);
+        // Le .srt vient d'avant les coupes (silences, euh) : les plages sont recalées sur la
+        // séquence d'aujourd'hui, sinon on retirerait d'autres passages.
+        const inSeq = ranges.map(r => ({ a: r.a + t0, b: r.b + t0 }));
+        const plan = app.speech.textCutPlan ? await app.speech.textCutPlan(inSeq) : { ranges: inSeq, commit: async () => {} };
+        if (!plan.ranges.length) return { kind: 'warn', title: _T('Déjà coupé'), detail: _T('Ces phrases ne sont plus dans la séquence (retirées par une coupe précédente).') };
         if (!x.textCopy && app.versions) await app.versions.beforeCut(_T('avant montage texte'));
         app.status.phase(_T('Coupe et recollage'));
-        const res = await Host.call('cutSilences', { ranges: ranges.map(r => ({ a: r.a + t0, b: r.b + t0 })), copy: !!x.textCopy, suffix: _T(' (montage texte)') });
+        const res = await Host.call('cutSilences', { ranges: plan.ranges, copy: !!x.textCopy, suffix: _T(' (montage texte)') });
         if (!res.ok) return { kind: 'error', title: _T('Phrases non coupées'), detail: res.error };
         (res.warnings || []).forEach(w => app.log(w, 'warn'));
+        await plan.commit();
         // Le .srt suit le nouveau montage : les sous-titres se reposent au bon endroit.
         x.srt = Tr.toSrt(O.afterCuts(list, picked, ranges));
         forSrt = x.srt;
@@ -82,7 +88,9 @@
             const text = h('button', { class: 'tx-text', title: _T('Aller à ') + mmss(c.start) }, h('span', { class: 'tx-time' }, mmss(c.start)), ' ', c.text.replace(/\s*\n\s*/g, ' '));
             text.addEventListener('click', async () => {
               const t0 = await app.speech.startTime(x.capFrom).catch(() => 0);
-              Host.call('setPlayhead', { t: t0 + c.start });
+              // Temps recalé sur les coupes faites (silences, euh) : le .srt vient d'avant.
+              const t = app.speech.mapTimes ? (await app.speech.mapTimes([t0 + c.start]).catch(() => [t0 + c.start]))[0] : t0 + c.start;
+              Host.call('setPlayhead', { t });
             });
             const cut = h('button', { class: 'action quiet icon tx-cut', title: off ? _T('Garder cette phrase') : _T('Barrer : à couper'), 'aria-pressed': off ? 'true' : 'false' }, off ? '↺' : '✕');
             cut.addEventListener('click', () => { if (off) struck.delete(i); else struck.add(i); draw(); });

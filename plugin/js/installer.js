@@ -88,7 +88,14 @@
         if (fs.statSync(a).isDirectory()) copyTree(a, b); else fs.copyFileSync(a, b);
       });
     };
-    fs.rmSync(backupDir, { recursive: true, force: true });
+    // Node 12 (Premiere 2021) n'a ni fs.rmSync ni rmdirSync récursif : suppression à la main.
+    const rmTree = p => {
+      if (!fs.existsSync(p)) return;
+      if (fs.rmSync) { fs.rmSync(p, { recursive: true, force: true }); return; }
+      fs.readdirSync(p).forEach(n => { const f = path.join(p, n); if (fs.lstatSync(f).isDirectory()) rmTree(f); else fs.unlinkSync(f); });
+      fs.rmdirSync(p);
+    };
+    rmTree(backupDir);
     copyTree(dir, backupDir);
     try {
       files.forEach(f => {

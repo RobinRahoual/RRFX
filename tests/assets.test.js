@@ -116,6 +116,30 @@ test('LUT .cube: 3D identity, a real grade, 1D, domain, errors', () => {
   assert.throws(() => A.parseCube('bonjour'), /illisible/);
 });
 
+test('LUT .cube: shaper 1D + 3D kept apart, INPUT_RANGE as domain', () => {
+  // Shaper qui inverse, puis 3D identité : la 3D ne doit pas recevoir les valeurs de la 1D.
+  const lines = ['LUT_1D_SIZE 2', 'LUT_3D_SIZE 2', 'LUT_1D_INPUT_RANGE 0 1', 'LUT_3D_INPUT_RANGE 0 1', '1 1 1', '0 0 0'];
+  for (let b = 0; b < 2; b++) for (let g = 0; g < 2; g++) for (let r = 0; r < 2; r++) lines.push(r + ' ' + g + ' ' + b);
+  const lut = A.parseCube(lines.join('\n'));
+  assert.strictEqual(lut.dim, 3);
+  assert.strictEqual(lut.size, 2);
+  assert.deepStrictEqual(Array.from(lut.data.slice(0, 6)), [0, 0, 0, 1, 0, 0]);
+  assert.deepStrictEqual(Array.from(lut.shaper.data), [1, 1, 1, 0, 0, 0]);
+  const px = new Uint8ClampedArray([0, 255, 100, 255]);
+  A.applyLut(px, lut);
+  assert.deepStrictEqual(Array.from(px), [255, 0, 155, 255]);
+  // LUT_3D_INPUT_RANGE 0 2 : comme DOMAIN 0-2, 255 tombe au milieu.
+  const r3 = ['LUT_3D_SIZE 2', 'LUT_3D_INPUT_RANGE 0 2'];
+  for (let b = 0; b < 2; b++) for (let g = 0; g < 2; g++) for (let r = 0; r < 2; r++) r3.push(r + ' ' + g + ' ' + b);
+  const half = A.parseCube(r3.join('\n'));
+  assert.deepStrictEqual(half.max, [2, 2, 2]);
+  const p2 = new Uint8ClampedArray([255, 0, 0, 255]);
+  A.applyLut(p2, half);
+  assert.strictEqual(p2[0], 128);
+  // 1D seule avec LUT_1D_INPUT_RANGE.
+  assert.deepStrictEqual(A.parseCube('LUT_1D_SIZE 2\nLUT_1D_INPUT_RANGE -0.5 1.5\n0 0 0\n1 1 1\n').min, [-0.5, -0.5, -0.5]);
+});
+
 test('formatSize', () => {
   assert.strictEqual(A.formatSize(512), '512 o');
   assert.strictEqual(A.formatSize(1536), '1,5 Ko');

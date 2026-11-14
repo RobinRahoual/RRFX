@@ -48,7 +48,8 @@ var RRFX = (function () {
 
     function parse(s) {
         if (!s) return {};
-        return eval('(' + s + ')');
+        // U+2028 / U+2029 bruts : fins de ligne pour eval (chaine coupee), pas pour JSON.
+        return eval('(' + String(s).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029') + ')');
     }
 
     function ok(o) {
@@ -97,6 +98,16 @@ var RRFX = (function () {
     // Meme sequence ? Premiere renvoie un nouvel objet a chaque lecture : on compare les identifiants.
     function sameSeq(a, b) { return !!(a && b && a.sequenceID === b.sequenceID); }
 
+    // Fin d'une sequence en ticks : Sequence.end est une chaine de ticks (un Time dans certaines
+    // versions) ; 0 si illisible.
+    function seqEnd(sq) {
+        var e = null, n;
+        try { e = sq.end; } catch (x) { return 0; }
+        if (e === null || e === undefined) return 0;
+        n = Number(e.ticks !== undefined ? e.ticks : e);
+        return isFinite(n) ? n : 0;
+    }
+
     // Rend s active. openSequence d'abord : activeSequence n'est pas modifiable dans toutes les
     // versions (Premiere 26 : Write permission denied).
     function showSeq(s) {
@@ -134,9 +145,22 @@ var RRFX = (function () {
         return a && a.sequenceID === id ? a : s;
     }
 
+    // QE (razor, transitions) attend un timecode. Affichage en images (109) ou en pieds+images
+    // (111, 112) : le format timecode de la meme cadence (29,97 / 59,94 : drop-frame), sinon
+    // hh:mm:ss:ff. Les autres formats d'affichage restent tels quels.
+    function tcFormatFor(fps, display) {
+        var d = Number(display), r = Math.round(fps * 100) / 100;
+        if (d !== 109 && d !== 111 && d !== 112) return display;
+        if (Math.abs(r - 23.98) < 0.02) return 110;
+        if (Math.abs(r - 29.97) < 0.02) return 102;
+        if (Math.abs(r - 59.94) < 0.02) return 106;
+        return { 24: 100, 25: 101, 30: 104, 48: 113, 50: 105, 60: 108 }[Math.round(fps)] || -1;
+    }
+
     function timecodeOf(s, ticks) {
-        var st = s.getSettings();
-        return mkTime(ticks).getFormatted(st.videoFrameRate, st.videoDisplayFormat);
+        var st = s.getSettings(), fmt = tcFormatFor(TICKS / tpf(s), st.videoDisplayFormat);
+        if (fmt === -1) return plainTimecode(s, ticks);
+        return mkTime(ticks).getFormatted(st.videoFrameRate, fmt);
     }
 
     // Image de la timeline (QE exportFrame*). Sur Windows, Premiere 25-26 repond parfois
@@ -295,7 +319,7 @@ var RRFX = (function () {
 
     // ------------------------------------------------------------ adjustment layer
 
-    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione|camada de ajuste/i;
+    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione|camada de ajuste|\u8abf\u6574\u30ec\u30a4\u30e4\u30fc|\uc870\uc815 ?\ub808\uc774\uc5b4|[\u041a\u043a]\u043e\u0440\u0440\u0435\u043a\u0442\u0438\u0440\u0443\u044e\u0449\u0438[\u0439\u0438] \u0441\u043b\u043e[\u0439\u0438]|\u8c03\u6574\u56fe\u5c42|\u8abf\u6574\u5716\u5c64/i;
 
     function walk(item, fn) {
         var i, c;
@@ -436,9 +460,22 @@ var RRFX = (function () {
         return c;
     }
 
-    // Keyframe times are in the clip's own time: its in point + offset from its start.
+    // Vitesse d'un element (1 si illisible), comme placeCopy et la rampe la lisent.
+    function speedOf(item) {
+        var v = 1;
+        try { v = Number(item.getSpeed()); } catch (e) {}
+        return v > 0 ? v : 1;
+    }
+
+    // Keyframe times are in the clip's own (media) time: its in point + offset from its start,
+    // times its speed (a clip at 200 % runs through twice as much media).
     function clipTime(item, seqTicks) {
-        return mkTime(tk(item.inPoint) + (seqTicks - tk(item.start)));
+        return mkTime(tk(item.inPoint) + (seqTicks - tk(item.start)) * speedOf(item));
+    }
+
+    // L'inverse : temps de sequence d'une image cle (ticks du clip).
+    function seqTimeOf(item, keyTicks) {
+        return tk(item.start) + (keyTicks - tk(item.inPoint)) / speedOf(item);
     }
 
     function isPixelPoint(p) {
@@ -530,10 +567,19 @@ var RRFX = (function () {
     }
 
     // Fin du media (le point de sortie marque par l'utilisateur est remis apres lecture).
+    // Point de sortie : video (1), sinon tout (4), sinon son (2) pour un media son seul.
+    function outPointOf(pi) {
+        var types = [1, 4, 2], k, t;
+        for (k = 0; k < types.length; k++) {
+            try { t = tk(pi.getOutPoint(types[k])); if (t > 0) return t; } catch (e) {}
+        }
+        return null;
+    }
+
     function mediaEndOf(pi) {
-        var marked = null, end = null;
-        try { marked = tk(pi.getOutPoint(1)); } catch (e) {}
-        try { pi.clearOutPoint(); end = tk(pi.getOutPoint(1)); } catch (e2) { end = marked; }
+        var marked = outPointOf(pi), end = null;
+        try { pi.clearOutPoint(); end = outPointOf(pi); } catch (e2) {}
+        if (end === null) end = marked;
         try { if (marked !== null && end !== null && Math.abs(marked - end) > 1) pi.setOutPoint(marked / TICKS, 4); } catch (e3) {}
         return end;
     }
@@ -542,16 +588,22 @@ var RRFX = (function () {
         return videoSourceOf(item.projectItem);
     }
 
+    // Sous-clip RR FX d'un rush : meme nom ET meme fichier (deux cartes ont chacune un C0001.MP4).
+    function subClipOf(master, name) {
+        var path = mediaPathOf(master);
+        return walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name && samePath(mediaPathOf(c), path); });
+    }
+
     function videoSourceOf(master) {
         var name, sub, end, bin;
         if (!master) throw new Error('Ce clip n\'a pas de m\u00e9dia source (s\u00e9quence imbriqu\u00e9e ?)');
         name = 'RR FX \u00b7 ' + master.name + ' \u00b7 vid\u00e9o';
-        sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        sub = subClipOf(master, name);
         if (sub) return sub;
         end = mediaEndOf(master);
         if (!(end > 0)) throw new Error('Dur\u00e9e du m\u00e9dia \u00ab ' + master.name + ' \u00bb illisible');
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 1, 0);
-        if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (!sub) sub = subClipOf(master, name);
         if (!sub) throw new Error('Premiere n\'a pas cr\u00e9\u00e9 le sous-clip vid\u00e9o de \u00ab ' + master.name + ' \u00bb');
         bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
@@ -561,12 +613,12 @@ var RRFX = (function () {
     // Sous-clip son seul d'un rush (pour poser le son de la camera de reference).
     function audioSourceOf(master) {
         var name = 'RR FX \u00b7 ' + master.name + ' \u00b7 son', sub, end, bin;
-        sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        sub = subClipOf(master, name);
         if (sub) return sub;
         end = mediaEndOf(master);
         if (!(end > 0)) throw new Error('Dur\u00e9e du m\u00e9dia \u00ab ' + master.name + ' \u00bb illisible');
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 0, 1);
-        if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (!sub) sub = subClipOf(master, name);
         if (!sub) throw new Error('Premiere n\'a pas cr\u00e9\u00e9 le sous-clip son de \u00ab ' + master.name + ' \u00bb');
         bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
@@ -702,7 +754,14 @@ var RRFX = (function () {
         src = videoSource(srcItem);
         ti = layerTrack(s, srcTrack, a, a + Math.max(b - a, need), warnings);
         placeOn(s, ti, src, a, srcA, srcA + need);
-        if (Math.abs(s0 - 1) > 0.001) setSpeedAt(s, ti, a, s0);
+        if (Math.abs(s0 - 1) > 0.001) {
+            // Vitesse refusee : la copie posee a 100 % ne reste pas dans la timeline.
+            try { setSpeedAt(s, ti, a, s0); } catch (e4) {
+                it = findItemAt(s, ti, a);
+                try { if (it) it.remove(false, false); } catch (e5) {}
+                throw e4;
+            }
+        }
         it = findItemAt(s, ti, a);
         fixSpan(it, a, b);
         try { it.name = name; } catch (e3) {}
@@ -711,17 +770,31 @@ var RRFX = (function () {
     }
 
     // Un element par sa position et son nom, sur sa piste ou ailleurs (une piste a pu etre inseree).
-    function findNamed(s, track, start, name) {
+    // -> { item, track } : la piste ou il est vraiment (pas forcement `track`), ou null.
+    function findNamedAt(s, track, start, name) {
         var it = findItemAt(s, track, start), i;
-        if (it && (!name || it.name === name)) return it;
+        if (it && (!name || it.name === name)) return { item: it, track: track };
         for (i = 0; i < s.videoTracks.numTracks; i++) {
             it = findItemAt(s, i, start);
-            if (it && (!name || it.name === name)) return it;
+            if (it && (!name || it.name === name)) return { item: it, track: i };
         }
         return null;
     }
 
+    function findNamed(s, track, start, name) {
+        var r = findNamedAt(s, track, start, name);
+        return r ? r.item : null;
+    }
+
+    function findClipAt(s, track, start, name) {
+        var r = findNamedAt(s, track, start, name), it;
+        if (r) return r;
+        it = findItemAt(s, track, start);
+        return it ? { item: it, track: track } : null;
+    }
+
     function findClip(s, track, start, name) {
-        return findNamed(s, track, start, name) || findItemAt(s, track, start);
+        var r = findClipAt(s, track, start, name);
+        return r ? r.item : null;
     }
 

@@ -40,7 +40,8 @@
     }
 
     // Recalcule l'image « après » (LUT réduite pendant un glissement, fine à la fin).
-    function update(final) {
+    // sk : sélection au moment du réglage (envoi différé) ; absent = la sélection actuelle.
+    function update(final, sk) {
       if (!V.canvas || !V.canvas.isConnected) return;
       if (!V.src) V.src = sourceCanvas();
       const lut = D.buildLut(P(), final ? 33 : 17);
@@ -53,7 +54,7 @@
       if (V.curveDraw && st().open.curve) V.curveDraw();
       if (final) remember();
       // En direct dans Premiere : pendant le glissement (LUT légère, 17³), puis au relâcher (33³).
-      pushLive(!final);
+      pushLive(!final, sk);
     }
 
     // ---------------------------------------------------------------- annuler / rétablir
@@ -76,6 +77,8 @@
       HIST.i = j;
       st().params = JSON.parse(HIST.list[j]);
       app.persist();
+      // L'envoi part après le rendu : il vise la sélection de l'instant du Ctrl+Z.
+      V.pendSel = selKey(app.S.ctx);
       render();
       return true;
     }
@@ -85,56 +88,82 @@
 
     /* Chaque réglage (curseur relâché, look, courbe…) part tout de suite sur les plans sélectionnés :
        la LUT du panneau dans la LUT d'entrée d'un Lumetri du plan, posé une fois puis réutilisé
-       (pas de calque de réglage). Les LUT intermédiaires d'une même sélection sont effacées. */
-    const LIVE = { sent: null, busy: false, again: false, sel: '', files: [] };
+       (pas de calque de réglage). */
+    const LIVE = { sent: null, busy: false, again: null, sel: '' };
     const liveOn = () => st().live !== false && st().target !== 'sequence' && !Host.demo && !!Store.fs;
     const liveKey = () => JSON.stringify(P());
     const selKey = c => (c ? [c.seqId, c.selection].concat(c.selectionNames || []).join('|') : '');
+    /* Marque du Lumetri réutilisé par gradeClips : Premiere cherche ce texte dans le chemin de la
+       LUT d'entrée. 'RRFX' seul prenait aussi la conversion LOG, l'auto, le raccord ou Mes LUTs
+       (tous rangés dans Documents/RRFX). Seuls les fichiers du direct et des looks posés sur les
+       plans commencent par « RRFX live » (nom de fichier : pas de séparateur Windows / Mac). */
+    const LIVE_MARK = 'RRFX live ';
+    const liveDir = () => Store.path.join(Store.dir, 'Looks', 'En direct');
+
+    /* Les LUT du direct ne sont plus effacées pendant la séance : la clé de sélection (noms des
+       plans) ne distingue pas deux morceaux d'un même plan, une LUT encore lue aurait pu partir.
+       Au démarrage, seules les LUT légères (17³, pendant un glissement) de plus de 7 jours sont
+       retirées ; les LUT finales restent (un projet peut encore les lire). */
+    setTimeout(() => {
+      if (Host.demo || !Store.fs) return;
+      try {
+        const dir = liveDir(), old = Date.now() - 7 * 86400000;
+        Store.fs.readdirSync(dir).filter(f => f.indexOf(LIVE_MARK + '17 ') === 0).forEach(f => {
+          const p = Store.path.join(dir, f);
+          try { if (Store.fs.statSync(p).mtimeMs < old) Store.fs.unlinkSync(p); } catch (e) { /* lue ou absente */ }
+        });
+      } catch (e) { /* pas encore de dossier */ }
+    }, 5000);
     function setLive(kind, text) {
       V.live = { kind, text };
       const el = V.view && V.view.querySelector('.lr-live');
       if (el) { el.className = 'note lr-live ' + kind; el.textContent = text; el.hidden = !text; }
     }
-    async function pushLive(fast) {
+    async function pushLive(fast, sk) {
       const size = fast ? 17 : 33;
       if (LIVE.sent === null) { LIVE.sent = '33:' + liveKey(); return; }
       const c = app.S.ctx;
       if (!liveOn() || !c || !(c.selection > 0)) return;
+      // Envoi différé (file d'attente, minuterie, Ctrl+Z) : si la sélection a changé depuis le
+      // réglage, il n'est pas pour ces plans-là.
+      const want = sk === undefined || sk === null ? selKey(c) : sk;
+      if (want !== selKey(c)) return;
       const key = size + ':' + liveKey();
       // Un envoi à la fois ; pendant ce temps, seul le dernier réglage attend (les autres sont sautés).
-      if (LIVE.busy) { LIVE.again = fast ? 'fast' : 'final'; return; }
+      if (LIVE.busy) { LIVE.again = { fast: !!fast, sk: want }; return; }
       if (key === LIVE.sent) return;
       LIVE.busy = true;
       try {
         const cube = D.toCube(D.buildLut(P(), size), st().name || 'RR FX');
-        const dir = Store.path.join(Store.dir, 'Looks', 'En direct');
+        const dir = liveDir();
         Store.fs.mkdirSync(dir, { recursive: true });
-        const file = Store.path.join(dir, 'RRFX live ' + A.hashText(cube) + '.cube');
+        // « 17 » dans le nom : LUT légère, la seule que le nettoyage du démarrage peut retirer.
+        const file = Store.path.join(dir, LIVE_MARK + (fast ? '17 ' : '') + A.hashText(cube) + '.cube');
         if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
+        else try { const now = new Date(); Store.fs.utimesSync(file, now, now); } catch (e) { /* date seulement */ }
         const fx = await app.services.lumetriFx();
-        const r = await Host.call('gradeClips', { lut: file, mark: 'RRFX', names: fx[0].names });
-        LIVE.sent = key;
-        if (!r.ok) setLive('warn', r.error);
+        // La sélection a pu changer pendant la préparation : envoi sauté.
+        const r = want === selKey(app.S.ctx) ? await Host.call('gradeClips', { lut: file, mark: LIVE_MARK, names: fx[0].names }) : null;
+        if (r) LIVE.sent = key;
+        if (!r) { /* sauté */ } else if (!r.ok) setLive('warn', r.error);
         else {
           if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: _T('Colorimétrie'), entries: r.created });
           (r.warnings || []).forEach(w => app.log(w, 'warn'));
           setLive(r.graded ? 'ok' : 'warn', r.graded ? '● ' + _T('En direct sur ') + app.plural(r.graded, _T('plan'), _T('plans')) : (r.warnings || [])[0] || '');
-          // Même sélection : les LUT précédentes ne servent plus à aucun plan.
-          const sk = selKey(c);
-          if (sk !== LIVE.sel) { LIVE.sel = sk; LIVE.files = []; }
-          LIVE.files.filter(f => f !== file).forEach(f => { try { Store.fs.unlinkSync(f); } catch (e) { /* encore lue */ } });
-          LIVE.files = [file];
+          LIVE.sel = want;
         }
       } catch (e) { setLive('warn', app.errorMessage(e)); }
       LIVE.busy = false;
-      if (LIVE.again) { const a = LIVE.again; LIVE.again = false; pushLive(a === 'fast'); }
+      if (LIVE.again) { const a = LIVE.again; LIVE.again = null; pushLive(a.fast, a.sk); }
     }
     // Autre plan sélectionné : son étalonnage partira au prochain réglage.
     app.contextListeners.push(c => { if (selKey(c) !== LIVE.sel && V.live && V.live.kind === 'ok') setLive('idle', c && c.selection ? _T('Nouveau plan sélectionné : bouge un réglage ou « Appliquer » pour l\'étalonner.') : ''); });
     function schedule(final) {
       if (final) { cancelAnimationFrame(V.timer); V.timer = 0; update(true); app.persist(); return; }
       if (V.timer) return;
-      V.timer = requestAnimationFrame(() => { V.timer = 0; update(false); clearTimeout(V.hq); V.hq = setTimeout(() => update(true), 250); });
+      // Sélection prise au réglage : l'image fine 250 ms plus tard ne part que si elle n'a pas changé.
+      const sk = selKey(app.S.ctx);
+      V.timer = requestAnimationFrame(() => { V.timer = 0; update(false, sk); clearTimeout(V.hq); V.hq = setTimeout(() => update(true, sk), 250); });
     }
 
     function drawPreview() {
@@ -567,15 +596,16 @@
         if (Store.fs) {
           const dir = Store.path.join(Store.dir, 'Looks');
           Store.fs.mkdirSync(dir, { recursive: true });
-          // Nommé d'après son contenu : les calques déjà posés gardent leur LUT.
-          file = Store.path.join(dir, 'RRFX ' + slug(name) + ' ' + A.hashText(cube) + '.cube');
+          // Nommé d'après son contenu : les calques déjà posés gardent leur LUT. Sur les plans, il
+          // va dans le Lumetri du direct : son nom porte la marque de ce Lumetri (LIVE_MARK).
+          file = Store.path.join(dir, (s.target !== 'sequence' ? LIVE_MARK + 'look ' : 'RRFX ') + slug(name) + ' ' + A.hashText(cube) + '.cube');
           if (!Store.fs.existsSync(file)) Store.fs.writeFileSync(file, cube, 'utf8');
         }
         // Plans sélectionnés : le look va dans leur Lumetri (le même qu'en direct), sans calque.
         if (file && s.target !== 'sequence') {
           app.status.phase(_T('Lumetri des plans sélectionnés'));
           const fx = await app.services.lumetriFx();
-          const r = await Host.call('gradeClips', { lut: file, mark: 'RRFX', names: fx[0].names });
+          const r = await Host.call('gradeClips', { lut: file, mark: LIVE_MARK, names: fx[0].names });
           if (!r.ok) return { kind: 'warn', title: _T('Aucun plan sélectionné'), detail: r.error };
           if (r.created && r.created.length) app.pushHistory({ date: Date.now(), label: 'Look · ' + name, entries: r.created });
           LIVE.sent = '33:' + liveKey();
@@ -730,7 +760,10 @@
         nav.appendChild(b);
       });
       applyLock();
-      requestAnimationFrame(() => update(true));
+      // Après un Ctrl+Z du panneau : l'envoi vise la sélection de l'instant du Ctrl+Z.
+      const sk = V.pendSel;
+      V.pendSel = null;
+      requestAnimationFrame(() => update(true, sk));
     }
 
     app.actions.applyLook = applyInPremiere;

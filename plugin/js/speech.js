@@ -98,17 +98,39 @@
   };
 
   /* .srt ou .vtt → [{ start, end, text }] (s), triés. Balises (<i>, {\an8}) retirées. */
+  // Balises connues (.srt, WebVTT) : un « < » du texte (« si a < b ») n'est pas une balise.
+  const TAGS = /<\/?(?:[biu]|c|v|lang|ruby|rt|font|span)(?:[ .][^>]*)?>|<\d{1,2}:\d{2}(?::\d{2})?(?:[.,]\d{1,3})?>/gi;
+  const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: '\'', nbsp: ' ', lrm: '', rlm: '' };
+  const entities = s => s.replace(/&(#x[0-9a-f]+|#\d+|[a-z]+);/gi, (m, e) => e[0] === '#' ? String.fromCharCode(e[1] === 'x' || e[1] === 'X' ? parseInt(e.slice(2), 16) : +e.slice(1)) : (ENT[e.toLowerCase()] !== undefined ? ENT[e.toLowerCase()] : m));
+
   function parseSubtitles(text) {
     const out = [];
-    String(text || '').replace(/\r\n?/g, '\n').split(/\n\s*\n/).forEach(block => {
-      const lines = block.split('\n').map(l => l.trim()).filter(Boolean);
-      const k = lines.findIndex(l => /-->/.test(l));
-      if (k < 0) return;
-      const [a, b] = lines[k].split('-->').map(stamp);
-      if (a === null || b === null || !(b > a)) return;
-      const txt = lines.slice(k + 1).join(' ').replace(/<[^>]*>/g, '').replace(/\{[^}]*\}/g, '').replace(/\s+/g, ' ').trim();
-      if (txt) out.push({ start: a, end: b, text: txt });
+    // Un sous-titre commence à chaque ligne « --> », même sans ligne vide avant (fichier retouché
+    // à la main) ; le numéro juste au-dessus n'est pas du texte.
+    const lines = String(text || '').replace(/^﻿/, '').replace(/\r\n?/g, '\n').split('\n').map(l => l.trim());
+    let cur = null;
+    const flush = () => {
+      if (!cur) return;
+      // Numéro du sous-titre suivant (une seule ligne, et jamais le seul texte sans ligne vide avant).
+      if (cur.next && /^\d+$/.test(cur.text[cur.text.length - 1] || '') && (cur.text.length > 1 || cur.blank)) cur.text.pop();
+      const txt = entities(cur.text.join(' ').replace(TAGS, '').replace(/\{\\[^}]*\}/g, '')).replace(/\s+/g, ' ').trim();
+      if (txt) out.push({ start: cur.start, end: cur.end, text: txt });
+      cur = null;
+    };
+    lines.forEach(l => {
+      if (/-->/.test(l)) {
+        if (cur) { cur.next = true; flush(); }
+        const [a, b] = l.split('-->').map(stamp);
+        cur = a === null || b === null || !(b > a) ? null : { start: a, end: b, text: [] };
+        return;
+      }
+      if (!cur) return;
+      if (!l) { cur.blank = true; return; }
+      // Après une ligne vide, une ligne de texte qui n'est pas un numéro ferme le sous-titre (NOTE, STYLE…).
+      if (cur.blank && !/^\d+$/.test(l)) { flush(); return; }
+      cur.text.push(l);
     });
+    flush();
     return out.sort((p, q) => p.start - q.start);
   }
 
@@ -136,10 +158,22 @@
 
   /* Sous-titres recalés après une coupe des silences (ranges : ce qui a été retiré, en temps
      de séquence d'avant la coupe). Ce qui tombait dans un silence disparaît. */
-  function remap(cues, ranges) {
-    const rs = ranges.slice().sort((p, q) => p.a - q.a);
+  /* Plages retirées triées et réunies : deux plages qui se chevauchent (un « euh » dans une
+     répétition) ne sont comptées qu'une fois. */
+  function mergeRanges(ranges) {
+    const rs = (ranges || []).filter(r => r && r.b > r.a).map(r => ({ a: r.a, b: r.b })).sort((p, q) => p.a - q.a), out = [];
+    rs.forEach(r => { const l = out[out.length - 1]; if (l && r.a <= l.b) l.b = Math.max(l.b, r.b); else out.push(r); });
+    return out;
+  }
+
+  /* minLen : durée minimale gardée (0.05 s pour des sous-titres ; 0 pour des mots, gardés
+     tant que leur début ne tombe pas dans une plage retirée). */
+  function remap(cues, ranges, minLen) {
+    const rs = mergeRanges(ranges), min = minLen === undefined ? 0.05 : minLen;
     const map = t => t - rs.reduce((s, r) => s + Math.min(Math.max(0, t - r.a), r.b - r.a), 0);
-    return cues.map(c => Object.assign({}, c, { start: map(c.start), end: map(c.end) })).filter(c => c.end - c.start >= 0.05);
+    const inside = t => rs.some(r => t >= r.a && t < r.b);
+    return cues.map(c => Object.assign({}, c, { start: map(c.start), end: map(c.end), cut: min > 0 ? false : inside(c.start) }))
+      .filter(c => (min > 0 ? c.end - c.start >= min : !c.cut)).map(c => { delete c.cut; return c; });
   }
 
   // ---------------------------------------------------------------- mots clés
@@ -232,7 +266,8 @@
         for (let n = 3; n >= 1 && !found; n--) {
           if (i + 2 * n > w.length) continue;
           const a = w.slice(i, i + n).map(bare).join(' '), b = w.slice(i + n, i + 2 * n).map(bare).join(' ');
-          if (a && a === b && !(n === 1 && /^(tres|non|oui|si|plus|vraiment|ha|haha)$/.test(a))) found = n;
+          // Doublons grammaticaux (« nous nous sommes », « had had ») et fin de phrase (« bien. Bien ») : pas des répétitions.
+          if (a && a === b && !(n === 1 && /^(tres|non|oui|si|plus|vraiment|ha|haha|nous|vous|had|that|bye|so)$/.test(a)) && !/[.?!…]$/.test(w[i + n - 1])) found = n;
         }
         // Mot coupé : « c'est- c'est », « on… on ».
         if (!found && /[-–…]$/.test(w[i]) && w[i + 1] && bare(w[i + 1]).startsWith(bare(w[i]).slice(0, 2))) found = 1;
@@ -266,7 +301,7 @@
     const o = Object.assign({ minLen: 10, max: 15, gap: 1.2, duration: 0 }, opts || {});
     let list = [];
     if (src.markers && src.markers.length) {
-      list = src.markers.slice().sort((a, b) => a.t - b.t).map(m => ({ t: m.t, title: String(m.name || '').replace(/^RR FX · /, '').trim() }));
+      list = src.markers.slice().sort((a, b) => a.t - b.t).map(m => ({ t: m.t, title: String(m.name || '').replace(/^RR FX · (Chapitre · )?/, '').trim() }));
     } else if (src.cues && src.cues.length) {
       const cues = src.cues.slice().sort((a, b) => a.start - b.start);
       const gaps = [];
@@ -278,7 +313,9 @@
     }
     list.sort((a, b) => a.t - b.t);
     // 00:00 obligatoire ; chapitres trop courts fusionnés avec le précédent.
-    if (list.length && list[0].t > 0.5) list.unshift({ t: 0, title: 'Introduction' });
+    // Premier chapitre à moins de 10 s : il est avancé à 00:00 (son titre est gardé) au lieu
+    // d'ajouter une « Introduction » qui l'effacerait à la fusion.
+    if (list.length && list[0].t > 0.5 && list[0].t >= o.minLen) list.unshift({ t: 0, title: 'Introduction' });
     if (list.length) list[0].t = 0;
     const merged = [];
     list.forEach(c => { if (!merged.length || c.t - merged[merged.length - 1].t >= o.minLen) merged.push(c); });
@@ -302,5 +339,5 @@
     return x;
   }
 
-  return { LEVELS, envelope, detect, combine, total, parseSubtitles, splitCues, offset, remap, keywords, emojiFor, highlight, repeats, chapters, stampOf, demoSpeech };
+  return { LEVELS, envelope, detect, combine, total, parseSubtitles, splitCues, offset, remap, mergeRanges, keywords, emojiFor, highlight, repeats, chapters, stampOf, demoSpeech };
 });

@@ -76,10 +76,13 @@
       files.forEach(f => {
         const base = f.name.replace(/\.[^.]+$/, ''), ext = f.ext || extOf(f.name);
         let out = Store.path.join(d, base + '.' + ext), k = 2;
-        // Même nom, contenu différent : on garde les deux.
-        while (Store.fs.existsSync(out) && Store.fs.statSync(out).size !== (f.bytes ? f.bytes.length : Store.fs.statSync(f.path).size)) out = Store.path.join(d, base + ' (' + k++ + ').' + ext);
+        // Même nom, contenu différent : on garde les deux. On compare le contenu (deux LUTs de même
+        // taille ne sont pas forcément les mêmes : une 33³ en garde souvent exactement la taille).
+        const src = f.bytes ? Buffer.from(f.bytes) : Store.fs.readFileSync(f.path);
+        const same = p => { const st2 = Store.fs.statSync(p); return st2.size === src.length && Store.fs.readFileSync(p).equals(src); };
+        while (Store.fs.existsSync(out) && !same(out)) out = Store.path.join(d, base + ' (' + k++ + ').' + ext);
         if (Store.fs.existsSync(out)) return;
-        if (f.bytes) Store.fs.writeFileSync(out, Buffer.from(f.bytes)); else Store.fs.copyFileSync(f.path, out);
+        Store.fs.writeFileSync(out, src);
         n++;
       });
       thumbs.clear();

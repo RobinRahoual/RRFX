@@ -83,12 +83,32 @@
     });
   }
 
+  /* Les autres projets Premiere du même dossier (noms de fichiers) : ils peuvent se servir de
+     fichiers d'assets que le projet ouvert ne connaît pas. */
+  function otherProjects(projectPath, names) {
+    const me = String(projectPath || '').split(/[\\/]/).pop().toLowerCase();
+    return (names || []).filter(n => /\.prproj$/i.test(n) && !/^\./.test(n) && n.toLowerCase() !== me);
+  }
+
+  /* Rangement automatique : les fichiers prêts. files : [{ name, bytes, mtime }] ; w : état gardé
+     d'un tour à l'autre ({} au début). Taille ou date changée depuis le tour d'avant : encore en
+     copie, rangé plus tard. shared (d'autres projets dans le dossier) : seulement les fichiers
+     arrivés depuis le premier tour, les plus anciens servent peut-être à ces projets. → noms. */
+  function readyToSort(files, w, shared) {
+    const first = !w.prev, prev = w.prev || new Map(), now = new Map();
+    files.forEach(f => now.set(f.name, f.bytes + ':' + f.mtime));
+    if (!w.base) w.base = new Set(files.map(f => f.name));
+    w.prev = now;
+    if (first) return [];
+    return files.filter(f => prev.get(f.name) === now.get(f.name) && !(shared && w.base.has(f.name))).map(f => f.name);
+  }
+
   /* Arguments yt-dlp en plus : la durée de la vidéo, avant le téléchargement, sur une ligne
      RRFXDUR=… (pour ranger un son en MUSIQUE ou SFX). */
   const DURATION_ARGS = ['--no-simulate', '--print', 'before_dl:RRFXDUR=%(duration)s'];
   const durationOf = line => { const m = /^RRFXDUR=(\d+(?:\.\d+)?)/.exec(String(line || '').trim()); return m ? +m[1] : null; };
 
-  return { CATS, NAMES, AUDIO, MUSIC_SECONDS, extOf, isAudio, audioSeconds, categoryOf, assetsDir, assetsRoot, planSort, DURATION_ARGS, durationOf };
+  return { CATS, NAMES, AUDIO, MUSIC_SECONDS, extOf, isAudio, audioSeconds, categoryOf, assetsDir, assetsRoot, planSort, otherProjects, readyToSort, DURATION_ARGS, durationOf };
 });
 
 /* Partie panneau : le dossier assets du projet ouvert, et son rangement. */
@@ -130,17 +150,37 @@
       try { Store.fs.renameSync(file, to); return to; } catch (e) { return file; }
     }
 
+    // Autres .prproj à côté du projet (noms), [] si aucun ou projet pas enregistré.
+    function siblingsOf(pp) {
+      if (!/\.prproj$/i.test(String(pp || ''))) return [];
+      try { return D.otherProjects(pp, Store.fs.readdirSync(Store.path.dirname(pp))); } catch (e) { return []; }
+    }
+
     /* Range les fichiers en vrac à la racine d'assets. quiet : rangement automatique (seulement
-       les fichiers que le projet n'utilise pas, sans message). → { moved, relinked, failed } */
+       les fichiers que le projet n'utilise pas, sans message). → { moved, relinked, failed }.
+       Un seul rangement à la fois (automatique et bouton) : { busy: true } sinon. */
+    let busy = false, auto = null;
     async function sortLoose(quiet) {
+      if (busy) return { busy: true, moved: 0, relinked: 0, failed: [] };
+      busy = true;
+      try { return await sortCore(quiet); } finally { busy = false; }
+    }
+    async function sortCore(quiet) {
       const pm = await Host.call('projectMedia', {});
       const rootDir = pm.ok ? D.assetsRoot(pm.projectPath, Store.path) : null;
       if (!rootDir) return { error: _T('Enregistre ton projet Premiere : le dossier assets se crée à côté du fichier .prproj.') };
       if (!Store.fs.existsSync(rootDir)) return { moved: 0, relinked: 0, failed: [], root: rootDir };
       const used = new Set((pm.paths || []).map(p => String(p).replace(/\\/g, '/').toLowerCase()));
       const isUsed = p => used.has(String(p).replace(/\\/g, '/').toLowerCase());
-      const files = Store.fs.readdirSync(rootDir).filter(n => { try { return Store.fs.statSync(Store.path.join(rootDir, n)).isFile(); } catch (e) { return false; } })
-        .map(n => ({ name: n, bytes: Store.fs.statSync(Store.path.join(rootDir, n)).size }));
+      let files = Store.fs.readdirSync(rootDir).map(n => { try { const s = Store.fs.statSync(Store.path.join(rootDir, n)); return s.isFile() ? { name: n, bytes: s.size, mtime: s.mtimeMs } : null; } catch (e) { return null; } })
+        .filter(Boolean);
+      if (quiet) {
+        // « Utilisé » ne vaut que pour le projet ouvert : avec d'autres projets dans le dossier, seuls
+        // les fichiers arrivés depuis le début de la surveillance bougent. Et jamais un fichier en copie.
+        if (!auto || auto.root !== rootDir) auto = { root: rootDir };
+        const ready = new Set(D.readyToSort(files, auto, siblingsOf(pm.projectPath).length > 0));
+        files = files.filter(f => ready.has(f.name));
+      }
       const plan = D.planSort(rootDir, files, Store.path, isUsed, p => Store.fs.existsSync(p)).filter(m => !quiet || !m.used);
       let moved = 0;
       const relink = [], failed = [];
@@ -165,10 +205,19 @@
       return { moved, relinked, failed, root: rootDir, plan };
     }
 
-    function sortNow() {
+    async function sortNow() {
+      // D'autres projets dans le dossier : RR FX ne voit que les médias du projet ouvert, un fichier
+      // qu'eux seuls utilisent passerait hors ligne chez eux. On demande d'abord.
+      if (Store.fs) {
+        const ctx = await Host.call('getContext', {});
+        const others = siblingsOf(ctx && ctx.ok ? ctx.projectPath : projectPath());
+        if (others.length && !(await app.confirmDialog(_T('Ranger malgré les autres projets ?'),
+          _T('Ce dossier contient aussi : ') + others.join(', ') + _T('. RR FX ne voit que les médias du projet ouvert : un fichier d\'assets utilisé seulement par ces projets y passerait hors ligne.'), _T('Ranger quand même')))) return null;
+      }
       return app.runTask(_T('Rangement du dossier assets'), async () => {
         if (!Store.fs) return { kind: 'warn', title: _T('Disponible dans Premiere'), detail: _T('Le rangement se fait sur ton disque, depuis Premiere.') };
         const r = await sortLoose(false);
+        if (r.busy) return { kind: 'warn', title: _T('Rangement déjà en cours'), detail: _T('Réessaie dans un instant.') };
         if (r.error) return { kind: 'warn', title: _T('Projet pas encore enregistré'), detail: r.error };
         if (!r.moved && !r.failed.length) return { kind: 'ok', title: _T('Dossier assets déjà rangé'), detail: r.root };
         const cats = {};
@@ -181,12 +230,11 @@
     }
 
     // Rangement automatique (option) : toutes les 20 s, ce qui est déposé en vrac et pas encore utilisé.
-    let busy = false;
+    // Option coupée : la surveillance repart de zéro quand elle est remise.
     setInterval(async () => {
+      if (!st().auto) auto = null;
       if (!Store.fs || busy || !st().auto || !/\.prproj$/i.test(projectPath())) return;
-      busy = true;
       try { const r = await sortLoose(true); if (r.moved) app.log(app.plural(r.moved, _T('fichier rangé'), _T('fichiers rangés')) + _T(' dans assets (automatique)'), 'ok'); } catch (e) { /* réessayé plus tard */ }
-      busy = false;
     }, 20000);
 
     function render() {

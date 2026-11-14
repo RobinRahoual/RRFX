@@ -144,7 +144,7 @@
                         if (keys && keys.length) {
                             animated = true;
                             for (j = 0; j < keys.length; j++) {
-                                kt = tk(keys[j]) - tk(it.inPoint) + S;
+                                kt = seqTimeOf(it, tk(keys[j]));
                                 k = kt <= mid ? segIn : segOut;
                                 if (k.a === null || kt < k.a) k.a = kt;
                                 if (k.b === null || kt > k.b) k.b = kt;
@@ -406,6 +406,8 @@
                 for (j = 0; j < replace.length; j++) {
                     if (mn !== replace[j] || !hasKeys(comp)) continue;
                     if (typeof comp.remove === 'function') { try { comp.remove(); removed++; } catch (e0) { clearKeys(comp); } } else clearKeys(comp);
+                    // Animation remplacee : l'annulation ne sait pas la remettre (signale, pas compte).
+                    entry.lost = (entry.lost || 0) + 1;
                     break;
                 }
             }
@@ -416,7 +418,7 @@
                     it = findItemAt(s, x.track, x.start);
                     if (fx.intrinsic) {
                         comp = componentByMatch(it, fx.intrinsic === 'motion' ? 'AE.ADBE Motion' : 'AE.ADBE Opacity');
-                        if (comp) clearKeys(comp);
+                        if (comp) { keepComp(entry, comp); clearKeys(comp); }
                     } else {
                         comp = addEffect(s, x.track, x.start, fx, warnings);
                         if (comp) entry.added.push(comp.matchName);

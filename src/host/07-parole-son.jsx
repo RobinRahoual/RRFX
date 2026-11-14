@@ -157,7 +157,9 @@
         var i, j, c, p;
         for (i = 0; i < it.components.numItems; i++) {
             c = it.components[i];
-            if (!/^(volume|lautst.rke|volumen)$/i.test(c.displayName)) continue;
+            // Par son nom affiche, ou par son matchName (Premiere dans une autre langue) ; pas le
+            // Volume de la voie (Channel Volume : gauche / droite).
+            if (!/^(volume|lautst.rke|volumen)$/i.test(c.displayName) && !(/volume/i.test(String(c.matchName)) && !/channel/i.test(String(c.matchName)))) continue;
             for (j = 0; j < c.properties.numItems; j++) {
                 p = c.properties[j];
                 if (LEVEL.test(p.displayName)) return p;
@@ -234,7 +236,19 @@
             done++;
             if (eff) {
                 q = qeAudioFor(s, c.track, tk(it.start));
-                try { if (q) { q.addAudioEffect(eff); cleaned++; } } catch (e1) {}
+                try {
+                    if (q) {
+                        var n0 = it.components.numItems, a0 = tk(it.start), fx;
+                        q.addAudioEffect(eff);
+                        cleaned++;
+                        // L'effet ajoute est note pour que l'annulation le retire.
+                        it = findAudioAt(s, c.track, a0) || it;
+                        if (it.components.numItems > n0) {
+                            fx = it.components[it.components.numItems - 1];
+                            created.push({ kind: 'afx', track: c.track, start: a0, name: it.name, added: [fx.matchName] });
+                        }
+                    }
+                } catch (e1) {}
             }
         }
         if (eff && cleaned < done) warnings.push('D\u00e9bruitage ajout\u00e9 sur ' + cleaned + ' clip(s) sur ' + done);

@@ -13,7 +13,8 @@
     const st = () => {
       const s = app.settings();
       if (!s.translate || typeof s.translate !== 'object') s.translate = {};
-      const d = { from: 'fr', to: 'en', service: 'mymemory', key: '', email: '', original: '', lang: '' };
+      // translated : le .srt tel que la dernière traduction l'a laissé (original et lang ne valent que pour lui).
+      const d = { from: 'fr', to: 'en', service: 'mymemory', key: '', email: '', original: '', translated: '', lang: '' };
       Object.keys(d).forEach(k => { if (!(k in s.translate)) s.translate[k] = d[k]; });
       return s.translate;
     };
@@ -57,16 +58,21 @@
         return out;
       }
       // MyMemory : un sous-titre par requête, trois à la fois.
-      let next = 0, done = 0;
+      // failed : dès qu'une requête échoue (quota, réseau), les autres s'arrêtent au lieu de
+      // continuer à envoyer le texte pour rien.
+      let next = 0, done = 0, failed = false;
       const worker = async () => {
-        while (next < texts.length && !app.S.cancel) {
-          const i = next++;
-          if (!texts[i]) { out[i] = ''; done++; continue; }
-          const r = await request(T.myMemoryRequest(texts[i], x.from, x.to, x.email));
-          if (r.status !== 200) throw new Error(T.httpError(r.status, 'mymemory'));
-          out[i] = T.myMemoryParse(r.json);
-          app.status.progress(++done, texts.length, 'MyMemory');
-        }
+        try {
+          while (next < texts.length && !app.S.cancel && !failed) {
+            const i = next++;
+            if (!texts[i]) { out[i] = ''; done++; continue; }
+            const r = await request(T.myMemoryRequest(texts[i], x.from, x.to, x.email));
+            if (failed) return;
+            if (r.status !== 200) throw new Error(T.httpError(r.status, 'mymemory'));
+            out[i] = T.myMemoryParse(r.json);
+            app.status.progress(++done, texts.length, 'MyMemory');
+          }
+        } catch (e) { failed = true; throw e; }
       };
       await Promise.all([worker(), worker(), worker()]);
       return out;
@@ -82,8 +88,11 @@
         app.status.phase(_T('Traduction (') + langName(x.from) + ' → ' + langName(x.to) + ')');
         const tr = await translateTexts(texts, x);
         if (app.S.cancel) return { kind: 'warn', title: _T('Traduction arrêtée'), detail: _T('Les sous-titres n\'ont pas changé.') };
-        if (!x.original) x.original = sp.srt;
+        // Le texte actuel est le nouvel original s'il n'est plus celui de la dernière traduction
+        // (nouveau .srt, transcription) : « Revenir à l'original » ne remet pas un vieux texte.
+        if (!x.original || (x.translated && sp.srt !== x.translated)) x.original = sp.srt;
         sp.srt = T.toSrt(T.apply(cues, tr));
+        x.translated = sp.srt;
         x.lang = x.to;
         app.persist();
         if (refresh) refresh();
@@ -118,8 +127,9 @@
             const out = Store.saveBinary([new TextEncoder().encode(app.speech.settings().srt)], 'sous-titres' + (x.lang ? '.' + x.lang : '') + '.srt', 'srt', _T('Enregistrer les sous-titres'));
             if (out) app.status.finish('ok', _T('Sous-titres enregistrés'), out);
           });
+          // Remet le texte d'avant la dernière traduction (même si la traduction a été retouchée).
           const back = x.original ? h('button', { class: 'action quiet' }, _T('Revenir à l\'original')) : null;
-          if (back) back.addEventListener('click', () => { app.speech.settings().srt = x.original; x.original = ''; x.lang = ''; app.persist(); app.switchTab('speech'); });
+          if (back) back.addEventListener('click', () => { app.speech.settings().srt = x.original; x.original = ''; x.translated = ''; x.lang = ''; app.persist(); app.switchTab('speech'); });
           box.appendChild(h('div', { class: 'row-buttons wrap' }, go, save, back));
           box.appendChild(h('div', { class: 'note' }, (cues.length ? app.plural(cues.length, _T('sous-titre')) + ', ' + T.chars(cues) + _T(' caractères') + (x.lang ? _T(' · en ') + langName(x.lang).toLowerCase() : '') + '. ' : '') + (x.service === 'ollama' ? _T('Traduit sur ton ordinateur par l\'IA locale (Ollama) : rien n\'est envoyé en ligne ; les timings ne bougent pas.') : _T('Le texte est envoyé à ') + (x.service === 'deepl' ? 'DeepL' : 'MyMemory') + _T(' pour être traduit ; les timings ne bougent pas.') + _T(' Contenu confidentiel (client, interview non publiée) : demande l\'accord avant, ou traduis à la main.'))));
         };

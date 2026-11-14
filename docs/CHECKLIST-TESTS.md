@@ -345,6 +345,73 @@ C'est la partie la plus à risque : elle passe par des fonctions de Premiere peu
 - [ ] Option *Ranger aussi ce que je dépose* : un fichier déposé se range dans les 20 s
 - [ ] *Ouvrir le dossier* ouvre `assets` dans l'Explorateur / le Finder
 
+## 25. Corrections de l'audit (novembre 2026)
+
+Corrigé et couvert par les tests automatiques, mais certaines corrections reposent sur le comportement de
+Premiere : à confirmer ici. ⚠ = hypothèse sur Premiere à vérifier en priorité.
+
+**Premiere 2021 (CEP 10, Node 12.3)** :
+- [ ] 🔴 Le panneau s'affiche normalement (mise en page, fenêtres de confirmation, avant/après des LUT)
+- [ ] 🔴 Mise à jour en un clic : installée sans erreur, `Documents/RRFX/Sauvegarde du panneau` remplacée
+- [ ] 🔴 Un téléchargement d'outil en cours + un effet appliqué : *Arrêter* sur la ligne du téléchargement n'arrête que lui, Échap n'arrête que l'effet
+- [ ] Réinstaller un outil déjà installé (ffmpeg) : pas d'erreur de dossier existant
+
+**Script Premiere** :
+- [ ] 🔴 ⚠ Effet en *copie du plan* sur un plan ralenti à 50 % puis accéléré à 200 % : l'animation tient toute sa durée (les images clés suivent la vitesse du plan)
+- [ ] ⚠ *Capturer la sélection* sur un plan à vitesse modifiée : l'animation reposée ailleurs a la même durée
+- [ ] 🔴 Deux rushs qui portent le même nom (C0001.MP4 de deux cartes) : un effet en copie sur chacun montre la bonne image
+- [ ] Effets en copie sur des coupes de deux pistes (V1 et V2) : chaque copie est au-dessus de son plan, visible
+- [ ] ⚠ Timeline affichée en images (*Affichage* > images, ou pieds+images) : couper les silences, poser les transitions et les temps forts coupent au bon endroit (29,97 et 25 i/s)
+- [ ] Barre de progression et compte à rebours « à la fin » : ils trouvent la fin de la séquence
+- [ ] *Vérifier avant export* sur un montage auto (*RR FX · Montage*) : pas de fausse « image noire »
+- [ ] *Égaliser la voix* avec *Réduire le bruit de fond*, puis ↶ Annuler : le volume et l'effet DeNoise partent
+- [ ] Ré-animer un texte qui avait déjà une animation, puis ↶ Annuler : l'ancienne animation revient (ou le journal dit qu'elle n'a pas pu être remise)
+- [ ] Rampe refusée par Premiere : aucun morceau orphelin ne reste dans la timeline
+- [ ] Premiere en japonais, coréen, russe ou chinois : le calque de réglage et le volume sont trouvés
+- [ ] Son seul (WAV d'un micro) : J-cut / L-cut et pose d'un son des Ressources gardent la bonne durée
+
+**Colorimétrie** :
+- [ ] 🔴 Sélectionne le calque *RR FX · Conversion*, bouge *Exposition* : la LUT de conversion LOG reste, un Lumetri « en direct » s'ajoute
+- [ ] 🔴 Un rush coupé en deux morceaux : étalonne le premier, puis le second : le premier garde son réglage
+- [ ] Bouge un curseur puis clique tout de suite sur un autre plan : le second plan ne reçoit pas le réglage du premier
+- [ ] Panneau en anglais, *Expo et balance auto* sur des plans déjà justes : aucun calque *RR FX · Auto* inutile
+- [ ] Relancer *Expo et balance auto* tout décoché : les anciens calques Auto partent
+- [ ] Une LUT .cube exportée de DaVinci Resolve avec un *shaper* 1D : aperçu et vignette justes
+- [ ] *Zoom suivi (objet)* sur 3 plans : l'objet est suivi dans chacun (ou un message dit qu'il n'est pas retrouvé)
+- [ ] *Expo et balance auto* pendant une copie 9:16 qui suit le visage : les deux finissent sans erreur d'images
+
+**Parole et textes** :
+- [ ] 🔴 Couper les « euh » puis poser les sous-titres : ils tombent au bon moment jusqu'à la fin de la vidéo
+- [ ] 🔴 Coupe des silences sur une copie, retour à la séquence d'origine, poser les sous-titres : ils ne sont pas décalés
+- [ ] *Respirations et clics* sur un plan caméra en V2 avec son son en A1 : le son de ce plan est baissé, pas la musique
+- [ ] Parole > Poser les sous-titres sans jamais avoir ouvert l'onglet Textes : le modèle de texte est trouvé
+- [ ] Montage par le texte après une coupe des silences : ce sont bien les phrases barrées qui partent
+- [ ] Chapitres YouTube avec un premier marqueur à 5 s : il devient 00:00 avec son titre
+- [ ] « Nous nous sommes vus » transcrit : rien n'est coupé par *Couper les « euh »*
+- [ ] Téléchargement du modèle Whisper coupé (Wi-Fi) : message clair, pas de modèle « prêt » abîmé
+- [ ] *Tout corriger* sur un sous-titre avec une adresse (https://…) et une heure (12:30) : rien n'est cassé
+- [ ] Panneau en anglais : un message d'erreur venant de Premiere (sélection vide, transition introuvable) s'affiche en anglais
+
+**Outils, import, ressources** :
+- [ ] 🔴 Import YouTube avec yt-dlp installé par RR FX (pas dans le PATH) : l'import marche
+- [ ] Deux liens Google Drive importés l'un après l'autre : deux fichiers distincts, le premier n'est pas remplacé
+- [ ] Projet dans un dossier avec `%` dans le nom : l'import yt-dlp marche
+- [ ] Désinstaller *SAM 2 + Depth Anything* : Demucs, VoiceFixer et rembg marchent encore
+- [ ] Deux .prproj dans le même dossier, *Ranger le dossier assets* : RR FX demande confirmation en nommant l'autre projet
+- [ ] Dossier surveillé : un gros fichier en cours de copie arrive une fois la copie finie
+- [ ] Archive arrêtée en cours : le bilan dit « Archive incomplète », le LISEZMOI aussi
+- [ ] Un pack `.rrfxpack` ou un code de partage abîmé : message clair, rien d'écrit hors de `Documents/RRFX/Packs`
+
+**Panneau** :
+- [ ] 🔴 Documents sur OneDrive, fichiers « à la demande » hors ligne : au démarrage, message « library.json n'a pas pu être lu », et ta bibliothèque n'est pas vidée
+- [ ] 🔴 Synchro : nouvel ordinateur relié au dossier de synchro : il reprend les réglages de l'autre, et l'autre garde les siens (macros, raccourcis, favoris)
+- [ ] Clavier AZERTY (Windows) : la touche A applique l'effet, Q ne fait rien
+- [ ] *Tout effacer ?* : Tab jusqu'à *Garder* puis Entrée : rien n'est effacé
+- [ ] Échap dans un champ de saisie pendant une tâche : la tâche continue
+- [ ] *Tout effacer (séquence)* sur la séquence B : les opérations de la séquence A restent annulables
+- [ ] Double clic sur *Lancer* (Express) : un seul montage express
+- [ ] Musique calme sans temps forts, Express *Reels dynamique* : arrêt après « temps forts », rien posé sur d'anciens marqueurs
+
 ---
 
 ## Remonter un problème

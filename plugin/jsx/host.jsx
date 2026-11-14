@@ -48,7 +48,8 @@ var RRFX = (function () {
 
     function parse(s) {
         if (!s) return {};
-        return eval('(' + s + ')');
+        // U+2028 / U+2029 bruts : fins de ligne pour eval (chaine coupee), pas pour JSON.
+        return eval('(' + String(s).replace(/\u2028/g, '\\u2028').replace(/\u2029/g, '\\u2029') + ')');
     }
 
     function ok(o) {
@@ -97,6 +98,16 @@ var RRFX = (function () {
     // Meme sequence ? Premiere renvoie un nouvel objet a chaque lecture : on compare les identifiants.
     function sameSeq(a, b) { return !!(a && b && a.sequenceID === b.sequenceID); }
 
+    // Fin d'une sequence en ticks : Sequence.end est une chaine de ticks (un Time dans certaines
+    // versions) ; 0 si illisible.
+    function seqEnd(sq) {
+        var e = null, n;
+        try { e = sq.end; } catch (x) { return 0; }
+        if (e === null || e === undefined) return 0;
+        n = Number(e.ticks !== undefined ? e.ticks : e);
+        return isFinite(n) ? n : 0;
+    }
+
     // Rend s active. openSequence d'abord : activeSequence n'est pas modifiable dans toutes les
     // versions (Premiere 26 : Write permission denied).
     function showSeq(s) {
@@ -134,9 +145,22 @@ var RRFX = (function () {
         return a && a.sequenceID === id ? a : s;
     }
 
+    // QE (razor, transitions) attend un timecode. Affichage en images (109) ou en pieds+images
+    // (111, 112) : le format timecode de la meme cadence (29,97 / 59,94 : drop-frame), sinon
+    // hh:mm:ss:ff. Les autres formats d'affichage restent tels quels.
+    function tcFormatFor(fps, display) {
+        var d = Number(display), r = Math.round(fps * 100) / 100;
+        if (d !== 109 && d !== 111 && d !== 112) return display;
+        if (Math.abs(r - 23.98) < 0.02) return 110;
+        if (Math.abs(r - 29.97) < 0.02) return 102;
+        if (Math.abs(r - 59.94) < 0.02) return 106;
+        return { 24: 100, 25: 101, 30: 104, 48: 113, 50: 105, 60: 108 }[Math.round(fps)] || -1;
+    }
+
     function timecodeOf(s, ticks) {
-        var st = s.getSettings();
-        return mkTime(ticks).getFormatted(st.videoFrameRate, st.videoDisplayFormat);
+        var st = s.getSettings(), fmt = tcFormatFor(TICKS / tpf(s), st.videoDisplayFormat);
+        if (fmt === -1) return plainTimecode(s, ticks);
+        return mkTime(ticks).getFormatted(st.videoFrameRate, fmt);
     }
 
     // Image de la timeline (QE exportFrame*). Sur Windows, Premiere 25-26 repond parfois
@@ -295,7 +319,7 @@ var RRFX = (function () {
 
     // ------------------------------------------------------------ adjustment layer
 
-    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione|camada de ajuste/i;
+    var ADJ_NAME = /adjustment layer|calque de r[\u00e9e]glage|calque d.effets|einstellungsebene|capa de ajuste|livello di regolazione|camada de ajuste|\u8abf\u6574\u30ec\u30a4\u30e4\u30fc|\uc870\uc815 ?\ub808\uc774\uc5b4|[\u041a\u043a]\u043e\u0440\u0440\u0435\u043a\u0442\u0438\u0440\u0443\u044e\u0449\u0438[\u0439\u0438] \u0441\u043b\u043e[\u0439\u0438]|\u8c03\u6574\u56fe\u5c42|\u8abf\u6574\u5716\u5c64/i;
 
     function walk(item, fn) {
         var i, c;
@@ -436,9 +460,22 @@ var RRFX = (function () {
         return c;
     }
 
-    // Keyframe times are in the clip's own time: its in point + offset from its start.
+    // Vitesse d'un element (1 si illisible), comme placeCopy et la rampe la lisent.
+    function speedOf(item) {
+        var v = 1;
+        try { v = Number(item.getSpeed()); } catch (e) {}
+        return v > 0 ? v : 1;
+    }
+
+    // Keyframe times are in the clip's own (media) time: its in point + offset from its start,
+    // times its speed (a clip at 200 % runs through twice as much media).
     function clipTime(item, seqTicks) {
-        return mkTime(tk(item.inPoint) + (seqTicks - tk(item.start)));
+        return mkTime(tk(item.inPoint) + (seqTicks - tk(item.start)) * speedOf(item));
+    }
+
+    // L'inverse : temps de sequence d'une image cle (ticks du clip).
+    function seqTimeOf(item, keyTicks) {
+        return tk(item.start) + (keyTicks - tk(item.inPoint)) / speedOf(item);
     }
 
     function isPixelPoint(p) {
@@ -530,10 +567,19 @@ var RRFX = (function () {
     }
 
     // Fin du media (le point de sortie marque par l'utilisateur est remis apres lecture).
+    // Point de sortie : video (1), sinon tout (4), sinon son (2) pour un media son seul.
+    function outPointOf(pi) {
+        var types = [1, 4, 2], k, t;
+        for (k = 0; k < types.length; k++) {
+            try { t = tk(pi.getOutPoint(types[k])); if (t > 0) return t; } catch (e) {}
+        }
+        return null;
+    }
+
     function mediaEndOf(pi) {
-        var marked = null, end = null;
-        try { marked = tk(pi.getOutPoint(1)); } catch (e) {}
-        try { pi.clearOutPoint(); end = tk(pi.getOutPoint(1)); } catch (e2) { end = marked; }
+        var marked = outPointOf(pi), end = null;
+        try { pi.clearOutPoint(); end = outPointOf(pi); } catch (e2) {}
+        if (end === null) end = marked;
         try { if (marked !== null && end !== null && Math.abs(marked - end) > 1) pi.setOutPoint(marked / TICKS, 4); } catch (e3) {}
         return end;
     }
@@ -542,16 +588,22 @@ var RRFX = (function () {
         return videoSourceOf(item.projectItem);
     }
 
+    // Sous-clip RR FX d'un rush : meme nom ET meme fichier (deux cartes ont chacune un C0001.MP4).
+    function subClipOf(master, name) {
+        var path = mediaPathOf(master);
+        return walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name && samePath(mediaPathOf(c), path); });
+    }
+
     function videoSourceOf(master) {
         var name, sub, end, bin;
         if (!master) throw new Error('Ce clip n\'a pas de m\u00e9dia source (s\u00e9quence imbriqu\u00e9e ?)');
         name = 'RR FX \u00b7 ' + master.name + ' \u00b7 vid\u00e9o';
-        sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        sub = subClipOf(master, name);
         if (sub) return sub;
         end = mediaEndOf(master);
         if (!(end > 0)) throw new Error('Dur\u00e9e du m\u00e9dia \u00ab ' + master.name + ' \u00bb illisible');
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 1, 0);
-        if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (!sub) sub = subClipOf(master, name);
         if (!sub) throw new Error('Premiere n\'a pas cr\u00e9\u00e9 le sous-clip vid\u00e9o de \u00ab ' + master.name + ' \u00bb');
         bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
@@ -561,12 +613,12 @@ var RRFX = (function () {
     // Sous-clip son seul d'un rush (pour poser le son de la camera de reference).
     function audioSourceOf(master) {
         var name = 'RR FX \u00b7 ' + master.name + ' \u00b7 son', sub, end, bin;
-        sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        sub = subClipOf(master, name);
         if (sub) return sub;
         end = mediaEndOf(master);
         if (!(end > 0)) throw new Error('Dur\u00e9e du m\u00e9dia \u00ab ' + master.name + ' \u00bb illisible');
         sub = master.createSubClip(name, mkTime(0), mkTime(end), 0, 0, 1);
-        if (!sub) sub = walk(app.project.rootItem, function (c) { return c.type === 1 && c.name === name; });
+        if (!sub) sub = subClipOf(master, name);
         if (!sub) throw new Error('Premiere n\'a pas cr\u00e9\u00e9 le sous-clip son de \u00ab ' + master.name + ' \u00bb');
         bin = rrfxBin();
         try { sub.moveBin(bin); } catch (e) {}
@@ -702,7 +754,14 @@ var RRFX = (function () {
         src = videoSource(srcItem);
         ti = layerTrack(s, srcTrack, a, a + Math.max(b - a, need), warnings);
         placeOn(s, ti, src, a, srcA, srcA + need);
-        if (Math.abs(s0 - 1) > 0.001) setSpeedAt(s, ti, a, s0);
+        if (Math.abs(s0 - 1) > 0.001) {
+            // Vitesse refusee : la copie posee a 100 % ne reste pas dans la timeline.
+            try { setSpeedAt(s, ti, a, s0); } catch (e4) {
+                it = findItemAt(s, ti, a);
+                try { if (it) it.remove(false, false); } catch (e5) {}
+                throw e4;
+            }
+        }
         it = findItemAt(s, ti, a);
         fixSpan(it, a, b);
         try { it.name = name; } catch (e3) {}
@@ -711,18 +770,32 @@ var RRFX = (function () {
     }
 
     // Un element par sa position et son nom, sur sa piste ou ailleurs (une piste a pu etre inseree).
-    function findNamed(s, track, start, name) {
+    // -> { item, track } : la piste ou il est vraiment (pas forcement `track`), ou null.
+    function findNamedAt(s, track, start, name) {
         var it = findItemAt(s, track, start), i;
-        if (it && (!name || it.name === name)) return it;
+        if (it && (!name || it.name === name)) return { item: it, track: track };
         for (i = 0; i < s.videoTracks.numTracks; i++) {
             it = findItemAt(s, i, start);
-            if (it && (!name || it.name === name)) return it;
+            if (it && (!name || it.name === name)) return { item: it, track: i };
         }
         return null;
     }
 
+    function findNamed(s, track, start, name) {
+        var r = findNamedAt(s, track, start, name);
+        return r ? r.item : null;
+    }
+
+    function findClipAt(s, track, start, name) {
+        var r = findNamedAt(s, track, start, name), it;
+        if (r) return r;
+        it = findItemAt(s, track, start);
+        return it ? { item: it, track: track } : null;
+    }
+
     function findClip(s, track, start, name) {
-        return findNamed(s, track, start, name) || findItemAt(s, track, start);
+        var r = findClipAt(s, track, start, name);
+        return r ? r.item : null;
     }
 
     // ============================================================ Contexte, cibles, application des effets, capture, marqueurs, tout effacer
@@ -906,10 +979,11 @@ var RRFX = (function () {
             if (o.target === 'overlay' && !t.name) t.name = o.name;
             if (o.target === 'clip') {
                 if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de clip pour ' + t.side.toUpperCase()); continue; }
-                track = t.clipTrack;
                 start = t.clipStart;
-                item = findItemAt(s, track, start);
-                if (!item) { warnings.push('Clip introuvable'); continue; }
+                placed = findClipAt(s, t.clipTrack, start, t.clipName);
+                if (!placed) { warnings.push('Clip introuvable'); continue; }
+                track = placed.track;
+                item = placed.item;
                 entry = { kind: 'clip', track: track, start: start, name: item.name, added: [] };
             } else if (o.target === 'overlay') {
                 placed = placeOverlay(s, o.overlay, t, i, warnings);
@@ -919,9 +993,12 @@ var RRFX = (function () {
                 entry = { kind: 'adj', track: track, start: start, name: label };
             } else if (o.target === 'copy') {
                 if (t.clipStart === null || t.clipStart === undefined) { warnings.push('Pas de plan pour ' + t.side.toUpperCase()); continue; }
-                item = findClip(s, t.clipTrack, t.clipStart, t.clipName);
-                if (!item) { warnings.push('Plan introuvable'); continue; }
-                placed = placeCopy(s, item, t.clipTrack, t.start, t.end, label, o, warnings);
+                // Piste ou le plan est vraiment : une copie precedente a pu inserer une piste dessous.
+                placed = findClipAt(s, t.clipTrack, t.clipStart, t.clipName);
+                if (!placed) { warnings.push('Plan introuvable'); continue; }
+                try {
+                    placed = placeCopy(s, placed.item, placed.track, t.start, t.end, label, o, warnings);
+                } catch (eC) { warnings.push(label + ' : ' + eC.toString()); continue; }
                 track = placed.track;
                 start = t.start;
                 entry = { kind: 'adj', track: track, start: start, name: label };
@@ -946,6 +1023,8 @@ var RRFX = (function () {
                     comp = addEffect(s, track, start, t.fx[j], warnings);
                     if (!comp) continue;
                     if (entry.added && !t.fx[j].intrinsic) entry.added.push(comp.matchName);
+                    // Trajectoire / Opacite du clip : leur etat d'avant est garde pour l'annulation.
+                    if (entry.added && t.fx[j].intrinsic) keepComp(entry, comp);
                     item = findItemAt(s, track, start);
                     n += setProps(s, item, comp, t.fx[j], t.start, f, warnings);
                     // Look ou conversion : la LUT .cube va dans la " LUT d'entree " de Lumetri.
@@ -977,8 +1056,63 @@ var RRFX = (function () {
         return n;
     }
 
+    // Etat d'un effet (valeurs fixes et images cles) pour le remettre a l'annulation ; null si
+    // une valeur animee est illisible.
+    function snapComp(c) {
+        var out = [], i, p, keys, j, v, ks;
+        for (i = 0; i < c.properties.numItems; i++) {
+            p = c.properties[i];
+            try {
+                if (p.isTimeVarying()) {
+                    keys = p.getKeys();
+                    ks = [];
+                    for (j = 0; keys && j < keys.length; j++) {
+                        v = plainValue(p.getValueAtKey(keys[j]));
+                        if (!v.ok) return null;
+                        ks.push([tk(keys[j]), v.v]);
+                    }
+                    out.push({ i: i, keys: ks });
+                } else {
+                    v = plainValue(p.getValue());
+                    if (v.ok) out.push({ i: i, v: v.v });
+                }
+            } catch (e) { return null; }
+        }
+        return out;
+    }
+
+    function restoreComp(c, snap) {
+        var i, j, sp, p, t, last;
+        for (i = 0; i < snap.length; i++) {
+            sp = snap[i];
+            p = c.properties[sp.i];
+            if (!p) continue;
+            if (p.isTimeVarying()) p.setTimeVarying(false);
+            if (sp.keys) {
+                if (!sp.keys.length) continue;
+                p.setTimeVarying(true);
+                last = sp.keys.length - 1;
+                for (j = 0; j <= last; j++) {
+                    t = mkTime(sp.keys[j][0]);
+                    p.addKey(t);
+                    p.setValueAtKey(t, sp.keys[j][1], j === last);
+                }
+            } else p.setValue(sp.v, true);
+        }
+    }
+
+    // Entree d'historique d'un clip : etat d'un effet intrinseque avant modification (une fois),
+    // ou `lost` s'il ne peut pas etre remis.
+    function keepComp(entry, comp) {
+        var i, snap;
+        entry.restore = entry.restore || [];
+        for (i = 0; i < entry.restore.length; i++) if (entry.restore[i].mn === comp.matchName) return;
+        snap = snapComp(comp);
+        if (snap) entry.restore.push({ mn: comp.matchName, props: snap }); else entry.lost = (entry.lost || 0) + 1;
+    }
+
     function undo(o) {
-        var s = useSeq(o.seq), removed = 0, skipped = 0, effects = 0, i, e, it, r;
+        var s = useSeq(o.seq), removed = 0, skipped = 0, effects = 0, i, k, e, it, r, n, c;
         // Newest first: effects stacked on the same clip come off in reverse order.
         for (i = o.entries.length - 1; i >= 0; i--) {
             e = o.entries[i];
@@ -1019,6 +1153,13 @@ var RRFX = (function () {
                 removed += multicamEnable(s, e.tracks, e.a, e.b) ? 1 : 0;
                 continue;
             }
+            if (e.kind === 'afx') {
+                // Effet audio ajoute (debruitage de la voix) : retire s'il est toujours le dernier.
+                it = findAudioAt(s, e.track, e.start);
+                r = it ? removeAddedEffects(it, e.added || []) : 0;
+                if (r) effects += r; else skipped++;
+                continue;
+            }
             if (e.kind === 'level') {
                 // Volume remis comme avant (musique baissee sous la voix, niveau de la voix).
                 it = findAudioAt(s, e.track, e.start);
@@ -1027,14 +1168,27 @@ var RRFX = (function () {
                 continue;
             }
             it = e.kind === 'adj' ? findNamed(s, e.track, e.start, e.name) : findItemAt(s, e.track, e.start);
+            // Clip : une piste a pu etre inseree dessous depuis, on le cherche ailleurs par son nom.
+            if (!it && e.kind !== 'adj' && e.name) it = findNamed(s, e.track, e.start, e.name);
             if (e.kind === 'adj') {
                 if (it && it.name === e.name) {
                     it.remove(false, false);
                     removed++;
                 } else skipped++;
-            } else {
-                r = it && e.added && e.added.length ? removeAddedEffects(it, e.added) : 0;
-                if (r) effects += r; else skipped++;
+            } else if (!it) skipped++;
+            else {
+                r = e.added && e.added.length ? removeAddedEffects(it, e.added) : 0;
+                if (e.added && e.added.length && !r) skipped++;
+                // Trajectoire / Opacite remises comme avant.
+                n = 0;
+                for (k = 0; e.restore && k < e.restore.length; k++) {
+                    c = componentByMatch(it, e.restore[k].mn);
+                    try { if (c) { restoreComp(c, e.restore[k].props); n++; } else skipped++; } catch (eR) { skipped++; }
+                }
+                effects += r + n;
+                // Effets remplaces ou images cles effacees qui ne peuvent pas etre remis : pas annule.
+                if (e.lost) skipped++;
+                else if (!r && !n && !(e.added && e.added.length) && !(e.restore && e.restore.length)) skipped++;
             }
         }
         return ok({ removed: removed, effects: effects, skipped: skipped });
@@ -1080,7 +1234,7 @@ var RRFX = (function () {
                         if (keys && keys.length) {
                             pe.animated = true;
                             for (j = 0; j < keys.length; j++) {
-                                kt = tk(keys[j]) - tk(it.inPoint) + S;
+                                kt = seqTimeOf(it, tk(keys[j]));
                                 if (k0 === null || kt < k0) k0 = kt;
                                 if (k1 === null || kt > k1) k1 = kt;
                             }
@@ -1574,8 +1728,11 @@ var RRFX = (function () {
         var s = activeSeq(), f = tpf(s), moved = 0, warnings = [], i, k, mv, it, a, b, d, audio, linked;
         for (i = 0; i < o.moves.length; i++) {
             mv = o.moves[i];
-            it = findClip(s, mv.track, snap(mv.start * TICKS, f), mv.name);
+            it = findClipAt(s, mv.track, snap(mv.start * TICKS, f), mv.name);
             if (!it) { warnings.push(mv.name + ' : introuvable'); continue; }
+            // La piste ou il est vraiment (une piste a pu etre inseree dessous).
+            mv = { track: it.track, name: mv.name, delta: mv.delta };
+            it = it.item;
             d = snap(mv.delta * TICKS, f);
             if (!d) { moved++; continue; }
             a = tk(it.start); b = tk(it.end);
@@ -1897,7 +2054,7 @@ var RRFX = (function () {
                         if (keys && keys.length) {
                             animated = true;
                             for (j = 0; j < keys.length; j++) {
-                                kt = tk(keys[j]) - tk(it.inPoint) + S;
+                                kt = seqTimeOf(it, tk(keys[j]));
                                 k = kt <= mid ? segIn : segOut;
                                 if (k.a === null || kt < k.a) k.a = kt;
                                 if (k.b === null || kt > k.b) k.b = kt;
@@ -2159,6 +2316,8 @@ var RRFX = (function () {
                 for (j = 0; j < replace.length; j++) {
                     if (mn !== replace[j] || !hasKeys(comp)) continue;
                     if (typeof comp.remove === 'function') { try { comp.remove(); removed++; } catch (e0) { clearKeys(comp); } } else clearKeys(comp);
+                    // Animation remplacee : l'annulation ne sait pas la remettre (signale, pas compte).
+                    entry.lost = (entry.lost || 0) + 1;
                     break;
                 }
             }
@@ -2169,7 +2328,7 @@ var RRFX = (function () {
                     it = findItemAt(s, x.track, x.start);
                     if (fx.intrinsic) {
                         comp = componentByMatch(it, fx.intrinsic === 'motion' ? 'AE.ADBE Motion' : 'AE.ADBE Opacity');
-                        if (comp) clearKeys(comp);
+                        if (comp) { keepComp(entry, comp); clearKeys(comp); }
                     } else {
                         comp = addEffect(s, x.track, x.start, fx, warnings);
                         if (comp) entry.added.push(comp.matchName);
@@ -2365,7 +2524,11 @@ var RRFX = (function () {
         all = mergeSpans(all, f);
         for (k = 0; k < all.length; k++) replaced += cutLayers(s, all[k].a, all[k].b, G.re, warnings);
         jobs.sort(function (x, y) { return x.a - y.a; });
+        // Un calque qui echoue ne fait pas perdre les autres (ni leur annulation) : averti, on continue.
         for (k = 0; k < jobs.length; k++) {
+            try { placeGrade(k); } catch (eJ) { warnings.push(jobs[k].name + ' : ' + eJ.toString()); }
+        }
+        function placeGrade(k) {
             a = jobs[k].a; b = jobs[k].b; top = jobs[k].top;
             // Au-dessus des copies RR FX du plan (rampes...) et des etalonnages d'un niveau inferieur.
             for (i = top + 1; i < s.videoTracks.numTracks; i++) {
@@ -2405,6 +2568,7 @@ var RRFX = (function () {
                 }
             }
         }
+        if (!created.length) return fail(warnings.length ? warnings[warnings.length - 1] : 'Aucun plan \u00e0 traiter.', { created: created, replaced: replaced, warnings: warnings });
         if (below) warnings.push(below + ' look(s), titre(s) ou overlay(s) sous le calque : remonte-les au-dessus pour qu\'ils ne soient pas modifi\u00e9s.');
         return ok({ created: created, layers: created.length, replaced: replaced, lutSet: lutSet, warnings: warnings });
     }
@@ -2814,7 +2978,9 @@ var RRFX = (function () {
         var i, j, c, p;
         for (i = 0; i < it.components.numItems; i++) {
             c = it.components[i];
-            if (!/^(volume|lautst.rke|volumen)$/i.test(c.displayName)) continue;
+            // Par son nom affiche, ou par son matchName (Premiere dans une autre langue) ; pas le
+            // Volume de la voie (Channel Volume : gauche / droite).
+            if (!/^(volume|lautst.rke|volumen)$/i.test(c.displayName) && !(/volume/i.test(String(c.matchName)) && !/channel/i.test(String(c.matchName)))) continue;
             for (j = 0; j < c.properties.numItems; j++) {
                 p = c.properties[j];
                 if (LEVEL.test(p.displayName)) return p;
@@ -2891,7 +3057,19 @@ var RRFX = (function () {
             done++;
             if (eff) {
                 q = qeAudioFor(s, c.track, tk(it.start));
-                try { if (q) { q.addAudioEffect(eff); cleaned++; } } catch (e1) {}
+                try {
+                    if (q) {
+                        var n0 = it.components.numItems, a0 = tk(it.start), fx;
+                        q.addAudioEffect(eff);
+                        cleaned++;
+                        // L'effet ajoute est note pour que l'annulation le retire.
+                        it = findAudioAt(s, c.track, a0) || it;
+                        if (it.components.numItems > n0) {
+                            fx = it.components[it.components.numItems - 1];
+                            created.push({ kind: 'afx', track: c.track, start: a0, name: it.name, added: [fx.matchName] });
+                        }
+                    }
+                } catch (e1) {}
             }
         }
         if (eff && cleaned < done) warnings.push('D\u00e9bruitage ajout\u00e9 sur ' + cleaned + ' clip(s) sur ' + done);
@@ -3167,8 +3345,11 @@ var RRFX = (function () {
     function rampApply(o) {
         var s = activeSeq(), f = tpf(s), warnings = [], created = [], item, S, I, s0 = 1, R0 = o.regionStart, R1, K = o.pieces.length;
         var bnd = [R0], L = [], total = 0, k, srcStart, end = null, src, ti, reach, it, plan = [], srcK, bad = [], label = 'RR FX \u00b7 Rampe';
-        item = findClip(s, o.track, o.clipStart, o.clipName);
+        item = findClipAt(s, o.track, o.clipStart, o.clipName);
         if (!item) return fail('Clip introuvable : il a boug\u00e9 depuis l\'analyse. R\u00e9essaie.');
+        // La piste ou le clip est vraiment : une piste a pu etre inseree dessous depuis l'analyse.
+        var srcTrack = item.track;
+        item = item.item;
         S = tk(item.start); I = tk(item.inPoint);
         try { s0 = item.getSpeed(); } catch (e) {}
         if (!(s0 > 0)) s0 = 1;
@@ -3198,13 +3379,20 @@ var RRFX = (function () {
             reach = Math.max(reach, bnd[k] + L[k]);
             srcK += L[k];
         }
-        ti = layerTrack(s, o.track, R0, reach, warnings);
+        ti = layerTrack(s, srcTrack, R0, reach, warnings);
 
         // Dans l'ordre : chaque morceau est pose a 100 % puis mis a sa vitesse, ce qui le
         // ramene exactement a sa place ; la place du suivant est encore libre.
         for (k = 0; k < K; k++) {
             placeOn(s, ti, src, plan[k].a, plan[k].inT, plan[k].outT);
-            setSpeedAt(s, ti, plan[k].a, plan[k].speed);
+            try { setSpeedAt(s, ti, plan[k].a, plan[k].speed); } catch (eS) {
+                // Vitesse refusee : les morceaux deja poses (et celui-ci) sont retires.
+                for (var m = 0; m <= k; m++) {
+                    it = findItemAt(s, ti, plan[m].a);
+                    try { if (it && (m === k || it.name === label)) it.remove(false, false); } catch (eR) {}
+                }
+                return fail(eS.toString(), { warnings: warnings });
+            }
             it = findItemAt(s, ti, plan[k].a);
             try { setSource(it, plan[k].inT, plan[k].outT); } catch (e4) {}
             fixSpan(it, plan[k].a, plan[k].b);
@@ -3266,8 +3454,7 @@ var RRFX = (function () {
         var P = app.project, out = [], i, sq, a = P.activeSequence, end;
         for (i = 0; i < P.sequences.numSequences; i++) {
             sq = P.sequences[i];
-            end = 0;
-            try { end = tk(sq.end) / TICKS; } catch (e) {}
+            end = seqEnd(sq) / TICKS;
             out.push({ id: sq.sequenceID, name: sq.name, w: Number(sq.frameSizeHorizontal) || 0, h: Number(sq.frameSizeVertical) || 0, end: end });
         }
         return ok({ sequences: out, active: a ? a.sequenceID : '' });
@@ -3303,16 +3490,23 @@ var RRFX = (function () {
         }
         for (j = 0; j < s.videoTracks.numTracks; j++) clean(clipsOf(s, j));
         for (j = 0; j < s.audioTracks.numTracks; j++) clean(audioItems(s, j));
-        // Tout recule de A (de gauche a droite : rien ne se chevauche).
+        // Tout recule de A (de gauche a droite : rien ne se chevauche). Les places sont notees
+        // avant de bouger quoi que ce soit : le son lie a pu suivre son image, il n'est decale
+        // que s'il n'est pas deja a sa place.
         if (A > 0) {
+            var plan = [];
             for (j = 0; j < s.videoTracks.numTracks; j++) {
                 list = clipsOf(s, j);
-                for (i = 0; i < list.length; i++) if (Math.abs(tk(list[i].start) - (tk(list[i].start) - A)) > 1 && tk(list[i].start) >= A - f / 2) { if (!shift(list[i], -A)) refused++; }
+                for (i = 0; i < list.length; i++) if (tk(list[i].start) >= A - f / 2) plan.push({ it: list[i], target: tk(list[i].start) - A });
             }
             for (j = 0; j < s.audioTracks.numTracks; j++) {
                 list = audioItems(s, j);
-                // Le son lie a pu suivre son image.
-                for (i = 0; i < list.length; i++) if (tk(list[i].start) >= A - f / 2) { if (!shift(list[i], -A)) refused++; }
+                for (i = 0; i < list.length; i++) if (tk(list[i].start) >= A - f / 2) plan.push({ it: list[i], target: tk(list[i].start) - A });
+            }
+            for (i = 0; i < plan.length; i++) {
+                x = tk(plan[i].it.start);
+                if (Math.abs(x - plan[i].target) <= 1) continue;
+                if (!shift(plan[i].it, plan[i].target - x)) refused++;
             }
         }
         if (refused) warnings.push(refused + ' morceau(x) que Premiere a refus\u00e9 de couper ou d\u00e9placer : v\u00e9rifie l\'extrait');
@@ -3324,6 +3518,7 @@ var RRFX = (function () {
     function preflight(o) {
         var s = activeSeq(), f = tpf(s), issues = [], i, j, list, it, spans = [], end = 0, a, b, p, v, comp, pos, W, H, vertical, lo, hi, cur, tr, fps = TICKS / f;
         W = Number(s.frameSizeHorizontal) || 1920; H = Number(s.frameSizeVertical) || 1080; vertical = H > W;
+        var over = overlayIds();
         function add(level, t, where, text) { issues.push({ level: level, t: t / TICKS, where: where, text: text }); }
         function offline(item) { try { return item.projectItem && item.projectItem.isOffline && item.projectItem.isOffline(); } catch (e) { return false; } }
         function disabled(item) { try { return item.disabled === true; } catch (e) { return false; } }
@@ -3337,7 +3532,9 @@ var RRFX = (function () {
                 end = Math.max(end, b);
                 if (offline(it)) add('error', a, 'V' + (j + 1), 'M\u00e9dia hors ligne : ' + it.name);
                 if (disabled(it)) add('warn', a, 'V' + (j + 1), 'Clip d\u00e9sactiv\u00e9 : ' + it.name);
-                if (!isAdj(it) && !/^RR FX/.test(String(it.name))) spans.push([a, b]);
+                // Image : tout sauf calques de reglage, titres (graphiques) et overlays RR FX. Les plans
+                // poses par RR FX (montage auto, copies du plan) sont de vraies images.
+                if (!isAdj(it) && !isGraphic(it) && !(/^RR FX/.test(String(it.name)) && convKind(it, over) === 'over')) spans.push([a, b]);
                 // Textes poses par RR FX : position dans la zone sure.
                 if (/^RR FX \u00b7 (Texte|Sous-titres|Bandeau)/.test(String(it.name)) || it.getMGTComponent) {
                     try {
@@ -3678,7 +3875,7 @@ var RRFX = (function () {
             try { sig = s.sequenceID + '|' + tk(s.getPlayerPosition()); } catch (e) { sig = s.sequenceID; }
             try { for (i = 0; i < s.videoTracks.numTracks; i++) n += s.videoTracks[i].clips.numItems; } catch (e1) {}
             try { for (i = 0; i < s.audioTracks.numTracks; i++) n += s.audioTracks[i].clips.numItems; } catch (e2) {}
-            try { sig += '|' + tk(s.end); } catch (e3) {}
+            sig += '|' + seqEnd(s);
             sig += '|' + n;
         }
         return ok({ project: P.name || '', path: P.path || '', sig: sig });
@@ -4161,7 +4358,7 @@ var RRFX = (function () {
         if (o.scope === 'selection' && !cuts.length) return fail('S\u00e9lectionne au moins deux plans qui se suivent.');
         if (vt) for (i = 0; i < cuts.length; i++) {
             q = qeItemAt(qs.getVideoTrackAt(cuts[i].track), cuts[i].t, f);
-            if (!q || typeof q.addTransition !== 'function') { warnings.push('Coupe ' + (i + 1) + ' passee'); continue; }
+            if (!q || typeof q.addTransition !== 'function') { warnings.push('Coupe ' + (i + 1) + ' pass\u00e9e'); continue; }
             try { q.addTransition(vt, true, dur, zero, align, false, true); created.push({ kind: 'trans', video: true, track: cuts[i].track, start: cuts[i].t }); n++; } catch (e) { warnings.push('Coupe ' + (i + 1) + ' : ' + e); }
         }
         if (at) {

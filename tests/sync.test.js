@@ -29,6 +29,22 @@ test('sync: libraries are joined, the newest side wins on the same item and on s
   assert.strictEqual(local.items[0].name, 'A local', 'local library untouched');
 });
 
+test('sync: a new computer with default settings never wipes a configured one', () => {
+  // Ordinateur B neuf : réglages jamais touchés (sharedAt 0), envoyés juste après la mise en place.
+  const fromB = SD.pack(lib([], { speech: { level: 'normal' } }), 'B', 9e12, 0);
+  // Ordinateur A configuré il y a longtemps (sharedAt ancien, mais > 0).
+  const a = lib([it('a', 'A')], { speech: { level: 'strong' }, macros: [1] }, { favorites: ['b:zoom'] });
+  const r = SD.merge(a, fromB, 1000);
+  assert.strictEqual(r.settings, false, 'A keeps its settings');
+  assert.deepStrictEqual(r.lib.favorites, ['b:zoom']);
+  // Dans l'autre sens, B (jamais touché) reprend les réglages de A.
+  const toB = SD.merge(lib([], { speech: { level: 'normal' } }), SD.pack(a, 'A', 5000, 1000), 0);
+  assert.strictEqual(toB.settings, true);
+  assert.strictEqual(toB.lib.settings.speech.level, 'strong');
+  // Les chemins (calque modèle, overlays) restent propres à chaque ordinateur.
+  assert.ok(!('adjTemplate' in SD.pack(lib([], { adjTemplate: 'C:\\x.prproj', overlays: [{ path: '/a' }] }), 'A', 1).settings));
+});
+
 test('sync: an item deleted on one computer is deleted on the other', () => {
   const local = lib([it('a', 'A'), it('b', 'B')], {}, { removed: [] });
   const remote = SD.pack(lib([it('a', 'A')], {}, { removed: ['b'] }), 'pc', 10);

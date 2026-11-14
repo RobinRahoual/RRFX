@@ -39,21 +39,45 @@
 
   /* Nom de fichier sûr (Windows et Mac), 80 caractères au plus. */
   function safeName(s, fallback) {
-    const t = String(s || '').normalize('NFC').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').slice(0, 80).trim();
+    // Windows refuse les noms finis par un point ou une espace.
+    let t = String(s || '').normalize('NFC').replace(/[\\/:*?"<>|\u0000-\u001f]+/g, ' ').replace(/\s+/g, ' ').trim().replace(/^\.+/, '').slice(0, 80).replace(/[. ]+$/, '');
+    // Noms réservés de Windows (CON, NUL, COM1…), même suivis d'une extension : inutilisables.
+    if (/^(con|prn|aux|nul|com[1-9]|lpt[1-9])(\.|$)/i.test(t)) t = t.replace(/^([^.]*)/, '$1_');
     return t || fallback || 'import';
   }
-  /* Nom pour un lien direct : la fin du chemin, décodée. */
+  /* Nom pour un lien direct : la fin du chemin, décodée. Google Drive (toujours « uc ») :
+     l'identifiant du fichier, pour que deux liens ne donnent pas le même nom. */
   function nameFromUrl(url, ext) {
     let base = '';
-    try { base = decodeURIComponent(new URL(url).pathname.split('/').pop() || ''); } catch (e) { base = ''; }
+    try {
+      const u = new URL(url), id = u.searchParams.get('id');
+      base = /(^|\.)drive\.google\.com$/i.test(u.hostname) && id ? 'drive-' + id : decodeURIComponent(u.pathname.split('/').pop() || '');
+    } catch (e) { base = ''; }
     base = base.replace(/\.[a-z0-9]{2,5}$/i, '');
     return safeName(base, 'import') + (ext ? '.' + ext : '');
+  }
+  /* Nom donné par le serveur (en-tête Content-Disposition), sans dossier. → nom ou ''. */
+  function nameFromDisposition(header) {
+    const h = String(header || '');
+    let m = /filename\*\s*=\s*[^']*'[^']*'([^;]+)/i.exec(h), name = '';
+    if (m) { try { name = decodeURIComponent(m[1].trim().replace(/^"|"$/g, '')); } catch (e) { name = ''; } }
+    if (!name && (m = /filename\s*=\s*(?:"([^"]*)"|([^;]+))/i.exec(h))) name = (m[1] !== undefined ? m[1] : m[2]).trim();
+    return name.split(/[\\/]/).pop() || '';
+  }
+  /* Nom libre dans un dossier : « nom (2).ext », « nom (3).ext »… quand le nom est déjà pris
+     (rien n'est écrasé). exists(chemin) ; path : module path de Node. */
+  function freeName(dir, name, exists, path) {
+    const dot = name.lastIndexOf('.'), stem = dot > 0 ? name.slice(0, dot) : name, ext = dot > 0 ? name.slice(dot) : '';
+    let out = name, k = 2;
+    while (exists(path.join(dir, out))) out = stem + ' (' + (k++) + ')' + ext;
+    return out;
   }
 
   /* Arguments de yt-dlp. mode : video (MP4) | audio (MP3 si ffmpeg est là, sinon M4A) ;
      out : dossier ; ffmpeg : chemin de ffmpeg ou ''. Le chemin final est imprimé en dernier. */
   function ytdlpArgs(o) {
-    const args = ['--no-playlist', '--newline', '--no-mtime', '--restrict-filenames', '-o', o.out.replace(/[\\/]+$/, '') + '/%(title).70s [%(id)s].%(ext)s', '--print', 'after_move:filepath', '--progress'];
+    // « % » dans le dossier : doublé, sinon yt-dlp le lit comme un champ du modèle de nom.
+    const args = ['--no-playlist', '--newline', '--no-mtime', '--restrict-filenames', '-o', o.out.replace(/[\\/]+$/, '').replace(/%/g, '%%') + '/%(title).70s [%(id)s].%(ext)s', '--print', 'after_move:filepath', '--progress'];
     if (o.ffmpeg) args.push('--ffmpeg-location', o.ffmpeg);
     if (o.mode === 'audio') {
       if (o.ffmpeg) args.push('-f', 'ba/b', '-x', '--audio-format', 'mp3', '--audio-quality', '0');
@@ -80,7 +104,8 @@
     return m ? Math.min(1, +m[1] / 100) : null;
   }
 
-  /* Où chercher yt-dlp et ffmpeg quand ils ne sont pas dans le PATH. */
+  /* Où chercher yt-dlp et ffmpeg quand ils ne sont pas dans le PATH. Pas le dossier
+     Téléchargements : n'importe quel exécutable peut s'y trouver. */
   function candidates(tool, platform, env) {
     const e = env || {}, exe = platform === 'win32' ? tool + '.exe' : tool;
     if (platform === 'win32') {
@@ -89,7 +114,6 @@
         local && local + '\\Microsoft\\WinGet\\Links\\' + exe,
         user && user + '\\scoop\\shims\\' + exe,
         'C:\\ProgramData\\chocolatey\\bin\\' + exe,
-        user && user + '\\Downloads\\' + exe,
         user && user + '\\Documents\\RRFX\\Outils\\' + exe
       ].filter(Boolean);
     }
@@ -97,5 +121,5 @@
     return ['/opt/homebrew/bin/' + exe, '/usr/local/bin/' + exe, '/usr/bin/' + exe, home && home + '/.local/bin/' + exe, home && home + '/Documents/RRFX/Outils/' + exe].filter(Boolean);
   }
 
-  return { VIDEO, AUDIO, classify, extOf, isAudio, isVideo, safeName, nameFromUrl, ytdlpArgs, assetsDir, progressOf, candidates };
+  return { VIDEO, AUDIO, classify, extOf, isAudio, isVideo, safeName, nameFromUrl, nameFromDisposition, freeName, ytdlpArgs, assetsDir, progressOf, candidates };
 });

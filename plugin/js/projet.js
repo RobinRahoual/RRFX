@@ -27,15 +27,30 @@
     // ---------------------------------------------------------------- dossiers surveillés
 
     const seen = new Map(); // dossier → fichiers déjà envoyés à Premiere (cette session)
-    /* Nouveaux fichiers du dossier importés dans son chutier. → { imported: [noms], error } */
+    const sizes = new Map(); // dossier → fichier → « taille:date » au tour d'avant
+    const sigOf = f => { try { const s = Store.fs.statSync(f); return s.size + ':' + s.mtimeMs; } catch (e) { return ''; } };
+    /* Nouveaux fichiers du dossier importés dans son chutier. Un fichier encore en copie (taille ou
+       date qui bouge) attend le tour suivant : importé à moitié, il resterait tronqué dans le projet.
+       → { imported: [noms], error } */
     async function scanWatch(w) {
       if (!Store.fs || !w.dir) return { imported: [] };
       const files = Store.listFiles(w.dir, MEDIA, 3000, 4), known = seen.get(w.dir) || new Set();
       const fresh = files.filter(f => !known.has(f));
-      if (!fresh.length) return { imported: [] };
-      const r = await Host.call('importToBin', { paths: fresh, bin: w.bin });
+      const prev = sizes.get(w.dir) || new Map(), now = new Map();
+      fresh.forEach(f => now.set(f, sigOf(f)));
+      // Jamais vus au tour d'avant : deuxième mesure un peu plus tard, pour ne pas attendre une minute.
+      if (fresh.some(f => !prev.has(f))) {
+        await new Promise(res => setTimeout(res, 1500));
+        fresh.filter(f => !prev.has(f)).forEach(f => { prev.set(f, now.get(f)); now.set(f, sigOf(f)); });
+      }
+      sizes.set(w.dir, now);
+      const ready = fresh.filter(f => now.get(f) && now.get(f) === prev.get(f));
+      if (!ready.length) return { imported: [] };
+      const r = await Host.call('importToBin', { paths: ready, bin: w.bin });
       if (!r.ok) { app.log(_T('Dossier surveillé « ') + base(w.dir) + _T(' » : ') + r.error, 'warn'); return { imported: [], error: r.error }; }
-      fresh.forEach(f => known.add(f));
+      // Connus seulement s'ils sont vraiment dans le projet : importés (même nom) ou déjà là (tout compté).
+      const names = new Set(r.imported.map(n => String(n).toLowerCase())), all = r.imported.length + (r.skipped || 0) >= ready.length;
+      ready.forEach(f => { if (all || names.has(base(f).toLowerCase())) known.add(f); });
       seen.set(w.dir, known);
       if (r.imported.length) { w.last = Date.now(); w.lastCount = r.imported.length; w.total = (w.total || 0) + r.imported.length; app.persist(); }
       if (r.imported.length) app.log(app.plural(r.imported.length, _T('fichier importé'), _T('fichiers importés')) + _T(' dans « ') + w.bin + _T(' » : ') + r.imported.slice(0, 5).join(', ') + (r.imported.length > 5 ? '…' : ''), 'ok');
